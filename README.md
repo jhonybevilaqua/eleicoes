@@ -15,6 +15,10 @@ TSE (JSON)  ──►  coleta  ──►  normalização  ──►  guardas  �
                                                     dedupe)
 ```
 
+> **Nunca usou?** Comece por [`docs/PRIMEIRO-USO.md`](docs/PRIMEIRO-USO.md) —
+> passo a passo do zero até o placar na cena, sem pressupor conhecimento de
+> programação.
+
 ## Instalação
 
 **Windows (PC de operação)**
@@ -22,6 +26,10 @@ TSE (JSON)  ──►  coleta  ──►  normalização  ──►  guardas  �
 ```bat
 scripts\instalar.bat
 ```
+
+Depois disso, rode os comandos como `gctse <comando>` de dentro da pasta do
+projeto — o atalho `gctse.bat` usa o ambiente instalado, sem precisar ativar
+nada.
 
 **Linux**
 
@@ -147,6 +155,7 @@ mínimo de seções totalizadas.
 
 ## Documentação
 
+- [`docs/PRIMEIRO-USO.md`](docs/PRIMEIRO-USO.md) — instalar e chegar ao primeiro placar
 - [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md) — como as peças se encaixam e onde mexer
 - [`docs/TSE-API.md`](docs/TSE-API.md) — endpoints, campos e o que confirmar em 2026
 - [`docs/GC-INTEGRACAO.md`](docs/GC-INTEGRACAO.md) — receita por marca de GC
