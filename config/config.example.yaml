@@ -1,0 +1,186 @@
+# ---------------------------------------------------------------------------
+# gctse - automacao de apuracao TSE -> GC
+# Copie para config/config.yaml e ajuste. Nao versione o config.yaml real.
+# ---------------------------------------------------------------------------
+
+log:
+  nivel: INFO              # DEBUG no ensaio, INFO no ar
+  arquivo: logs/gctse.log  # rotaciona a meia-noite, guarda 14 dias
+
+# --- Origem dos dados no TSE ------------------------------------------------
+# ATENCAO: ciclo/pleito/eleicao de 2026 so existem quando o TSE publica a
+# configuracao do pleito. Rode 'gctse descobrir' para ler os codigos reais e
+# preencha aqui. Os valores abaixo sao um exemplo, nao os codigos oficiais.
+tse:
+  base_url: https://resultados.tse.jus.br/oficial
+  ciclo: ele2026
+  pleito: "000"     # <- preencher com o codigo do pleito (gctse descobrir)
+  eleicao: "000"    # <- preencher com o codigo da eleicao
+  turno: 1
+  # Padroes de URL. So mexa se o TSE mudar o layout dos caminhos em 2026.
+  padroes:
+    simplificado: "{base_url}/{ciclo}/{pleito}/dados-simplificados/{dir}/{abr}-c{cargo:04d}-e{eleicao:06d}-r.json"
+    completo: "{base_url}/{ciclo}/{pleito}/dados/{dir}/{abr}-c{cargo:04d}-e{eleicao:06d}-r.json"
+    config_eleicoes: "{base_url}/comum/config/ele-c.json"
+    municipios: "{base_url}/{ciclo}/{pleito}/config/{uf}/{uf}-e{eleicao:06d}-i.json"
+
+# --- Coleta -----------------------------------------------------------------
+coleta:
+  fonte: tse                 # tse | simulador | arquivo
+  intervalo_segundos: 20     # o TSE totaliza em ciclos de ~30-60s
+  paralelismo: 4
+  timeout_segundos: 8
+  tentativas: 3
+  backoff: 1.5
+  cache_condicional: true    # ETag/If-Modified-Since: nao rebaixa a origem
+  usar_dados_completos: false
+  arquivo_estado: dados/estado/estado.json
+  arquivo_saude: dados/estado/saude.json
+  falhas_para_alerta: 3
+  segundos_sem_dado_para_alerta: 300
+  pasta_amostras: dados/amostras
+  simulador_duracao_segundos: 900
+
+# --- Guardas de seguranca no ar ---------------------------------------------
+seguranca:
+  # Descarta boletim que nao esteja em fase Oficial ('O'). E o que impede um
+  # simulado do TSE de ir ao ar como resultado real. Mantenha true.
+  bloquear_nao_oficial: true
+  # Descarta boletim mais antigo que o ultimo publicado (copia velha de CDN).
+  bloquear_regressao: true
+  # So publica a partir deste percentual de secoes totalizadas (0 = sempre).
+  pct_minimo_para_publicar: 0
+
+# --- Tratamento de texto para o ar ------------------------------------------
+texto:
+  caixa: alta              # alta | baixa | titulo | original
+  remover_acentos: false   # true se o GC nao renderiza acento de fonte externa
+  reticencia: ""
+  formatar_numeros: true
+  separador_milhar: "."
+  casas_percentual: 2
+  sufixo_percentual: "%"
+  selo_nao_oficial: "PARCIAL - NAO OFICIAL"
+  limites:                 # corte por campo, em caracteres (0 = sem limite)
+    nome: 22
+    nome_completo: 40
+    partido: 12
+    coligacao: 40
+    cargo: 24
+    abrangencia: 24
+    situacao: 16
+
+# --- Padroes de saida (podem ser sobrepostos em cada exporter) --------------
+saida:
+  destino: dados/saida
+  encoding: utf-8          # cp1252 em GC legado que quebra acento
+  quebra_linha: crlf       # crlf | lf
+  reescrever_sempre: false
+
+# --- Exporters --------------------------------------------------------------
+exporters:
+
+  # Hot folder XML generico - atende a maioria dos GCs com data linkage.
+  gc_xml:
+    tipo: xml
+    perfil: generico       # generico | tabular | atributos
+    destino: dados/saida/xml
+    nome_arquivo: "{alvo}"
+
+  # CSV em linhas - Ross XPression (DataLinq), Chyron, planilhas de apoio.
+  gc_csv:
+    tipo: csv
+    layout: linhas         # linhas | largo
+    delimitador: ","
+    destino: dados/saida/csv
+    nome_arquivo: "{alvo}"
+    arquivo_resumo: true
+    limite_candidatos: 8
+
+  # JSON para segunda tela, site e portal.
+  web_json:
+    tipo: json
+    formato: completo      # completo | gc | largo | bruto
+    destino: dados/saida/json
+    nome_arquivo: "{alvo}"
+
+  # CasparCG: templateData XML + JSON.
+  # caspar:
+  #   tipo: casparcg
+  #   destino: dados/saida/caspar
+  #   nome_arquivo: "{alvo}"
+  #   limite_candidatos: 5
+  #   mapa_campos:
+  #     f0: cargo
+  #     f1: abrangencia
+  #     f2: apuracao_pct
+  #     f3: cand1_nome
+  #     f4: cand1_percentual
+  #     f5: cand2_nome
+  #     f6: cand2_percentual
+
+  # Viz Trio tab fields - a ordem em 'campos' precisa casar com a pagina.
+  # viz:
+  #   tipo: viz_tab
+  #   destino: dados/saida/viz
+  #   nome_arquivo: "{alvo}"
+  #   campos: [posicao, nome, partido, percentual, votos]
+
+  # Push direto na API do GC / broker / Power Automate.
+  # push_gc:
+  #   tipo: http
+  #   url: ${GC_WEBHOOK_URL}
+  #   metodo: POST
+  #   formato: gc
+  #   cabecalhos:
+  #     Authorization: Bearer ${GC_TOKEN}
+
+# --- Alertas para o plantao -------------------------------------------------
+alertas:
+  ativo: false
+  webhook_url: ${ALERTA_WEBHOOK_URL}   # Teams incoming webhook ou Power Automate
+  campo_texto: text
+  prefixo: "[GC-TSE]"
+  intervalo_repeticao_segundos: 600
+
+# --- Ajuste do mapeamento de campos do TSE ----------------------------------
+# Se o TSE mudar as abreviacoes em 2026, corrija aqui (a chave listada e
+# tentada ANTES das padroes). Confira com 'gctse inspecionar'.
+mapeamento: {}
+#   resumo:
+#     votos_validos: [vv, vvc]
+#   candidato:
+#     nome: [nm, nmurna]
+
+# --- Valores herdados por todos os alvos ------------------------------------
+padroes_alvo:
+  turno: 1
+  exporters: [gc_xml, gc_csv, web_json]
+
+# --- Alvos (abrangencia x cargo) --------------------------------------------
+# abrangencia: 'br' | sigla da UF | UF + codigo TSE do municipio (ex.: pr75353)
+# cargo: 1 Presidente | 3 Governador | 5 Senador | 6 Dep. Federal
+#        7 Dep. Estadual | 8 Dep. Distrital | 11 Prefeito | 13 Vereador
+alvos:
+  - nome: presidente-br
+    abrangencia: br
+    cargo: 1
+    limite_candidatos: 6
+
+  - nome: governador-pr
+    abrangencia: pr
+    cargo: 3
+    apelido_abrangencia: PARANA
+    limite_candidatos: 6
+
+  - nome: senador-pr
+    abrangencia: pr
+    cargo: 5
+    apelido_abrangencia: PARANA
+    limite_candidatos: 6
+
+  - nome: dep-federal-pr
+    abrangencia: pr
+    cargo: 6
+    limite_candidatos: 15
+    exporters: [gc_csv, web_json]

@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gctse"
+version = "1.0.0"
+description = "Automacao de apuracao eleitoral do TSE para sistemas de GC de emissoras"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = ["requests>=2.31", "PyYAML>=6.0"]
+
+[project.scripts]
+gctse = "gctse.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

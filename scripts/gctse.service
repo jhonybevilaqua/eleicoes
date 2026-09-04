@@ -1,0 +1,19 @@
+# Operacao continua em Linux. Copie para /etc/systemd/system/gctse.service
+# e rode: systemctl daemon-reload && systemctl enable --now gctse
+[Unit]
+Description=gctse - apuracao TSE para o GC
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=gctse
+WorkingDirectory=/opt/gctse
+ExecStart=/opt/gctse/.venv/bin/python -m gctse -c /opt/gctse/config/config.yaml rodar
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
