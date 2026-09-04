@@ -11,8 +11,12 @@
       `limite_candidatos` de cada template.
 - [ ] Apontar `destino` de cada exporter para o hot folder real do GC e
       confirmar permissão de escrita da conta que roda o serviço.
+- [ ] Escolher o `Type` do DataSource: JSON ou XML (vínculo por nome, sem
+      célula para deslocar) ou CSV. Testar os dois na cena antes de decidir.
 - [ ] Decidir a `ordem` de cada cena do LiveBoard: `colocacao` (ranking) ou
-      `fixa` (candidato preso à linha). Cena com foto por posição exige `fixa`.
+      `fixa` (candidato preso à posição). Cena com foto por posição exige `fixa`.
+- [ ] Se usar o `Sort` do DataSource, apontar para `votos_num` (não para
+      `votos`) e marcar "As number".
 - [ ] `gctse celulas --pasta dados/saida/mapa` — gerar o mapa e amarrar a cena
       por ele, não por tentativa e erro. Guardar o CSV junto com o roteiro.
 
@@ -63,7 +67,8 @@ Acompanhe por dois pontos:
 | Campo saindo vazio no GC | O TSE mudou a chave. Rode `gctse inspecionar`, ajuste `mapeamento` e reinicie — não precisa mexer no template. |
 | Placar precisa sair do ar | Pare o serviço. Os arquivos ficam parados com o último valor; quem tira do ar é o GC. |
 | Precisa forçar reescrita | `saida.reescrever_sempre: true` e reiniciar. Use só se o GC perdeu o arquivo. |
-| LiveBoard mostrando campo trocado | Alguém mudou `layout`, `ordem`, `slots` ou as listas de campos. Rode `gctse celulas` e compare com o vínculo da cena. |
+| LiveBoard mostrando campo trocado | Alguém mudou `formato`, `layout`, `ordem`, `slots` ou as listas de campos. Rode `gctse celulas` e compare com o vínculo da cena. |
+| Ordenação do LiveBoard saindo errada | O `Sort` está apontando para uma coluna formatada. Troque para `votos_num` com "As number". |
 | Linha sobrando na cena | Amarre a visibilidade do objeto ao campo `visivel` do slot (`0` = não existe candidato ali). |
 
 **Não faça no ar:** editar arquivo de saída na mão (o próximo ciclo sobrescreve),

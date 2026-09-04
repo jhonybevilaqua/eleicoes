@@ -76,7 +76,7 @@ alvos:
 
 | tipo | Saída | Uso típico |
 |---|---|---|
-| `classx` | CSV de grade fixa + mapa de células | **ClassX LiveBoard** |
+| `classx` | CSV, JSON ou XML de geometria fixa + mapa de vínculos | **ClassX LiveBoard** |
 | `xml` | XML (perfis `generico`, `tabular`, `atributos`) | GC com data linkage, Chyron, Viz Pilot |
 | `csv` | CSV/TSV, layout `linhas` ou `largo` | Ross XPression DataLinq, Chyron, planilhas |
 | `json` | JSON (`completo`, `gc`, `largo`, `bruto`) | GC web, segunda tela, site |
@@ -88,10 +88,12 @@ Cada exporter tem `destino`, `encoding` e `nome_arquivo` próprios, então dá
 para escrever ao mesmo tempo no hot folder do GC, na pasta do web e num
 webhook. Detalhes e exemplos por marca em [`docs/GC-INTEGRACAO.md`](docs/GC-INTEGRACAO.md).
 
-**ClassX LiveBoard**: o exporter `classx` gera CSV de geometria fixa — sempre
-o mesmo número de linhas e colunas, do primeiro ao último boletim — para que o
-vínculo por célula nunca leia o campo errado. `gctse celulas` imprime o mapa
-de qual célula guarda qual campo, para amarrar a cena sem adivinhar.
+**ClassX LiveBoard**: o exporter `classx` gera CSV, JSON ou XML com os mesmos
+nomes de campo e geometria fixa — sempre o mesmo número de registros, do
+primeiro ao último boletim. Em JSON/XML o vínculo é por nome, então não há
+célula para deslocar; em CSV, a geometria garantida faz a célula continuar
+válida. Campos numéricos vêm em versão crua (`votos_num`) para o `Sort` com
+"As number". `gctse celulas` imprime o mapa de onde cada campo está.
 
 ## Guardas de segurança no ar
 

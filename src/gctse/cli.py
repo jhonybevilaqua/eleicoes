@@ -152,16 +152,24 @@ def cmd_celulas(args) -> int:
             principal = exporter.caminho_saida(referencia, alvo.nome, exporter.extensao)
             nomes = {"principal": principal.name, "-resumo": principal.stem + "-resumo" + exporter.extensao}
 
-            print(f"\n=== {alvo.nome}  /  exporter '{nome_exporter}'  /  layout {exporter.layout}  /  ordem {exporter.ordem}")
-            print(f"    arquivo: {principal}")
-            if exporter.layout == "grade":
-                print(f"    resumo.: {principal.with_name(nomes['-resumo'])}")
-            print(f"    {'CELULA':<8} {'CAMPO':<26} ARQUIVO / OBSERVACAO")
+            itens = exporter.mapa_celulas()
+            estruturado = exporter.formato in ("json", "xml")
+            rotulo = "CAMINHO" if estruturado else "CELULA"
+            largura = max([len(rotulo)] + [len(i["celula"]) for i in itens]) + 2
 
-            linhas_csv = [["arquivo", "celula", "campo", "observacao"]]
-            for item in exporter.mapa_celulas():
+            descricao = f"formato {exporter.formato}"
+            if not estruturado:
+                descricao += f"  /  layout {exporter.layout}"
+            print(f"\n=== {alvo.nome}  /  exporter '{nome_exporter}'  /  {descricao}  /  ordem {exporter.ordem}")
+            print(f"    arquivo: {principal}")
+            if not estruturado and exporter.layout == "grade":
+                print(f"    resumo.: {principal.with_name(nomes['-resumo'])}")
+            print(f"    {rotulo:<{largura}} {'CAMPO':<26} OBSERVACAO")
+
+            linhas_csv = [["arquivo", rotulo.lower(), "campo", "observacao"]]
+            for item in itens:
                 arquivo = nomes.get(item["arquivo"], item["arquivo"])
-                print(f"    {item['celula']:<8} {item['campo']:<26} {arquivo}  ({item['origem']})")
+                print(f"    {item['celula']:<{largura}} {item['campo']:<26} {item['origem']}")
                 linhas_csv.append([arquivo, item["celula"], item["campo"], item["origem"]])
 
             if pasta:
@@ -173,8 +181,8 @@ def cmd_celulas(args) -> int:
     if not encontrados:
         print("Nenhum exporter do tipo 'classx' associado aos alvos configurados.")
         return 1
-    print("\nAs celulas so mudam se voce alterar layout, ordem, slots ou as listas")
-    print("de campos. Se mudar, gere o mapa de novo e refaca os vinculos na cena.")
+    print("\nAs referencias so mudam se voce alterar formato, layout, ordem, slots")
+    print("ou as listas de campos. Se mudar, gere o mapa de novo e refaca os vinculos.")
     return 0
 
 

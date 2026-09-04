@@ -201,3 +201,123 @@ def test_mapa_descreve_o_significado_da_linha(tmp_path):
 
     fixo, _ = _exportar(tmp_path / "b", {"layout": "grade", "ordem": "fixa", "candidatos_fixos": ["22"]})
     assert "numero 22" in fixo.mapa_celulas()[0]["origem"]
+
+
+# --- JSON e XML: vinculo por nome, sem celula --------------------------------
+
+def test_json_mantem_a_geometria_dos_slots(tmp_path):
+    import json as _json
+
+    _, arquivos = _exportar(tmp_path / "a", {"formato": "json", "slots": 6})
+    corpo = _json.loads(arquivos[0].read_text(encoding="utf-8"))
+    assert len(corpo["candidatos"]) == 6
+    assert [c["posicao"] for c in corpo["candidatos"]] == [1, 2, 3, 4, 5, 6]
+    assert corpo["candidatos"][0]["nome"] == "CANDIDATA ALFA"
+    assert corpo["candidatos"][5]["visivel"] == "0"
+    assert corpo["candidatos"][5]["nome"] == ""
+
+
+def test_json_entrega_numero_de_verdade_para_o_sort(tmp_path):
+    import json as _json
+
+    _, arquivos = _exportar(tmp_path, {"formato": "json", "slots": 3})
+    corpo = _json.loads(arquivos[0].read_text(encoding="utf-8"))
+    primeiro = corpo["candidatos"][0]
+    assert primeiro["votos"] == "2.000.000"          # formatado, para o ar
+    assert primeiro["votos_num"] == 2000000          # numero, para ordenar
+    assert primeiro["percentual_num"] == 50.0
+    assert corpo["resumo"]["apuracao_pct_num"] == 50.0
+
+
+def test_json_slot_vazio_tem_numerico_nulo(tmp_path):
+    import json as _json
+
+    _, arquivos = _exportar(tmp_path, {"formato": "json", "slots": 4})
+    corpo = _json.loads(arquivos[0].read_text(encoding="utf-8"))
+    assert corpo["candidatos"][3]["votos_num"] is None
+
+
+def test_json_inclui_mapa_achatado(tmp_path):
+    import json as _json
+
+    _, arquivos = _exportar(tmp_path, {"formato": "json", "slots": 2})
+    corpo = _json.loads(arquivos[0].read_text(encoding="utf-8"))
+    assert corpo["plano"]["cand1_nome"] == "CANDIDATA ALFA"
+    assert corpo["plano"]["cand2_nome"] == "CANDIDATO BETA"
+    assert corpo["plano"]["cargo"] == "GOVERNADOR"
+
+
+def test_json_sem_plano_quando_desligado(tmp_path):
+    import json as _json
+
+    _, arquivos = _exportar(tmp_path, {"formato": "json", "slots": 2, "incluir_plano": False})
+    assert "plano" not in _json.loads(arquivos[0].read_text(encoding="utf-8"))
+
+
+def test_xml_repete_o_elemento_candidato(tmp_path):
+    from xml.etree import ElementTree as ET
+
+    _, arquivos = _exportar(tmp_path, {"formato": "xml", "slots": 5})
+    raiz = ET.fromstring(arquivos[0].read_text(encoding="utf-8"))
+    candidatos = raiz.findall("candidatos/candidato")
+    assert len(candidatos) == 5
+    assert candidatos[0].find("nome").text == "CANDIDATA ALFA"
+    assert candidatos[0].get("posicao") == "1"
+    assert raiz.find("resumo/cargo").text == "GOVERNADOR"
+
+
+def test_xml_escapa_caractere_especial(tmp_path):
+    from xml.etree import ElementTree as ET
+
+    boletim = _boletim({"n": "11", "nm": "Alfa & Beta", "cc": "PA", "vap": "10", "pvap": "100,00"})
+    _, arquivos = _exportar(tmp_path, {"formato": "xml", "slots": 1}, boletim=boletim)
+    raiz = ET.fromstring(arquivos[0].read_text(encoding="utf-8"))
+    assert raiz.find("candidatos/candidato/nome").text == "ALFA & BETA"
+
+
+def test_extensao_segue_o_formato(tmp_path):
+    for formato, extensao in (("csv", ".csv"), ("json", ".json"), ("xml", ".xml")):
+        _, arquivos = _exportar(tmp_path / formato, {"formato": formato, "slots": 2})
+        assert arquivos[0].suffix == extensao
+
+
+def test_mapa_json_usa_caminho_de_chave(tmp_path):
+    exporter, _ = _exportar(
+        tmp_path, {"formato": "json", "slots": 2, "campos_resumo": ["cargo"], "campos_candidato": ["nome"]}
+    )
+    mapa = {item["campo"]: item["celula"] for item in exporter.mapa_celulas()}
+    assert mapa["cargo"] in ("resumo.cargo", "plano.cargo")
+    assert mapa["cand1_nome"] == "plano.cand1_nome"
+    caminhos = [i["celula"] for i in exporter.mapa_celulas()]
+    assert "candidatos[0].nome" in caminhos
+    assert "candidatos[1].nome" in caminhos
+
+
+def test_mapa_xml_usa_xpath(tmp_path):
+    exporter, _ = _exportar(
+        tmp_path, {"formato": "xml", "slots": 2, "campos_resumo": ["cargo"], "campos_candidato": ["nome"],
+                   "incluir_plano": False}
+    )
+    caminhos = [i["celula"] for i in exporter.mapa_celulas()]
+    assert "/dados/resumo/cargo" in caminhos
+    assert "/dados/candidatos/candidato[1]/nome" in caminhos
+    assert "/dados/candidatos/candidato[2]/nome" in caminhos
+
+
+def test_ordem_fixa_vale_tambem_em_json(tmp_path):
+    import json as _json
+
+    _, arquivos = _exportar(
+        tmp_path, {"formato": "json", "ordem": "fixa", "candidatos_fixos": ["33", "11"]}
+    )
+    corpo = _json.loads(arquivos[0].read_text(encoding="utf-8"))
+    assert [c["numero"] for c in corpo["candidatos"]] == ["33", "11"]
+
+
+def test_campos_numericos_no_csv_saem_sem_formatacao(tmp_path):
+    """No CSV o Sort do LiveBoard precisa de uma coluna crua para 'As number'."""
+    _, arquivos = _exportar(tmp_path, {"layout": "grade", "slots": 2})
+    linhas = _ler(arquivos[0])
+    idx = linhas[0].index("votos_num")
+    assert linhas[1][idx] == "2000000"
+    assert linhas[0].index("percentual_num") >= 0

@@ -97,21 +97,27 @@ exporters:
     arquivo_resumo: true
     limite_candidatos: 8
 
-  # ClassX LiveBoard - CSV de grade fixa para vinculo por celula.
-  # A geometria nunca muda: sempre 'slots' linhas de candidato, sempre as
-  # mesmas colunas. Rode 'gctse celulas' para o mapa de vinculo da cena.
+  # ClassX LiveBoard. Gera CSV, JSON ou XML com a mesma geometria e os
+  # mesmos nomes de campo - trocar o 'Type' no DataSource nao muda nada aqui.
+  # Rode 'gctse celulas' para o mapa de vinculo da cena.
   liveboard:
     tipo: classx
-    layout: chave_valor      # chave_valor | grade | largo
+    formato: json            # json | xml | csv
     ordem: colocacao         # colocacao (1o, 2o...) | fixa (candidato fixo por linha)
     slots: 6                 # linhas de candidato, sempre esta quantidade
-    delimitador: ";"
-    encoding: utf-8-sig      # com BOM: acento correto ao abrir no Excel
+    encoding: utf-8
     destino: dados/saida/liveboard
     nome_arquivo: "{alvo}"
     formato_nome_partido: "{nome} ({partido})"
-    # Para ordem: fixa - a linha 1 e sempre o primeiro numero da lista,
-    # independentemente da colocacao. Numero que nao aparecer sai vazio.
+    incluir_plano: true      # tambem entrega cand1_nome, cand2_votos... achatado
+
+    # --- so valem quando formato: csv ---
+    layout: chave_valor      # chave_valor | grade | largo
+    delimitador: ";"         # casa com 'Separator' no DataSource
+
+    # --- para ordem: fixa ---
+    # A linha 1 e sempre o primeiro numero da lista, independentemente da
+    # colocacao. Numero que nao aparecer no boletim sai vazio (visivel = 0).
     # ordem: fixa
     # candidatos_fixos: ["22", "13", "12"]
 

@@ -28,75 +28,154 @@ No layout largo (`cand1_nome`, `cand2_percentual`, …) os dois conjuntos vêm n
 
 ## ClassX LiveBoard
 
-O LiveBoard amarra cada objeto da cena a uma célula (B7, C12…). Isso é
-confiável desde que a **geometria do arquivo nunca mude**. O exporter `classx`
-garante isso.
+O exporter `classx` gera **CSV, JSON ou XML** — os três com os mesmos nomes de
+campo e as mesmas garantias. Trocar o `Type` no DataSource não obriga a mexer
+em nada do lado do servidor: é só apontar para o outro arquivo.
+
+### Qual `Type` escolher
+
+| Type | Vínculo | Recomendação |
+|---|---|---|
+| **JSON** | pelo nome do campo (`resumo.cargo`, `candidatos[0].nome`) | **comece por aqui** — não existe deslocamento de célula, e os campos numéricos vêm como número de verdade |
+| **XML** | por XPath (`/dados/candidatos/candidato[1]/nome`) | igualmente seguro; use se o LiveBoard amarrar melhor em XML na sua versão |
+| **CSV** | por célula/coluna | funciona, desde que a geometria nunca mude — é o que este exporter garante |
+
+Se o vínculo por nome funcionar bem na sua versão do LiveBoard, JSON resolve de
+uma vez o problema que você levantou: não há coordenada para deslocar.
 
 ### A decisão que vem antes da configuração
 
-Célula não se move sozinha. O que muda é o que ela significa:
+Vale para os três formatos. Célula (ou índice) não se move sozinha — o que
+muda é o que ela significa:
 
-| `ordem` | A linha 1 é… | Na virada de liderança | Use quando |
+| `ordem` | A posição 1 é… | Na virada de liderança | Use quando |
 |---|---|---|---|
-| `colocacao` | sempre o 1º colocado | o **nome** dentro da célula troca | placar de apuração, ranking |
+| `colocacao` | sempre o 1º colocado | o **nome** dentro dela troca | placar de apuração, ranking |
 | `fixa` | sempre o candidato nº X | nada muda de lugar | cena com foto/cor fixa por posição |
 
-Se a cena tem a foto do candidato desenhada na posição, `ordem: fixa` é o
-único modo correto — senão a foto do A aparece com os votos do B na primeira
-virada. Se a cena é um ranking neutro, `colocacao` é o certo.
-
+Se a cena tem a foto do candidato desenhada na posição, `ordem: fixa` é o único
+modo correto — senão a foto do A aparece com os votos do B na primeira virada.
 Dá para ter os dois ao mesmo tempo: dois exporters `classx`, cada um com sua
 pasta e sua cena.
 
 ### O risco real: geometria variável
 
-O que de fato desloca célula não é o ranking — é o arquivo mudar de tamanho.
-Quatro linhas às 17h e seis às 20h (apareceu candidato, o bloco de resumo
-cresceu) e tudo abaixo desliza, sem erro visível. O exporter blinda contra
-isso:
+No CSV, o que de fato desloca célula não é o ranking — é o arquivo mudar de
+tamanho. Quatro linhas às 17h e seis às 20h (apareceu candidato, o bloco de
+resumo cresceu) e tudo abaixo escorrega, sem erro visível. O exporter blinda
+contra isso, e a mesma garantia vale em JSON e XML:
 
-- **sempre** `slots` linhas de candidato — sobrou, corta; faltou, preenche
+- **sempre** `slots` registros de candidato — sobrou, corta; faltou, preenche
   vazio;
-- ordem das colunas fixa em configuração, nunca a ordem que o TSE mandou;
+- ordem dos campos fixa em configuração, nunca a ordem que o TSE mandou;
 - cabeçalho sempre na mesma linha;
 - escrita atômica, então o LiveBoard nunca lê o arquivo pela metade.
 
-Cada linha vazia sai com `visivel = 0` — amarre a visibilidade do objeto a
-esse campo e a cena esconde sozinha as posições que não existem.
+Registro vazio sai com `visivel = 0` — amarre a visibilidade do objeto a esse
+campo e a cena esconde sozinha as posições que não existem.
 
-### Layouts
+### Sort e "As number"
 
-**`chave_valor`** (padrão, e o mais indicado para vínculo por célula) — coluna
-A é o nome do campo, coluna B é o valor. Cada campo tem sua linha fixa; você
-amarra sempre em `B<n>`:
+O `Sort` do DataSource não consegue ordenar `2.400.000` nem `50,00%` como
+número — são texto formatado em pt-BR. Por isso cada campo numérico vem em duas
+versões:
+
+| Para exibir no ar | Para ordenar / calcular |
+|---|---|
+| `votos` → `2.400.000` | `votos_num` → `2400000` |
+| `percentual` → `50,00%` | `percentual_num` → `50.0` |
+| `apuracao_pct` → `50,00%` | `apuracao_pct_num` → `50.0` |
+
+Se for usar o `Sort`, aponte **Column** para `votos_num` e marque **As number**.
+Em JSON esses campos já saem como número (não string), então o `As number`
+sequer é necessário. Os `*_num` também servem para largura de barra de
+percentual.
+
+Os dados já saem ordenados por votos, então o `Sort` do LiveBoard é opcional —
+exceto se você usar `ordem: fixa` e quiser um ranking em outra cena a partir do
+mesmo arquivo.
+
+### JSON — o formato
+
+```json
+{
+  "resumo": {
+    "cargo": "GOVERNADOR",
+    "apuracao_pct": "50,00%",
+    "apuracao_pct_num": 50.0,
+    "selo": ""
+  },
+  "candidatos": [
+    { "posicao": 1, "visivel": "1", "numero": "11", "nome": "CANDIDATO ALFA",
+      "partido": "PSD", "nome_partido": "CANDIDATO ALFA (PSD)",
+      "percentual": "50,00%", "votos": "2.000.000",
+      "percentual_num": 50.0, "votos_num": 2000000 },
+    { "posicao": 3, "visivel": "0", "nome": "", "votos_num": null }
+  ],
+  "plano": { "cargo": "GOVERNADOR", "cand1_nome": "CANDIDATO ALFA", "...": "" }
+}
+```
+
+O bloco `plano` é o mesmo conteúdo achatado (`cand1_nome`, `cand2_percentual`…),
+para quem prefere amarrar por uma chave única em vez de índice de array — é o
+equivalente direto ao seu jeito atual de buscar campo a campo. Desligue com
+`incluir_plano: false` se não usar.
+
+### XML — o formato
+
+```xml
+<dados>
+  <resumo>
+    <cargo>GOVERNADOR</cargo>
+    <apuracao_pct>50,00%</apuracao_pct>
+  </resumo>
+  <candidatos>
+    <candidato posicao="1">
+      <nome>CANDIDATO ALFA</nome>
+      <nome_partido>CANDIDATO ALFA (PSD)</nome_partido>
+      <percentual>50,00%</percentual>
+      <votos_num>2000000</votos_num>
+    </candidato>
+  </candidatos>
+</dados>
+```
+
+`<candidato>` repetido sob `<candidatos>` é a estrutura que leitores de XML
+esperam para iterar registros.
+
+### CSV — os três layouts
+
+Configure o DataSource com **Separator** `;`, **Text delimiter** `"`, nomes de
+coluna na primeira linha e **trim fields** ligado — bate com o que é gerado.
+
+**`chave_valor`** (padrão para CSV) — coluna A é o nome do campo, coluna B é o
+valor. Cada campo tem sua linha fixa; você amarra sempre em `B<n>`:
 
 ```
 campo;valor
 cargo;GOVERNADOR
-abrangencia;PARANA
 ...
-cand1_nome_partido;RATINHO JUNIOR (PSD)     <- B19
-cand1_percentual;50,00%                     <- B20
+cand1_nome_partido;CANDIDATO ALFA (PSD)     <- B20
+cand1_percentual;50,00%                     <- B21
 ```
 
-Repare que é exatamente o padrão que você descreveu: nome com partido numa
-célula, percentual na de baixo. O campo `nome_partido` já vem montado, então
-um único objeto da cena resolve a linha inteira. O formato é configurável em
-`formato_nome_partido`.
+É exatamente o padrão que você descreveu: nome com partido numa célula,
+percentual na de baixo. O campo `nome_partido` já vem montado, então um único
+objeto da cena resolve a linha (formato configurável em `formato_nome_partido`).
 
 **`grade`** — tabela clássica: linha 1 é cabeçalho, linhas 2 em diante são os
-slots. Bom quando a cena tem uma lista e você amarra por coluna. O resumo sai
-num segundo arquivo, `<alvo>-resumo.csv`, também de geometria fixa.
+slots. É o layout que combina com **Sort** e com nomes de coluna na primeira
+linha. O resumo sai num segundo arquivo, `<alvo>-resumo.csv`, também de
+geometria fixa.
 
 ```
-visivel;numero;nome;partido;nome_partido;percentual;votos;eleito
-1;11;RATINHO JUNIOR;PSD;RATINHO JUNIOR (PSD);50,00%;2.000.000;0
-1;22;CANDIDATO BETA;PL;CANDIDATO BETA (PL);35,00%;1.400.000;0
-0;;;;;;;
+visivel;numero;nome;partido;nome_partido;percentual;votos;percentual_num;votos_num;eleito
+1;11;CANDIDATO ALFA;PSD;CANDIDATO ALFA (PSD);50,00%;2.000.000;50.00;2000000;0
+0;;;;;;;;;
 ```
 
-**`largo`** — tudo numa linha só (linha 1 cabeçalho, linha 2 valores). Para
-cena de take único: `A2`, `B2`, `C2`…
+**`largo`** — tudo numa linha só (linha 1 cabeçalho, linha 2 valores). Para cena
+de take único: `A2`, `B2`, `C2`…
 
 ### Configuração
 
@@ -104,31 +183,36 @@ cena de take único: `A2`, `B2`, `C2`…
 exporters:
   liveboard:
     tipo: classx
-    layout: chave_valor
+    formato: json           # json | xml | csv
     ordem: colocacao
     slots: 6
-    delimitador: ";"
-    encoding: utf-8-sig
+    encoding: utf-8
     destino: "//liveboard/dados"
     nome_arquivo: "{alvo}"
     formato_nome_partido: "{nome} ({partido})"
+    incluir_plano: true
+
+    # só valem quando formato: csv
+    layout: chave_valor
+    delimitador: ";"
 ```
 
 Para o modo de candidato fixo:
 
 ```yaml
     ordem: fixa
-    candidatos_fixos: ["22", "13", "12"]   # linha 1 = nº 22, linha 2 = nº 13...
+    candidatos_fixos: ["22", "13", "12"]   # posição 1 = nº 22, posição 2 = nº 13…
 ```
 
 Em `ordem: fixa`, `slots` passa a ser o tamanho da lista. Número que não
-aparecer no boletim sai como linha vazia, com `visivel = 0`.
+aparecer no boletim sai como registro vazio, com `visivel = 0`.
 
-### O mapa de células
+### O mapa de vínculos
 
-Não amarre a cena por tentativa e erro. O comando abaixo diz exatamente qual
-célula guarda qual campo — e roda sem precisar de dado do TSE, então pode ser
-gerado semanas antes do pleito e entregue junto com o roteiro da cena:
+Não amarre a cena por tentativa e erro. O comando abaixo diz exatamente onde
+cada campo está — célula no CSV, caminho de chave no JSON, XPath no XML. Roda
+sem precisar de dado do TSE, então pode ser gerado semanas antes do pleito e
+entregue junto com o roteiro da cena:
 
 ```bash
 gctse celulas
@@ -136,31 +220,31 @@ gctse celulas --pasta dados/saida/mapa    # também grava em CSV
 ```
 
 ```
-=== governador-pr  /  exporter 'liveboard'  /  layout chave_valor  /  ordem colocacao
-    arquivo: dados/saida/liveboard/governador-pr.csv
-    CELULA   CAMPO                      ARQUIVO / OBSERVACAO
-    B2       cargo                      governador-pr.csv  (resumo)
-    B5       apuracao_pct               governador-pr.csv  (resumo)
-    B17      cand1_nome                 governador-pr.csv  (1o colocado no momento)
-    B19      cand1_nome_partido         governador-pr.csv  (1o colocado no momento)
-    B20      cand1_percentual           governador-pr.csv  (1o colocado no momento)
+=== governador-pr  /  exporter 'liveboard'  /  formato json  /  ordem colocacao
+    arquivo: dados/saida/liveboard/governador-pr.json
+    CAMINHO                        CAMPO                      OBSERVACAO
+    resumo.cargo                   cargo                      resumo
+    resumo.apuracao_pct            apuracao_pct               resumo
+    candidatos[0].nome             cand1_nome                 1o colocado no momento
+    candidatos[0].nome_partido     cand1_nome_partido         1o colocado no momento
+    plano.cand1_nome               cand1_nome                 1o colocado no momento (plano)
 ```
 
-A coluna de observação é o que evita o erro caro: ela diz se aquela célula é
+A coluna de observação é o que evita o erro caro: ela diz se aquela posição é
 “1º colocado no momento” ou “sempre o candidato nº 22”.
 
-**As células só mudam se você alterar `layout`, `ordem`, `slots` ou as listas
-`campos_resumo` / `campos_candidato`.** Se mexer em qualquer um desses depois
-de a cena estar amarrada, gere o mapa de novo e refaça os vínculos. Fora isso,
-a posição é estável do primeiro ao último boletim do dia.
+**As referências só mudam se você alterar `formato`, `layout`, `ordem`, `slots`
+ou as listas `campos_resumo` / `campos_candidato`.** Se mexer em qualquer um
+desses depois de a cena estar amarrada, gere o mapa de novo e refaça os
+vínculos. Fora isso, a posição é estável do primeiro ao último boletim do dia.
 
 ### Encoding
 
-`utf-8-sig` (UTF-8 com BOM) é o padrão sugerido: o acento sai correto e o
-arquivo abre certo no Excel se alguém precisar conferir na mão. Se o LiveBoard
-mostrar caractere estranho, tente `cp1252`. Em último caso,
-`texto.remover_acentos: true` tira o problema pela raiz, ao custo de o nome ir
-ao ar sem acento.
+Em JSON e XML, `utf-8`. Em CSV, `utf-8-sig` (UTF-8 com BOM) é o padrão
+sugerido: o acento sai correto e o arquivo abre certo no Excel se alguém
+precisar conferir na mão. Se o LiveBoard mostrar caractere estranho, tente
+`cp1252`. Em último caso, `texto.remover_acentos: true` tira o problema pela
+raiz, ao custo de o nome ir ao ar sem acento.
 
 ## Ross XPression (DataLinq)
 
