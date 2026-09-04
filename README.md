@@ -69,6 +69,9 @@ Dois modelos para partir:
   `colocacao` para o ranking, campos enxutos. Copie este se estiver começando.
 - **`config/config.example.yaml`** — todas as opções documentadas, para
   consulta.
+- **`config/config.validacao-2022.yaml`** — aponta para o pleito de 2022, que
+  ainda está publicado, para validar a cadeia inteira contra dado real do TSE
+  antes de 2026. Veja [`docs/TSE-API.md`](docs/TSE-API.md).
 
 Tudo fica em `config/config.yaml`. As quatro seções que você mais vai mexer:
 

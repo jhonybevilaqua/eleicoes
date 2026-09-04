@@ -112,6 +112,31 @@ com vírgula decimal (`"49,10"`). O parser converte via
 (`12.345.678`, `49,10%`) e também em forma numérica (`votos_num`,
 `percentual_num`) para quem precisa calcular ou desenhar barra.
 
+## Validar contra dado real, antes de 2026
+
+Os arquivos dos pleitos anteriores continuam publicados. Isso permite provar a
+cadeia inteira — URL, parser, mapeamento, exporters, vínculo da cena no
+LiveBoard — contra dado **real** do TSE, sem esperar 2026. O resultado de 2022
+é conhecido e imutável, então qualquer divergência é erro nosso, não do dado.
+
+```bash
+gctse -c config/config.validacao-2022.yaml descobrir
+gctse -c config/config.validacao-2022.yaml inspecionar --abrangencia br --cargo 1
+gctse -c config/config.validacao-2022.yaml uma-vez
+```
+
+Rode da rede da emissora. Confira em `dados/validacao-2022/gc/presidente-br.json`
+o 2º turno de 2022: Lula 60.345.999 (50,90%) e Bolsonaro 58.206.354 (49,10%).
+Se bater, a cadeia está correta ponta a ponta.
+
+Isso **não** valida os códigos e as abreviações de 2026 — o TSE já renomeou
+campos entre pleitos. O checklist abaixo continua obrigatório. Mas reduz o
+trabalho do dia D a confirmar dois códigos e conferir nomes de campo, em vez de
+descobrir a integração inteira sob pressão.
+
+Se algum arquivo der 404, rode `descobrir` para ver os códigos válidos — pode
+ser que o TSE tenha mudado o caminho ou retirado o pleito antigo do ar.
+
 ## Checklist para 2026
 
 Semanas antes do pleito, quando o TSE publicar a configuração:

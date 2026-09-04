@@ -1,5 +1,26 @@
 # Runbook — dia da eleição
 
+## Agora · O que não depende do TSE
+
+Só três coisas esperam o TSE publicar: os códigos do pleito, a conferência dos
+nomes de campo e os números dos candidatos (após o registro). Todo o resto pode
+e deve ser feito com antecedência.
+
+- [ ] Liberar, com a TI, o acesso do PC de operação a `resultados.tse.jus.br`
+      (443). É o item com maior prazo de espera — comece por ele.
+- [ ] Instalar no PC de operação e deixar o serviço subindo sozinho
+      (`scripts\rodar.bat` ou systemd).
+- [ ] Validar a cadeia contra dado real com `config/config.validacao-2022.yaml`
+      (ver `docs/TSE-API.md`). Isso derruba a maior parte do risco técnico.
+- [ ] `gctse exemplo` e montar/amarrar as cenas do LiveBoard contra
+      `exemplos/`, usando o mapa em `exemplos/mapa/`.
+- [ ] Aferir `texto.limites.nome` contra o lower third real — meça no ar, não
+      no olho.
+- [ ] Definir as praças e os cargos que vão ao ar, e quantas posições cada cena
+      mostra (`slots`).
+- [ ] Configurar e testar o webhook de alertas (Teams ou Power Automate).
+- [ ] Definir a escala de plantão do dia e quem decide tirar o placar do ar.
+
 ## D-30 · Preparação
 
 - [ ] `gctse descobrir` assim que o TSE publicar a configuração do pleito;
