@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -31,6 +32,18 @@ from .tse.endpoints import Endpoints
 from .util.log import configurar
 
 PADRAO_CONFIG = "config/config.yaml"
+
+
+def _ancorar_na_pasta_do_executavel() -> None:
+    """No executavel empacotado, trabalha a partir da pasta do proprio .exe.
+
+    Sem isso, dar duplo clique no gctse.exe faz o processo herdar um diretorio
+    de trabalho qualquer (as vezes C:\Windows\System32) e todos os caminhos
+    relativos da config - config/, dados/saida/, logs/ - apontam para o lugar
+    errado. Ancorar aqui e o que permite distribuir uma pasta autocontida.
+    """
+    if getattr(sys, "frozen", False):
+        os.chdir(Path(sys.executable).resolve().parent)
 
 
 def _cfg(args):
@@ -332,6 +345,7 @@ def construir_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    _ancorar_na_pasta_do_executavel()
     parser = construir_parser()
     args = parser.parse_args(argv)
     try:

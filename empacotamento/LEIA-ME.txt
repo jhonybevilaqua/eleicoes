@@ -1,0 +1,49 @@
+===========================================================================
+ gctse - Apuracao TSE para o GC
+ Versao executavel: NAO precisa instalar Python nem nada.
+===========================================================================
+
+COMO USAR
+
+  Copie esta pasta inteira para o PC de operacao (ex.: C:\gctse) e rode os
+  arquivos .bat na ordem. Basta dar duplo clique.
+
+  1-validar.bat          Confere se esta tudo certo. Comece por aqui.
+  2-gerar-exemplos.bat   Cria a pasta exemplos\ com os arquivos que o GC vai
+                         ler, mais o mapa de qual campo esta onde. E com eles
+                         que o time monta e amarra a cena no LiveBoard.
+  3-ensaio.bat           Simula uma apuracao completa em 10 minutos, com o
+                         placar se mexendo. Para ensaiar com a equipe.
+  4-rodar.bat            Operacao de verdade, no dia da eleicao. Fica rodando
+                         e se reinicia sozinho se cair.
+
+IMPORTANTE
+
+  * A pasta e autocontida: nao instala nada no Windows, nao mexe no registro.
+    Para desinstalar, apague a pasta.
+
+  * Mantenha o gctse.exe junto da pasta _internal e da pasta config. Se
+    separar, nao funciona.
+
+  * O que voce vai editar e config\config.yaml, num editor de texto comum
+    (Bloco de Notas serve).
+
+  * O 3-ensaio.bat usa dados INVENTADOS, com selo "PARCIAL - NAO OFICIAL".
+    Nunca coloque a saida do ensaio no ar.
+
+  * Para a operacao real, o PC precisa de acesso a resultados.tse.jus.br na
+    porta 443. Peca a liberacao a TI com antecedencia - costuma demorar.
+
+ONDE ESTA O RESTO
+
+  docs\PRIMEIRO-USO.md      passo a passo, do zero ao placar na cena
+  docs\GC-INTEGRACAO.md     como amarrar a cena no ClassX LiveBoard
+  docs\OPERACAO.md          checklist e contingencia do dia da eleicao
+  docs\TSE-API.md           a fonte de dados e o que confirmar em 2026
+
+SE O ANTIVIRUS RECLAMAR
+
+  Executaveis gerados por PyInstaller as vezes sao sinalizados por engano.
+  Peca a TI para liberar a pasta. O codigo-fonte e o processo de compilacao
+  estao publicos no repositorio, entao da para auditar e ate recompilar
+  internamente se a politica exigir.

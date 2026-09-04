@@ -1,0 +1,99 @@
+# Compila o executavel Windows. Roda em runner Windows porque PyInstaller nao
+# faz compilacao cruzada: um .exe precisa ser construido no Windows.
+#
+# Como baixar o resultado:
+#   GitHub -> aba Actions -> "Executavel Windows" -> ultima execucao ->
+#   secao Artifacts -> gctse-windows.zip
+#
+# Marcar uma tag (git tag v1.0.0 && git push --tags) publica o mesmo zip
+# como Release, que fica com link fixo e nao expira.
+
+name: Executavel Windows
+
+on:
+  workflow_dispatch:        # botao "Run workflow" na aba Actions
+  push:
+    branches: [claude/gc-tse-api-automation-v3nvef]
+    tags: ["v*"]
+
+permissions:
+  contents: write           # necessario para publicar a Release na tag
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller pytest
+
+      - name: Rodar os testes
+        run: python -m pytest tests -q
+        env:
+          PYTHONPATH: src
+
+      - name: Compilar o executavel
+        run: >
+          python -m PyInstaller
+          --name gctse --onedir --console --noconfirm --clean
+          --paths src
+          --hidden-import gctse.exporters.arquivo_csv
+          --hidden-import gctse.exporters.arquivo_json
+          --hidden-import gctse.exporters.arquivo_xml
+          --hidden-import gctse.exporters.caspar
+          --hidden-import gctse.exporters.classx
+          --hidden-import gctse.exporters.http_push
+          --hidden-import gctse.exporters.viz_tab
+          gctse_launcher.py
+
+      - name: Montar a pasta de distribuicao
+        shell: pwsh
+        run: |
+          $alvo = "dist\gctse"
+          New-Item -ItemType Directory -Force -Path "$alvo\config", "$alvo\docs" | Out-Null
+          Copy-Item config\*.yaml "$alvo\config\"
+          Copy-Item docs\*.md "$alvo\docs\"
+          Copy-Item README.md "$alvo\"
+          Copy-Item empacotamento\*.bat "$alvo\"
+          Copy-Item empacotamento\LEIA-ME.txt "$alvo\"
+          Copy-Item "$alvo\config\config.recomendado.yaml" "$alvo\config\config.yaml"
+
+      - name: Conferir que o executavel roda
+        shell: pwsh
+        working-directory: dist\gctse
+        run: |
+          .\gctse.exe --version
+          .\gctse.exe validar
+          .\gctse.exe exemplo
+          if (-not (Test-Path "exemplos\mapa")) { throw "mapa de vinculos nao foi gerado" }
+
+      - name: Publicar o zip como artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: gctse-windows
+          path: dist/gctse
+          retention-days: 90
+
+      - name: Publicar Release (somente em tag)
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        run: Compress-Archive -Path dist\gctse\* -DestinationPath gctse-windows.zip
+
+      - uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: gctse-windows.zip
+          body: |
+            Executavel Windows autocontido. Nao precisa de Python instalado.
+
+            Baixe o zip, extraia numa pasta e rode `1-validar.bat`.
+            Passo a passo em `docs/PRIMEIRO-USO.md`.

@@ -1,0 +1,97 @@
+# ---------------------------------------------------------------------------
+# Config de VALIDACAO contra o pleito de 2022 (dado real, ja encerrado).
+#
+# Para que serve: provar a cadeia inteira - URL, parser, mapeamento de campos,
+# exporters, vinculo da cena no LiveBoard - contra arquivos REAIS do TSE, sem
+# esperar 2026. O resultado e conhecido e imutavel, entao qualquer divergencia
+# e erro nosso, nao do dado.
+#
+# O que ela NAO prova: os codigos e as abreviacoes de 2026. O TSE ja mudou
+# nomes de campo entre pleitos - por isso o passo 'inspecionar' continua
+# obrigatorio quando 2026 for publicado.
+#
+# COMO USAR (rode da rede da emissora, nao de um ambiente restrito):
+#
+#   gctse -c config/config.validacao-2022.yaml descobrir
+#       -> confirma os codigos de pleito. Os valores abaixo (544 = 1o turno,
+#          545 = 2o turno) sao o que o TSE usou; se der 404, o 'descobrir'
+#          mostra os codigos corretos e/ou se os arquivos foram retirados do ar.
+#
+#   gctse -c config/config.validacao-2022.yaml inspecionar --abrangencia br --cargo 1
+#       -> lista as chaves REAIS do arquivo. Compare com docs/TSE-API.md.
+#
+#   gctse -c config/config.validacao-2022.yaml uma-vez
+#       -> gera os arquivos em dados/validacao-2022/ com resultado real.
+#          Confira: Lula 60.345.999 (50,90%) e Bolsonaro 58.206.354 (49,10%)
+#          no 2o turno de presidente. Se bater, a cadeia inteira esta correta.
+#
+# Se o resultado bater, o unico risco remanescente para 2026 sao os codigos
+# do pleito e eventual renomeacao de campo - os dois cobertos pelo checklist
+# de docs/TSE-API.md.
+# ---------------------------------------------------------------------------
+
+log:
+  nivel: INFO
+
+tse:
+  base_url: https://resultados.tse.jus.br/oficial
+  ciclo: ele2022
+  pleito: "545"     # 545 = 2o turno; troque para 544 para o 1o turno
+  eleicao: "545"
+  turno: 2
+
+coleta:
+  fonte: tse
+  intervalo_segundos: 60
+  timeout_segundos: 15
+  tentativas: 3
+  cache_condicional: true
+  arquivo_estado: dados/validacao-2022/estado.json
+
+seguranca:
+  # Dado de 2022 vem em fase oficial; se vier outra coisa, queremos ver e
+  # nao descartar em silencio - esta e uma config de diagnostico, nao de ar.
+  bloquear_nao_oficial: false
+  bloquear_regressao: false
+
+texto:
+  caixa: alta
+  formatar_numeros: true
+
+saida:
+  destino: dados/validacao-2022
+
+exporters:
+  conferencia:
+    tipo: json
+    formato: gc
+    destino: dados/validacao-2022/gc
+    nome_arquivo: "{alvo}"
+
+  bruto:
+    tipo: json
+    formato: bruto          # o JSON do TSE como veio, para comparar na mao
+    destino: dados/validacao-2022/bruto
+    nome_arquivo: "{alvo}"
+
+  liveboard:
+    tipo: classx
+    formato: json
+    ordem: colocacao
+    slots: 6
+    destino: dados/validacao-2022/liveboard
+    nome_arquivo: "{alvo}"
+
+padroes_alvo:
+  turno: 2
+  exporters: [conferencia, bruto, liveboard]
+
+alvos:
+  - nome: presidente-br
+    abrangencia: br
+    cargo: 1
+
+  - nome: governador-pr
+    abrangencia: pr
+    cargo: 3
+    apelido_abrangencia: PARANA

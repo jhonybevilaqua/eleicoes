@@ -21,7 +21,16 @@ TSE (JSON)  ──►  coleta  ──►  normalização  ──►  guardas  �
 
 ## Instalação
 
-**Windows (PC de operação)**
+**Windows — executável, sem instalar Python** (recomendado para o PC de operação)
+
+O GitHub compila a versão Windows a cada mudança: aba **Actions** → fluxo
+**Executavel Windows** → última execução → **Artifacts** → `gctse-windows.zip`.
+Extraia numa pasta e rode `1-validar.bat`. Nada é instalado no Windows.
+
+Marcar uma tag (`git tag v1.0.0 && git push --tags`) publica o mesmo pacote
+como **Release**, com link permanente e sem exigir login.
+
+**Windows — a partir do código-fonte**
 
 ```bat
 scripts\instalar.bat

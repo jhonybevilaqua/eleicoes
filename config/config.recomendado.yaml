@@ -1,0 +1,150 @@
+# ---------------------------------------------------------------------------
+# Configuracao recomendada - TV, ClassX LiveBoard, eleicoes gerais 2026.
+#
+# Diferente do config.example.yaml (que documenta TODAS as opcoes), este
+# arquivo e uma escolha fechada: o que eu poria no ar. Copie para
+# config/config.yaml, ajuste as pracas e os numeros dos candidatos, e rode.
+#
+# As quatro decisoes que ele toma, e por que:
+#
+# 1. formato: json
+#    Vinculo por nome de campo. Nao existe celula para deslocar, e os campos
+#    numericos chegam tipados (o "As number" do Sort nem precisa ser marcado).
+#
+# 2. Dois exporters por praca, nao um.
+#    'liveboard_fixo'  ordem: fixa      -> cena com foto/cor por posicao
+#    'liveboard_rank'  ordem: colocacao -> placar/ranking
+#    Custa zero gerar os dois. E evita o erro caro: numa cena com foto fixa,
+#    'colocacao' faz a foto do A aparecer com os votos do B na primeira
+#    virada. Errar para o lado de 'fixa' produz, no pior caso, uma lista fora
+#    de ordem - problema estetico, nao factual.
+#
+# 3. Listas de campos enxutas.
+#    So o que a cena usa. Menos campo = menos vinculo para conferir no D-1.
+#
+# 4. bloquear_nao_oficial: true, sempre.
+#    O TSE publica simulados nos mesmos caminhos antes do pleito.
+# ---------------------------------------------------------------------------
+
+log:
+  nivel: INFO
+  arquivo: logs/gctse.log
+
+tse:
+  base_url: https://resultados.tse.jus.br/oficial
+  ciclo: ele2026
+  pleito: "000"     # <- 'gctse descobrir' quando o TSE publicar
+  eleicao: "000"    # <- idem
+  turno: 1
+
+coleta:
+  fonte: tse
+  intervalo_segundos: 20
+  paralelismo: 4
+  timeout_segundos: 8
+  tentativas: 3
+  cache_condicional: true
+  arquivo_estado: dados/estado/estado.json
+  arquivo_saude: dados/estado/saude.json
+  falhas_para_alerta: 3
+  segundos_sem_dado_para_alerta: 300
+
+seguranca:
+  bloquear_nao_oficial: true
+  bloquear_regressao: true
+  pct_minimo_para_publicar: 0
+
+texto:
+  caixa: alta
+  remover_acentos: false
+  formatar_numeros: true
+  separador_milhar: "."
+  casas_percentual: 2
+  sufixo_percentual: "%"
+  selo_nao_oficial: "PARCIAL - NAO OFICIAL"
+  limites:
+    nome: 22          # afira contra o lower third real antes do D-7
+    partido: 12
+    cargo: 24
+    abrangencia: 24
+
+saida:
+  destino: dados/saida
+  encoding: utf-8
+  quebra_linha: crlf
+
+exporters:
+
+  # Cena com foto ou cor fixa por posicao. A pessoa naquela posicao nunca
+  # muda, aconteca o que acontecer no placar.
+  liveboard_fixo:
+    tipo: classx
+    formato: json
+    ordem: fixa
+    destino: dados/saida/liveboard/fixo
+    nome_arquivo: "{alvo}"
+    formato_nome_partido: "{nome} ({partido})"
+    incluir_plano: true
+    campos_resumo: [cargo, abrangencia, apuracao_pct, apuracao_pct_num, selo, hora_atualizacao]
+    campos_candidato: [visivel, numero, nome, partido, nome_partido, percentual, percentual_num, votos, eleito]
+    # AJUSTAR: numeros na ordem em que aparecem na cena.
+    candidatos_fixos: ["10", "20", "30"]
+
+  # Placar/ranking. Posicao 1 e sempre o 1o colocado.
+  liveboard_rank:
+    tipo: classx
+    formato: json
+    ordem: colocacao
+    slots: 6
+    destino: dados/saida/liveboard/rank
+    nome_arquivo: "{alvo}"
+    formato_nome_partido: "{nome} ({partido})"
+    incluir_plano: true
+    campos_resumo:
+      [cargo, abrangencia, apuracao_pct, apuracao_pct_num, secoes_totalizadas,
+       secoes_total, votos_validos, votos_brancos, votos_nulos, selo, hora_atualizacao]
+    campos_candidato:
+      [visivel, numero, nome, partido, nome_partido, percentual, percentual_num,
+       votos, votos_num, eleito]
+
+  # Site, segunda tela e conferencia. Nao vai para o ar.
+  web_json:
+    tipo: json
+    formato: completo
+    destino: dados/saida/web
+    nome_arquivo: "{alvo}"
+
+alertas:
+  ativo: false
+  webhook_url: ${ALERTA_WEBHOOK_URL}   # Teams ou Power Automate
+  prefixo: "[GC-TSE]"
+  intervalo_repeticao_segundos: 600
+
+mapeamento: {}
+
+padroes_alvo:
+  turno: 1
+  exporters: [liveboard_rank, web_json]
+
+# AJUSTAR as pracas. 'pr' esta aqui como exemplo do mercado da emissora.
+alvos:
+  - nome: presidente-br
+    abrangencia: br
+    cargo: 1
+    exporters: [liveboard_fixo, liveboard_rank, web_json]
+
+  - nome: governador-pr
+    abrangencia: pr
+    cargo: 3
+    apelido_abrangencia: PARANA
+    exporters: [liveboard_fixo, liveboard_rank, web_json]
+
+  - nome: senador-pr
+    abrangencia: pr
+    cargo: 5
+    apelido_abrangencia: PARANA
+
+  - nome: dep-federal-pr
+    abrangencia: pr
+    cargo: 6
+    limite_candidatos: 15

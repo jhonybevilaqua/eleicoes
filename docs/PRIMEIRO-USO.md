@@ -5,7 +5,65 @@ acesso ao GC e permissão para instalar software.
 
 ---
 
-## 1. Instalar o Python (uma vez)
+## Caminho A — executável, sem instalar nada (recomendado)
+
+Use este se você não pode instalar Python nas máquinas. A pasta é
+autocontida: não instala nada no Windows, não mexe no registro, e para
+"desinstalar" basta apagá-la.
+
+### A1. Baixar o executável
+
+O GitHub compila a versão Windows automaticamente a cada mudança no projeto.
+
+1. Abra o repositório no GitHub, aba **Actions**.
+2. Clique no fluxo **Executavel Windows** e abra a execução mais recente que
+   esteja com o visto verde.
+3. Na seção **Artifacts**, baixe **gctse-windows.zip**.
+
+> Para baixar artefatos do Actions é preciso estar logado no GitHub. Se a
+> equipe não tiver conta, marque uma tag no projeto (`git tag v1.0.0 &&
+> git push --tags`): o mesmo pacote vira uma **Release**, com link público e
+> permanente, que não expira.
+
+### A2. Instalar
+
+Extraia o zip numa pasta do PC de operação, por exemplo `C:\gctse`. Pronto —
+não há instalador.
+
+A pasta contém:
+
+```
+gctse.exe                 o programa
+_internal\                bibliotecas (não separe do .exe)
+config\                   as configurações que você edita
+docs\                     esta documentação
+1-validar.bat             confere se está tudo certo
+2-gerar-exemplos.bat      gera os arquivos para montar a cena
+3-ensaio.bat              simula uma apuração completa
+4-rodar.bat               operação real, no dia
+LEIA-ME.txt               resumo de uma página
+```
+
+### A3. Usar
+
+Dê duplo clique nos `.bat` na ordem. Comece por **`1-validar.bat`**: se ele
+responder "Configuracao OK", está tudo funcionando.
+
+Depois pule direto para o passo **6. Montar a cena no LiveBoard**, mais abaixo.
+
+> **Se o antivírus reclamar:** executáveis gerados por PyInstaller às vezes são
+> sinalizados por engano. Peça à TI para liberar a pasta. Como o código-fonte e
+> o processo de compilação são públicos, dá para auditar — e, se a política
+> exigir, compilar internamente com `scripts\build.bat` numa máquina que tenha
+> Python.
+
+---
+
+## Caminho B — a partir do código-fonte
+
+Use se você tem liberdade para instalar Python, ou se vai mexer no código.
+
+### B1. Instalar o Python (uma vez)
 
 Baixe o Python 3.9 ou superior em <https://www.python.org/downloads/> e instale.
 
@@ -20,11 +78,9 @@ python --version
 
 Deve responder `Python 3.x.x`.
 
----
+### B2. Baixar o projeto
 
-## 2. Baixar o projeto
-
-**Com Git** (recomendado, facilita atualizar depois):
+**Com Git:**
 
 ```
 git clone https://github.com/jhonybevilaqua/eleicoes.git
@@ -36,9 +92,7 @@ git checkout claude/gc-tse-api-automation-v3nvef
 `claude/gc-tse-api-automation-v3nvef`, clique em **Code → Download ZIP** e
 extraia numa pasta, por exemplo `C:\gctse`.
 
----
-
-## 3. Instalar
+### B3. Instalar
 
 No Prompt de Comando, dentro da pasta do projeto:
 
@@ -47,8 +101,8 @@ scripts\instalar.bat
 ```
 
 Isso cria o ambiente, instala as dependências e copia
-`config\config.recomendado.yaml` para `config\config.yaml` — o arquivo que você
-vai editar.
+`config\config.recomendado.yaml` para `config\config.yaml` — o arquivo que
+você vai editar.
 
 Em Linux:
 
@@ -66,6 +120,8 @@ cp config/config.recomendado.yaml config/config.yaml
 gctse validar
 ```
 
+No executável, isso é o `1-validar.bat`.
+
 Deve listar os alvos e as URLs montadas. Se aparecer "Configuracao OK", está
 instalado.
 
@@ -78,6 +134,8 @@ instalado.
 ```
 gctse exemplo
 ```
+
+No executável, é o `2-gerar-exemplos.bat`.
 
 Cria a pasta `exemplos\` com os arquivos **exatamente como sairão no ar** —
 mesmos nomes de campo, mesma estrutura — só com conteúdo fictício. E também o
@@ -113,7 +171,7 @@ Detalhes e as outras opções (XML, CSV, cena com foto fixa) em
 gctse ensaio --duracao 600
 ```
 
-Simula uma apuração completa em 10 minutos, escrevendo nas pastas de saída
+No executável, é o `3-ensaio.bat`. Simula uma apuração completa em 10 minutos, escrevendo nas pastas de saída
 configuradas. Deixe a cena no ar (num monitor de teste) e acompanhe: giro do
 placar, nome longo estourando, virada de liderança, chegada aos 100%.
 
@@ -182,7 +240,8 @@ gctse inspecionar --abrangencia br --cargo 1
 Então deixe rodando:
 
 ```
-scripts\rodar.bat
+scripts\rodar.bat        (código-fonte)
+4-rodar.bat              (executável)
 ```
 
 Esse script reinicia sozinho se o processo cair. Acompanhe por
@@ -197,8 +256,11 @@ O passo a passo completo do dia, com contingência, está em
 
 | Sintoma | O que fazer |
 |---|---|
-| `python` não é reconhecido | Python não está no PATH — reinstale marcando a opção |
-| `Ambiente nao encontrado` | rode `scripts\instalar.bat` |
+| `python` não é reconhecido | só no caminho B: Python não está no PATH — reinstale marcando a opção |
+| `Ambiente nao encontrado` | só no caminho B: rode `scripts\instalar.bat` |
+| Antivírus bloqueou o .exe | peça liberação à TI, ou compile internamente com `scripts\build.bat` |
+| O .exe abre e fecha na hora | rode pelos `.bat`, que pausam ao final e mostram a mensagem |
+| `gctse.exe` não acha a config | a pasta `_internal` e a pasta `config` precisam estar junto do .exe |
 | `arquivo de configuracao nao encontrado` | copie `config\config.recomendado.yaml` para `config\config.yaml` |
 | `falha(404)` antes da eleição | normal — o TSE ainda não publicou os arquivos |
 | Erro de conexão | liberação de rede para `resultados.tse.jus.br:443` |

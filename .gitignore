@@ -12,7 +12,14 @@ dados/saida/*
 dados/estado/*
 !dados/saida/.gitkeep
 !dados/estado/.gitkeep
+# Apenas a config em uso na maquina e as copias locais. Os modelos
+# versionados (example, recomendado, validacao-*) precisam ficar no repo.
 config/config.yaml
-config/config.*.yaml
-!config/config.example.yaml
+config/config.local*.yaml
 logs/
+
+# Empacotamento
+build/
+dist/
+.venv-build/
+*.spec
