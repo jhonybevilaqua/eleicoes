@@ -48,8 +48,15 @@ No Windows, sem ativar a venv: `.venv\Scripts\python.exe -m gctse rodar`.
 
 ## Configuração
 
-Tudo fica em `config/config.yaml` (modelo comentado em
-`config/config.example.yaml`). As quatro seções que você mais vai mexer:
+Dois modelos para partir:
+
+- **`config/config.recomendado.yaml`** — escolha fechada, pronta para rodar:
+  JSON no LiveBoard, um exporter `fixa` para cena com foto por posição e um
+  `colocacao` para o ranking, campos enxutos. Copie este se estiver começando.
+- **`config/config.example.yaml`** — todas as opções documentadas, para
+  consulta.
+
+Tudo fica em `config/config.yaml`. As quatro seções que você mais vai mexer:
 
 | Seção | Para quê |
 |---|---|

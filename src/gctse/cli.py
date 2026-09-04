@@ -279,6 +279,13 @@ def main(argv: list[str] | None = None) -> int:
     except KeyboardInterrupt:
         print("\ninterrompido pelo operador")
         return 130
+    except BrokenPipeError:
+        # saida canalizada para 'head'/'more' e fechada antes do fim
+        try:
+            sys.stdout.close()
+        except BrokenPipeError:
+            pass
+        return 0
 
 
 if __name__ == "__main__":
