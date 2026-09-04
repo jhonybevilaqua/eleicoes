@@ -5,6 +5,11 @@ A arte e as medidas ficam em [`tarjas/modelos.html`](../tarjas/modelos.html) —
 abra no navegador para ver cada modelo em proporção 1920×1080, com as guias de
 área segura e o estado de fechamento.
 
+Para imprimir ou circular: [`tarjas/Tarjas-EV-News-2026.pdf`](../tarjas/Tarjas-EV-News-2026.pdf)
+— A4 paisagem, um modelo por página, cada um nos dois estados lado a lado.
+A mesma página gera o PDF (modo `?impressao`), então mexer na arte e rodar
+`python scripts/gerar_pdf_tarjas.py` mantém os dois em sincronia.
+
 ## Os modelos
 
 | Código | Modelo | Foto | Altura | Quando usar |

@@ -23,3 +23,6 @@ build/
 dist/
 .venv-build/
 *.spec
+
+# o PDF das tarjas e gerado, mas vai versionado para circular sem build
+!tarjas/*.pdf

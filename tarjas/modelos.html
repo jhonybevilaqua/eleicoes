@@ -103,12 +103,12 @@ body.guias .guia{opacity:1}
 .barra{background:#ffffff1f;overflow:hidden}
 .barra i{display:block;height:100%;transition:width .4s ease}
 .eleito{display:none;background:#12996b;font-weight:700;letter-spacing:.08em;flex:none}
-body.final .eleito{display:flex;align-items:center}
+.final .eleito{display:flex;align-items:center}
 .rodape{background:#08152b;display:flex;align-items:center;font-weight:500;letter-spacing:.04em;
   color:#c4d3e6}
 .rodape .hora{background:#1257a5;color:#fff;font-weight:600;flex:none}
 .selo-nao{color:#ffcf6b;font-weight:600;letter-spacing:.08em;margin-left:auto}
-body.final .selo-nao{display:none}
+.final .selo-nao{display:none}
 
 /* ---------- especificacao ---------- */
 .specs{display:grid;grid-template-columns:1fr;gap:26px;margin-top:26px}
@@ -139,6 +139,45 @@ body.final .selo-nao{display:none}
 .final-nota ul{padding-left:18px;margin:0}
 .final-nota code{font-family:var(--mono);font-size:13px;color:var(--accent)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* ---------- impressao / PDF ---------- */
+.estado-rot{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-3);margin:0 0 8px}
+.par{display:grid;gap:22px;margin-bottom:8px}
+body.impressao .controls{display:none}
+body.impressao .palco::after{display:none}
+
+@media print{
+  :root{
+    --ground:#ffffff; --surface:#ffffff; --surface-2:#f2f5f9;
+    --ink:#0f1826; --ink-2:#3c4b60; --ink-3:#6c7b91;
+    --rule:#c9d3e0; --rule-2:#e2e8f0; --accent:#12539f; --accent-soft:#eef4fc;
+  }
+  @page{size:A4 landscape;margin:11mm 12mm 13mm}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{background:#fff}
+  .wrap{max-width:none;padding:0 0 8px}
+  .controls,.guia{display:none}
+  header{padding:0 0 16px;break-after:page}
+  h1{font-size:52px}
+  .modelo{break-inside:avoid;break-after:page;padding:0 0 8px;border:0}
+  .modelo:last-of-type{break-after:auto}
+  .par{grid-template-columns:1fr 1fr}
+  /* no papel a tarja e o assunto: recorta o quadro vazio acima dela para
+     caber um modelo por pagina. T6 fica no topo do frame e mantem 16:9. */
+  .palco{aspect-ratio:16/6.4}
+  .palco.palco-alto{aspect-ratio:16/9}
+  .liga td{padding:5.5px 10px 5.5px 0}
+  .medidas li{padding:5px 0}
+  .specs{grid-template-columns:1fr 1.25fr;gap:20px;margin-top:16px}
+  .liga{font-size:10.5px} .liga code{font-size:10px} .medidas{font-size:11px}
+  .medidas span{font-size:10.5px} .museo{font-size:12.5px;margin-bottom:14px}
+  .mtitulo{font-size:24px} .rolar{overflow:visible}
+  .final-nota{break-before:page;border:0;padding:0;margin-top:0}
+  .final-nota h2{font-size:24px}
+  .final-nota p,.final-nota li{font-size:12px}
+  .aviso{font-size:12px}
+}
 </style>
 
 <div class="wrap">
@@ -417,7 +456,7 @@ const modelos = [
              ["Cor do marcador","candidatos[n].cor","identifica o partido"],
              ["Urnas apuradas","resumo.apuracao_pct","chip à direita"]]},
 
-  {cod:"T6", titulo:"Selo permanente de apuração", arte:selo(),
+  {cod:"T6", titulo:"Selo permanente de apuração", arte:selo(), alto:true,
    uso:`Fica no canto durante todo o bloco, entre uma tarja e outra, para o telespectador que acaba
         de sintonizar saber o que está sendo apurado e quanto já saiu. Não mostra candidato.`,
    medidas:[["Posição","topo 56 px · direita 60 px"],["Cabeçalho","altura 38 px"],
@@ -429,11 +468,23 @@ const modelos = [
              ["Atualização","resumo.hora_atualizacao","opcional"]]}
 ];
 
+const impressao = new URLSearchParams(location.search).has("impressao");
+if (impressao) document.body.classList.add("impressao");
+
+const palcos = (arte, alto = "") => impressao
+  ? `<div class="par">
+       <div><p class="estado-rot">Parcial · 63% das urnas</p>
+         <div class="palco ${alto}">${arte}</div></div>
+       <div><p class="estado-rot">Fechamento · 100% apurado</p>
+         <div class="palco final ${alto}">${arte}</div></div>
+     </div>`
+  : `<div class="palco ${alto}">${guias}${arte}</div>`;
+
 document.getElementById("modelos").innerHTML = modelos.map(m => `
   <section class="modelo">
     <div class="mhead"><span class="codigo">${m.cod}</span><h2 class="mtitulo">${m.titulo}</h2></div>
     <p class="museo">${m.uso}</p>
-    <div class="palco">${guias}${m.arte}</div>
+    ${palcos(m.arte, m.alto ? "palco-alto" : "")}
     <div class="specs">
       <div class="bloco"><h3>Medidas · projeto 1920 × 1080</h3>
         <ul class="medidas">${m.medidas.map(([k,v])=>`<li>${k}<span>${v}</span></li>`).join("")}</ul>
@@ -448,9 +499,12 @@ document.getElementById("modelos").innerHTML = modelos.map(m => `
   </section>`).join("");
 
 function aplicar(){
-  const d = document.body.classList.contains("final") ? dados.final : dados.parcial;
-  document.querySelectorAll("[data-f]").forEach(el => el.textContent = d[el.dataset.f]);
-  document.querySelectorAll("[data-b]").forEach(el => el.style.width = d[el.dataset.b] + "%");
+  const global = document.body.classList.contains("final") ? dados.final : dados.parcial;
+  // um palco marcado como 'final' mostra o fechamento mesmo com o resto parcial:
+  // e o que permite a versao impressa trazer os dois estados lado a lado
+  const valores = el => el.closest(".palco.final") ? dados.final : global;
+  document.querySelectorAll("[data-f]").forEach(el => el.textContent = valores(el)[el.dataset.f]);
+  document.querySelectorAll("[data-b]").forEach(el => el.style.width = valores(el)[el.dataset.b] + "%");
 }
 document.getElementById("tFinal").addEventListener("change", e => {
   document.body.classList.toggle("final", e.target.checked); aplicar();

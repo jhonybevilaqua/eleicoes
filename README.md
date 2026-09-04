@@ -168,7 +168,7 @@ mínimo de seções totalizadas.
 - [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md) — como as peças se encaixam e onde mexer
 - [`docs/TSE-API.md`](docs/TSE-API.md) — endpoints, campos e o que confirmar em 2026
 - [`docs/GC-INTEGRACAO.md`](docs/GC-INTEGRACAO.md) — receita por marca de GC
-- [`docs/TARJAS.md`](docs/TARJAS.md) — os seis modelos de tarja e como montá-los
+- [`docs/TARJAS.md`](docs/TARJAS.md) — os seis modelos de tarja, o HTML e o PDF
 - [`docs/OPERACAO.md`](docs/OPERACAO.md) — runbook do dia da eleição e contingência
 
 ## Testes
