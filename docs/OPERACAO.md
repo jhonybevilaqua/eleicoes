@@ -17,8 +17,11 @@
       `fixa` (candidato preso à posição). Cena com foto por posição exige `fixa`.
 - [ ] Se usar o `Sort` do DataSource, apontar para `votos_num` (não para
       `votos`) e marcar "As number".
-- [ ] `gctse celulas --pasta dados/saida/mapa` — gerar o mapa e amarrar a cena
-      por ele, não por tentativa e erro. Guardar o CSV junto com o roteiro.
+- [ ] `gctse exemplo` — gerar os arquivos de exemplo e amarrar a cena contra
+      eles, com o mapa em `exemplos/mapa/`, não por tentativa e erro. Isso pode
+      ser feito meses antes: a estrutura é a mesma do dia.
+- [ ] `gctse exemplo --progresso 100` — conferir a cena de fechamento (eleito,
+      100% totalizado) antes de precisar dela no ar.
 
 ## D-7 · Ensaio técnico
 

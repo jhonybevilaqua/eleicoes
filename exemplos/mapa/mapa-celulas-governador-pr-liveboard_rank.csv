@@ -1,0 +1,143 @@
+﻿arquivo;caminho;campo;observacao
+governador-pr.json;resumo.cargo;cargo;resumo
+governador-pr.json;resumo.abrangencia;abrangencia;resumo
+governador-pr.json;resumo.apuracao_pct;apuracao_pct;resumo
+governador-pr.json;resumo.apuracao_pct_num;apuracao_pct_num;resumo
+governador-pr.json;resumo.secoes_totalizadas;secoes_totalizadas;resumo
+governador-pr.json;resumo.secoes_total;secoes_total;resumo
+governador-pr.json;resumo.votos_validos;votos_validos;resumo
+governador-pr.json;resumo.votos_brancos;votos_brancos;resumo
+governador-pr.json;resumo.votos_nulos;votos_nulos;resumo
+governador-pr.json;resumo.selo;selo;resumo
+governador-pr.json;resumo.hora_atualizacao;hora_atualizacao;resumo
+governador-pr.json;candidatos[0].visivel;cand1_visivel;1o colocado no momento
+governador-pr.json;candidatos[0].numero;cand1_numero;1o colocado no momento
+governador-pr.json;candidatos[0].nome;cand1_nome;1o colocado no momento
+governador-pr.json;candidatos[0].partido;cand1_partido;1o colocado no momento
+governador-pr.json;candidatos[0].nome_partido;cand1_nome_partido;1o colocado no momento
+governador-pr.json;candidatos[0].percentual;cand1_percentual;1o colocado no momento
+governador-pr.json;candidatos[0].percentual_num;cand1_percentual_num;1o colocado no momento
+governador-pr.json;candidatos[0].votos;cand1_votos;1o colocado no momento
+governador-pr.json;candidatos[0].votos_num;cand1_votos_num;1o colocado no momento
+governador-pr.json;candidatos[0].eleito;cand1_eleito;1o colocado no momento
+governador-pr.json;candidatos[1].visivel;cand2_visivel;2o colocado no momento
+governador-pr.json;candidatos[1].numero;cand2_numero;2o colocado no momento
+governador-pr.json;candidatos[1].nome;cand2_nome;2o colocado no momento
+governador-pr.json;candidatos[1].partido;cand2_partido;2o colocado no momento
+governador-pr.json;candidatos[1].nome_partido;cand2_nome_partido;2o colocado no momento
+governador-pr.json;candidatos[1].percentual;cand2_percentual;2o colocado no momento
+governador-pr.json;candidatos[1].percentual_num;cand2_percentual_num;2o colocado no momento
+governador-pr.json;candidatos[1].votos;cand2_votos;2o colocado no momento
+governador-pr.json;candidatos[1].votos_num;cand2_votos_num;2o colocado no momento
+governador-pr.json;candidatos[1].eleito;cand2_eleito;2o colocado no momento
+governador-pr.json;candidatos[2].visivel;cand3_visivel;3o colocado no momento
+governador-pr.json;candidatos[2].numero;cand3_numero;3o colocado no momento
+governador-pr.json;candidatos[2].nome;cand3_nome;3o colocado no momento
+governador-pr.json;candidatos[2].partido;cand3_partido;3o colocado no momento
+governador-pr.json;candidatos[2].nome_partido;cand3_nome_partido;3o colocado no momento
+governador-pr.json;candidatos[2].percentual;cand3_percentual;3o colocado no momento
+governador-pr.json;candidatos[2].percentual_num;cand3_percentual_num;3o colocado no momento
+governador-pr.json;candidatos[2].votos;cand3_votos;3o colocado no momento
+governador-pr.json;candidatos[2].votos_num;cand3_votos_num;3o colocado no momento
+governador-pr.json;candidatos[2].eleito;cand3_eleito;3o colocado no momento
+governador-pr.json;candidatos[3].visivel;cand4_visivel;4o colocado no momento
+governador-pr.json;candidatos[3].numero;cand4_numero;4o colocado no momento
+governador-pr.json;candidatos[3].nome;cand4_nome;4o colocado no momento
+governador-pr.json;candidatos[3].partido;cand4_partido;4o colocado no momento
+governador-pr.json;candidatos[3].nome_partido;cand4_nome_partido;4o colocado no momento
+governador-pr.json;candidatos[3].percentual;cand4_percentual;4o colocado no momento
+governador-pr.json;candidatos[3].percentual_num;cand4_percentual_num;4o colocado no momento
+governador-pr.json;candidatos[3].votos;cand4_votos;4o colocado no momento
+governador-pr.json;candidatos[3].votos_num;cand4_votos_num;4o colocado no momento
+governador-pr.json;candidatos[3].eleito;cand4_eleito;4o colocado no momento
+governador-pr.json;candidatos[4].visivel;cand5_visivel;5o colocado no momento
+governador-pr.json;candidatos[4].numero;cand5_numero;5o colocado no momento
+governador-pr.json;candidatos[4].nome;cand5_nome;5o colocado no momento
+governador-pr.json;candidatos[4].partido;cand5_partido;5o colocado no momento
+governador-pr.json;candidatos[4].nome_partido;cand5_nome_partido;5o colocado no momento
+governador-pr.json;candidatos[4].percentual;cand5_percentual;5o colocado no momento
+governador-pr.json;candidatos[4].percentual_num;cand5_percentual_num;5o colocado no momento
+governador-pr.json;candidatos[4].votos;cand5_votos;5o colocado no momento
+governador-pr.json;candidatos[4].votos_num;cand5_votos_num;5o colocado no momento
+governador-pr.json;candidatos[4].eleito;cand5_eleito;5o colocado no momento
+governador-pr.json;candidatos[5].visivel;cand6_visivel;6o colocado no momento
+governador-pr.json;candidatos[5].numero;cand6_numero;6o colocado no momento
+governador-pr.json;candidatos[5].nome;cand6_nome;6o colocado no momento
+governador-pr.json;candidatos[5].partido;cand6_partido;6o colocado no momento
+governador-pr.json;candidatos[5].nome_partido;cand6_nome_partido;6o colocado no momento
+governador-pr.json;candidatos[5].percentual;cand6_percentual;6o colocado no momento
+governador-pr.json;candidatos[5].percentual_num;cand6_percentual_num;6o colocado no momento
+governador-pr.json;candidatos[5].votos;cand6_votos;6o colocado no momento
+governador-pr.json;candidatos[5].votos_num;cand6_votos_num;6o colocado no momento
+governador-pr.json;candidatos[5].eleito;cand6_eleito;6o colocado no momento
+governador-pr.json;plano.cargo;cargo;resumo (plano)
+governador-pr.json;plano.abrangencia;abrangencia;resumo (plano)
+governador-pr.json;plano.apuracao_pct;apuracao_pct;resumo (plano)
+governador-pr.json;plano.apuracao_pct_num;apuracao_pct_num;resumo (plano)
+governador-pr.json;plano.secoes_totalizadas;secoes_totalizadas;resumo (plano)
+governador-pr.json;plano.secoes_total;secoes_total;resumo (plano)
+governador-pr.json;plano.votos_validos;votos_validos;resumo (plano)
+governador-pr.json;plano.votos_brancos;votos_brancos;resumo (plano)
+governador-pr.json;plano.votos_nulos;votos_nulos;resumo (plano)
+governador-pr.json;plano.selo;selo;resumo (plano)
+governador-pr.json;plano.hora_atualizacao;hora_atualizacao;resumo (plano)
+governador-pr.json;plano.cand1_visivel;cand1_visivel;1o colocado no momento (plano)
+governador-pr.json;plano.cand1_numero;cand1_numero;1o colocado no momento (plano)
+governador-pr.json;plano.cand1_nome;cand1_nome;1o colocado no momento (plano)
+governador-pr.json;plano.cand1_partido;cand1_partido;1o colocado no momento (plano)
+governador-pr.json;plano.cand1_nome_partido;cand1_nome_partido;1o colocado no momento (plano)
+governador-pr.json;plano.cand1_percentual;cand1_percentual;1o colocado no momento (plano)
+governador-pr.json;plano.cand1_percentual_num;cand1_percentual_num;1o colocado no momento (plano)
+governador-pr.json;plano.cand1_votos;cand1_votos;1o colocado no momento (plano)
+governador-pr.json;plano.cand1_votos_num;cand1_votos_num;1o colocado no momento (plano)
+governador-pr.json;plano.cand1_eleito;cand1_eleito;1o colocado no momento (plano)
+governador-pr.json;plano.cand2_visivel;cand2_visivel;2o colocado no momento (plano)
+governador-pr.json;plano.cand2_numero;cand2_numero;2o colocado no momento (plano)
+governador-pr.json;plano.cand2_nome;cand2_nome;2o colocado no momento (plano)
+governador-pr.json;plano.cand2_partido;cand2_partido;2o colocado no momento (plano)
+governador-pr.json;plano.cand2_nome_partido;cand2_nome_partido;2o colocado no momento (plano)
+governador-pr.json;plano.cand2_percentual;cand2_percentual;2o colocado no momento (plano)
+governador-pr.json;plano.cand2_percentual_num;cand2_percentual_num;2o colocado no momento (plano)
+governador-pr.json;plano.cand2_votos;cand2_votos;2o colocado no momento (plano)
+governador-pr.json;plano.cand2_votos_num;cand2_votos_num;2o colocado no momento (plano)
+governador-pr.json;plano.cand2_eleito;cand2_eleito;2o colocado no momento (plano)
+governador-pr.json;plano.cand3_visivel;cand3_visivel;3o colocado no momento (plano)
+governador-pr.json;plano.cand3_numero;cand3_numero;3o colocado no momento (plano)
+governador-pr.json;plano.cand3_nome;cand3_nome;3o colocado no momento (plano)
+governador-pr.json;plano.cand3_partido;cand3_partido;3o colocado no momento (plano)
+governador-pr.json;plano.cand3_nome_partido;cand3_nome_partido;3o colocado no momento (plano)
+governador-pr.json;plano.cand3_percentual;cand3_percentual;3o colocado no momento (plano)
+governador-pr.json;plano.cand3_percentual_num;cand3_percentual_num;3o colocado no momento (plano)
+governador-pr.json;plano.cand3_votos;cand3_votos;3o colocado no momento (plano)
+governador-pr.json;plano.cand3_votos_num;cand3_votos_num;3o colocado no momento (plano)
+governador-pr.json;plano.cand3_eleito;cand3_eleito;3o colocado no momento (plano)
+governador-pr.json;plano.cand4_visivel;cand4_visivel;4o colocado no momento (plano)
+governador-pr.json;plano.cand4_numero;cand4_numero;4o colocado no momento (plano)
+governador-pr.json;plano.cand4_nome;cand4_nome;4o colocado no momento (plano)
+governador-pr.json;plano.cand4_partido;cand4_partido;4o colocado no momento (plano)
+governador-pr.json;plano.cand4_nome_partido;cand4_nome_partido;4o colocado no momento (plano)
+governador-pr.json;plano.cand4_percentual;cand4_percentual;4o colocado no momento (plano)
+governador-pr.json;plano.cand4_percentual_num;cand4_percentual_num;4o colocado no momento (plano)
+governador-pr.json;plano.cand4_votos;cand4_votos;4o colocado no momento (plano)
+governador-pr.json;plano.cand4_votos_num;cand4_votos_num;4o colocado no momento (plano)
+governador-pr.json;plano.cand4_eleito;cand4_eleito;4o colocado no momento (plano)
+governador-pr.json;plano.cand5_visivel;cand5_visivel;5o colocado no momento (plano)
+governador-pr.json;plano.cand5_numero;cand5_numero;5o colocado no momento (plano)
+governador-pr.json;plano.cand5_nome;cand5_nome;5o colocado no momento (plano)
+governador-pr.json;plano.cand5_partido;cand5_partido;5o colocado no momento (plano)
+governador-pr.json;plano.cand5_nome_partido;cand5_nome_partido;5o colocado no momento (plano)
+governador-pr.json;plano.cand5_percentual;cand5_percentual;5o colocado no momento (plano)
+governador-pr.json;plano.cand5_percentual_num;cand5_percentual_num;5o colocado no momento (plano)
+governador-pr.json;plano.cand5_votos;cand5_votos;5o colocado no momento (plano)
+governador-pr.json;plano.cand5_votos_num;cand5_votos_num;5o colocado no momento (plano)
+governador-pr.json;plano.cand5_eleito;cand5_eleito;5o colocado no momento (plano)
+governador-pr.json;plano.cand6_visivel;cand6_visivel;6o colocado no momento (plano)
+governador-pr.json;plano.cand6_numero;cand6_numero;6o colocado no momento (plano)
+governador-pr.json;plano.cand6_nome;cand6_nome;6o colocado no momento (plano)
+governador-pr.json;plano.cand6_partido;cand6_partido;6o colocado no momento (plano)
+governador-pr.json;plano.cand6_nome_partido;cand6_nome_partido;6o colocado no momento (plano)
+governador-pr.json;plano.cand6_percentual;cand6_percentual;6o colocado no momento (plano)
+governador-pr.json;plano.cand6_percentual_num;cand6_percentual_num;6o colocado no momento (plano)
+governador-pr.json;plano.cand6_votos;cand6_votos;6o colocado no momento (plano)
+governador-pr.json;plano.cand6_votos_num;cand6_votos_num;6o colocado no momento (plano)
+governador-pr.json;plano.cand6_eleito;cand6_eleito;6o colocado no momento (plano)

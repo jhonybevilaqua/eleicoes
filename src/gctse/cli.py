@@ -8,6 +8,7 @@
   gctse ensaio         loop continuo com dados simulados
   gctse amostrar       grava o JSON atual do TSE em dados/amostras
   gctse celulas        mostra qual celula guarda qual campo (ClassX LiveBoard)
+  gctse exemplo        gera arquivos de exemplo + mapa, para montar a cena hoje
 """
 
 from __future__ import annotations
@@ -117,15 +118,19 @@ def cmd_amostrar(args) -> int:
     return 0 if gravados else 1
 
 
-def cmd_celulas(args) -> int:
+def cmd_celulas(args, cfg=None) -> int:
     """Mapa de vinculo por celula, para amarrar a cena no LiveBoard.
 
     O mapa depende so da configuracao do exporter - nao precisa de dado do
     TSE - entao pode ser gerado semanas antes do pleito e entregue ao
     operador junto com o roteiro da cena.
+
+    Recebe 'cfg' ja carregada quando chamado por outro comando (o 'exemplo'
+    redireciona os destinos em memoria; recarregar do disco perderia isso).
     """
-    cfg = _cfg(args)
-    _iniciar_log(cfg, args)
+    if cfg is None:
+        cfg = _cfg(args)
+        _iniciar_log(cfg, args)
 
     pasta = Path(args.pasta) if args.pasta else None
     if pasta:
@@ -186,6 +191,56 @@ def cmd_celulas(args) -> int:
     return 0
 
 
+def cmd_exemplo(args) -> int:
+    """Gera, com dados ficticios, os arquivos exatamente como sairao no ar.
+
+    Serve para o time montar e amarrar a cena do GC agora, meses antes de o
+    TSE publicar qualquer coisa: os nomes de campo, a estrutura e os caminhos
+    sao os mesmos do dia da eleicao - so o conteudo e inventado.
+    """
+    cfg = _cfg(args)
+    _iniciar_log(cfg, args)
+
+    pasta = Path(args.pasta)
+    coleta = cfg.bruto.setdefault("coleta", {})
+    coleta["fonte"] = "simulador"
+    coleta["simulador_progresso"] = args.progresso
+    coleta["arquivo_estado"] = str(pasta / ".estado.json")
+    coleta.pop("arquivo_saude", None)
+    cfg.bruto.setdefault("seguranca", {})["bloquear_nao_oficial"] = False
+    cfg.bruto.setdefault("saida", {})["destino"] = str(pasta)
+    for nome, opcoes in cfg.exporters.items():
+        opcoes["destino"] = str(pasta / nome)
+
+    problemas = cfg.validar()
+    if problemas:
+        for problema in problemas:
+            print(f"  - {problema}")
+        return 1
+
+    print(f"Gerando exemplos em {pasta} com {args.progresso:.0f}% apurado...\n")
+    pipeline = Pipeline(cfg)
+    try:
+        resultados = pipeline.rodar_uma_vez()
+    finally:
+        pipeline.fechar()
+    for nome, situacao in sorted(resultados.items()):
+        print(f"  {nome}: {situacao}")
+
+    estado = pasta / ".estado.json"
+    if estado.exists():
+        estado.unlink()
+
+    args.pasta = str(pasta / "mapa")
+    print()
+    cmd_celulas(args, cfg)
+
+    print(f"\nArquivos de exemplo em {pasta}. Aponte o DataSource do GC para eles")
+    print("e monte a cena agora; no dia, os mesmos caminhos recebem o dado real.")
+    print("ATENCAO: conteudo ficticio, fase 'S'. Nao use no ar.")
+    return 0
+
+
 def _executar(cfg, args, uma_vez: bool) -> int:
     problemas = cfg.validar()
     if problemas:
@@ -225,6 +280,8 @@ def cmd_ensaio(args) -> int:
     # ensaio nunca toca o TSE e nao herda o bloqueio de fase simulada
     cfg.bruto.setdefault("coleta", {})["fonte"] = "simulador"
     cfg.bruto["coleta"]["simulador_duracao_segundos"] = args.duracao
+    if args.progresso is not None:
+        cfg.bruto["coleta"]["simulador_progresso"] = args.progresso
     cfg.bruto.setdefault("seguranca", {})["bloquear_nao_oficial"] = False
     print(f"ENSAIO: dados simulados, apuracao completa em ~{args.duracao}s. Ctrl+C encerra.")
     return _executar(cfg, args, uma_vez=False)
@@ -263,7 +320,13 @@ def construir_parser() -> argparse.ArgumentParser:
 
     p_ensaio = sub.add_parser("ensaio", help="loop continuo com dados simulados")
     p_ensaio.add_argument("--duracao", type=int, default=900, help="segundos ate 100%% apurado (padrao: 900)")
+    p_ensaio.add_argument("--progresso", type=float, help="trava a apuracao neste percentual")
     p_ensaio.set_defaults(func=cmd_ensaio)
+
+    p_exemplo = sub.add_parser("exemplo", help="gera arquivos de exemplo + mapa para montar a cena")
+    p_exemplo.add_argument("--pasta", default="exemplos", help="pasta de destino (padrao: exemplos)")
+    p_exemplo.add_argument("--progresso", type=float, default=63.0, help="percentual apurado (padrao: 63)")
+    p_exemplo.set_defaults(func=cmd_exemplo)
 
     return parser
 

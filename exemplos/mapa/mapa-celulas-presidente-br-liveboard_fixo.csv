@@ -1,0 +1,67 @@
+﻿arquivo;caminho;campo;observacao
+presidente-br.json;resumo.cargo;cargo;resumo
+presidente-br.json;resumo.abrangencia;abrangencia;resumo
+presidente-br.json;resumo.apuracao_pct;apuracao_pct;resumo
+presidente-br.json;resumo.apuracao_pct_num;apuracao_pct_num;resumo
+presidente-br.json;resumo.selo;selo;resumo
+presidente-br.json;resumo.hora_atualizacao;hora_atualizacao;resumo
+presidente-br.json;candidatos[0].visivel;cand1_visivel;sempre o candidato numero 10
+presidente-br.json;candidatos[0].numero;cand1_numero;sempre o candidato numero 10
+presidente-br.json;candidatos[0].nome;cand1_nome;sempre o candidato numero 10
+presidente-br.json;candidatos[0].partido;cand1_partido;sempre o candidato numero 10
+presidente-br.json;candidatos[0].nome_partido;cand1_nome_partido;sempre o candidato numero 10
+presidente-br.json;candidatos[0].percentual;cand1_percentual;sempre o candidato numero 10
+presidente-br.json;candidatos[0].percentual_num;cand1_percentual_num;sempre o candidato numero 10
+presidente-br.json;candidatos[0].votos;cand1_votos;sempre o candidato numero 10
+presidente-br.json;candidatos[0].eleito;cand1_eleito;sempre o candidato numero 10
+presidente-br.json;candidatos[1].visivel;cand2_visivel;sempre o candidato numero 20
+presidente-br.json;candidatos[1].numero;cand2_numero;sempre o candidato numero 20
+presidente-br.json;candidatos[1].nome;cand2_nome;sempre o candidato numero 20
+presidente-br.json;candidatos[1].partido;cand2_partido;sempre o candidato numero 20
+presidente-br.json;candidatos[1].nome_partido;cand2_nome_partido;sempre o candidato numero 20
+presidente-br.json;candidatos[1].percentual;cand2_percentual;sempre o candidato numero 20
+presidente-br.json;candidatos[1].percentual_num;cand2_percentual_num;sempre o candidato numero 20
+presidente-br.json;candidatos[1].votos;cand2_votos;sempre o candidato numero 20
+presidente-br.json;candidatos[1].eleito;cand2_eleito;sempre o candidato numero 20
+presidente-br.json;candidatos[2].visivel;cand3_visivel;sempre o candidato numero 30
+presidente-br.json;candidatos[2].numero;cand3_numero;sempre o candidato numero 30
+presidente-br.json;candidatos[2].nome;cand3_nome;sempre o candidato numero 30
+presidente-br.json;candidatos[2].partido;cand3_partido;sempre o candidato numero 30
+presidente-br.json;candidatos[2].nome_partido;cand3_nome_partido;sempre o candidato numero 30
+presidente-br.json;candidatos[2].percentual;cand3_percentual;sempre o candidato numero 30
+presidente-br.json;candidatos[2].percentual_num;cand3_percentual_num;sempre o candidato numero 30
+presidente-br.json;candidatos[2].votos;cand3_votos;sempre o candidato numero 30
+presidente-br.json;candidatos[2].eleito;cand3_eleito;sempre o candidato numero 30
+presidente-br.json;plano.cargo;cargo;resumo (plano)
+presidente-br.json;plano.abrangencia;abrangencia;resumo (plano)
+presidente-br.json;plano.apuracao_pct;apuracao_pct;resumo (plano)
+presidente-br.json;plano.apuracao_pct_num;apuracao_pct_num;resumo (plano)
+presidente-br.json;plano.selo;selo;resumo (plano)
+presidente-br.json;plano.hora_atualizacao;hora_atualizacao;resumo (plano)
+presidente-br.json;plano.cand1_visivel;cand1_visivel;sempre o candidato numero 10 (plano)
+presidente-br.json;plano.cand1_numero;cand1_numero;sempre o candidato numero 10 (plano)
+presidente-br.json;plano.cand1_nome;cand1_nome;sempre o candidato numero 10 (plano)
+presidente-br.json;plano.cand1_partido;cand1_partido;sempre o candidato numero 10 (plano)
+presidente-br.json;plano.cand1_nome_partido;cand1_nome_partido;sempre o candidato numero 10 (plano)
+presidente-br.json;plano.cand1_percentual;cand1_percentual;sempre o candidato numero 10 (plano)
+presidente-br.json;plano.cand1_percentual_num;cand1_percentual_num;sempre o candidato numero 10 (plano)
+presidente-br.json;plano.cand1_votos;cand1_votos;sempre o candidato numero 10 (plano)
+presidente-br.json;plano.cand1_eleito;cand1_eleito;sempre o candidato numero 10 (plano)
+presidente-br.json;plano.cand2_visivel;cand2_visivel;sempre o candidato numero 20 (plano)
+presidente-br.json;plano.cand2_numero;cand2_numero;sempre o candidato numero 20 (plano)
+presidente-br.json;plano.cand2_nome;cand2_nome;sempre o candidato numero 20 (plano)
+presidente-br.json;plano.cand2_partido;cand2_partido;sempre o candidato numero 20 (plano)
+presidente-br.json;plano.cand2_nome_partido;cand2_nome_partido;sempre o candidato numero 20 (plano)
+presidente-br.json;plano.cand2_percentual;cand2_percentual;sempre o candidato numero 20 (plano)
+presidente-br.json;plano.cand2_percentual_num;cand2_percentual_num;sempre o candidato numero 20 (plano)
+presidente-br.json;plano.cand2_votos;cand2_votos;sempre o candidato numero 20 (plano)
+presidente-br.json;plano.cand2_eleito;cand2_eleito;sempre o candidato numero 20 (plano)
+presidente-br.json;plano.cand3_visivel;cand3_visivel;sempre o candidato numero 30 (plano)
+presidente-br.json;plano.cand3_numero;cand3_numero;sempre o candidato numero 30 (plano)
+presidente-br.json;plano.cand3_nome;cand3_nome;sempre o candidato numero 30 (plano)
+presidente-br.json;plano.cand3_partido;cand3_partido;sempre o candidato numero 30 (plano)
+presidente-br.json;plano.cand3_nome_partido;cand3_nome_partido;sempre o candidato numero 30 (plano)
+presidente-br.json;plano.cand3_percentual;cand3_percentual;sempre o candidato numero 30 (plano)
+presidente-br.json;plano.cand3_percentual_num;cand3_percentual_num;sempre o candidato numero 30 (plano)
+presidente-br.json;plano.cand3_votos;cand3_votos;sempre o candidato numero 30 (plano)
+presidente-br.json;plano.cand3_eleito;cand3_eleito;sempre o candidato numero 30 (plano)

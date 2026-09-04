@@ -1,0 +1,83 @@
+{
+  "resumo": {
+    "cargo": "GOVERNADOR",
+    "abrangencia": "PARANA",
+    "apuracao_pct": "63,00%",
+    "apuracao_pct_num": 63.0,
+    "selo": "PARCIAL - NAO OFICIAL",
+    "hora_atualizacao": "12:55"
+  },
+  "candidatos": [
+    {
+      "posicao": 1,
+      "visivel": "0",
+      "numero": "",
+      "nome": "",
+      "partido": "",
+      "nome_partido": "",
+      "percentual": "",
+      "percentual_num": null,
+      "votos": "",
+      "eleito": ""
+    },
+    {
+      "posicao": 2,
+      "visivel": "0",
+      "numero": "",
+      "nome": "",
+      "partido": "",
+      "nome_partido": "",
+      "percentual": "",
+      "percentual_num": null,
+      "votos": "",
+      "eleito": ""
+    },
+    {
+      "posicao": 3,
+      "visivel": "0",
+      "numero": "",
+      "nome": "",
+      "partido": "",
+      "nome_partido": "",
+      "percentual": "",
+      "percentual_num": null,
+      "votos": "",
+      "eleito": ""
+    }
+  ],
+  "plano": {
+    "cargo": "GOVERNADOR",
+    "abrangencia": "PARANA",
+    "apuracao_pct": "63,00%",
+    "apuracao_pct_num": 63.0,
+    "selo": "PARCIAL - NAO OFICIAL",
+    "hora_atualizacao": "12:55",
+    "cand1_visivel": "0",
+    "cand1_numero": "",
+    "cand1_nome": "",
+    "cand1_partido": "",
+    "cand1_nome_partido": "",
+    "cand1_percentual": "",
+    "cand1_percentual_num": null,
+    "cand1_votos": "",
+    "cand1_eleito": "",
+    "cand2_visivel": "0",
+    "cand2_numero": "",
+    "cand2_nome": "",
+    "cand2_partido": "",
+    "cand2_nome_partido": "",
+    "cand2_percentual": "",
+    "cand2_percentual_num": null,
+    "cand2_votos": "",
+    "cand2_eleito": "",
+    "cand3_visivel": "0",
+    "cand3_numero": "",
+    "cand3_nome": "",
+    "cand3_partido": "",
+    "cand3_nome_partido": "",
+    "cand3_percentual": "",
+    "cand3_percentual_num": null,
+    "cand3_votos": "",
+    "cand3_eleito": ""
+  }
+}

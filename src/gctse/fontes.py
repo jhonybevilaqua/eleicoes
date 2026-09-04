@@ -43,8 +43,8 @@ class FonteTSE:
 class FonteSimulada:
     """Ensaio: gera boletins ficticios que evoluem no tempo."""
 
-    def __init__(self, duracao_segundos: int = 900):
-        self.simulador = Simulador(duracao_segundos=duracao_segundos)
+    def __init__(self, duracao_segundos: int = 900, progresso_fixo: float | None = None):
+        self.simulador = Simulador(duracao_segundos=duracao_segundos, progresso_fixo=progresso_fixo)
 
     def obter(self, abrangencia: str, cargo: int, turno: int) -> Resposta:
         dados = self.simulador.gerar(abrangencia, cargo, turno)
@@ -89,8 +89,9 @@ def criar_fonte(cfg, cliente: ClienteTSE, endpoints: Endpoints) -> Fonte:
     tipo = str(cfg.coleta.get("fonte", "tse")).lower()
     if tipo == "simulador":
         duracao = int(cfg.coleta.get("simulador_duracao_segundos", 900))
+        travado = cfg.coleta.get("simulador_progresso")
         log.warning("FONTE = SIMULADOR (dados ficticios, fase 'S'). Nao use no ar.")
-        return FonteSimulada(duracao)
+        return FonteSimulada(duracao, float(travado) if travado is not None else None)
     if tipo == "arquivo":
         pasta = cfg.coleta.get("pasta_amostras", "dados/amostras")
         log.warning("FONTE = ARQUIVO (%s). Reproducao de amostras gravadas.", pasta)

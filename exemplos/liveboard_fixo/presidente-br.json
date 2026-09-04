@@ -1,0 +1,83 @@
+{
+  "resumo": {
+    "cargo": "PRESIDENTE",
+    "abrangencia": "BRASIL",
+    "apuracao_pct": "63,00%",
+    "apuracao_pct_num": 63.0,
+    "selo": "PARCIAL - NAO OFICIAL",
+    "hora_atualizacao": "12:55"
+  },
+  "candidatos": [
+    {
+      "posicao": 1,
+      "visivel": "1",
+      "numero": "10",
+      "nome": "CANDIDATO ENSAIO A",
+      "partido": "PART-A",
+      "nome_partido": "CANDIDATO ENSAIO A (PART-A)",
+      "percentual": "23,15%",
+      "percentual_num": 23.15,
+      "votos": "16.601.093",
+      "eleito": "0"
+    },
+    {
+      "posicao": 2,
+      "visivel": "1",
+      "numero": "20",
+      "nome": "CANDIDATO ENSAIO B",
+      "partido": "PART-B",
+      "nome_partido": "CANDIDATO ENSAIO B (PART-B)",
+      "percentual": "15,85%",
+      "percentual_num": 15.85,
+      "votos": "11.363.316",
+      "eleito": "0"
+    },
+    {
+      "posicao": 3,
+      "visivel": "1",
+      "numero": "30",
+      "nome": "CANDIDATO ENSAIO C",
+      "partido": "PART-C",
+      "nome_partido": "CANDIDATO ENSAIO C (PART-C)",
+      "percentual": "15,58%",
+      "percentual_num": 15.58,
+      "votos": "11.169.831",
+      "eleito": "0"
+    }
+  ],
+  "plano": {
+    "cargo": "PRESIDENTE",
+    "abrangencia": "BRASIL",
+    "apuracao_pct": "63,00%",
+    "apuracao_pct_num": 63.0,
+    "selo": "PARCIAL - NAO OFICIAL",
+    "hora_atualizacao": "12:55",
+    "cand1_visivel": "1",
+    "cand1_numero": "10",
+    "cand1_nome": "CANDIDATO ENSAIO A",
+    "cand1_partido": "PART-A",
+    "cand1_nome_partido": "CANDIDATO ENSAIO A (PART-A)",
+    "cand1_percentual": "23,15%",
+    "cand1_percentual_num": 23.15,
+    "cand1_votos": "16.601.093",
+    "cand1_eleito": "0",
+    "cand2_visivel": "1",
+    "cand2_numero": "20",
+    "cand2_nome": "CANDIDATO ENSAIO B",
+    "cand2_partido": "PART-B",
+    "cand2_nome_partido": "CANDIDATO ENSAIO B (PART-B)",
+    "cand2_percentual": "15,85%",
+    "cand2_percentual_num": 15.85,
+    "cand2_votos": "11.363.316",
+    "cand2_eleito": "0",
+    "cand3_visivel": "1",
+    "cand3_numero": "30",
+    "cand3_nome": "CANDIDATO ENSAIO C",
+    "cand3_partido": "PART-C",
+    "cand3_nome_partido": "CANDIDATO ENSAIO C (PART-C)",
+    "cand3_percentual": "15,58%",
+    "cand3_percentual_num": 15.58,
+    "cand3_votos": "11.169.831",
+    "cand3_eleito": "0"
+  }
+}

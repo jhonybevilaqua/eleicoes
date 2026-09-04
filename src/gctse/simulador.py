@@ -52,14 +52,26 @@ def _fmt_pct(valor: float) -> str:
 class Simulador:
     """Gera boletins ficticios que evoluem ao longo de 'duracao_segundos'."""
 
-    def __init__(self, *, duracao_segundos: int = 900, semente: int = 2026, secoes_base: int = 472000):
+    def __init__(
+        self,
+        *,
+        duracao_segundos: int = 900,
+        semente: int = 2026,
+        secoes_base: int = 472000,
+        progresso_fixo: float | None = None,
+    ):
         self.duracao = max(1, duracao_segundos)
         self.inicio = time.time()
         self.semente = semente
         self.secoes_base = secoes_base
+        # trava a apuracao num percentual: util para gerar arquivo de exemplo
+        # com placar cheio, ou para conferir como a cena fica em 50%.
+        self.progresso_fixo = progresso_fixo
 
     def progresso(self) -> float:
         """0..100 - curva com arranque rapido e cauda longa, como na vida real."""
+        if self.progresso_fixo is not None:
+            return round(max(0.0, min(100.0, float(self.progresso_fixo))), 2)
         decorrido = min(1.0, (time.time() - self.inicio) / self.duracao)
         return round(100.0 * (1 - math.exp(-3.2 * decorrido)) / (1 - math.exp(-3.2)), 2)
 

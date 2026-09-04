@@ -27,7 +27,7 @@ scripts\instalar.bat
 
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt -e .
-cp config/config.example.yaml config/config.yaml
+cp config/config.recomendado.yaml config/config.yaml
 ```
 
 Requisito: Python 3.9 ou superior.
@@ -38,13 +38,27 @@ Requisito: Python 3.9 ou superior.
 gctse validar                 # confere a configuração e mostra as URLs montadas
 gctse descobrir               # lista os pleitos publicados pelo TSE (pega os códigos)
 gctse inspecionar --abrangencia br --cargo 1   # mostra as chaves reais do arquivo
-gctse celulas                 # mapa de células para amarrar a cena (ClassX)
+gctse exemplo                 # gera arquivos de exemplo + mapa (monte a cena hoje)
+gctse celulas                 # mapa de vínculos para amarrar a cena (ClassX)
 gctse ensaio --duracao 600    # simula uma apuração completa em 10 min
 gctse uma-vez                 # um único ciclo (bom para agendador)
 gctse rodar                   # operação contínua
 ```
 
 No Windows, sem ativar a venv: `.venv\Scripts\python.exe -m gctse rodar`.
+
+## Montar a cena do GC antes do pleito
+
+Os dados reais de 2026 só existem no dia, mas a cena não precisa esperar. A
+pasta [`exemplos/`](exemplos/) traz os arquivos com a **estrutura exata** do que
+vai ao ar — mesmos nomes de campo, mesmos caminhos — mais o mapa de qual
+caminho guarda qual campo. Aponte o DataSource do LiveBoard para eles e amarre
+a cena hoje; no dia, os mesmos caminhos recebem o dado real.
+
+```bash
+gctse exemplo                      # regera em exemplos/, com 63% apurado
+gctse exemplo --progresso 100      # como a cena fica no fechamento
+```
 
 ## Configuração
 
