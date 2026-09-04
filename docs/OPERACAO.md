@@ -11,6 +11,10 @@
       `limite_candidatos` de cada template.
 - [ ] Apontar `destino` de cada exporter para o hot folder real do GC e
       confirmar permissão de escrita da conta que roda o serviço.
+- [ ] Decidir a `ordem` de cada cena do LiveBoard: `colocacao` (ranking) ou
+      `fixa` (candidato preso à linha). Cena com foto por posição exige `fixa`.
+- [ ] `gctse celulas --pasta dados/saida/mapa` — gerar o mapa e amarrar a cena
+      por ele, não por tentativa e erro. Guardar o CSV junto com o roteiro.
 
 ## D-7 · Ensaio técnico
 
@@ -18,6 +22,8 @@
       **teste**, não a do ar.
 - [ ] Validar no GC: giro do placar, nomes longos, percentuais, selo
       “PARCIAL — NÃO OFICIAL”, virada de liderança, 100% totalizado.
+- [ ] Conferir no LiveBoard, durante o ensaio, que nenhuma célula troca de
+      significado entre o começo e o fim da apuração simulada.
 - [ ] Ensaiar a contingência (abaixo) com o time de plantão.
 - [ ] Ligar os alertas (`alertas.ativo: true`) e testar o webhook.
 - [ ] Durante a janela de simulado do TSE: rodar com
@@ -57,6 +63,8 @@ Acompanhe por dois pontos:
 | Campo saindo vazio no GC | O TSE mudou a chave. Rode `gctse inspecionar`, ajuste `mapeamento` e reinicie — não precisa mexer no template. |
 | Placar precisa sair do ar | Pare o serviço. Os arquivos ficam parados com o último valor; quem tira do ar é o GC. |
 | Precisa forçar reescrita | `saida.reescrever_sempre: true` e reiniciar. Use só se o GC perdeu o arquivo. |
+| LiveBoard mostrando campo trocado | Alguém mudou `layout`, `ordem`, `slots` ou as listas de campos. Rode `gctse celulas` e compare com o vínculo da cena. |
+| Linha sobrando na cena | Amarre a visibilidade do objeto ao campo `visivel` do slot (`0` = não existe candidato ali). |
 
 **Não faça no ar:** editar arquivo de saída na mão (o próximo ciclo sobrescreve),
 apagar `estado.json` com o sistema rodando (reescreve tudo e o hot folder pisca),

@@ -13,6 +13,7 @@ from .arquivo_csv import ExporterCSV
 from .arquivo_json import ExporterJSON
 from .arquivo_xml import ExporterXML
 from .caspar import ExporterCasparCG
+from .classx import ExporterClassX
 from .http_push import ExporterHTTP
 from .viz_tab import ExporterVizTab
 
@@ -21,6 +22,7 @@ REGISTRO: dict[str, Type[Exporter]] = {
     "json": ExporterJSON,
     "xml": ExporterXML,
     "casparcg": ExporterCasparCG,
+    "classx": ExporterClassX,
     "http": ExporterHTTP,
     "viz_tab": ExporterVizTab,
 }

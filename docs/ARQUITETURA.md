@@ -67,6 +67,13 @@ impressão digital do último boletim e a hora de geração no TSE.
 com exceção capturada. Um cargo com arquivo ainda não publicado não impede o
 placar de presidente de atualizar.
 
+**Geometria fixa no exporter `classx`.** O LiveBoard amarra objeto a célula, e
+célula só é endereço confiável se o arquivo tiver sempre o mesmo formato. Por
+isso o número de linhas de candidato vem da configuração, não do TSE: sobrou,
+corta; faltou, preenche vazio com `visivel = 0`. O mapa de células é derivado
+da mesma configuração (`mapa_celulas()`), então o que o operador amarra e o
+que o sistema escreve não podem divergir.
+
 **Sem banco de dados.** Um processo, arquivos de estado em JSON, saída em
 arquivo. Menos peça para falhar às 21h de um domingo de apuração, e qualquer
 técnico do plantão consegue inspecionar tudo com um editor de texto.
@@ -79,5 +86,6 @@ técnico do plantão consegue inspecionar tudo com um editor de texto.
 | TSE mudou o caminho das URLs | `tse.padroes` no `config.yaml` |
 | Novo cargo ou nova praça no ar | `alvos` no `config.yaml` |
 | Novo formato de arquivo para o GC | novo módulo em `exporters/` + registro em `exporters/__init__.py` |
+| Célula do LiveBoard apontando errado | `layout`/`ordem`/`slots` do exporter `classx`; conferir com `gctse celulas` |
 | Nome estourando o lower third | `texto.limites` no `config.yaml` |
 | Acento quebrado no ar | `encoding` do exporter (`cp1252`) ou `texto.remover_acentos` |

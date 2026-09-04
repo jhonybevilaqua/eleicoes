@@ -26,6 +26,142 @@ Os demais vêm prontos para o ar (`2.400.000`, `60,00%`).
 No layout largo (`cand1_nome`, `cand2_percentual`, …) os dois conjuntos vêm num
 único registro — é o formato para take único.
 
+## ClassX LiveBoard
+
+O LiveBoard amarra cada objeto da cena a uma célula (B7, C12…). Isso é
+confiável desde que a **geometria do arquivo nunca mude**. O exporter `classx`
+garante isso.
+
+### A decisão que vem antes da configuração
+
+Célula não se move sozinha. O que muda é o que ela significa:
+
+| `ordem` | A linha 1 é… | Na virada de liderança | Use quando |
+|---|---|---|---|
+| `colocacao` | sempre o 1º colocado | o **nome** dentro da célula troca | placar de apuração, ranking |
+| `fixa` | sempre o candidato nº X | nada muda de lugar | cena com foto/cor fixa por posição |
+
+Se a cena tem a foto do candidato desenhada na posição, `ordem: fixa` é o
+único modo correto — senão a foto do A aparece com os votos do B na primeira
+virada. Se a cena é um ranking neutro, `colocacao` é o certo.
+
+Dá para ter os dois ao mesmo tempo: dois exporters `classx`, cada um com sua
+pasta e sua cena.
+
+### O risco real: geometria variável
+
+O que de fato desloca célula não é o ranking — é o arquivo mudar de tamanho.
+Quatro linhas às 17h e seis às 20h (apareceu candidato, o bloco de resumo
+cresceu) e tudo abaixo desliza, sem erro visível. O exporter blinda contra
+isso:
+
+- **sempre** `slots` linhas de candidato — sobrou, corta; faltou, preenche
+  vazio;
+- ordem das colunas fixa em configuração, nunca a ordem que o TSE mandou;
+- cabeçalho sempre na mesma linha;
+- escrita atômica, então o LiveBoard nunca lê o arquivo pela metade.
+
+Cada linha vazia sai com `visivel = 0` — amarre a visibilidade do objeto a
+esse campo e a cena esconde sozinha as posições que não existem.
+
+### Layouts
+
+**`chave_valor`** (padrão, e o mais indicado para vínculo por célula) — coluna
+A é o nome do campo, coluna B é o valor. Cada campo tem sua linha fixa; você
+amarra sempre em `B<n>`:
+
+```
+campo;valor
+cargo;GOVERNADOR
+abrangencia;PARANA
+...
+cand1_nome_partido;RATINHO JUNIOR (PSD)     <- B19
+cand1_percentual;50,00%                     <- B20
+```
+
+Repare que é exatamente o padrão que você descreveu: nome com partido numa
+célula, percentual na de baixo. O campo `nome_partido` já vem montado, então
+um único objeto da cena resolve a linha inteira. O formato é configurável em
+`formato_nome_partido`.
+
+**`grade`** — tabela clássica: linha 1 é cabeçalho, linhas 2 em diante são os
+slots. Bom quando a cena tem uma lista e você amarra por coluna. O resumo sai
+num segundo arquivo, `<alvo>-resumo.csv`, também de geometria fixa.
+
+```
+visivel;numero;nome;partido;nome_partido;percentual;votos;eleito
+1;11;RATINHO JUNIOR;PSD;RATINHO JUNIOR (PSD);50,00%;2.000.000;0
+1;22;CANDIDATO BETA;PL;CANDIDATO BETA (PL);35,00%;1.400.000;0
+0;;;;;;;
+```
+
+**`largo`** — tudo numa linha só (linha 1 cabeçalho, linha 2 valores). Para
+cena de take único: `A2`, `B2`, `C2`…
+
+### Configuração
+
+```yaml
+exporters:
+  liveboard:
+    tipo: classx
+    layout: chave_valor
+    ordem: colocacao
+    slots: 6
+    delimitador: ";"
+    encoding: utf-8-sig
+    destino: "//liveboard/dados"
+    nome_arquivo: "{alvo}"
+    formato_nome_partido: "{nome} ({partido})"
+```
+
+Para o modo de candidato fixo:
+
+```yaml
+    ordem: fixa
+    candidatos_fixos: ["22", "13", "12"]   # linha 1 = nº 22, linha 2 = nº 13...
+```
+
+Em `ordem: fixa`, `slots` passa a ser o tamanho da lista. Número que não
+aparecer no boletim sai como linha vazia, com `visivel = 0`.
+
+### O mapa de células
+
+Não amarre a cena por tentativa e erro. O comando abaixo diz exatamente qual
+célula guarda qual campo — e roda sem precisar de dado do TSE, então pode ser
+gerado semanas antes do pleito e entregue junto com o roteiro da cena:
+
+```bash
+gctse celulas
+gctse celulas --pasta dados/saida/mapa    # também grava em CSV
+```
+
+```
+=== governador-pr  /  exporter 'liveboard'  /  layout chave_valor  /  ordem colocacao
+    arquivo: dados/saida/liveboard/governador-pr.csv
+    CELULA   CAMPO                      ARQUIVO / OBSERVACAO
+    B2       cargo                      governador-pr.csv  (resumo)
+    B5       apuracao_pct               governador-pr.csv  (resumo)
+    B17      cand1_nome                 governador-pr.csv  (1o colocado no momento)
+    B19      cand1_nome_partido         governador-pr.csv  (1o colocado no momento)
+    B20      cand1_percentual           governador-pr.csv  (1o colocado no momento)
+```
+
+A coluna de observação é o que evita o erro caro: ela diz se aquela célula é
+“1º colocado no momento” ou “sempre o candidato nº 22”.
+
+**As células só mudam se você alterar `layout`, `ordem`, `slots` ou as listas
+`campos_resumo` / `campos_candidato`.** Se mexer em qualquer um desses depois
+de a cena estar amarrada, gere o mapa de novo e refaça os vínculos. Fora isso,
+a posição é estável do primeiro ao último boletim do dia.
+
+### Encoding
+
+`utf-8-sig` (UTF-8 com BOM) é o padrão sugerido: o acento sai correto e o
+arquivo abre certo no Excel se alguém precisar conferir na mão. Se o LiveBoard
+mostrar caractere estranho, tente `cp1252`. Em último caso,
+`texto.remover_acentos: true` tira o problema pela raiz, ao custo de o nome ir
+ao ar sem acento.
+
 ## Ross XPression (DataLinq)
 
 ```yaml

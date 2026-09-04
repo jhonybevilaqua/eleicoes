@@ -97,6 +97,24 @@ exporters:
     arquivo_resumo: true
     limite_candidatos: 8
 
+  # ClassX LiveBoard - CSV de grade fixa para vinculo por celula.
+  # A geometria nunca muda: sempre 'slots' linhas de candidato, sempre as
+  # mesmas colunas. Rode 'gctse celulas' para o mapa de vinculo da cena.
+  liveboard:
+    tipo: classx
+    layout: chave_valor      # chave_valor | grade | largo
+    ordem: colocacao         # colocacao (1o, 2o...) | fixa (candidato fixo por linha)
+    slots: 6                 # linhas de candidato, sempre esta quantidade
+    delimitador: ";"
+    encoding: utf-8-sig      # com BOM: acento correto ao abrir no Excel
+    destino: dados/saida/liveboard
+    nome_arquivo: "{alvo}"
+    formato_nome_partido: "{nome} ({partido})"
+    # Para ordem: fixa - a linha 1 e sempre o primeiro numero da lista,
+    # independentemente da colocacao. Numero que nao aparecer sai vazio.
+    # ordem: fixa
+    # candidatos_fixos: ["22", "13", "12"]
+
   # JSON para segunda tela, site e portal.
   web_json:
     tipo: json
@@ -155,7 +173,7 @@ mapeamento: {}
 # --- Valores herdados por todos os alvos ------------------------------------
 padroes_alvo:
   turno: 1
-  exporters: [gc_xml, gc_csv, web_json]
+  exporters: [liveboard, web_json]
 
 # --- Alvos (abrangencia x cargo) --------------------------------------------
 # abrangencia: 'br' | sigla da UF | UF + codigo TSE do municipio (ex.: pr75353)

@@ -7,17 +7,22 @@
   gctse rodar          loop continuo de operacao
   gctse ensaio         loop continuo com dados simulados
   gctse amostrar       grava o JSON atual do TSE em dados/amostras
+  gctse celulas        mostra qual celula guarda qual campo (ClassX LiveBoard)
 """
 
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import sys
 from pathlib import Path
 
 from . import __version__
 from .config import ErroConfig, carregar
+from .exporters import criar
+from .exporters.classx import ExporterClassX
+from .modelos import CARGOS, Apuracao
 from .pipeline import Pipeline
 from .tse.cliente import ClienteTSE
 from .tse.descoberta import inspecionar, listar_eleicoes
@@ -112,6 +117,67 @@ def cmd_amostrar(args) -> int:
     return 0 if gravados else 1
 
 
+def cmd_celulas(args) -> int:
+    """Mapa de vinculo por celula, para amarrar a cena no LiveBoard.
+
+    O mapa depende so da configuracao do exporter - nao precisa de dado do
+    TSE - entao pode ser gerado semanas antes do pleito e entregue ao
+    operador junto com o roteiro da cena.
+    """
+    cfg = _cfg(args)
+    _iniciar_log(cfg, args)
+
+    pasta = Path(args.pasta) if args.pasta else None
+    if pasta:
+        pasta.mkdir(parents=True, exist_ok=True)
+
+    encontrados = 0
+    for alvo in cfg.alvos:
+        for nome_exporter in alvo.exporters:
+            opcoes = cfg.exporters.get(nome_exporter) or {}
+            if str(opcoes.get("tipo", "")).lower() != "classx":
+                continue
+            exporter = criar(nome_exporter, opcoes, cfg.texto, cfg.saida)
+            if not isinstance(exporter, ExporterClassX):
+                continue
+            encontrados += 1
+
+            referencia = Apuracao(
+                cargo_codigo=alvo.cargo,
+                cargo_nome=CARGOS.get(alvo.cargo, f"Cargo {alvo.cargo}"),
+                abrangencia_codigo=alvo.abrangencia.upper(),
+                abrangencia_nome=alvo.apelido_abrangencia or alvo.abrangencia.upper(),
+                turno=alvo.turno,
+            )
+            principal = exporter.caminho_saida(referencia, alvo.nome, exporter.extensao)
+            nomes = {"principal": principal.name, "-resumo": principal.stem + "-resumo" + exporter.extensao}
+
+            print(f"\n=== {alvo.nome}  /  exporter '{nome_exporter}'  /  layout {exporter.layout}  /  ordem {exporter.ordem}")
+            print(f"    arquivo: {principal}")
+            if exporter.layout == "grade":
+                print(f"    resumo.: {principal.with_name(nomes['-resumo'])}")
+            print(f"    {'CELULA':<8} {'CAMPO':<26} ARQUIVO / OBSERVACAO")
+
+            linhas_csv = [["arquivo", "celula", "campo", "observacao"]]
+            for item in exporter.mapa_celulas():
+                arquivo = nomes.get(item["arquivo"], item["arquivo"])
+                print(f"    {item['celula']:<8} {item['campo']:<26} {arquivo}  ({item['origem']})")
+                linhas_csv.append([arquivo, item["celula"], item["campo"], item["origem"]])
+
+            if pasta:
+                destino = pasta / f"mapa-celulas-{alvo.nome}-{nome_exporter}.csv"
+                with open(destino, "w", encoding="utf-8-sig", newline="") as fh:
+                    csv.writer(fh, delimiter=";").writerows(linhas_csv)
+                print(f"    -> mapa gravado em {destino}")
+
+    if not encontrados:
+        print("Nenhum exporter do tipo 'classx' associado aos alvos configurados.")
+        return 1
+    print("\nAs celulas so mudam se voce alterar layout, ordem, slots ou as listas")
+    print("de campos. Se mudar, gere o mapa de novo e refaca os vinculos na cena.")
+    return 0
+
+
 def _executar(cfg, args, uma_vez: bool) -> int:
     problemas = cfg.validar()
     if problemas:
@@ -179,6 +245,10 @@ def construir_parser() -> argparse.ArgumentParser:
     p_amostra = sub.add_parser("amostrar", help="grava o JSON atual dos alvos em disco")
     p_amostra.add_argument("--pasta", default="dados/amostras")
     p_amostra.set_defaults(func=cmd_amostrar)
+
+    p_celulas = sub.add_parser("celulas", help="mapa de celulas dos exporters ClassX LiveBoard")
+    p_celulas.add_argument("--pasta", help="grava o mapa em CSV nesta pasta")
+    p_celulas.set_defaults(func=cmd_celulas)
 
     sub.add_parser("uma-vez", help="executa um unico ciclo").set_defaults(func=cmd_uma_vez)
     sub.add_parser("rodar", help="loop continuo de operacao").set_defaults(func=cmd_rodar)
