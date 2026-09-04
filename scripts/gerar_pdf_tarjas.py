@@ -29,7 +29,7 @@ async def main():
         n = await pag.locator(".modelo").count()
         print(f"{n} modelos renderizados")
         await pag.pdf(path=str(DESTINO), format="A4", landscape=True, print_background=True,
-                      margin={"top": "11mm", "bottom": "13mm", "left": "12mm", "right": "12mm"})
+                      margin={"top": "9mm", "bottom": "10mm", "left": "12mm", "right": "12mm"})
         await nav.close()
         print(f"PDF gerado em {DESTINO}")
 

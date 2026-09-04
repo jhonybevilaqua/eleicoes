@@ -153,7 +153,7 @@ body.impressao .palco::after{display:none}
     --ink:#0f1826; --ink-2:#3c4b60; --ink-3:#6c7b91;
     --rule:#c9d3e0; --rule-2:#e2e8f0; --accent:#12539f; --accent-soft:#eef4fc;
   }
-  @page{size:A4 landscape;margin:11mm 12mm 13mm}
+  @page{size:A4 landscape;margin:9mm 12mm 10mm}
   *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   body{background:#fff}
   .wrap{max-width:none;padding:0 0 8px}
@@ -162,13 +162,26 @@ body.impressao .palco::after{display:none}
   h1{font-size:52px}
   .modelo{break-inside:avoid;break-after:page;padding:0 0 8px;border:0}
   .modelo:last-of-type{break-after:auto}
-  .par{grid-template-columns:1fr 1fr}
-  /* no papel a tarja e o assunto: recorta o quadro vazio acima dela para
-     caber um modelo por pagina. T6 fica no topo do frame e mantem 16:9. */
-  .palco{aspect-ratio:16/6.4}
-  .palco.palco-alto{aspect-ratio:16/9}
-  .liga td{padding:5.5px 10px 5.5px 0}
-  .medidas li{padding:5px 0}
+  /* pagina horizontal: a arte fica no 16:9 inteiro na coluna larga, as
+     medidas ao lado dela e a tabela de ligacoes atravessando o rodape.
+     'display:contents' no .specs solta os dois blocos dentro desta grade. */
+  .modelo{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);
+    column-gap:24px;row-gap:9px;align-items:start}
+  .mhead,.museo{grid-column:1/-1}
+  .museo{margin-bottom:0;max-width:none}
+  .specs{display:contents}
+  .specs>.bloco:last-child{grid-column:1/-1}
+  .palco{aspect-ratio:16/9}
+  .estado-rot{margin-bottom:6px}
+  .liga td{padding:4.5px 10px 4.5px 0}
+  .liga th{padding-bottom:6px}
+  .medidas li{padding:4.5px 0}
+  .museo{font-size:12.5px;line-height:1.45}
+  /* pagina final: os seis modelos no estado de fechamento */
+  .galeria{break-before:page;display:grid;grid-template-columns:repeat(3,1fr);gap:18px 16px}
+  .galeria h2{grid-column:1/-1;font-family:var(--cond);text-transform:uppercase;font-size:24px;
+    font-weight:600;margin:0}
+  .galeria p{grid-column:1/-1;font-size:12px;color:var(--ink-2);margin:-6px 0 2px}
   .specs{grid-template-columns:1fr 1.25fr;gap:20px;margin-top:16px}
   .liga{font-size:10.5px} .liga code{font-size:10px} .medidas{font-size:11px}
   .medidas span{font-size:10.5px} .museo{font-size:12.5px;margin-bottom:14px}
@@ -399,16 +412,15 @@ const modelos = [
         lado a lado. É a tarja que fica mais tempo no ar, então recebe o maior espaço vertical.`,
    medidas:[["Altura total","280 px"],["Cartola","58 px"],["Painel","176 px"],["Rodapé","46 px"],
             ["Foto","112 × 140 px"],["Nome","40 px"],["Percentual","50 px"]],
-   ligacoes:[["Cargo","resumo.cargo","PRESIDENTE"],["Praça","resumo.abrangencia","BRASIL"],
+   ligacoes:[["Cargo","resumo.cargo","PRESIDENTE"],
+             ["Praça","resumo.abrangencia","BRASIL"],
              ["Urnas apuradas","resumo.apuracao_pct","chip da cartola"],
              ["Foto 1º","candidatos[0].foto","fotos/13.png"],
-             ["Nome 1º","candidatos[0].nome","texto"],
-             ["Sigla 1º","candidatos[0].partido","texto"],
+             ["Nome e sigla 1º","candidatos[0].nome · .partido","dois objetos, ou .nome_partido num só"],
              ["Votos 1º","candidatos[0].percentual","número grande"],
-             ["Barra 1º","candidatos[0].percentual_num","largura, em %"],
-             ["Cor da barra 1º","candidatos[0].cor","cor do preenchimento"],
+             ["Barra 1º","candidatos[0].percentual_num · .cor","largura em % e cor do preenchimento"],
              ["Eleito 1º","candidatos[0].eleito","visibilidade do selo"],
-             ["Bloco 2º","candidatos[1].*","mesmos campos"],
+             ["Bloco do 2º","candidatos[1].*","os mesmos campos"],
              ["Selo de parcial","resumo.selo","visibilidade + texto"]]},
 
   {cod:"T2", titulo:"Governador — duelo com foto", arte:comFoto("GOVERNADOR","PARANÁ"),
@@ -456,7 +468,7 @@ const modelos = [
              ["Cor do marcador","candidatos[n].cor","identifica o partido"],
              ["Urnas apuradas","resumo.apuracao_pct","chip à direita"]]},
 
-  {cod:"T6", titulo:"Selo permanente de apuração", arte:selo(), alto:true,
+  {cod:"T6", titulo:"Selo permanente de apuração", arte:selo(),
    uso:`Fica no canto durante todo o bloco, entre uma tarja e outra, para o telespectador que acaba
         de sintonizar saber o que está sendo apurado e quanto já saiu. Não mostra candidato.`,
    medidas:[["Posição","topo 56 px · direita 60 px"],["Cabeçalho","altura 38 px"],
@@ -471,20 +483,16 @@ const modelos = [
 const impressao = new URLSearchParams(location.search).has("impressao");
 if (impressao) document.body.classList.add("impressao");
 
-const palcos = (arte, alto = "") => impressao
-  ? `<div class="par">
-       <div><p class="estado-rot">Parcial · 63% das urnas</p>
-         <div class="palco ${alto}">${arte}</div></div>
-       <div><p class="estado-rot">Fechamento · 100% apurado</p>
-         <div class="palco final ${alto}">${arte}</div></div>
-     </div>`
-  : `<div class="palco ${alto}">${guias}${arte}</div>`;
+const palcos = arte => impressao
+  ? `<div><p class="estado-rot">Parcial · 63% das urnas apuradas</p>
+       <div class="palco">${arte}</div></div>`
+  : `<div class="palco">${guias}${arte}</div>`;
 
 document.getElementById("modelos").innerHTML = modelos.map(m => `
   <section class="modelo">
     <div class="mhead"><span class="codigo">${m.cod}</span><h2 class="mtitulo">${m.titulo}</h2></div>
     <p class="museo">${m.uso}</p>
-    ${palcos(m.arte, m.alto ? "palco-alto" : "")}
+    ${palcos(m.arte)}
     <div class="specs">
       <div class="bloco"><h3>Medidas · projeto 1920 × 1080</h3>
         <ul class="medidas">${m.medidas.map(([k,v])=>`<li>${k}<span>${v}</span></li>`).join("")}</ul>
@@ -497,6 +505,19 @@ document.getElementById("modelos").innerHTML = modelos.map(m => `
       </div>
     </div>
   </section>`).join("");
+
+if (impressao) {
+  // uma pagina no fim com os seis modelos ja fechados: e o estado que o
+  // operador ve menos vezes no ensaio e mais precisa reconhecer no ar
+  const galeria = document.createElement("section");
+  galeria.className = "galeria";
+  galeria.innerHTML = `<h2>Estado de fechamento · 100% apurado</h2>
+    <p>Os mesmos seis modelos com a apuração encerrada: selo ELEITO no primeiro colocado e
+       a faixa "PARCIAL — NÃO OFICIAL" já removida.</p>` +
+    modelos.map(m => `<div><p class="estado-rot">${m.cod} · ${m.titulo}</p>
+      <div class="palco final">${m.arte}</div></div>`).join("");
+  document.getElementById("modelos").appendChild(galeria);
+}
 
 function aplicar(){
   const global = document.body.classList.contains("final") ? dados.final : dados.parcial;
