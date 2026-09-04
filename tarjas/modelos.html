@@ -179,6 +179,20 @@ body.impressao .palco::after{display:none}
   .liga th{padding-bottom:6px}
   .medidas li{padding:4.5px 0}
   .museo{font-size:12.5px;line-height:1.45}
+  /* pranchas de arte: uma pagina inteira por tarja, sem margem, para o
+     designer conferir proporcao e detalhe em tamanho real */
+  @page cheia{size:A4 landscape;margin:0}
+  /* A pagina 'cheia' nao tem margem, entao o bloco ocupa a folha inteira e
+     centraliza a arte. 200mm e nao 210: o padding do container ainda soma
+     aqui, e estourar por 1mm gera uma pagina em branco no fim. */
+  .prova{page:cheia;break-before:page;height:200mm;display:flex;flex-direction:column;
+    justify-content:center;gap:0}
+  .prova .palco{border:0;border-radius:0;width:100%}
+  .prova-rot{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--ink-3);margin:7px 12px 0;display:flex;gap:10px}
+  .prova-rot b{color:var(--ink);font-weight:500}
+  .provas-capa{break-before:page}
+
   /* pagina final: os seis modelos no estado de fechamento */
   .galeria{break-before:page;display:grid;grid-template-columns:repeat(3,1fr);gap:18px 16px}
   .galeria h2{grid-column:1/-1;font-family:var(--cond);text-transform:uppercase;font-size:24px;
@@ -536,6 +550,27 @@ if (impressao) {
     modelos.map(m => `<div><p class="estado-rot">${m.cod} · ${m.titulo}</p>
       <div class="palco final">${m.arte}</div></div>`).join("");
   document.getElementById("modelos").appendChild(galeria);
+}
+
+if (impressao) {
+  // pranchas de arte no fim do documento: cada tarja sozinha numa pagina,
+  // no maior tamanho que o papel comporta, nos dois estados
+  const provas = document.createElement("div");
+  provas.innerHTML = `<section class="final-nota provas-capa">
+      <h2>Pranchas de arte · tamanho real</h2>
+      <p>As páginas a seguir trazem cada tarja sozinha, no maior tamanho que a folha comporta e sem
+         nenhuma margem, para conferir proporção, peso de tipografia e alinhamento contra o
+         monitor. Cada modelo aparece duas vezes: parcial e fechamento.</p>
+      <p>Os mesmos quadros estão exportados em PNG 1920 × 1080 na pasta
+         <code>tarjas/artes/</code> — use-os como base para calcar a cena no LiveBoard.</p>
+    </section>` +
+    modelos.flatMap(m => [["parcial", ""], ["fechamento", "final"]].map(([nome, cls]) => `
+      <div class="prova">
+        <div class="palco ${cls}" data-arte="${m.cod}-${nome}">${m.arte}</div>
+        <p class="prova-rot"><b>${m.cod}</b><span>${m.titulo}</span>
+           <span>· ${nome === "parcial" ? "63% das urnas apuradas" : "100% apurado"}</span></p>
+      </div>`)).join("");
+  document.querySelector(".wrap:last-of-type").appendChild(provas);
 }
 
 function aplicar(){

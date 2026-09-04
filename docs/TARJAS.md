@@ -6,10 +6,25 @@ A arte e as medidas ficam em [`tarjas/modelos.html`](../tarjas/modelos.html) —
 abra no navegador para ver cada modelo em proporção 1920×1080, com as guias de
 área segura e o estado de fechamento.
 
-Para imprimir ou circular: [`tarjas/Tarjas-Eleicoes-2026.pdf`](../tarjas/Tarjas-Eleicoes-2026.pdf)
-— A4 paisagem, um modelo por página, cada um nos dois estados lado a lado.
-A mesma página gera o PDF (modo `?impressao`), então mexer na arte e rodar
-`python scripts/gerar_pdf_tarjas.py` mantém os dois em sincronia.
+Para imprimir ou circular:
+[`tarjas/Tarjas-Eleicoes-2026.pdf`](../tarjas/Tarjas-Eleicoes-2026.pdf) — A4
+paisagem, 23 páginas:
+
+| Páginas | O quê |
+|---|---|
+| 1 | capa |
+| 2–7 | um modelo por página, com medidas e ligação com o JSON |
+| 8 | os seis no estado de fechamento |
+| 9–10 | como montar no LiveBoard |
+| 11 | abertura das pranchas |
+| 12–23 | **pranchas de arte**: cada tarja sozinha, em página cheia sem margem, nos dois estados |
+
+E em [`tarjas/artes/`](../tarjas/artes/), os mesmos doze quadros exportados em
+**PNG 1920 × 1080** — tamanho de projeto, para calcar a cena no LiveBoard por
+cima. Nomeados `T1-parcial.png`, `T1-fechamento.png` e assim por diante.
+
+Tudo sai da mesma página (modo `?impressao`), então mexer na arte e rodar
+`python scripts/gerar_pdf_tarjas.py` regenera PDF e PNGs em sincronia.
 
 ## Os modelos
 
