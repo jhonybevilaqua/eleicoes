@@ -13,6 +13,8 @@ governador-pr.json;candidatos[0].nome_partido;cand1_nome_partido;sempre o candid
 governador-pr.json;candidatos[0].percentual;cand1_percentual;sempre o candidato numero 10
 governador-pr.json;candidatos[0].percentual_num;cand1_percentual_num;sempre o candidato numero 10
 governador-pr.json;candidatos[0].votos;cand1_votos;sempre o candidato numero 10
+governador-pr.json;candidatos[0].foto;cand1_foto;sempre o candidato numero 10
+governador-pr.json;candidatos[0].cor;cand1_cor;sempre o candidato numero 10
 governador-pr.json;candidatos[0].eleito;cand1_eleito;sempre o candidato numero 10
 governador-pr.json;candidatos[1].visivel;cand2_visivel;sempre o candidato numero 20
 governador-pr.json;candidatos[1].numero;cand2_numero;sempre o candidato numero 20
@@ -22,6 +24,8 @@ governador-pr.json;candidatos[1].nome_partido;cand2_nome_partido;sempre o candid
 governador-pr.json;candidatos[1].percentual;cand2_percentual;sempre o candidato numero 20
 governador-pr.json;candidatos[1].percentual_num;cand2_percentual_num;sempre o candidato numero 20
 governador-pr.json;candidatos[1].votos;cand2_votos;sempre o candidato numero 20
+governador-pr.json;candidatos[1].foto;cand2_foto;sempre o candidato numero 20
+governador-pr.json;candidatos[1].cor;cand2_cor;sempre o candidato numero 20
 governador-pr.json;candidatos[1].eleito;cand2_eleito;sempre o candidato numero 20
 governador-pr.json;candidatos[2].visivel;cand3_visivel;sempre o candidato numero 30
 governador-pr.json;candidatos[2].numero;cand3_numero;sempre o candidato numero 30
@@ -31,6 +35,8 @@ governador-pr.json;candidatos[2].nome_partido;cand3_nome_partido;sempre o candid
 governador-pr.json;candidatos[2].percentual;cand3_percentual;sempre o candidato numero 30
 governador-pr.json;candidatos[2].percentual_num;cand3_percentual_num;sempre o candidato numero 30
 governador-pr.json;candidatos[2].votos;cand3_votos;sempre o candidato numero 30
+governador-pr.json;candidatos[2].foto;cand3_foto;sempre o candidato numero 30
+governador-pr.json;candidatos[2].cor;cand3_cor;sempre o candidato numero 30
 governador-pr.json;candidatos[2].eleito;cand3_eleito;sempre o candidato numero 30
 governador-pr.json;plano.cargo;cargo;resumo (plano)
 governador-pr.json;plano.abrangencia;abrangencia;resumo (plano)
@@ -46,6 +52,8 @@ governador-pr.json;plano.cand1_nome_partido;cand1_nome_partido;sempre o candidat
 governador-pr.json;plano.cand1_percentual;cand1_percentual;sempre o candidato numero 10 (plano)
 governador-pr.json;plano.cand1_percentual_num;cand1_percentual_num;sempre o candidato numero 10 (plano)
 governador-pr.json;plano.cand1_votos;cand1_votos;sempre o candidato numero 10 (plano)
+governador-pr.json;plano.cand1_foto;cand1_foto;sempre o candidato numero 10 (plano)
+governador-pr.json;plano.cand1_cor;cand1_cor;sempre o candidato numero 10 (plano)
 governador-pr.json;plano.cand1_eleito;cand1_eleito;sempre o candidato numero 10 (plano)
 governador-pr.json;plano.cand2_visivel;cand2_visivel;sempre o candidato numero 20 (plano)
 governador-pr.json;plano.cand2_numero;cand2_numero;sempre o candidato numero 20 (plano)
@@ -55,6 +63,8 @@ governador-pr.json;plano.cand2_nome_partido;cand2_nome_partido;sempre o candidat
 governador-pr.json;plano.cand2_percentual;cand2_percentual;sempre o candidato numero 20 (plano)
 governador-pr.json;plano.cand2_percentual_num;cand2_percentual_num;sempre o candidato numero 20 (plano)
 governador-pr.json;plano.cand2_votos;cand2_votos;sempre o candidato numero 20 (plano)
+governador-pr.json;plano.cand2_foto;cand2_foto;sempre o candidato numero 20 (plano)
+governador-pr.json;plano.cand2_cor;cand2_cor;sempre o candidato numero 20 (plano)
 governador-pr.json;plano.cand2_eleito;cand2_eleito;sempre o candidato numero 20 (plano)
 governador-pr.json;plano.cand3_visivel;cand3_visivel;sempre o candidato numero 30 (plano)
 governador-pr.json;plano.cand3_numero;cand3_numero;sempre o candidato numero 30 (plano)
@@ -64,4 +74,6 @@ governador-pr.json;plano.cand3_nome_partido;cand3_nome_partido;sempre o candidat
 governador-pr.json;plano.cand3_percentual;cand3_percentual;sempre o candidato numero 30 (plano)
 governador-pr.json;plano.cand3_percentual_num;cand3_percentual_num;sempre o candidato numero 30 (plano)
 governador-pr.json;plano.cand3_votos;cand3_votos;sempre o candidato numero 30 (plano)
+governador-pr.json;plano.cand3_foto;cand3_foto;sempre o candidato numero 30 (plano)
+governador-pr.json;plano.cand3_cor;cand3_cor;sempre o candidato numero 30 (plano)
 governador-pr.json;plano.cand3_eleito;cand3_eleito;sempre o candidato numero 30 (plano)

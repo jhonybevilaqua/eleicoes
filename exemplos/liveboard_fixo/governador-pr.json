@@ -5,7 +5,7 @@
     "apuracao_pct": "63,00%",
     "apuracao_pct_num": 63.0,
     "selo": "PARCIAL - NAO OFICIAL",
-    "hora_atualizacao": "12:55"
+    "hora_atualizacao": "14:01"
   },
   "candidatos": [
     {
@@ -18,6 +18,8 @@
       "percentual": "",
       "percentual_num": null,
       "votos": "",
+      "foto": "",
+      "cor": "",
       "eleito": ""
     },
     {
@@ -30,6 +32,8 @@
       "percentual": "",
       "percentual_num": null,
       "votos": "",
+      "foto": "",
+      "cor": "",
       "eleito": ""
     },
     {
@@ -42,6 +46,8 @@
       "percentual": "",
       "percentual_num": null,
       "votos": "",
+      "foto": "",
+      "cor": "",
       "eleito": ""
     }
   ],
@@ -51,7 +57,7 @@
     "apuracao_pct": "63,00%",
     "apuracao_pct_num": 63.0,
     "selo": "PARCIAL - NAO OFICIAL",
-    "hora_atualizacao": "12:55",
+    "hora_atualizacao": "14:01",
     "cand1_visivel": "0",
     "cand1_numero": "",
     "cand1_nome": "",
@@ -60,6 +66,8 @@
     "cand1_percentual": "",
     "cand1_percentual_num": null,
     "cand1_votos": "",
+    "cand1_foto": "",
+    "cand1_cor": "",
     "cand1_eleito": "",
     "cand2_visivel": "0",
     "cand2_numero": "",
@@ -69,6 +77,8 @@
     "cand2_percentual": "",
     "cand2_percentual_num": null,
     "cand2_votos": "",
+    "cand2_foto": "",
+    "cand2_cor": "",
     "cand2_eleito": "",
     "cand3_visivel": "0",
     "cand3_numero": "",
@@ -78,6 +88,8 @@
     "cand3_percentual": "",
     "cand3_percentual_num": null,
     "cand3_votos": "",
+    "cand3_foto": "",
+    "cand3_cor": "",
     "cand3_eleito": ""
   }
 }

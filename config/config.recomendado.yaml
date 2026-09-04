@@ -68,6 +68,12 @@ texto:
     cargo: 24
     abrangencia: 24
 
+  # Arte das tarjas (ver docs/TARJAS.md). Arquivo nomeado pelo NUMERO da urna:
+  # o numero e estavel, a grafia do nome nao.
+  padrao_foto: "fotos/{numero}.png"
+  cor_padrao: "#7d93b3"
+  cores_partido: {}   # ex.: { PVL: "#2f97e8", PDR: "#c0392b" }
+
 saida:
   destino: dados/saida
   encoding: utf-8
@@ -86,7 +92,9 @@ exporters:
     formato_nome_partido: "{nome} ({partido})"
     incluir_plano: true
     campos_resumo: [cargo, abrangencia, apuracao_pct, apuracao_pct_num, selo, hora_atualizacao]
-    campos_candidato: [visivel, numero, nome, partido, nome_partido, percentual, percentual_num, votos, eleito]
+    campos_candidato:
+      [visivel, numero, nome, partido, nome_partido, percentual, percentual_num,
+       votos, foto, cor, eleito]
     # AJUSTAR: numeros na ordem em que aparecem na cena.
     candidatos_fixos: ["10", "20", "30"]
 

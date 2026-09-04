@@ -1,0 +1,462 @@
+<title>Tarjas EV News 2026</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --ground:#f2f5f9; --surface:#ffffff; --surface-2:#e9eef5;
+  --ink:#0f1826; --ink-2:#48586f; --ink-3:#77869c;
+  --rule:#d5dde8; --rule-2:#e6ebf2;
+  --accent:#1a63c0; --accent-soft:#e7f0fc;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,Segoe UI,sans-serif;
+  --cond:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#0b111c; --surface:#131b28; --surface-2:#1b2534;
+    --ink:#e8edf5; --ink-2:#a3b1c6; --ink-3:#75849b;
+    --rule:#293446; --rule-2:#1f2937;
+    --accent:#5fa2f0; --accent-soft:#16263d;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0b111c; --surface:#131b28; --surface-2:#1b2534;
+  --ink:#e8edf5; --ink-2:#a3b1c6; --ink-3:#75849b;
+  --rule:#293446; --rule-2:#1f2937;
+  --accent:#5fa2f0; --accent-soft:#16263d;
+}
+
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);line-height:1.55;
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px 96px}
+
+/* ---------- cabecalho ---------- */
+header{padding:56px 0 32px;border-bottom:1px solid var(--rule)}
+.kicker{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--accent);margin:0 0 12px}
+h1{font-family:var(--cond);font-weight:700;font-size:clamp(40px,7vw,68px);line-height:.98;
+  letter-spacing:-.01em;margin:0 0 14px;text-wrap:balance;text-transform:uppercase}
+.lede{font-size:17px;color:var(--ink-2);max-width:62ch;margin:0}
+.controls{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
+.sw{display:inline-flex;align-items:center;gap:9px;background:var(--surface);border:1px solid var(--rule);
+  border-radius:999px;padding:8px 15px;font-size:13px;font-weight:500;cursor:pointer;color:var(--ink)}
+.sw:hover{border-color:var(--accent)}
+.sw input{accent-color:var(--accent);width:15px;height:15px;margin:0;cursor:pointer}
+.sw:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.aviso{margin-top:22px;padding:12px 16px;border-left:3px solid var(--accent);background:var(--accent-soft);
+  font-size:13.5px;color:var(--ink-2);border-radius:0 4px 4px 0}
+
+/* ---------- secao de modelo ---------- */
+.modelo{padding:52px 0;border-bottom:1px solid var(--rule-2)}
+.mhead{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+.codigo{font-family:var(--mono);font-size:13px;font-weight:500;color:var(--surface);
+  background:var(--ink);padding:3px 8px;border-radius:3px;letter-spacing:.04em}
+.mtitulo{font-family:var(--cond);font-weight:600;text-transform:uppercase;font-size:30px;
+  letter-spacing:.005em;margin:0}
+.museo{font-size:15px;color:var(--ink-2);margin:0 0 22px;max-width:64ch}
+
+/* ---------- palco 16:9 ---------- */
+.palco{position:relative;container-type:inline-size;aspect-ratio:16/9;width:100%;
+  background:linear-gradient(160deg,#4a5568 0%,#2d3748 45%,#1a202c 100%);
+  border-radius:5px;overflow:hidden;border:1px solid var(--rule)}
+.palco::after{content:"IMAGEM DA REPORTAGEM";position:absolute;top:5.5%;left:4%;
+  font-family:var(--mono);font-size:clamp(8px,1.05cqw,13px);letter-spacing:.16em;color:#ffffff33}
+.palco{--u:0.0520833cqw} /* 1 pixel de um projeto 1920 de largura */
+
+/* guias de area segura */
+.guia{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .18s}
+body.guias .guia{opacity:1}
+.guia i{position:absolute;display:block;border:1px dashed}
+.guia .acao{inset:3.5%;border-color:#ffd54f99}
+.guia .titulo{inset:5%;border-color:#ff8a6599}
+.guia b{position:absolute;font-family:var(--mono);font-size:clamp(7px,.85cqw,11px);
+  letter-spacing:.1em;font-weight:400}
+.guia .lba{top:3.5%;left:3.9%;transform:translateY(-115%);color:#ffd54f}
+.guia .lbt{top:5%;left:5.4%;transform:translateY(-115%);color:#ff8a65}
+
+/* ---------- linguagem visual da tarja ---------- */
+.tarja{position:absolute;left:0;right:0;bottom:0;font-family:var(--cond);color:#fff;
+  text-transform:uppercase;line-height:1}
+.painel{background:linear-gradient(100deg,#0a1a33 0%,#122a52 62%,#16325e 100%)}
+.marca{display:flex;align-items:center;justify-content:center;background:#1257a5;
+  font-weight:700;letter-spacing:.02em;flex:none}
+.marca span{font-weight:500;opacity:.82}
+.cartola{display:flex;align-items:center;gap:calc(14 * var(--u));background:#2f97e8;
+  font-weight:600;letter-spacing:.09em}
+.cartola .sep{opacity:.55;font-weight:500}
+.uf{background:#0a1a33;font-weight:700;letter-spacing:.06em}
+.chip{margin-left:auto;display:flex;align-items:center;gap:calc(9 * var(--u));
+  background:#0a1a33;font-weight:600;letter-spacing:.06em}
+.chip em{font-style:normal;color:#8fc4f2;font-weight:500}
+.chip strong{font-variant-numeric:tabular-nums;letter-spacing:.01em}
+
+.cand{display:flex;align-items:center;min-width:0}
+.foto{flex:none;background:#20334f;position:relative;overflow:hidden}
+.foto svg{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:88%;height:auto;
+  fill:#5f7a9e}
+.foto b{position:absolute;top:calc(8 * var(--u));left:calc(8 * var(--u));font-family:var(--mono);
+  font-size:calc(13 * var(--u));letter-spacing:.1em;color:#ffffff55;font-weight:400}
+.nome{font-weight:700;letter-spacing:.005em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.part{font-weight:500;color:#a9c2de;letter-spacing:.05em}
+.pct{font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em;margin-left:auto;
+  text-align:right}
+.barra{background:#ffffff1f;overflow:hidden}
+.barra i{display:block;height:100%;transition:width .4s ease}
+.eleito{display:none;background:#12996b;font-weight:700;letter-spacing:.08em;flex:none}
+body.final .eleito{display:flex;align-items:center}
+.rodape{background:#08152b;display:flex;align-items:center;font-weight:500;letter-spacing:.04em;
+  color:#c4d3e6}
+.rodape .hora{background:#1257a5;color:#fff;font-weight:600;flex:none}
+.selo-nao{color:#ffcf6b;font-weight:600;letter-spacing:.08em;margin-left:auto}
+body.final .selo-nao{display:none}
+
+/* ---------- especificacao ---------- */
+.specs{display:grid;grid-template-columns:1fr;gap:26px;margin-top:26px}
+@media (min-width:840px){.specs{grid-template-columns:minmax(0,1fr) minmax(0,1.25fr)}}
+.bloco h3{font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-3);margin:0 0 12px;font-weight:500}
+.medidas{list-style:none;margin:0;padding:0;font-size:14px}
+.medidas li{display:flex;gap:12px;padding:7px 0;border-bottom:1px solid var(--rule-2);color:var(--ink-2)}
+.medidas li:last-child{border-bottom:0}
+.medidas span{margin-left:auto;font-family:var(--mono);font-size:13px;color:var(--ink);
+  font-variant-numeric:tabular-nums;text-align:right}
+.liga{width:100%;border-collapse:collapse;font-size:13.5px}
+.liga th{text-align:left;font-family:var(--mono);font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-3);font-weight:500;padding:0 12px 8px 0;
+  border-bottom:1px solid var(--rule)}
+.liga td{padding:8px 12px 8px 0;border-bottom:1px solid var(--rule-2);vertical-align:top;color:var(--ink-2)}
+.liga td:first-child{color:var(--ink);white-space:nowrap}
+.liga code{font-family:var(--mono);font-size:12.5px;color:var(--accent);word-break:break-all}
+.rolar{overflow-x:auto}
+
+/* ---------- fechamento ---------- */
+.final-nota{margin-top:56px;padding:30px 32px;background:var(--surface);border:1px solid var(--rule);
+  border-radius:6px}
+.final-nota h2{font-family:var(--cond);text-transform:uppercase;font-size:26px;font-weight:600;
+  margin:0 0 18px}
+.final-nota h4{font-size:14px;margin:22px 0 6px;color:var(--ink)}
+.final-nota p,.final-nota li{font-size:14.5px;color:var(--ink-2);margin:0 0 8px}
+.final-nota ul{padding-left:18px;margin:0}
+.final-nota code{font-family:var(--mono);font-size:13px;color:var(--accent)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+<header>
+  <p class="kicker">EV News · Cobertura Eleições 2026</p>
+  <h1>Tarjas de apuração</h1>
+  <p class="lede">Seis modelos de tarja para a noite de apuração, na linguagem visual do EV News.
+    Todos mostram a praça, o 1º e o 2º colocado, o percentual de urnas apuradas e o percentual de
+    votos válidos. Cada elemento está amarrado ao campo do JSON que a automação do TSE entrega.</p>
+  <div class="controls">
+    <label class="sw"><input type="checkbox" id="tFinal"> Ver estado de fechamento (100% apurado)</label>
+    <label class="sw"><input type="checkbox" id="tGuias"> Mostrar áreas segura e de título</label>
+  </div>
+  <p class="aviso"><strong>Nomes, siglas e números são fictícios.</strong> Servem para dimensionar o
+    layout — nenhum candidato, partido ou resultado real está representado aqui.</p>
+</header>
+</div>
+
+<div class="wrap" id="modelos"></div>
+
+<div class="wrap">
+<section class="final-nota">
+  <h2>Como montar no LiveBoard</h2>
+
+  <h4>Projeto e escala</h4>
+  <p>Todas as medidas abaixo são para um projeto de <strong>1920 × 1080</strong>. Se o LiveBoard estiver
+    em outra resolução, multiplique proporcionalmente — as proporções entre os blocos é que precisam
+    ser mantidas.</p>
+
+  <h4>Os dois percentuais não são a mesma coisa</h4>
+  <ul>
+    <li><code>resumo.apuracao_pct</code> — <strong>urnas apuradas</strong>. Quanto da apuração já saiu.
+      Vai no chip, sempre visível.</li>
+    <li><code>candidatos[n].percentual</code> — <strong>votos válidos</strong> daquele candidato.
+      Vai no número grande, junto do nome.</li>
+  </ul>
+  <p>Trocar um pelo outro no ar é o erro mais caro dessa cobertura. Nomeie os objetos na cena com os
+    dois nomes por extenso, não com abreviação.</p>
+
+  <h4>Fotos dos candidatos</h4>
+  <p>Nomeie os arquivos pelo <strong>número da urna</strong>, não pelo nome: <code>fotos/13.png</code>,
+    <code>fotos/22.png</code>. O número é o identificador estável — grafia de nome muda, número não.
+    Configure em <code>texto.padrao_foto: "fotos/{numero}.png"</code> e o campo
+    <code>candidatos[n].foto</code> chega pronto no JSON.</p>
+  <p>Enquadramento: retrato vertical 3:4, cabeça e ombros, fundo recortado. Deixe uma foto
+    <code>fotos/_sem.png</code> genérica como fallback — em proporcional aparece candidato sem foto no
+    acervo.</p>
+
+  <h4>Cores por partido</h4>
+  <p>Configure <code>texto.cores_partido</code> e o campo <code>candidatos[n].cor</code> alimenta a
+    barra. A mesma sigla mantém a mesma cor em todas as praças e cargos — é por ela que o
+    telespectador se orienta entre um bloco e outro.</p>
+
+  <h4>Proporcional exige números pequenos</h4>
+  <p>Em deputado, o 1º colocado costuma ficar na casa de 2% a 5%. O campo do percentual precisa
+    caber <code>4,12%</code> sem parecer quebrado, e a barra precisa ser legível com preenchimento
+    mínimo — por isso os modelos T4 e T5 normalizam a barra pelo líder, não pelo total.</p>
+
+  <h4>Linhas vazias</h4>
+  <p>Amarre a visibilidade de cada bloco de candidato ao campo <code>visivel</code> do slot. Antes de
+    a apuração começar, ou numa praça sem dado, a tarja aparece só com a cartola e o chip zerado, em
+    vez de mostrar campos em branco.</p>
+
+  <h4>Selo de parcial</h4>
+  <p>Enquanto <code>resumo.selo</code> vier preenchido, mostre-o. Ele só fica vazio quando o boletim é
+    oficial. É a trava visual que impede um simulado do TSE de ir ao ar com cara de resultado final.</p>
+</section>
+</div>
+
+<script>
+const dados = {
+  parcial: {urnas:"63,00%", c1p:"47,82%", c2p:"41,15%", c1b:47.82, c2b:41.15,
+            sen1:"38,71%", sen2:"29,44%", sen1b:38.71, sen2b:29.44,
+            dep1:"4,12%", dep2:"3,58%", dep1b:100, dep2b:86.9},
+  final:   {urnas:"100,00%", c1p:"51,34%", c2p:"44,08%", c1b:51.34, c2b:44.08,
+            sen1:"41,06%", sen2:"31,77%", sen1b:41.06, sen2b:31.77,
+            dep1:"4,87%", dep2:"3,91%", dep1b:100, dep2b:80.3}
+};
+
+/* silhueta de retrato usada no lugar da foto real */
+const silhueta = `<svg viewBox="0 0 100 120" aria-hidden="true"><path fill="#5b789c" d="M50 58c13 0 23-11 23-25S63 8 50 8 27 19 27 33s10 25 23 25zm0 8c-19 0-38 10-38 30v24h76V96c0-20-19-30-38-30z"/></svg>`;
+
+const u = "var(--u)";
+const px = n => `calc(${n} * var(--u))`;
+
+/* --- blocos reutilizados ------------------------------------------------ */
+function cartola(cargo, praca, {uf=true}={}){
+  return `<div class="cartola" style="height:${px(58)};padding:0 ${px(26)};font-size:${px(25)}">
+      <span>ELEIÇÕES 2026</span><span class="sep">/</span><span>${cargo}</span>
+      ${uf?`<span class="uf" style="padding:${px(7)} ${px(14)};font-size:${px(23)}">${praca}</span>`
+          :`<span class="sep">/</span><span>${praca}</span>`}
+      <span class="chip" style="height:${px(38)};padding:0 ${px(16)};font-size:${px(21)}">
+        <em>URNAS APURADAS</em><strong data-f="urnas">${dados.parcial.urnas}</strong></span>
+    </div>`;
+}
+function rodape(){
+  return `<div class="rodape" style="height:${px(46)};font-size:${px(20)};padding-right:${px(24)}">
+      <span class="hora" style="padding:0 ${px(18)};line-height:${px(46)}">04 out.20:41</span>
+      <span style="padding-left:${px(20)}">RESULTADOS OFICIAIS DO TSE · ATUALIZAÇÃO AUTOMÁTICA</span>
+      <span class="selo-nao">PARCIAL — NÃO OFICIAL</span>
+    </div>`;
+}
+function marca(h, fs){
+  return `<div class="marca" style="width:${px(196)};height:${px(h)};font-size:${px(fs)};
+      flex-direction:column;line-height:1.02">
+      <span style="font-size:${px(fs*0.62)}">ev</span>news</div>`;
+}
+
+/* --- T1 / T2 : duelo com foto ------------------------------------------ */
+function comFoto(cargo, praca){
+  const bloco = (n, nome, part, cor, campo, campoB) => `
+    <div class="cand" style="flex:1;min-width:0;gap:${px(20)};padding:${px(18)} ${px(24)}">
+      <div class="foto" style="width:${px(112)};height:${px(140)};border-radius:${px(4)}">
+        <b>FOTO</b>${silhueta}</div>
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:${px(11)}">
+        <div style="display:flex;align-items:baseline;gap:${px(12)};min-width:0">
+          <span class="nome" style="font-size:${px(40)}">${nome}</span>
+          <span class="part" style="font-size:${px(26)}">${part}</span>
+          <span class="eleito" style="height:${px(28)};padding:0 ${px(11)};font-size:${px(19)};
+            border-radius:${px(3)}">ELEITO</span>
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:${px(16)}">
+          <span style="font-size:${px(22)};color:#8fa8c6;font-weight:500">${n}º</span>
+          <div class="barra" style="flex:1;height:${px(13)};border-radius:${px(7)}">
+            <i data-b="${campoB}" style="width:${dados.parcial[campoB]}%;background:${cor};
+              border-radius:${px(7)}"></i></div>
+          <span class="pct" style="font-size:${px(50)};margin:0" data-f="${campo}">${dados.parcial[campo]}</span>
+        </div>
+      </div>
+    </div>`;
+  return `<div class="tarja">
+    ${cartola(cargo, praca)}
+    <div class="painel" style="display:flex;align-items:stretch">
+      ${marca(176, 40)}
+      ${bloco(1,"MARIA ANDRADE","PVL","#2f97e8","c1p","c1b")}
+      <div style="width:${px(2)};background:#ffffff1c;margin:${px(22)} 0"></div>
+      ${bloco(2,"ROBERTO LIMA","PDR","#7d93b3","c2p","c2b")}
+    </div>
+    ${rodape()}</div>`;
+}
+
+/* --- T3 / T4 : sem foto, duas linhas ----------------------------------- */
+function semFoto(cargo, praca, campos, compacto){
+  const alt = compacto ? 60 : 74;
+  const linha = (n, nome, part, cor, campo, campoB) => `
+    <div class="cand" style="height:${px(alt)};gap:${px(18)};padding:0 ${px(26)}">
+      <span style="font-size:${px(compacto?24:28)};color:#8fa8c6;font-weight:600;width:${px(38)}">${n}º</span>
+      <span class="nome" style="font-size:${px(compacto?32:38)};max-width:${px(compacto?420:480)}">${nome}</span>
+      <span class="part" style="font-size:${px(compacto?22:25)}">${part}</span>
+      <div class="barra" style="flex:1;height:${px(11)};border-radius:${px(6)};margin:0 ${px(10)}">
+        <i data-b="${campoB}" style="width:${dados.parcial[campoB]}%;background:${cor};border-radius:${px(6)}"></i></div>
+      <span class="pct" style="font-size:${px(compacto?36:42)};min-width:${px(150)}"
+        data-f="${campo}">${dados.parcial[campo]}</span>
+      <span class="eleito" style="height:${px(26)};padding:0 ${px(10)};font-size:${px(18)};
+        border-radius:${px(3)};margin-left:${px(12)}">ELEITO</span>
+    </div>`;
+  return `<div class="tarja">
+    ${cartola(cargo, praca)}
+    <div class="painel" style="display:flex;align-items:stretch">
+      ${marca(alt*2, 34)}
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center">
+        ${linha(1,"MARIA ANDRADE","PVL","#2f97e8",campos[0],campos[2])}
+        <div style="height:1px;background:#ffffff1c;margin:0 ${px(26)}"></div>
+        ${linha(2,"ROBERTO LIMA","PDR","#7d93b3",campos[1],campos[3])}
+      </div>
+    </div>
+    ${rodape()}</div>`;
+}
+
+/* --- T5 : linha unica, para passagem ao vivo --------------------------- */
+function passagem(){
+  const item = (n, nome, part, cor, campo) => `
+    <span style="display:flex;align-items:center;gap:${px(12)};min-width:0">
+      <span style="width:${px(9)};height:${px(30)};background:${cor};border-radius:${px(2)};flex:none"></span>
+      <span style="font-size:${px(20)};color:#8fa8c6;font-weight:600">${n}º</span>
+      <span class="nome" style="font-size:${px(30)};max-width:${px(300)}">${nome}</span>
+      <span class="part" style="font-size:${px(21)}">${part}</span>
+      <span class="pct" style="font-size:${px(34)};margin:0" data-f="${campo}">${dados.parcial[campo]}</span>
+    </span>`;
+  return `<div class="tarja">
+    <div class="painel" style="display:flex;align-items:center;height:${px(78)};gap:${px(26)}">
+      ${marca(78, 30)}
+      <span class="uf" style="padding:${px(8)} ${px(15)};font-size:${px(24)};font-weight:700">PARANÁ</span>
+      <span style="font-size:${px(22)};color:#8fc4f2;font-weight:600;letter-spacing:.08em">GOVERNADOR</span>
+      <div style="width:${px(2)};height:${px(38)};background:#ffffff26"></div>
+      ${item(1,"MARIA ANDRADE","PVL","#2f97e8","c1p")}
+      ${item(2,"ROBERTO LIMA","PDR","#7d93b3","c2p")}
+      <span class="chip" style="margin-left:auto;height:${px(78)};padding:0 ${px(24)};font-size:${px(21)}">
+        <em>URNAS</em><strong data-f="urnas">${dados.parcial.urnas}</strong></span>
+    </div>
+    ${rodape()}</div>`;
+}
+
+/* --- T6 : selo permanente de canto ------------------------------------- */
+function selo(){
+  return `<div style="position:absolute;top:${px(56)};right:${px(60)};font-family:var(--cond);
+      color:#fff;text-transform:uppercase;line-height:1;border-radius:${px(4)};overflow:hidden;
+      box-shadow:0 ${px(6)} ${px(24)} #0006">
+    <div style="background:#2f97e8;padding:${px(9)} ${px(18)};font-size:${px(20)};font-weight:600;
+      letter-spacing:.09em;display:flex;gap:${px(10)}">
+      <span>GOVERNADOR</span><span style="opacity:.6">/</span><span>PARANÁ</span></div>
+    <div class="painel" style="padding:${px(14)} ${px(18)};display:flex;align-items:center;
+      gap:${px(14)}">
+      <span style="font-size:${px(18)};color:#8fc4f2;font-weight:500;letter-spacing:.07em">
+        URNAS<br>APURADAS</span>
+      <strong style="font-size:${px(46)};font-weight:700;font-variant-numeric:tabular-nums"
+        data-f="urnas">${dados.parcial.urnas}</strong></div>
+    <div style="background:#08152b;padding:${px(7)} ${px(18)};font-size:${px(16)};font-weight:600;
+      letter-spacing:.07em;color:#ffcf6b" class="selo-nao">PARCIAL — NÃO OFICIAL</div>
+  </div>`;
+}
+
+const guias = `<div class="guia"><i class="acao"></i><i class="titulo"></i>
+  <b class="lba">ÁREA DE AÇÃO 93%</b><b class="lbt">ÁREA DE TÍTULO 90%</b></div>`;
+
+const modelos = [
+  {cod:"T1", titulo:"Presidente — duelo com foto", arte:comFoto("PRESIDENTE","BRASIL"),
+   uso:`O placar principal da noite. Foto, nome, sigla e percentual de votos dos dois primeiros,
+        lado a lado. É a tarja que fica mais tempo no ar, então recebe o maior espaço vertical.`,
+   medidas:[["Altura total","280 px"],["Cartola","58 px"],["Painel","176 px"],["Rodapé","46 px"],
+            ["Foto","112 × 140 px"],["Nome","40 px"],["Percentual","50 px"]],
+   ligacoes:[["Cargo","resumo.cargo","PRESIDENTE"],["Praça","resumo.abrangencia","BRASIL"],
+             ["Urnas apuradas","resumo.apuracao_pct","chip da cartola"],
+             ["Foto 1º","candidatos[0].foto","fotos/13.png"],
+             ["Nome 1º","candidatos[0].nome","texto"],
+             ["Sigla 1º","candidatos[0].partido","texto"],
+             ["Votos 1º","candidatos[0].percentual","número grande"],
+             ["Barra 1º","candidatos[0].percentual_num","largura, em %"],
+             ["Cor da barra 1º","candidatos[0].cor","cor do preenchimento"],
+             ["Eleito 1º","candidatos[0].eleito","visibilidade do selo"],
+             ["Bloco 2º","candidatos[1].*","mesmos campos"],
+             ["Selo de parcial","resumo.selo","visibilidade + texto"]]},
+
+  {cod:"T2", titulo:"Governador — duelo com foto", arte:comFoto("GOVERNADOR","PARANÁ"),
+   uso:`Mesma estrutura da T1, com a praça em destaque no bloco escuro. Use uma cena por UF que a
+        emissora cobre — trocar só o arquivo de origem é mais seguro no ar do que trocar campo.`,
+   medidas:[["Altura total","280 px"],["Bloco da praça","altura 37 px"],["Foto","112 × 140 px"],
+            ["Divisória central","2 px"],["Margem lateral","24 px"]],
+   ligacoes:[["Praça","resumo.abrangencia","PARANÁ"],
+             ["Praça (apelido)","apelido_abrangencia na config","evita 'PR' no ar"],
+             ["Urnas apuradas","resumo.apuracao_pct","chip da cartola"],
+             ["1º colocado","candidatos[0].*","foto, nome, sigla, %"],
+             ["2º colocado","candidatos[1].*","foto, nome, sigla, %"]]},
+
+  {cod:"T3", titulo:"Senador — sem foto", arte:semFoto("SENADOR","PARANÁ",["sen1","sen2","sen1b","sen2b"],false),
+   uso:`Duas linhas, sem foto: posição, nome, sigla, barra e percentual. Cabe nome longo sem quebrar
+        o layout, que é o caso comum no Senado.`,
+   medidas:[["Altura total","252 px"],["Linha de candidato","74 px"],["Nome","38 px · máx. 480 px"],
+            ["Percentual","42 px · larg. mín. 150 px"],["Barra","11 px"]],
+   ligacoes:[["Cargo","resumo.cargo","SENADOR"],["Praça","resumo.abrangencia","PARANÁ"],
+             ["Urnas apuradas","resumo.apuracao_pct","chip da cartola"],
+             ["Nome + sigla","candidatos[0].nome_partido","alternativa a dois objetos"],
+             ["Votos","candidatos[0].percentual","número grande"],
+             ["Barra","candidatos[0].percentual_num","largura, em %"],
+             ["Linha vazia","candidatos[n].visivel","0 esconde a linha inteira"]]},
+
+  {cod:"T4", titulo:"Deputado — sem foto, compacta", arte:semFoto("DEPUTADO FEDERAL","PARANÁ",["dep1","dep2","dep1b","dep2b"],true),
+   uso:`Versão apertada para os proporcionais, onde o 1º colocado fica na casa de 2% a 5%. A barra é
+        normalizada pelo líder — se fosse pelo total, as duas ficariam invisíveis no ar.`,
+   medidas:[["Altura total","224 px"],["Linha de candidato","60 px"],["Nome","32 px · máx. 420 px"],
+            ["Percentual","36 px"],["Barra","11 px, normalizada pelo líder"]],
+   ligacoes:[["Cargo","resumo.cargo","DEPUTADO FEDERAL / ESTADUAL"],
+             ["Praça","resumo.abrangencia","PARANÁ"],
+             ["Votos","candidatos[0].percentual","cabe 4,12% sem quebrar"],
+             ["Barra","candidatos[0].percentual_num ÷ candidatos[0].percentual_num","líder = 100%"],
+             ["Votos absolutos","candidatos[0].votos","opcional, se a cena tiver espaço"]]},
+
+  {cod:"T5", titulo:"Passagem ao vivo — linha única", arte:passagem(),
+   uso:`Para entrar por baixo de entrevista ou passagem de repórter, como na foto de referência.
+        Altura mínima, sem foto, sem perder nenhuma das quatro informações obrigatórias.`,
+   medidas:[["Altura total","124 px"],["Painel","78 px"],["Rodapé","46 px"],["Nome","30 px · máx. 300 px"],
+            ["Percentual","34 px"],["Marcador de cor","9 × 30 px"]],
+   ligacoes:[["Praça","resumo.abrangencia","bloco escuro"],
+             ["Cargo","resumo.cargo","texto azul"],
+             ["1º e 2º","candidatos[0..1].nome / .partido / .percentual",""],
+             ["Cor do marcador","candidatos[n].cor","identifica o partido"],
+             ["Urnas apuradas","resumo.apuracao_pct","chip à direita"]]},
+
+  {cod:"T6", titulo:"Selo permanente de apuração", arte:selo(),
+   uso:`Fica no canto durante todo o bloco, entre uma tarja e outra, para o telespectador que acaba
+        de sintonizar saber o que está sendo apurado e quanto já saiu. Não mostra candidato.`,
+   medidas:[["Posição","topo 56 px · direita 60 px"],["Cabeçalho","altura 38 px"],
+            ["Percentual","46 px"],["Faixa de parcial","altura 30 px"]],
+   ligacoes:[["Cargo","resumo.cargo","cabeçalho azul"],
+             ["Praça","resumo.abrangencia","cabeçalho azul"],
+             ["Urnas apuradas","resumo.apuracao_pct","número grande"],
+             ["Selo de parcial","resumo.selo","faixa inferior; some quando oficial"],
+             ["Atualização","resumo.hora_atualizacao","opcional"]]}
+];
+
+document.getElementById("modelos").innerHTML = modelos.map(m => `
+  <section class="modelo">
+    <div class="mhead"><span class="codigo">${m.cod}</span><h2 class="mtitulo">${m.titulo}</h2></div>
+    <p class="museo">${m.uso}</p>
+    <div class="palco">${guias}${m.arte}</div>
+    <div class="specs">
+      <div class="bloco"><h3>Medidas · projeto 1920 × 1080</h3>
+        <ul class="medidas">${m.medidas.map(([k,v])=>`<li>${k}<span>${v}</span></li>`).join("")}</ul>
+      </div>
+      <div class="bloco"><h3>Ligação com o JSON da automação</h3>
+        <div class="rolar"><table class="liga">
+          <thead><tr><th>Elemento</th><th>Campo</th><th>Observação</th></tr></thead>
+          <tbody>${m.ligacoes.map(([a,b,c])=>`<tr><td>${a}</td><td><code>${b}</code></td><td>${c}</td></tr>`).join("")}</tbody>
+        </table></div>
+      </div>
+    </div>
+  </section>`).join("");
+
+function aplicar(){
+  const d = document.body.classList.contains("final") ? dados.final : dados.parcial;
+  document.querySelectorAll("[data-f]").forEach(el => el.textContent = d[el.dataset.f]);
+  document.querySelectorAll("[data-b]").forEach(el => el.style.width = d[el.dataset.b] + "%");
+}
+document.getElementById("tFinal").addEventListener("change", e => {
+  document.body.classList.toggle("final", e.target.checked); aplicar();
+});
+document.getElementById("tGuias").addEventListener("change", e => {
+  document.body.classList.toggle("guias", e.target.checked);
+});
+aplicar();
+</script>

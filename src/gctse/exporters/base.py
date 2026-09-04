@@ -108,7 +108,31 @@ class Exporter(ABC):
             "eleito": "1" if cand.eleito else "0",
             "situacao": self._txt(cand.situacao, "situacao"),
             "sequencial": cand.sequencial,
+            "foto": self._foto(cand),
+            "cor": self._cor(cand),
         }
+
+    def _foto(self, cand: Candidato) -> str:
+        """Caminho da foto do candidato, montado a partir do numero da urna.
+
+        A arte nomeia os arquivos pelo numero (10.png, 22.png...), que e o
+        identificador estavel: nome muda de grafia, numero nao. Vazio quando
+        'texto.padrao_foto' nao esta configurado ou o candidato nao tem numero.
+        """
+        padrao = str(self.cfg_texto.get("padrao_foto", ""))
+        if not padrao or not cand.numero:
+            return ""
+        return padrao.format(numero=cand.numero, sequencial=cand.sequencial, partido=cand.partido)
+
+    def _cor(self, cand: Candidato) -> str:
+        """Cor da barra/tarja do candidato, por partido.
+
+        Mantem a mesma cor para o mesmo partido em todas as pracas e cargos,
+        que e o que o telespectador usa para se orientar entre um bloco e outro.
+        """
+        cores = self.cfg_texto.get("cores_partido") or {}
+        chave = (cand.partido or "").strip().upper()
+        return str(cores.get(chave, self.cfg_texto.get("cor_padrao", "")))
 
     def candidatos(self, ap: Apuracao) -> list[Candidato]:
         return ap.candidatos[: self.limite] if self.limite > 0 else ap.candidatos

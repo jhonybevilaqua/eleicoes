@@ -125,3 +125,29 @@ def test_encoding_legado_nao_quebra_a_gravacao(tmp_path):
     escritos = exporter.exportar(ap, "gov")
     conteudo = escritos[0].read_text(encoding="cp1252")
     assert "JOÃO CONCEIÇÃO" in conteudo
+
+
+# --- campos de arte: foto e cor --------------------------------------------
+
+def test_foto_montada_pelo_numero_do_candidato(tmp_path):
+    texto = {**TEXTO, "padrao_foto": "fotos/{numero}.png"}
+    exporter = criar("t", {"tipo": "json", "formato": "gc", "destino": str(tmp_path)}, texto, {})
+    (arquivo,) = exporter.exportar(_apuracao(), "gov")
+    corpo = json.loads(arquivo.read_text(encoding="utf-8"))
+    assert corpo["candidatos"][0]["foto"] == "fotos/11.png"
+    assert corpo["candidatos"][1]["foto"] == "fotos/22.png"
+
+
+def test_foto_vazia_quando_nao_configurada(tmp_path):
+    exporter = criar("t", {"tipo": "json", "formato": "gc", "destino": str(tmp_path)}, TEXTO, {})
+    (arquivo,) = exporter.exportar(_apuracao(), "gov")
+    assert json.loads(arquivo.read_text(encoding="utf-8"))["candidatos"][0]["foto"] == ""
+
+
+def test_cor_por_partido_com_fallback(tmp_path):
+    texto = {**TEXTO, "cores_partido": {"PART-A": "#0a5ec2"}, "cor_padrao": "#8a8a8a"}
+    exporter = criar("t", {"tipo": "json", "formato": "gc", "destino": str(tmp_path)}, texto, {})
+    (arquivo,) = exporter.exportar(_apuracao(), "gov")
+    corpo = json.loads(arquivo.read_text(encoding="utf-8"))
+    assert corpo["candidatos"][0]["cor"] == "#0a5ec2"    # mapeado
+    assert corpo["candidatos"][1]["cor"] == "#8a8a8a"    # fallback
