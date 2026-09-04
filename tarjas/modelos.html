@@ -1,4 +1,4 @@
-<title>Tarjas EV News 2026</title>
+<title>Tarjas Eleições 2026</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
 :root{
@@ -77,36 +77,38 @@ body.guias .guia{opacity:1}
 /* ---------- linguagem visual da tarja ---------- */
 .tarja{position:absolute;left:0;right:0;bottom:0;font-family:var(--cond);color:#fff;
   text-transform:uppercase;line-height:1}
-.painel{background:linear-gradient(100deg,#0a1a33 0%,#122a52 62%,#16325e 100%)}
-.marca{display:flex;align-items:center;justify-content:center;background:#1257a5;
-  font-weight:700;letter-spacing:.02em;flex:none}
-.marca span{font-weight:500;opacity:.82}
-.cartola{display:flex;align-items:center;gap:calc(14 * var(--u));background:#2f97e8;
+.painel{background:linear-gradient(100deg,#061436 0%,#0b2450 60%,#0e2f66 100%)}
+/* bloco de marca da cobertura, no lugar da logo da emissora */
+.marca{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:#14417f;flex:none;line-height:1}
+.mk-el{font-weight:700;letter-spacing:.005em;color:#fff}
+.mk-ano{background:#1d4d92;color:#a8c8e8;font-weight:600;letter-spacing:.16em}
+.cartola{display:flex;align-items:center;gap:calc(14 * var(--u));background:#2977cc;
   font-weight:600;letter-spacing:.09em}
 .cartola .sep{opacity:.55;font-weight:500}
-.uf{background:#0a1a33;font-weight:700;letter-spacing:.06em}
+.uf{background:#061436;font-weight:700;letter-spacing:.06em}
 .chip{margin-left:auto;display:flex;align-items:center;gap:calc(9 * var(--u));
-  background:#0a1a33;font-weight:600;letter-spacing:.06em}
-.chip em{font-style:normal;color:#8fc4f2;font-weight:500}
+  background:#061436;font-weight:600;letter-spacing:.06em}
+.chip em{font-style:normal;color:#8cc4ec;font-weight:500}
 .chip strong{font-variant-numeric:tabular-nums;letter-spacing:.01em}
 
 .cand{display:flex;align-items:center;min-width:0}
-.foto{flex:none;background:#20334f;position:relative;overflow:hidden}
+.foto{flex:none;background:#12294d;position:relative;overflow:hidden}
 .foto svg{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:88%;height:auto;
   fill:#5f7a9e}
 .foto b{position:absolute;top:calc(8 * var(--u));left:calc(8 * var(--u));font-family:var(--mono);
   font-size:calc(13 * var(--u));letter-spacing:.1em;color:#ffffff55;font-weight:400}
 .nome{font-weight:700;letter-spacing:.005em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.part{font-weight:500;color:#a9c2de;letter-spacing:.05em}
+.part{font-weight:500;color:#9dc0e2;letter-spacing:.05em}
 .pct{font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em;margin-left:auto;
   text-align:right}
 .barra{background:#ffffff1f;overflow:hidden}
 .barra i{display:block;height:100%;transition:width .4s ease}
-.eleito{display:none;background:#12996b;font-weight:700;letter-spacing:.08em;flex:none}
+.eleito{display:none;background:#11996a;font-weight:700;letter-spacing:.08em;flex:none}
 .final .eleito{display:flex;align-items:center}
-.rodape{background:#08152b;display:flex;align-items:center;font-weight:500;letter-spacing:.04em;
+.rodape{background:#04102c;display:flex;align-items:center;font-weight:500;letter-spacing:.04em;
   color:#c4d3e6}
-.rodape .hora{background:#1257a5;color:#fff;font-weight:600;flex:none}
+.rodape .hora{background:#14417f;color:#fff;font-weight:600;flex:none}
 .selo-nao{color:#ffcf6b;font-weight:600;letter-spacing:.08em;margin-left:auto}
 .final .selo-nao{display:none}
 
@@ -195,11 +197,12 @@ body.impressao .palco::after{display:none}
 
 <div class="wrap">
 <header>
-  <p class="kicker">EV News · Cobertura Eleições 2026</p>
+  <p class="kicker">TV Evangelizar · Cobertura Eleições 2026</p>
   <h1>Tarjas de apuração</h1>
-  <p class="lede">Seis modelos de tarja para a noite de apuração, na linguagem visual do EV News.
-    Todos mostram a praça, o 1º e o 2º colocado, o percentual de urnas apuradas e o percentual de
-    votos válidos. Cada elemento está amarrado ao campo do JSON que a automação do TSE entrega.</p>
+  <p class="lede">Seis modelos de tarja para a noite de apuração, na identidade da cobertura
+    Eleições 2026 — o mesmo bloco de marca da abertura, reduzido para o tamanho de tarja. Todos
+    mostram a praça, o 1º e o 2º colocado, o percentual de urnas apuradas e o percentual de votos
+    válidos. Cada elemento está amarrado ao campo do JSON que a automação do TSE entrega.</p>
   <div class="controls">
     <label class="sw"><input type="checkbox" id="tFinal"> Ver estado de fechamento (100% apurado)</label>
     <label class="sw"><input type="checkbox" id="tGuias"> Mostrar áreas segura e de título</label>
@@ -214,6 +217,15 @@ body.impressao .palco::after{display:none}
 <div class="wrap">
 <section class="final-nota">
   <h2>Como montar no LiveBoard</h2>
+
+  <h4>O bloco de marca</h4>
+  <p>O canto esquerdo da tarja carrega a marca da <strong>cobertura</strong>, não a da emissora:
+    "ELEIÇÕES" em caixa alta com o chip "2026" abaixo, como na abertura. Ocupa 232 px de largura e
+    corpo 34 px em todos os modelos, então a arte é a mesma peça reaproveitada — desenhe uma vez e
+    reutilize.</p>
+  <p>A abertura traz um leve deslocamento cromático avermelhado nas letras. Em tela cheia funciona;
+    em tarja, a 40 px de altura, vira um artefato de 1 px que parece defeito de render. Deixe de
+    fora, ou aplique com no máximo 1 px e confira num monitor de referência antes.</p>
 
   <h4>Projeto e escala</h4>
   <p>Todas as medidas abaixo são para um projeto de <strong>1920 × 1080</strong>. Se o LiveBoard estiver
@@ -279,7 +291,7 @@ const px = n => `calc(${n} * var(--u))`;
 /* --- blocos reutilizados ------------------------------------------------ */
 function cartola(cargo, praca, {uf=true}={}){
   return `<div class="cartola" style="height:${px(58)};padding:0 ${px(26)};font-size:${px(25)}">
-      <span>ELEIÇÕES 2026</span><span class="sep">/</span><span>${cargo}</span>
+      <span>APURAÇÃO</span><span class="sep">/</span><span>${cargo}</span>
       ${uf?`<span class="uf" style="padding:${px(7)} ${px(14)};font-size:${px(23)}">${praca}</span>`
           :`<span class="sep">/</span><span>${praca}</span>`}
       <span class="chip" style="height:${px(38)};padding:0 ${px(16)};font-size:${px(21)}">
@@ -293,10 +305,17 @@ function rodape(){
       <span class="selo-nao">PARCIAL — NÃO OFICIAL</span>
     </div>`;
 }
-function marca(h, fs){
-  return `<div class="marca" style="width:${px(196)};height:${px(h)};font-size:${px(fs)};
-      flex-direction:column;line-height:1.02">
-      <span style="font-size:${px(fs*0.62)}">ev</span>news</div>`;
+// Largura e corpo fixos em todos os modelos: assim o bloco e uma peca so,
+// desenhada uma vez e reaproveitada. 232px comportam "ELEICOES" a 34px com
+// 20px de respiro de cada lado - medido, nao estimado.
+const MARCA_LARG = 232, MARCA_FS = 34;
+
+function marca(h){
+  const fs = MARCA_FS;
+  return `<div class="marca" style="width:${px(MARCA_LARG)};height:${px(h)};gap:${px(fs*0.22)}">
+      <span class="mk-el" style="font-size:${px(fs)}">ELEIÇÕES</span>
+      <span class="mk-ano" style="font-size:${px(fs*0.5)};padding:${px(fs*0.12)} ${px(fs*0.3)};
+        border-radius:${px(2)}">2026</span></div>`;
 }
 
 /* --- T1 / T2 : duelo com foto ------------------------------------------ */
@@ -324,10 +343,10 @@ function comFoto(cargo, praca){
   return `<div class="tarja">
     ${cartola(cargo, praca)}
     <div class="painel" style="display:flex;align-items:stretch">
-      ${marca(176, 40)}
-      ${bloco(1,"MARIA ANDRADE","PVL","#2f97e8","c1p","c1b")}
+      ${marca(176)}
+      ${bloco(1,"MARIA ANDRADE","PVL","#4a90d9","c1p","c1b")}
       <div style="width:${px(2)};background:#ffffff1c;margin:${px(22)} 0"></div>
-      ${bloco(2,"ROBERTO LIMA","PDR","#7d93b3","c2p","c2b")}
+      ${bloco(2,"ROBERTO LIMA","PDR","#6b86ab","c2p","c2b")}
     </div>
     ${rodape()}</div>`;
 }
@@ -350,11 +369,11 @@ function semFoto(cargo, praca, campos, compacto){
   return `<div class="tarja">
     ${cartola(cargo, praca)}
     <div class="painel" style="display:flex;align-items:stretch">
-      ${marca(alt*2, 34)}
+      ${marca(alt*2)}
       <div style="flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center">
-        ${linha(1,"MARIA ANDRADE","PVL","#2f97e8",campos[0],campos[2])}
+        ${linha(1,"MARIA ANDRADE","PVL","#4a90d9",campos[0],campos[2])}
         <div style="height:1px;background:#ffffff1c;margin:0 ${px(26)}"></div>
-        ${linha(2,"ROBERTO LIMA","PDR","#7d93b3",campos[1],campos[3])}
+        ${linha(2,"ROBERTO LIMA","PDR","#6b86ab",campos[1],campos[3])}
       </div>
     </div>
     ${rodape()}</div>`;
@@ -372,12 +391,12 @@ function passagem(){
     </span>`;
   return `<div class="tarja">
     <div class="painel" style="display:flex;align-items:center;height:${px(78)};gap:${px(26)}">
-      ${marca(78, 30)}
+      ${marca(78)}
       <span class="uf" style="padding:${px(8)} ${px(15)};font-size:${px(24)};font-weight:700">PARANÁ</span>
-      <span style="font-size:${px(22)};color:#8fc4f2;font-weight:600;letter-spacing:.08em">GOVERNADOR</span>
+      <span style="font-size:${px(22)};color:#8cc4ec;font-weight:600;letter-spacing:.08em">GOVERNADOR</span>
       <div style="width:${px(2)};height:${px(38)};background:#ffffff26"></div>
-      ${item(1,"MARIA ANDRADE","PVL","#2f97e8","c1p")}
-      ${item(2,"ROBERTO LIMA","PDR","#7d93b3","c2p")}
+      ${item(1,"MARIA ANDRADE","PVL","#4a90d9","c1p")}
+      ${item(2,"ROBERTO LIMA","PDR","#6b86ab","c2p")}
       <span class="chip" style="margin-left:auto;height:${px(78)};padding:0 ${px(24)};font-size:${px(21)}">
         <em>URNAS</em><strong data-f="urnas">${dados.parcial.urnas}</strong></span>
     </div>
@@ -389,16 +408,16 @@ function selo(){
   return `<div style="position:absolute;top:${px(56)};right:${px(60)};font-family:var(--cond);
       color:#fff;text-transform:uppercase;line-height:1;border-radius:${px(4)};overflow:hidden;
       box-shadow:0 ${px(6)} ${px(24)} #0006">
-    <div style="background:#2f97e8;padding:${px(9)} ${px(18)};font-size:${px(20)};font-weight:600;
+    <div style="background:#2977cc;padding:${px(9)} ${px(18)};font-size:${px(20)};font-weight:600;
       letter-spacing:.09em;display:flex;gap:${px(10)}">
       <span>GOVERNADOR</span><span style="opacity:.6">/</span><span>PARANÁ</span></div>
     <div class="painel" style="padding:${px(14)} ${px(18)};display:flex;align-items:center;
       gap:${px(14)}">
-      <span style="font-size:${px(18)};color:#8fc4f2;font-weight:500;letter-spacing:.07em">
+      <span style="font-size:${px(18)};color:#8cc4ec;font-weight:500;letter-spacing:.07em">
         URNAS<br>APURADAS</span>
       <strong style="font-size:${px(46)};font-weight:700;font-variant-numeric:tabular-nums"
         data-f="urnas">${dados.parcial.urnas}</strong></div>
-    <div style="background:#08152b;padding:${px(7)} ${px(18)};font-size:${px(16)};font-weight:600;
+    <div style="background:#04102c;padding:${px(7)} ${px(18)};font-size:${px(16)};font-weight:600;
       letter-spacing:.07em;color:#ffcf6b" class="selo-nao">PARCIAL — NÃO OFICIAL</div>
   </div>`;
 }

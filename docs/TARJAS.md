@@ -1,11 +1,12 @@
-# Tarjas de apuração — EV News 2026
+# Tarjas de apuração — Eleições 2026
 
-Seis modelos de tarja para a noite de apuração, na linguagem visual do EV News.
+Seis modelos de tarja para a noite de apuração, na identidade da cobertura
+Eleições 2026 — o mesmo bloco de marca da abertura, reduzido para tarja.
 A arte e as medidas ficam em [`tarjas/modelos.html`](../tarjas/modelos.html) —
 abra no navegador para ver cada modelo em proporção 1920×1080, com as guias de
 área segura e o estado de fechamento.
 
-Para imprimir ou circular: [`tarjas/Tarjas-EV-News-2026.pdf`](../tarjas/Tarjas-EV-News-2026.pdf)
+Para imprimir ou circular: [`tarjas/Tarjas-Eleicoes-2026.pdf`](../tarjas/Tarjas-Eleicoes-2026.pdf)
 — A4 paisagem, um modelo por página, cada um nos dois estados lado a lado.
 A mesma página gera o PDF (modo `?impressao`), então mexer na arte e rodar
 `python scripts/gerar_pdf_tarjas.py` mantém os dois em sincronia.
@@ -62,6 +63,33 @@ texto:
 O campo `candidatos[n].cor` alimenta a barra. A mesma sigla mantém a mesma cor
 em todas as praças e cargos — é por ela que o telespectador se orienta entre um
 bloco e outro.
+
+## O bloco de marca
+
+O canto esquerdo carrega a marca da **cobertura**, não a da emissora: "ELEIÇÕES"
+em caixa alta com o chip "2026" abaixo, como na abertura. Ocupa 232 px de
+largura e corpo 34 px em todos os modelos — desenhe a peça uma vez e reutilize.
+
+A abertura tem um leve deslocamento cromático avermelhado nas letras. Em tela
+cheia funciona; em tarja, a 40 px de altura, vira um artefato de 1 px que parece
+defeito de render. Deixe de fora, ou use no máximo 1 px e confira num monitor de
+referência.
+
+## Paleta
+
+Calibrada pela abertura oficial:
+
+| Uso | Cor |
+|---|---|
+| Painel (gradiente) | `#061436` → `#0e2f66` |
+| Bloco de marca | `#14417f` |
+| Chip "2026" | `#1d4d92`, texto `#a8c8e8` |
+| Cartola / acento | `#2977cc` |
+| Praça, chip de urnas | `#061436` |
+| Texto secundário | `#8cc4ec` |
+| Barra do 1º / 2º | `#4a90d9` / `#6b86ab` |
+| Rodapé | `#04102c` |
+| Selo ELEITO | `#11996a` |
 
 ## Detalhes que a arte precisa respeitar
 

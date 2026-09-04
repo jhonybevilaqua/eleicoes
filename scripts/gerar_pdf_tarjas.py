@@ -15,7 +15,7 @@ from playwright.async_api import async_playwright
 
 RAIZ = pathlib.Path(__file__).resolve().parents[1]
 ORIGEM = RAIZ / "tarjas" / "modelos.html"
-DESTINO = RAIZ / "tarjas" / "Tarjas-EV-News-2026.pdf"
+DESTINO = RAIZ / "tarjas" / "Tarjas-Eleicoes-2026.pdf"
 # em ambiente com Chromium proprio, aponte com CHROMIUM_PATH
 NAVEGADOR = os.environ.get("CHROMIUM_PATH")
 
