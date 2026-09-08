@@ -16,6 +16,10 @@ presidente-br.json;candidatos[0].votos;cand1_votos;sempre o candidato numero 10
 presidente-br.json;candidatos[0].foto;cand1_foto;sempre o candidato numero 10
 presidente-br.json;candidatos[0].cor;cand1_cor;sempre o candidato numero 10
 presidente-br.json;candidatos[0].eleito;cand1_eleito;sempre o candidato numero 10
+presidente-br.json;candidatos[0].barra_px;cand1_barra_px;sempre o candidato numero 10
+presidente-br.json;candidatos[0].barra_resto_px;cand1_barra_resto_px;sempre o candidato numero 10
+presidente-br.json;candidatos[0].barra_esc;cand1_barra_esc;sempre o candidato numero 10
+presidente-br.json;candidatos[0].barra_idx;cand1_barra_idx;sempre o candidato numero 10
 presidente-br.json;candidatos[1].visivel;cand2_visivel;sempre o candidato numero 20
 presidente-br.json;candidatos[1].numero;cand2_numero;sempre o candidato numero 20
 presidente-br.json;candidatos[1].nome;cand2_nome;sempre o candidato numero 20
@@ -27,6 +31,10 @@ presidente-br.json;candidatos[1].votos;cand2_votos;sempre o candidato numero 20
 presidente-br.json;candidatos[1].foto;cand2_foto;sempre o candidato numero 20
 presidente-br.json;candidatos[1].cor;cand2_cor;sempre o candidato numero 20
 presidente-br.json;candidatos[1].eleito;cand2_eleito;sempre o candidato numero 20
+presidente-br.json;candidatos[1].barra_px;cand2_barra_px;sempre o candidato numero 20
+presidente-br.json;candidatos[1].barra_resto_px;cand2_barra_resto_px;sempre o candidato numero 20
+presidente-br.json;candidatos[1].barra_esc;cand2_barra_esc;sempre o candidato numero 20
+presidente-br.json;candidatos[1].barra_idx;cand2_barra_idx;sempre o candidato numero 20
 presidente-br.json;candidatos[2].visivel;cand3_visivel;sempre o candidato numero 30
 presidente-br.json;candidatos[2].numero;cand3_numero;sempre o candidato numero 30
 presidente-br.json;candidatos[2].nome;cand3_nome;sempre o candidato numero 30
@@ -38,6 +46,10 @@ presidente-br.json;candidatos[2].votos;cand3_votos;sempre o candidato numero 30
 presidente-br.json;candidatos[2].foto;cand3_foto;sempre o candidato numero 30
 presidente-br.json;candidatos[2].cor;cand3_cor;sempre o candidato numero 30
 presidente-br.json;candidatos[2].eleito;cand3_eleito;sempre o candidato numero 30
+presidente-br.json;candidatos[2].barra_px;cand3_barra_px;sempre o candidato numero 30
+presidente-br.json;candidatos[2].barra_resto_px;cand3_barra_resto_px;sempre o candidato numero 30
+presidente-br.json;candidatos[2].barra_esc;cand3_barra_esc;sempre o candidato numero 30
+presidente-br.json;candidatos[2].barra_idx;cand3_barra_idx;sempre o candidato numero 30
 presidente-br.json;plano.cargo;cargo;resumo (plano)
 presidente-br.json;plano.abrangencia;abrangencia;resumo (plano)
 presidente-br.json;plano.apuracao_pct;apuracao_pct;resumo (plano)
@@ -55,6 +67,10 @@ presidente-br.json;plano.cand1_votos;cand1_votos;sempre o candidato numero 10 (p
 presidente-br.json;plano.cand1_foto;cand1_foto;sempre o candidato numero 10 (plano)
 presidente-br.json;plano.cand1_cor;cand1_cor;sempre o candidato numero 10 (plano)
 presidente-br.json;plano.cand1_eleito;cand1_eleito;sempre o candidato numero 10 (plano)
+presidente-br.json;plano.cand1_barra_px;cand1_barra_px;sempre o candidato numero 10 (plano)
+presidente-br.json;plano.cand1_barra_resto_px;cand1_barra_resto_px;sempre o candidato numero 10 (plano)
+presidente-br.json;plano.cand1_barra_esc;cand1_barra_esc;sempre o candidato numero 10 (plano)
+presidente-br.json;plano.cand1_barra_idx;cand1_barra_idx;sempre o candidato numero 10 (plano)
 presidente-br.json;plano.cand2_visivel;cand2_visivel;sempre o candidato numero 20 (plano)
 presidente-br.json;plano.cand2_numero;cand2_numero;sempre o candidato numero 20 (plano)
 presidente-br.json;plano.cand2_nome;cand2_nome;sempre o candidato numero 20 (plano)
@@ -66,6 +82,10 @@ presidente-br.json;plano.cand2_votos;cand2_votos;sempre o candidato numero 20 (p
 presidente-br.json;plano.cand2_foto;cand2_foto;sempre o candidato numero 20 (plano)
 presidente-br.json;plano.cand2_cor;cand2_cor;sempre o candidato numero 20 (plano)
 presidente-br.json;plano.cand2_eleito;cand2_eleito;sempre o candidato numero 20 (plano)
+presidente-br.json;plano.cand2_barra_px;cand2_barra_px;sempre o candidato numero 20 (plano)
+presidente-br.json;plano.cand2_barra_resto_px;cand2_barra_resto_px;sempre o candidato numero 20 (plano)
+presidente-br.json;plano.cand2_barra_esc;cand2_barra_esc;sempre o candidato numero 20 (plano)
+presidente-br.json;plano.cand2_barra_idx;cand2_barra_idx;sempre o candidato numero 20 (plano)
 presidente-br.json;plano.cand3_visivel;cand3_visivel;sempre o candidato numero 30 (plano)
 presidente-br.json;plano.cand3_numero;cand3_numero;sempre o candidato numero 30 (plano)
 presidente-br.json;plano.cand3_nome;cand3_nome;sempre o candidato numero 30 (plano)
@@ -77,3 +97,7 @@ presidente-br.json;plano.cand3_votos;cand3_votos;sempre o candidato numero 30 (p
 presidente-br.json;plano.cand3_foto;cand3_foto;sempre o candidato numero 30 (plano)
 presidente-br.json;plano.cand3_cor;cand3_cor;sempre o candidato numero 30 (plano)
 presidente-br.json;plano.cand3_eleito;cand3_eleito;sempre o candidato numero 30 (plano)
+presidente-br.json;plano.cand3_barra_px;cand3_barra_px;sempre o candidato numero 30 (plano)
+presidente-br.json;plano.cand3_barra_resto_px;cand3_barra_resto_px;sempre o candidato numero 30 (plano)
+presidente-br.json;plano.cand3_barra_esc;cand3_barra_esc;sempre o candidato numero 30 (plano)
+presidente-br.json;plano.cand3_barra_idx;cand3_barra_idx;sempre o candidato numero 30 (plano)

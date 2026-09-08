@@ -5,7 +5,7 @@
     "apuracao_pct": "63,00%",
     "apuracao_pct_num": 63.0,
     "selo": "PARCIAL - NAO OFICIAL",
-    "hora_atualizacao": "14:01"
+    "hora_atualizacao": "11:02"
   },
   "candidatos": [
     {
@@ -20,7 +20,11 @@
       "votos": "",
       "foto": "",
       "cor": "",
-      "eleito": ""
+      "eleito": "",
+      "barra_px": null,
+      "barra_resto_px": null,
+      "barra_esc": null,
+      "barra_idx": null
     },
     {
       "posicao": 2,
@@ -34,7 +38,11 @@
       "votos": "",
       "foto": "",
       "cor": "",
-      "eleito": ""
+      "eleito": "",
+      "barra_px": null,
+      "barra_resto_px": null,
+      "barra_esc": null,
+      "barra_idx": null
     },
     {
       "posicao": 3,
@@ -48,7 +56,11 @@
       "votos": "",
       "foto": "",
       "cor": "",
-      "eleito": ""
+      "eleito": "",
+      "barra_px": null,
+      "barra_resto_px": null,
+      "barra_esc": null,
+      "barra_idx": null
     }
   ],
   "plano": {
@@ -57,7 +69,7 @@
     "apuracao_pct": "63,00%",
     "apuracao_pct_num": 63.0,
     "selo": "PARCIAL - NAO OFICIAL",
-    "hora_atualizacao": "14:01",
+    "hora_atualizacao": "11:02",
     "cand1_visivel": "0",
     "cand1_numero": "",
     "cand1_nome": "",
@@ -69,6 +81,10 @@
     "cand1_foto": "",
     "cand1_cor": "",
     "cand1_eleito": "",
+    "cand1_barra_px": null,
+    "cand1_barra_resto_px": null,
+    "cand1_barra_esc": null,
+    "cand1_barra_idx": null,
     "cand2_visivel": "0",
     "cand2_numero": "",
     "cand2_nome": "",
@@ -80,6 +96,10 @@
     "cand2_foto": "",
     "cand2_cor": "",
     "cand2_eleito": "",
+    "cand2_barra_px": null,
+    "cand2_barra_resto_px": null,
+    "cand2_barra_esc": null,
+    "cand2_barra_idx": null,
     "cand3_visivel": "0",
     "cand3_numero": "",
     "cand3_nome": "",
@@ -90,6 +110,10 @@
     "cand3_votos": "",
     "cand3_foto": "",
     "cand3_cor": "",
-    "cand3_eleito": ""
+    "cand3_eleito": "",
+    "cand3_barra_px": null,
+    "cand3_barra_resto_px": null,
+    "cand3_barra_esc": null,
+    "cand3_barra_idx": null
   }
 }

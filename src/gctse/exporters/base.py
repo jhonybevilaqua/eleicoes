@@ -92,7 +92,8 @@ class Exporter(ABC):
             "qtd_candidatos": str(len(ap.candidatos)),
         }
 
-    def campos_candidato(self, cand: Candidato) -> dict[str, str]:
+    def campos_candidato(self, cand: Candidato, ap: Apuracao | None = None) -> dict[str, str]:
+        geometria = self._barra(cand, ap)
         return {
             "posicao": str(cand.posicao),
             "numero": cand.numero,
@@ -110,6 +111,53 @@ class Exporter(ABC):
             "sequencial": cand.sequencial,
             "foto": self._foto(cand),
             "cor": self._cor(cand),
+            **geometria,
+        }
+
+    def _barra(self, cand: Candidato, ap: Apuracao | None) -> dict[str, str]:
+        """Geometria da barra JA CALCULADA, para o GC nao precisar fazer conta.
+
+        O caminho curto para um grafico que acompanha o percentual e nao pedir
+        aritmetica ao gerador de caracteres. Ele recebe a largura em pixels do
+        projeto, ou uma escala 0-1, ou um indice de quadro - e so aplica.
+
+        'base' decide contra o que o percentual e normalizado:
+          validos  a propria fatia de votos validos do candidato (majoritario)
+          lider    o 1o colocado vira 100% (proporcional, onde ninguem passa
+                   de 5% e uma barra sobre o total ficaria invisivel no ar)
+
+        'minimo_px' garante que um candidato com voto quase zero ainda deixe um
+        traco visivel, em vez de sumir e parecer campo vazio.
+        """
+        cfg = self.opcoes.get("barra") or self.cfg_texto.get("barra") or {}
+        trilho = int(cfg.get("trilho_px", 0))
+        if not trilho:
+            return {}
+
+        base = str(cfg.get("base", "validos")).lower()
+        referencia = 100.0
+        if base == "lider" and ap and ap.candidatos:
+            referencia = max((c.percentual for c in ap.candidatos), default=0.0)
+        if referencia <= 0:
+            referencia = 100.0
+
+        fracao = max(0.0, min(1.0, cand.percentual / referencia))
+        minimo = int(cfg.get("minimo_px", 0))
+        largura = round(trilho * fracao)
+        if cand.percentual > 0:
+            largura = max(largura, minimo)
+        passos = int(cfg.get("passos", 100))
+
+        return {
+            "barra_pct": f"{fracao * 100:.2f}",
+            "barra_px": str(largura),
+            # o que sobra do trilho: e o unico numero necessario quando a cena
+            # usa um retangulo da cor do fundo cobrindo a barra cheia, truque
+            # que funciona em CG que so sabe mover objeto, sem redimensionar
+            "barra_resto_px": str(trilho - largura),
+            "barra_esc": f"{fracao:.4f}",
+            "barra_idx": str(round(fracao * passos)),
+            "barra_trilho_px": str(trilho),
         }
 
     def _foto(self, cand: Candidato) -> str:
@@ -138,7 +186,7 @@ class Exporter(ABC):
         return ap.candidatos[: self.limite] if self.limite > 0 else ap.candidatos
 
     def linhas(self, ap: Apuracao) -> list[dict[str, str]]:
-        return [self.campos_candidato(c) for c in self.candidatos(ap)]
+        return [self.campos_candidato(c, ap) for c in self.candidatos(ap)]
 
     def achatado(self, ap: Apuracao) -> dict[str, str]:
         """Formato 'largo': resumo + cand1_nome, cand1_votos, cand2_... .
@@ -148,7 +196,7 @@ class Exporter(ABC):
         """
         plano = dict(self.campos_resumo(ap))
         for indice, cand in enumerate(self.candidatos(ap), start=1):
-            for chave, valor in self.campos_candidato(cand).items():
+            for chave, valor in self.campos_candidato(cand, ap).items():
                 plano[f"cand{indice}_{chave}"] = valor
         return plano
 

@@ -151,3 +151,93 @@ def test_cor_por_partido_com_fallback(tmp_path):
     corpo = json.loads(arquivo.read_text(encoding="utf-8"))
     assert corpo["candidatos"][0]["cor"] == "#0a5ec2"    # mapeado
     assert corpo["candidatos"][1]["cor"] == "#8a8a8a"    # fallback
+
+
+# --- geometria da barra ja calculada ---------------------------------------
+
+BARRA = {"tipo": "json", "formato": "gc"}
+
+
+def _com_candidatos(*cands):
+    return {**{k: v for k, v in BOLETIM.items() if k != "cand"}, "cand": list(cands)}
+
+
+def _corpo(tmp_path, barra, boletim=None):
+    exporter = criar("t", {**BARRA, "destino": str(tmp_path), "barra": barra}, TEXTO, {})
+    ap = analisar(boletim or BOLETIM, abrangencia="pr", cargo=3)
+    (arquivo,) = exporter.exportar(ap, "gov")
+    return json.loads(arquivo.read_text(encoding="utf-8"))["candidatos"]
+
+
+def test_sem_config_de_barra_os_campos_nao_aparecem(tmp_path):
+    exporter = criar("t", {**BARRA, "destino": str(tmp_path)}, TEXTO, {})
+    (arquivo,) = exporter.exportar(_apuracao(), "gov")
+    assert "barra_px" not in json.loads(arquivo.read_text(encoding="utf-8"))["candidatos"][0]
+
+
+def test_largura_em_pixels_sobre_votos_validos(tmp_path):
+    cands = _corpo(tmp_path, {"trilho_px": 500})
+    assert cands[0]["percentual"] == "60,00%"
+    assert cands[0]["barra_px"] == "300"        # 60% de 500
+    assert cands[1]["barra_px"] == "200"        # 40% de 500
+    assert cands[0]["barra_esc"] == "0.6000"
+    assert cands[0]["barra_idx"] == "60"
+
+
+def test_base_lider_normaliza_pelo_primeiro(tmp_path):
+    """Em proporcional ninguem passa de 5%: sobre o total a barra sumiria."""
+    proporcional = _com_candidatos(
+        {"n": "11", "nm": "Alfa", "cc": "PA", "vap": "412", "pvap": "4,12"},
+        {"n": "22", "nm": "Beta", "cc": "PB", "vap": "358", "pvap": "3,58"},
+    )
+    validos = _corpo(tmp_path / "a", {"trilho_px": 400}, proporcional)
+    assert validos[0]["barra_px"] == "16"       # 4,12% de 400 - invisivel no ar
+
+    lider = _corpo(tmp_path / "b", {"trilho_px": 400, "base": "lider"}, proporcional)
+    assert lider[0]["barra_px"] == "400"        # o 1o vira 100%
+    assert lider[1]["barra_px"] == "348"        # 3,58/4,12 de 400
+    assert lider[0]["barra_esc"] == "1.0000"
+
+
+def test_minimo_garante_traco_visivel(tmp_path):
+    quase_zero = _com_candidatos(
+        {"n": "11", "nm": "Alfa", "cc": "PA", "vap": "3.996.000", "pvap": "99,90"},
+        {"n": "22", "nm": "Beta", "cc": "PB", "vap": "4.000", "pvap": "0,10"},
+    )
+    cands = _corpo(tmp_path, {"trilho_px": 500, "minimo_px": 6}, quase_zero)
+    assert cands[1]["barra_px"] == "6"          # 0,10% de 500 seria 1px
+
+
+def test_candidato_sem_voto_fica_zerado(tmp_path):
+    zerado = _com_candidatos({"n": "11", "nm": "Alfa", "cc": "PA", "vap": "0", "pvap": "0,00"})
+    cands = _corpo(tmp_path, {"trilho_px": 500, "minimo_px": 6}, zerado)
+    assert cands[0]["barra_px"] == "0"          # minimo nao se aplica a zero
+
+
+def test_resto_do_trilho_para_mascara_movel(tmp_path):
+    """CG que so move objeto: cobre a barra cheia com um retangulo de fundo."""
+    cands = _corpo(tmp_path, {"trilho_px": 500})
+    assert cands[0]["barra_px"] == "300" and cands[0]["barra_resto_px"] == "200"
+    assert int(cands[0]["barra_px"]) + int(cands[0]["barra_resto_px"]) == 500
+
+
+def test_indice_de_quadro_para_sprite(tmp_path):
+    """Para GC que so troca de quadro: 0..passos em vez de largura."""
+    cands = _corpo(tmp_path, {"trilho_px": 500, "passos": 20})
+    assert cands[0]["barra_idx"] == "12"        # 60% de 20 quadros
+    assert cands[1]["barra_idx"] == "8"
+
+
+def test_json_entrega_geometria_como_numero(tmp_path):
+    exporter = criar(
+        "lb",
+        {"tipo": "classx", "formato": "json", "slots": 2, "destino": str(tmp_path),
+         "barra": {"trilho_px": 500},
+         "campos_candidato": ["nome", "barra_px", "barra_esc", "barra_idx"]},
+        TEXTO, {},
+    )
+    (arquivo,) = exporter.exportar(_apuracao(), "gov")
+    c = json.loads(arquivo.read_text(encoding="utf-8"))["candidatos"][0]
+    assert c["barra_px"] == 300 and isinstance(c["barra_px"], int)
+    assert c["barra_esc"] == 0.6
+    assert c["barra_idx"] == 60

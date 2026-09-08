@@ -94,7 +94,13 @@ exporters:
     campos_resumo: [cargo, abrangencia, apuracao_pct, apuracao_pct_num, selo, hora_atualizacao]
     campos_candidato:
       [visivel, numero, nome, partido, nome_partido, percentual, percentual_num,
-       votos, foto, cor, eleito]
+       votos, foto, cor, eleito, barra_px, barra_resto_px, barra_esc, barra_idx]
+    # Geometria da barra ja calculada, para o GC nao precisar fazer conta.
+    # AJUSTAR trilho_px ao comprimento real do trilho na cena. Ver docs/CASTALIA.md.
+    barra:
+      trilho_px: 420
+      minimo_px: 6
+      base: validos
     # AJUSTAR: numeros na ordem em que aparecem na cena.
     candidatos_fixos: ["10", "20", "30"]
 
@@ -113,7 +119,11 @@ exporters:
        secoes_total, votos_validos, votos_brancos, votos_nulos, selo, hora_atualizacao]
     campos_candidato:
       [visivel, numero, nome, partido, nome_partido, percentual, percentual_num,
-       votos, votos_num, eleito]
+       votos, votos_num, eleito, barra_px, barra_resto_px, barra_esc, barra_idx]
+    barra:
+      trilho_px: 420
+      minimo_px: 6
+      base: validos       # troque para 'lider' nas cenas de deputado
 
   # Site, segunda tela e conferencia. Nao vai para o ar.
   web_json:

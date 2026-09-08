@@ -93,7 +93,11 @@ CAMPOS_CANDIDATO_PADRAO = [
 
 # Saem como numero de verdade no JSON e no XML, para o Sort do LiveBoard
 # ("As number") e para calculo de largura de barra.
-CAMPOS_NUMERICOS = {"posicao", "votos_num", "percentual_num", "apuracao_pct_num"}
+CAMPOS_NUMERICOS = {
+    "posicao", "votos_num", "percentual_num", "apuracao_pct_num",
+    "barra_pct", "barra_px", "barra_resto_px", "barra_esc", "barra_idx",
+    "barra_trilho_px",
+}
 
 
 def letra_coluna(indice: int) -> str:
@@ -152,7 +156,7 @@ class ExporterClassX(Exporter):
 
     def slots_preenchidos(self, ap: Apuracao) -> list[dict[str, str]]:
         """Sempre 'slots' linhas, na ordem escolhida. Geometria garantida."""
-        campos = [self.campos_candidato(c) for c in ap.candidatos]
+        campos = [self.campos_candidato(c, ap) for c in ap.candidatos]
 
         if self.ordem == "fixa" and self.candidatos_fixos:
             por_numero = {c["numero"]: c for c in campos}

@@ -20,6 +20,10 @@ senador-pr.json;candidatos[0].percentual_num;cand1_percentual_num;1o colocado no
 senador-pr.json;candidatos[0].votos;cand1_votos;1o colocado no momento
 senador-pr.json;candidatos[0].votos_num;cand1_votos_num;1o colocado no momento
 senador-pr.json;candidatos[0].eleito;cand1_eleito;1o colocado no momento
+senador-pr.json;candidatos[0].barra_px;cand1_barra_px;1o colocado no momento
+senador-pr.json;candidatos[0].barra_resto_px;cand1_barra_resto_px;1o colocado no momento
+senador-pr.json;candidatos[0].barra_esc;cand1_barra_esc;1o colocado no momento
+senador-pr.json;candidatos[0].barra_idx;cand1_barra_idx;1o colocado no momento
 senador-pr.json;candidatos[1].visivel;cand2_visivel;2o colocado no momento
 senador-pr.json;candidatos[1].numero;cand2_numero;2o colocado no momento
 senador-pr.json;candidatos[1].nome;cand2_nome;2o colocado no momento
@@ -30,6 +34,10 @@ senador-pr.json;candidatos[1].percentual_num;cand2_percentual_num;2o colocado no
 senador-pr.json;candidatos[1].votos;cand2_votos;2o colocado no momento
 senador-pr.json;candidatos[1].votos_num;cand2_votos_num;2o colocado no momento
 senador-pr.json;candidatos[1].eleito;cand2_eleito;2o colocado no momento
+senador-pr.json;candidatos[1].barra_px;cand2_barra_px;2o colocado no momento
+senador-pr.json;candidatos[1].barra_resto_px;cand2_barra_resto_px;2o colocado no momento
+senador-pr.json;candidatos[1].barra_esc;cand2_barra_esc;2o colocado no momento
+senador-pr.json;candidatos[1].barra_idx;cand2_barra_idx;2o colocado no momento
 senador-pr.json;candidatos[2].visivel;cand3_visivel;3o colocado no momento
 senador-pr.json;candidatos[2].numero;cand3_numero;3o colocado no momento
 senador-pr.json;candidatos[2].nome;cand3_nome;3o colocado no momento
@@ -40,6 +48,10 @@ senador-pr.json;candidatos[2].percentual_num;cand3_percentual_num;3o colocado no
 senador-pr.json;candidatos[2].votos;cand3_votos;3o colocado no momento
 senador-pr.json;candidatos[2].votos_num;cand3_votos_num;3o colocado no momento
 senador-pr.json;candidatos[2].eleito;cand3_eleito;3o colocado no momento
+senador-pr.json;candidatos[2].barra_px;cand3_barra_px;3o colocado no momento
+senador-pr.json;candidatos[2].barra_resto_px;cand3_barra_resto_px;3o colocado no momento
+senador-pr.json;candidatos[2].barra_esc;cand3_barra_esc;3o colocado no momento
+senador-pr.json;candidatos[2].barra_idx;cand3_barra_idx;3o colocado no momento
 senador-pr.json;candidatos[3].visivel;cand4_visivel;4o colocado no momento
 senador-pr.json;candidatos[3].numero;cand4_numero;4o colocado no momento
 senador-pr.json;candidatos[3].nome;cand4_nome;4o colocado no momento
@@ -50,6 +62,10 @@ senador-pr.json;candidatos[3].percentual_num;cand4_percentual_num;4o colocado no
 senador-pr.json;candidatos[3].votos;cand4_votos;4o colocado no momento
 senador-pr.json;candidatos[3].votos_num;cand4_votos_num;4o colocado no momento
 senador-pr.json;candidatos[3].eleito;cand4_eleito;4o colocado no momento
+senador-pr.json;candidatos[3].barra_px;cand4_barra_px;4o colocado no momento
+senador-pr.json;candidatos[3].barra_resto_px;cand4_barra_resto_px;4o colocado no momento
+senador-pr.json;candidatos[3].barra_esc;cand4_barra_esc;4o colocado no momento
+senador-pr.json;candidatos[3].barra_idx;cand4_barra_idx;4o colocado no momento
 senador-pr.json;candidatos[4].visivel;cand5_visivel;5o colocado no momento
 senador-pr.json;candidatos[4].numero;cand5_numero;5o colocado no momento
 senador-pr.json;candidatos[4].nome;cand5_nome;5o colocado no momento
@@ -60,6 +76,10 @@ senador-pr.json;candidatos[4].percentual_num;cand5_percentual_num;5o colocado no
 senador-pr.json;candidatos[4].votos;cand5_votos;5o colocado no momento
 senador-pr.json;candidatos[4].votos_num;cand5_votos_num;5o colocado no momento
 senador-pr.json;candidatos[4].eleito;cand5_eleito;5o colocado no momento
+senador-pr.json;candidatos[4].barra_px;cand5_barra_px;5o colocado no momento
+senador-pr.json;candidatos[4].barra_resto_px;cand5_barra_resto_px;5o colocado no momento
+senador-pr.json;candidatos[4].barra_esc;cand5_barra_esc;5o colocado no momento
+senador-pr.json;candidatos[4].barra_idx;cand5_barra_idx;5o colocado no momento
 senador-pr.json;candidatos[5].visivel;cand6_visivel;6o colocado no momento
 senador-pr.json;candidatos[5].numero;cand6_numero;6o colocado no momento
 senador-pr.json;candidatos[5].nome;cand6_nome;6o colocado no momento
@@ -70,6 +90,10 @@ senador-pr.json;candidatos[5].percentual_num;cand6_percentual_num;6o colocado no
 senador-pr.json;candidatos[5].votos;cand6_votos;6o colocado no momento
 senador-pr.json;candidatos[5].votos_num;cand6_votos_num;6o colocado no momento
 senador-pr.json;candidatos[5].eleito;cand6_eleito;6o colocado no momento
+senador-pr.json;candidatos[5].barra_px;cand6_barra_px;6o colocado no momento
+senador-pr.json;candidatos[5].barra_resto_px;cand6_barra_resto_px;6o colocado no momento
+senador-pr.json;candidatos[5].barra_esc;cand6_barra_esc;6o colocado no momento
+senador-pr.json;candidatos[5].barra_idx;cand6_barra_idx;6o colocado no momento
 senador-pr.json;plano.cargo;cargo;resumo (plano)
 senador-pr.json;plano.abrangencia;abrangencia;resumo (plano)
 senador-pr.json;plano.apuracao_pct;apuracao_pct;resumo (plano)
@@ -91,6 +115,10 @@ senador-pr.json;plano.cand1_percentual_num;cand1_percentual_num;1o colocado no m
 senador-pr.json;plano.cand1_votos;cand1_votos;1o colocado no momento (plano)
 senador-pr.json;plano.cand1_votos_num;cand1_votos_num;1o colocado no momento (plano)
 senador-pr.json;plano.cand1_eleito;cand1_eleito;1o colocado no momento (plano)
+senador-pr.json;plano.cand1_barra_px;cand1_barra_px;1o colocado no momento (plano)
+senador-pr.json;plano.cand1_barra_resto_px;cand1_barra_resto_px;1o colocado no momento (plano)
+senador-pr.json;plano.cand1_barra_esc;cand1_barra_esc;1o colocado no momento (plano)
+senador-pr.json;plano.cand1_barra_idx;cand1_barra_idx;1o colocado no momento (plano)
 senador-pr.json;plano.cand2_visivel;cand2_visivel;2o colocado no momento (plano)
 senador-pr.json;plano.cand2_numero;cand2_numero;2o colocado no momento (plano)
 senador-pr.json;plano.cand2_nome;cand2_nome;2o colocado no momento (plano)
@@ -101,6 +129,10 @@ senador-pr.json;plano.cand2_percentual_num;cand2_percentual_num;2o colocado no m
 senador-pr.json;plano.cand2_votos;cand2_votos;2o colocado no momento (plano)
 senador-pr.json;plano.cand2_votos_num;cand2_votos_num;2o colocado no momento (plano)
 senador-pr.json;plano.cand2_eleito;cand2_eleito;2o colocado no momento (plano)
+senador-pr.json;plano.cand2_barra_px;cand2_barra_px;2o colocado no momento (plano)
+senador-pr.json;plano.cand2_barra_resto_px;cand2_barra_resto_px;2o colocado no momento (plano)
+senador-pr.json;plano.cand2_barra_esc;cand2_barra_esc;2o colocado no momento (plano)
+senador-pr.json;plano.cand2_barra_idx;cand2_barra_idx;2o colocado no momento (plano)
 senador-pr.json;plano.cand3_visivel;cand3_visivel;3o colocado no momento (plano)
 senador-pr.json;plano.cand3_numero;cand3_numero;3o colocado no momento (plano)
 senador-pr.json;plano.cand3_nome;cand3_nome;3o colocado no momento (plano)
@@ -111,6 +143,10 @@ senador-pr.json;plano.cand3_percentual_num;cand3_percentual_num;3o colocado no m
 senador-pr.json;plano.cand3_votos;cand3_votos;3o colocado no momento (plano)
 senador-pr.json;plano.cand3_votos_num;cand3_votos_num;3o colocado no momento (plano)
 senador-pr.json;plano.cand3_eleito;cand3_eleito;3o colocado no momento (plano)
+senador-pr.json;plano.cand3_barra_px;cand3_barra_px;3o colocado no momento (plano)
+senador-pr.json;plano.cand3_barra_resto_px;cand3_barra_resto_px;3o colocado no momento (plano)
+senador-pr.json;plano.cand3_barra_esc;cand3_barra_esc;3o colocado no momento (plano)
+senador-pr.json;plano.cand3_barra_idx;cand3_barra_idx;3o colocado no momento (plano)
 senador-pr.json;plano.cand4_visivel;cand4_visivel;4o colocado no momento (plano)
 senador-pr.json;plano.cand4_numero;cand4_numero;4o colocado no momento (plano)
 senador-pr.json;plano.cand4_nome;cand4_nome;4o colocado no momento (plano)
@@ -121,6 +157,10 @@ senador-pr.json;plano.cand4_percentual_num;cand4_percentual_num;4o colocado no m
 senador-pr.json;plano.cand4_votos;cand4_votos;4o colocado no momento (plano)
 senador-pr.json;plano.cand4_votos_num;cand4_votos_num;4o colocado no momento (plano)
 senador-pr.json;plano.cand4_eleito;cand4_eleito;4o colocado no momento (plano)
+senador-pr.json;plano.cand4_barra_px;cand4_barra_px;4o colocado no momento (plano)
+senador-pr.json;plano.cand4_barra_resto_px;cand4_barra_resto_px;4o colocado no momento (plano)
+senador-pr.json;plano.cand4_barra_esc;cand4_barra_esc;4o colocado no momento (plano)
+senador-pr.json;plano.cand4_barra_idx;cand4_barra_idx;4o colocado no momento (plano)
 senador-pr.json;plano.cand5_visivel;cand5_visivel;5o colocado no momento (plano)
 senador-pr.json;plano.cand5_numero;cand5_numero;5o colocado no momento (plano)
 senador-pr.json;plano.cand5_nome;cand5_nome;5o colocado no momento (plano)
@@ -131,6 +171,10 @@ senador-pr.json;plano.cand5_percentual_num;cand5_percentual_num;5o colocado no m
 senador-pr.json;plano.cand5_votos;cand5_votos;5o colocado no momento (plano)
 senador-pr.json;plano.cand5_votos_num;cand5_votos_num;5o colocado no momento (plano)
 senador-pr.json;plano.cand5_eleito;cand5_eleito;5o colocado no momento (plano)
+senador-pr.json;plano.cand5_barra_px;cand5_barra_px;5o colocado no momento (plano)
+senador-pr.json;plano.cand5_barra_resto_px;cand5_barra_resto_px;5o colocado no momento (plano)
+senador-pr.json;plano.cand5_barra_esc;cand5_barra_esc;5o colocado no momento (plano)
+senador-pr.json;plano.cand5_barra_idx;cand5_barra_idx;5o colocado no momento (plano)
 senador-pr.json;plano.cand6_visivel;cand6_visivel;6o colocado no momento (plano)
 senador-pr.json;plano.cand6_numero;cand6_numero;6o colocado no momento (plano)
 senador-pr.json;plano.cand6_nome;cand6_nome;6o colocado no momento (plano)
@@ -141,3 +185,7 @@ senador-pr.json;plano.cand6_percentual_num;cand6_percentual_num;6o colocado no m
 senador-pr.json;plano.cand6_votos;cand6_votos;6o colocado no momento (plano)
 senador-pr.json;plano.cand6_votos_num;cand6_votos_num;6o colocado no momento (plano)
 senador-pr.json;plano.cand6_eleito;cand6_eleito;6o colocado no momento (plano)
+senador-pr.json;plano.cand6_barra_px;cand6_barra_px;6o colocado no momento (plano)
+senador-pr.json;plano.cand6_barra_resto_px;cand6_barra_resto_px;6o colocado no momento (plano)
+senador-pr.json;plano.cand6_barra_esc;cand6_barra_esc;6o colocado no momento (plano)
+senador-pr.json;plano.cand6_barra_idx;cand6_barra_idx;6o colocado no momento (plano)
