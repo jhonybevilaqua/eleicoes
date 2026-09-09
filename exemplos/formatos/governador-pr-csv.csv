@@ -1,0 +1,5 @@
+﻿visivel;numero;nome;partido;nome_partido;percentual;percentual_num;votos;foto;cor;eleito;barra_px;barra_resto_px;barra_esc;barra_idx
+1;33;GOVERNO ENSAIO 3;PART-C;GOVERNO ENSAIO 3 (PART-C);29,28%;29.28;777.798;fotos/33.png;#7d93b3;0;123;297;0.2928;29
+1;22;GOVERNO ENSAIO 2;PART-B;GOVERNO ENSAIO 2 (PART-B);28,52%;28.52;757.470;fotos/22.png;#7d93b3;0;120;300;0.2852;29
+1;11;GOVERNO ENSAIO 1;PART-A;GOVERNO ENSAIO 1 (PART-A);26,33%;26.33;699.297;fotos/11.png;#7d93b3;0;111;309;0.2633;26
+1;44;GOVERNO ENSAIO 4;PART-D;GOVERNO ENSAIO 4 (PART-D);15,87%;15.87;421.458;fotos/44.png;#7d93b3;0;67;353;0.1587;16

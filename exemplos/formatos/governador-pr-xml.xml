@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8"?>
+<dados>
+  <resumo>
+    <cargo>GOVERNADOR</cargo>
+    <abrangencia>PARANA</abrangencia>
+    <turno>1</turno>
+    <apuracao_pct>63,00%</apuracao_pct>
+    <secoes_totalizadas>11.013</secoes_totalizadas>
+    <secoes_total>17.481</secoes_total>
+    <votos_validos>2.656.026</votos_validos>
+    <votos_brancos>38.977</votos_brancos>
+    <votos_nulos>89.090</votos_nulos>
+    <comparecimento>2.784.093</comparecimento>
+    <abstencao>740.076</abstencao>
+    <selo>SIMULADO</selo>
+    <hora_atualizacao>12:53</hora_atualizacao>
+    <apuracao_pct_num>63.00</apuracao_pct_num>
+  </resumo>
+  <candidatos>
+    <candidato posicao="1">
+      <posicao>1</posicao>
+      <visivel>1</visivel>
+      <numero>33</numero>
+      <nome>GOVERNO ENSAIO 3</nome>
+      <partido>PART-C</partido>
+      <nome_partido>GOVERNO ENSAIO 3 (PART-C)</nome_partido>
+      <percentual>29,28%</percentual>
+      <percentual_num>29.28</percentual_num>
+      <votos>777.798</votos>
+      <foto>fotos/33.png</foto>
+      <cor>#7d93b3</cor>
+      <eleito>0</eleito>
+      <barra_px>123</barra_px>
+      <barra_resto_px>297</barra_resto_px>
+      <barra_esc>0.2928</barra_esc>
+      <barra_idx>29</barra_idx>
+    </candidato>
+    <candidato posicao="2">
+      <posicao>2</posicao>
+      <visivel>1</visivel>
+      <numero>22</numero>
+      <nome>GOVERNO ENSAIO 2</nome>
+      <partido>PART-B</partido>
+      <nome_partido>GOVERNO ENSAIO 2 (PART-B)</nome_partido>
+      <percentual>28,52%</percentual>
+      <percentual_num>28.52</percentual_num>
+      <votos>757.470</votos>
+      <foto>fotos/22.png</foto>
+      <cor>#7d93b3</cor>
+      <eleito>0</eleito>
+      <barra_px>120</barra_px>
+      <barra_resto_px>300</barra_resto_px>
+      <barra_esc>0.2852</barra_esc>
+      <barra_idx>29</barra_idx>
+    </candidato>
+    <candidato posicao="3">
+      <posicao>3</posicao>
+      <visivel>1</visivel>
+      <numero>11</numero>
+      <nome>GOVERNO ENSAIO 1</nome>
+      <partido>PART-A</partido>
+      <nome_partido>GOVERNO ENSAIO 1 (PART-A)</nome_partido>
+      <percentual>26,33%</percentual>
+      <percentual_num>26.33</percentual_num>
+      <votos>699.297</votos>
+      <foto>fotos/11.png</foto>
+      <cor>#7d93b3</cor>
+      <eleito>0</eleito>
+      <barra_px>111</barra_px>
+      <barra_resto_px>309</barra_resto_px>
+      <barra_esc>0.2633</barra_esc>
+      <barra_idx>26</barra_idx>
+    </candidato>
+    <candidato posicao="4">
+      <posicao>4</posicao>
+      <visivel>1</visivel>
+      <numero>44</numero>
+      <nome>GOVERNO ENSAIO 4</nome>
+      <partido>PART-D</partido>
+      <nome_partido>GOVERNO ENSAIO 4 (PART-D)</nome_partido>
+      <percentual>15,87%</percentual>
+      <percentual_num>15.87</percentual_num>
+      <votos>421.458</votos>
+      <foto>fotos/44.png</foto>
+      <cor>#7d93b3</cor>
+      <eleito>0</eleito>
+      <barra_px>67</barra_px>
+      <barra_resto_px>353</barra_resto_px>
+      <barra_esc>0.1587</barra_esc>
+      <barra_idx>16</barra_idx>
+    </candidato>
+  </candidatos>
+  <plano>
+    <cargo>GOVERNADOR</cargo>
+    <abrangencia>PARANA</abrangencia>
+    <turno>1</turno>
+    <apuracao_pct>63,00%</apuracao_pct>
+    <secoes_totalizadas>11.013</secoes_totalizadas>
+    <secoes_total>17.481</secoes_total>
+    <votos_validos>2.656.026</votos_validos>
+    <votos_brancos>38.977</votos_brancos>
+    <votos_nulos>89.090</votos_nulos>
+    <comparecimento>2.784.093</comparecimento>
+    <abstencao>740.076</abstencao>
+    <selo>SIMULADO</selo>
+    <hora_atualizacao>12:53</hora_atualizacao>
+    <apuracao_pct_num>63.0</apuracao_pct_num>
+    <cand1_visivel>1</cand1_visivel>
+    <cand1_numero>33</cand1_numero>
+    <cand1_nome>GOVERNO ENSAIO 3</cand1_nome>
+    <cand1_partido>PART-C</cand1_partido>
+    <cand1_nome_partido>GOVERNO ENSAIO 3 (PART-C)</cand1_nome_partido>
+    <cand1_percentual>29,28%</cand1_percentual>
+    <cand1_percentual_num>29.28</cand1_percentual_num>
+    <cand1_votos>777.798</cand1_votos>
+    <cand1_foto>fotos/33.png</cand1_foto>
+    <cand1_cor>#7d93b3</cand1_cor>
+    <cand1_eleito>0</cand1_eleito>
+    <cand1_barra_px>123</cand1_barra_px>
+    <cand1_barra_resto_px>297</cand1_barra_resto_px>
+    <cand1_barra_esc>0.2928</cand1_barra_esc>
+    <cand1_barra_idx>29</cand1_barra_idx>
+    <cand2_visivel>1</cand2_visivel>
+    <cand2_numero>22</cand2_numero>
+    <cand2_nome>GOVERNO ENSAIO 2</cand2_nome>
+    <cand2_partido>PART-B</cand2_partido>
+    <cand2_nome_partido>GOVERNO ENSAIO 2 (PART-B)</cand2_nome_partido>
+    <cand2_percentual>28,52%</cand2_percentual>
+    <cand2_percentual_num>28.52</cand2_percentual_num>
+    <cand2_votos>757.470</cand2_votos>
+    <cand2_foto>fotos/22.png</cand2_foto>
+    <cand2_cor>#7d93b3</cand2_cor>
+    <cand2_eleito>0</cand2_eleito>
+    <cand2_barra_px>120</cand2_barra_px>
+    <cand2_barra_resto_px>300</cand2_barra_resto_px>
+    <cand2_barra_esc>0.2852</cand2_barra_esc>
+    <cand2_barra_idx>29</cand2_barra_idx>
+    <cand3_visivel>1</cand3_visivel>
+    <cand3_numero>11</cand3_numero>
+    <cand3_nome>GOVERNO ENSAIO 1</cand3_nome>
+    <cand3_partido>PART-A</cand3_partido>
+    <cand3_nome_partido>GOVERNO ENSAIO 1 (PART-A)</cand3_nome_partido>
+    <cand3_percentual>26,33%</cand3_percentual>
+    <cand3_percentual_num>26.33</cand3_percentual_num>
+    <cand3_votos>699.297</cand3_votos>
+    <cand3_foto>fotos/11.png</cand3_foto>
+    <cand3_cor>#7d93b3</cand3_cor>
+    <cand3_eleito>0</cand3_eleito>
+    <cand3_barra_px>111</cand3_barra_px>
+    <cand3_barra_resto_px>309</cand3_barra_resto_px>
+    <cand3_barra_esc>0.2633</cand3_barra_esc>
+    <cand3_barra_idx>26</cand3_barra_idx>
+    <cand4_visivel>1</cand4_visivel>
+    <cand4_numero>44</cand4_numero>
+    <cand4_nome>GOVERNO ENSAIO 4</cand4_nome>
+    <cand4_partido>PART-D</cand4_partido>
+    <cand4_nome_partido>GOVERNO ENSAIO 4 (PART-D)</cand4_nome_partido>
+    <cand4_percentual>15,87%</cand4_percentual>
+    <cand4_percentual_num>15.87</cand4_percentual_num>
+    <cand4_votos>421.458</cand4_votos>
+    <cand4_foto>fotos/44.png</cand4_foto>
+    <cand4_cor>#7d93b3</cand4_cor>
+    <cand4_eleito>0</cand4_eleito>
+    <cand4_barra_px>67</cand4_barra_px>
+    <cand4_barra_resto_px>353</cand4_barra_resto_px>
+    <cand4_barra_esc>0.1587</cand4_barra_esc>
+    <cand4_barra_idx>16</cand4_barra_idx>
+  </plano>
+</dados>
