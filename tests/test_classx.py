@@ -321,3 +321,41 @@ def test_campos_numericos_no_csv_saem_sem_formatacao(tmp_path):
     idx = linhas[0].index("votos_num")
     assert linhas[1][idx] == "2000000"
     assert linhas[0].index("percentual_num") >= 0
+
+
+# --- estrutura plana: um item da cena, uma chave --------------------------
+
+def test_estrutura_plana_devolve_objeto_raso(tmp_path):
+    import json as _json
+
+    exporter, arquivos = _exportar(
+        tmp_path, {"formato": "json", "estrutura": "plano", "slots": 2,
+                   "campos_resumo": ["cargo", "apuracao_pct"],
+                   "campos_candidato": ["nome", "percentual"]}
+    )
+    corpo = _json.loads(arquivos[0].read_text(encoding="utf-8"))
+    assert set(corpo) == {"cargo", "apuracao_pct",
+                          "cand1_nome", "cand1_percentual", "cand2_nome", "cand2_percentual"}
+    assert corpo["cand1_nome"] == "CANDIDATA ALFA"
+    assert not any(isinstance(v, (dict, list)) for v in corpo.values())
+
+
+def test_mapa_plano_usa_a_propria_chave(tmp_path):
+    exporter, _ = _exportar(
+        tmp_path, {"formato": "json", "estrutura": "plano", "slots": 2,
+                   "campos_resumo": ["cargo"], "campos_candidato": ["nome"]}
+    )
+    referencias = [i["celula"] for i in exporter.mapa_celulas()]
+    assert referencias == ["cargo", "cand1_nome", "cand2_nome"]
+
+
+def test_estrutura_plana_mantem_a_geometria(tmp_path):
+    import json as _json
+
+    um = _boletim({"n": "11", "nm": "Unica", "cc": "PA", "vap": "10", "pvap": "100,00"})
+    _, arquivos = _exportar(
+        tmp_path, {"formato": "json", "estrutura": "plano", "slots": 4}, boletim=um
+    )
+    corpo = _json.loads(arquivos[0].read_text(encoding="utf-8"))
+    assert corpo["cand1_visivel"] == "1"
+    assert corpo["cand4_visivel"] == "0" and corpo["cand4_nome"] == ""

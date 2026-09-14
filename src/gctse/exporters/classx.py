@@ -128,6 +128,11 @@ class ExporterClassX(Exporter):
         self.delimitador = "\t" if delimitador.lower() in ("tab", "\\t") else delimitador
         self.formato = str(self.opcoes.get("formato", "csv")).lower()
         self.incluir_plano = bool(self.opcoes.get("incluir_plano", True))
+        # 'plano' devolve um objeto RASO: so cand1_nome, cand1_percentual...
+        # Em GC onde cada item da cena e assinado a um campo, chave unica e
+        # rasa e o formato com menos chance de vinculo errado - nao ha indice
+        # de array nem caminho aninhado para digitar errado.
+        self.estrutura = str(self.opcoes.get("estrutura", "completo")).lower()
         self.extensao = str(
             self.opcoes.get("extensao", {"json": ".json", "xml": ".xml"}.get(self.formato, ".csv"))
         )
@@ -221,9 +226,12 @@ class ExporterClassX(Exporter):
             registro.update(self._bloco(self.colunas_candidato, linha))
             candidatos.append(registro)
 
-        corpo = {"resumo": self._bloco(self.colunas_resumo, resumo), "candidatos": candidatos}
-        if self.incluir_plano:
-            corpo["plano"] = self._plano(resumo, linhas)
+        if self.estrutura == "plano":
+            corpo = self._plano(resumo, linhas)
+        else:
+            corpo = {"resumo": self._bloco(self.colunas_resumo, resumo), "candidatos": candidatos}
+            if self.incluir_plano:
+                corpo["plano"] = self._plano(resumo, linhas)
 
         destino = self.caminho_saida(ap, nome_alvo, self.extensao)
         texto = json.dumps(corpo, ensure_ascii=False, indent=2)
@@ -365,6 +373,9 @@ class ExporterClassX(Exporter):
     def _mapa_estruturado(self) -> list[dict[str, str]]:
         """Caminhos de JSON (chave.chave) e XML (XPath). Sem celula envolvida."""
         json_mode = self.formato == "json"
+        if json_mode and self.estrutura == "plano":
+            return self._mapa_plano()
+
         mapa: list[dict[str, str]] = []
 
         for campo in self.colunas_resumo:
@@ -393,6 +404,19 @@ class ExporterClassX(Exporter):
                     chave = f"cand{indice}_{campo}"
                     referencia = f"plano.{chave}" if json_mode else f"/dados/plano/{chave}"
                     mapa.append({"arquivo": "principal", "celula": referencia, "campo": chave, "origem": origem})
+        return mapa
+
+    def _mapa_plano(self) -> list[dict[str, str]]:
+        """Objeto raso: a chave E o caminho. Um item da cena, um nome."""
+        mapa = [
+            {"arquivo": "principal", "celula": campo, "campo": campo, "origem": "resumo"}
+            for campo in self.colunas_resumo
+        ]
+        for indice in range(1, self.slots + 1):
+            origem = self._descricao_slot(indice)
+            for campo in self.colunas_candidato:
+                chave = f"cand{indice}_{campo}"
+                mapa.append({"arquivo": "principal", "celula": chave, "campo": chave, "origem": origem})
         return mapa
 
     def _descricao_slot(self, indice: int) -> str:

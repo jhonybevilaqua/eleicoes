@@ -21,7 +21,14 @@ class Exporter(ABC):
     def __init__(self, *, nome: str, opcoes: dict, cfg_texto: dict, cfg_saida: dict):
         self.nome = nome
         self.opcoes = opcoes or {}
-        self.cfg_texto = cfg_texto or {}
+        # Cada tarja tem espaco diferente: o nome que cabe no placar de
+        # presidente estoura na tarja de rodizio. Por isso o exporter pode
+        # sobrepor o tratamento de texto, e 'limites' funde campo a campo em
+        # vez de substituir o bloco inteiro.
+        base_texto = dict(cfg_texto or {})
+        proprio = dict((self.opcoes.get("texto") or {}))
+        limites = {**(base_texto.get("limites") or {}), **(proprio.pop("limites", None) or {})}
+        self.cfg_texto = {**base_texto, **proprio, "limites": limites}
         self.cfg_saida = cfg_saida or {}
         self.destino = Path(self.opcoes.get("destino", self.cfg_saida.get("destino", "dados/saida")))
         self.encoding = str(self.opcoes.get("encoding", self.cfg_saida.get("encoding", "utf-8")))

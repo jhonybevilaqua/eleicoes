@@ -241,3 +241,31 @@ def test_json_entrega_geometria_como_numero(tmp_path):
     assert c["barra_px"] == 300 and isinstance(c["barra_px"], int)
     assert c["barra_esc"] == 0.6
     assert c["barra_idx"] == 60
+
+
+def test_exporter_pode_sobrepor_o_limite_de_nome(tmp_path):
+    """A tarja de rodízio tem menos espaço que o placar de presidente."""
+    longo = _com_candidatos({"n": "11", "nm": "Maria Aparecida de Andrade", "cc": "PA",
+                             "vap": "10", "pvap": "100,00"})
+    ap = analisar(longo, abrangencia="pr", cargo=3)
+
+    largo = criar("t", {**BARRA, "destino": str(tmp_path / "a")}, {**TEXTO, "limites": {"nome": 30}}, {})
+    (arq,) = largo.exportar(ap, "gov")
+    assert json.loads(arq.read_text(encoding="utf-8"))["candidatos"][0]["nome"] == "MARIA APARECIDA DE ANDRADE"
+
+    curto = criar(
+        "t", {**BARRA, "destino": str(tmp_path / "b"), "texto": {"limites": {"nome": 14}}},
+        {**TEXTO, "limites": {"nome": 30}}, {},
+    )
+    (arq,) = curto.exportar(ap, "gov")
+    assert json.loads(arq.read_text(encoding="utf-8"))["candidatos"][0]["nome"] == "MARIA"
+
+
+def test_sobreposicao_nao_apaga_os_demais_ajustes_de_texto(tmp_path):
+    exporter = criar(
+        "t", {**BARRA, "destino": str(tmp_path), "texto": {"limites": {"nome": 14}}},
+        {"caixa": "alta", "formatar_numeros": True, "limites": {"partido": 4}}, {},
+    )
+    assert exporter.cfg_texto["caixa"] == "alta"          # veio da config global
+    assert exporter.cfg_texto["limites"]["partido"] == 4  # limite nao sobreposto sobrevive
+    assert exporter.cfg_texto["limites"]["nome"] == 14    # e o sobreposto vence
