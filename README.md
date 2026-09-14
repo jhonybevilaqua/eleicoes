@@ -156,6 +156,9 @@ mínimo de seções totalizadas.
 
 ## Supervisão
 
+- `dados/estado/painel.html` — **tela de validação**: abra no navegador e deixe
+  num monitor. Mostra, por praça, o percentual de urnas, 1º e 2º colocado e a
+  situação de cada alvo. Recarrega sozinha; é arquivo estático, sem servidor.
 - `dados/estado/saude.json` — situação de cada alvo a cada ciclo, para o
   monitoramento da emissora acompanhar.
 - `logs/gctse.log` — log rotativo diário, 14 dias.
@@ -170,6 +173,7 @@ mínimo de seções totalizadas.
 - [`docs/GC-INTEGRACAO.md`](docs/GC-INTEGRACAO.md) — receita por marca de GC
 - [`docs/TARJAS.md`](docs/TARJAS.md) — os seis modelos de tarja, o HTML e o PDF
 - [`docs/CASTALIA.md`](docs/CASTALIA.md) — fazer o gráfico acompanhar o percentual no Castalia
+- [`docs/TESTE-SIMULADO.md`](docs/TESTE-SIMULADO.md) — testar com o simulado do TSE
 - [`docs/OPERACAO.md`](docs/OPERACAO.md) — runbook do dia da eleição e contingência
 
 ## Testes

@@ -246,6 +246,61 @@ precisar conferir na mão. Se o LiveBoard mostrar caractere estranho, tente
 `cp1252`. Em último caso, `texto.remover_acentos: true` tira o problema pela
 raiz, ao custo de o nome ir ao ar sem acento.
 
+## Rodízio de praças — governador e senador
+
+Governador e senador são disputados em 27 unidades da federação e a tarja roda
+um punhado delas por bloco. Duas coisas diferentes precisam ser resolvidas:
+
+**Quais praças chegam.** Só o que está em `alvos` é consultado. Liste as UFs que
+vão ao ar e pronto — o TSE não "manda tudo", o sistema busca o que você pediu.
+
+**Como a tarja roda.** Um `rodizio` junta várias praças num arquivo só, com um
+registro por UF, e o GC itera os registros:
+
+```yaml
+alvos:
+  - {nome: gov-pr, abrangencia: pr, cargo: 3, apelido_abrangencia: "PARANÁ", exporters: []}
+  - {nome: gov-sp, abrangencia: sp, cargo: 3, apelido_abrangencia: "SÃO PAULO", exporters: []}
+
+exporters:
+  liveboard_rodizio:
+    tipo: rodizio
+    formato: json          # json | xml | csv
+    destino: "//liveboard/dados"
+    barra: {trilho_px: 420, minimo_px: 6}
+
+rodizios:
+  governadores:
+    exporter: liveboard_rodizio
+    nome_arquivo: rodizio-governador
+    alvos: [gov-pr, gov-sp]      # esta ordem é a ordem do ar
+```
+
+`exporters: []` no alvo significa "coleta, mas não gera arquivo próprio" — a
+praça existe só para alimentar o rodízio.
+
+Cada registro traz `ordem`, `visivel`, `praca`, `apuracao_pct` e os dois
+primeiros colocados já com nome, sigla, percentual, cor e `barra_px`:
+
+```json
+{
+  "rodizio": "governadores", "total": 10, "com_dado": 10,
+  "pracas": [
+    {"ordem": 1, "visivel": "1", "praca": "PARANÁ", "apuracao_pct": "47,00%",
+     "cand1_nome_partido": "NOME (PVL)", "cand1_percentual": "30,21%",
+     "cand1_barra_px": 127, "cand2_nome_partido": "OUTRO (PDR)"}
+  ]
+}
+```
+
+**A lista nunca encolhe.** Praça cujo boletim ainda não saiu entra como registro
+vazio com `visivel = 0` — o rodízio não se desloca no meio da apuração. Amarre a
+visibilidade do take a esse campo e a praça sem dado é pulada sozinha.
+
+**Quem manda no tempo do ar é o GC.** O rodízio entrega os dados; o ritmo da
+troca é do operador. Trocar isso de lado tiraria de vocês o controle do que está
+no vídeo.
+
 ## Ross XPression (DataLinq)
 
 ```yaml

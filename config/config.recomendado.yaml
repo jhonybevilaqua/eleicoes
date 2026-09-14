@@ -46,6 +46,8 @@ coleta:
   cache_condicional: true
   arquivo_estado: dados/estado/estado.json
   arquivo_saude: dados/estado/saude.json
+  # Tela de validacao: abra no navegador e deixe num monitor. Recarrega sozinha.
+  arquivo_painel: dados/estado/painel.html
   falhas_para_alerta: 3
   segundos_sem_dado_para_alerta: 300
 

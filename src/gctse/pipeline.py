@@ -7,6 +7,7 @@ Alvos sao independentes: falha em um nao impede os demais.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import signal
@@ -23,6 +24,7 @@ from .exporters import criar
 from .exporters.base import Exporter
 from .fontes import criar_fonte
 from .modelos import Apuracao
+from .painel import renderizar as renderizar_painel
 from .tse.cliente import ClienteTSE
 from .tse.endpoints import Endpoints
 from .tse.parser import analisar
@@ -52,6 +54,10 @@ class Pipeline:
         }
         self.alvos: list[Alvo] = cfg.alvos
 
+        # ultima apuracao boa de cada alvo, para montar os rodizios no fim do
+        # ciclo. Mantida mesmo quando o boletim nao mudou, senao a praca sumiria
+        # da lista so por estar estavel.
+        self._ultima: dict[str, Apuracao] = {}
         self._parar = threading.Event()
         self._falhas: dict[str, int] = {}
         self._ultimo_sucesso: dict[str, float] = {}
@@ -90,9 +96,11 @@ class Pipeline:
                 except Exception as exc:  # nunca deixar uma excecao derrubar o ciclo
                     log.exception("erro inesperado no alvo '%s'", alvo.nome)
                     resultados[alvo.nome] = f"erro: {exc}"
+        rodizios = self._publicar_rodizios()
         self.ciclos += 1
         self.estado.salvar()
         self._escrever_saude(resultados)
+        self._escrever_painel(resultados, rodizios)
         return resultados
 
     def rodar(self) -> None:
@@ -152,6 +160,7 @@ class Pipeline:
             apuracao.abrangencia_nome = alvo.apelido_abrangencia
 
         self._ultimo_sucesso[alvo.nome] = time.time()
+        self._ultima[alvo.nome] = apuracao
         return self._publicar(alvo, apuracao)
 
     def _publicar(self, alvo: Alvo, ap: Apuracao) -> str:
@@ -193,6 +202,11 @@ class Pipeline:
             exporter = self.exporters.get(nome_exporter)
             if exporter is None:
                 continue
+            if hasattr(exporter, "exportar_lista"):
+                # exporter de rodizio: so faz sentido com a lista inteira de
+                # pracas, montada no fim do ciclo. Listado num alvo por engano,
+                # seria um erro por ciclo ate alguem notar.
+                continue
             try:
                 escritos.extend(exporter.exportar(ap, alvo.nome))
             except Exception as exc:
@@ -215,6 +229,42 @@ class Pipeline:
         )
         return f"publicado({ap.pct_secoes:.2f}%)"
 
+    def _publicar_rodizios(self) -> dict[str, tuple[int, int]]:
+        """Junta varias pracas num arquivo so, na ordem configurada."""
+        situacao: dict[str, tuple[int, int]] = {}
+        apelidos = {a.nome: (a.apelido_abrangencia or a.abrangencia.upper()) for a in self.alvos}
+        for nome, grupo in self.cfg.rodizios.items():
+            exporter = self.exporters.get(grupo.get("exporter", ""))
+            if exporter is None or not hasattr(exporter, "exportar_lista"):
+                continue
+            itens = [
+                (ordem, apelidos.get(alvo, alvo), self._ultima.get(alvo))
+                for ordem, alvo in enumerate(grupo.get("alvos") or [], start=1)
+            ]
+            arquivo = str(grupo.get("nome_arquivo") or nome)
+
+            # dedupe proprio: sem isso o arquivo do rodizio seria reescrito a
+            # cada ciclo mesmo quando nenhuma das pracas mudou
+            impressao = hashlib.sha1(
+                json.dumps(exporter.montar(itens), ensure_ascii=False, sort_keys=True).encode("utf-8")
+            ).hexdigest()
+            chave = f"rodizio:{nome}"
+            situacao[nome] = (len(itens), sum(1 for _, _, ap in itens if ap))
+            if not self.estado.mudou(chave, impressao) and not bool(self.cfg.saida.get("reescrever_sempre", False)):
+                continue
+            try:
+                escritos = exporter.exportar_lista(itens, arquivo)
+            except Exception as exc:
+                log.exception("rodizio '%s' falhou", nome)
+                self.alertas.enviar(f"rodizio:{nome}", f"rodizio '{nome}' falhou: {exc}", "ERRO")
+                continue
+            com_dado = sum(1 for _, _, ap in itens if ap)
+            situacao[nome] = (len(itens), com_dado)
+            self.estado.registrar(chave, impressao, None, {"pracas": len(itens), "com_dado": com_dado})
+            log.info("rodizio '%s': %d de %d praca(s) com dado, %d arquivo(s)",
+                     nome, com_dado, len(itens), len(escritos))
+        return situacao
+
     # --- supervisao ---
 
     def _verificar_estagnacao(self) -> None:
@@ -230,6 +280,24 @@ class Pipeline:
                     f"alvo '{alvo.nome}' sem dado novo ha {int(agora - ultimo)}s",
                     "ERRO",
                 )
+
+    def _escrever_painel(self, resultados: dict[str, str], rodizios: dict[str, tuple[int, int]]) -> None:
+        """Tela de validacao para o coordenador acompanhar durante a apuracao."""
+        caminho = self.cfg.coleta.get("arquivo_painel")
+        if not caminho:
+            return
+        try:
+            renderizar_painel(
+                caminho=caminho,
+                fonte=str(self.cfg.coleta.get("fonte", "tse")),
+                ciclos=self.ciclos,
+                intervalo=self.cfg.intervalo,
+                resultados=resultados,
+                apuracoes=self._ultima,
+                rodizios=rodizios,
+            )
+        except OSError as exc:
+            log.error("nao foi possivel escrever o painel: %s", exc)
 
     def _escrever_saude(self, resultados: dict[str, str]) -> None:
         """Arquivo de saude para o monitoramento da emissora acompanhar."""

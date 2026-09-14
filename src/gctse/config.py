@@ -87,6 +87,17 @@ class Config:
         return self.bruto.get("exporters", {})
 
     @property
+    def rodizios(self) -> dict[str, dict[str, Any]]:
+        """Grupos de pracas que saem num arquivo so, para a tarja rodar.
+
+        rodizios:
+          governadores:
+            exporter: liveboard_rodizio
+            alvos: [gov-pr, gov-sp, gov-rj]   # a ordem aqui e a ordem do ar
+        """
+        return self.bruto.get("rodizios", {}) or {}
+
+    @property
     def intervalo(self) -> int:
         return int(self.coleta.get("intervalo_segundos", 20))
 
@@ -108,7 +119,12 @@ class Config:
                     turno=int(dados.get("turno", self.tse.get("turno", 1))),
                     intervalo=int(dados["intervalo"]) if dados.get("intervalo") else None,
                     limite_candidatos=int(dados.get("limite_candidatos", 0)),
-                    exporters=list(dados.get("exporters") or list(self.exporters.keys())),
+                    # lista vazia EXPLICITA e uma escolha valida: o alvo e
+                    # coletado so para alimentar um rodizio, sem arquivo proprio.
+                    # 'or' trataria [] como ausente e devolveria todos.
+                    exporters=list(
+                        dados["exporters"] if "exporters" in dados else self.exporters.keys()
+                    ),
                     apelido_abrangencia=str(dados.get("apelido_abrangencia", "")),
                 )
             )
@@ -127,6 +143,15 @@ class Config:
             problemas.append("nenhum exporter configurado em 'exporters'")
 
         conhecidos = set(self.exporters.keys())
+        nomes_alvo = {a.nome for a in self.alvos}
+        for nome, grupo in self.rodizios.items():
+            if not grupo.get("alvos"):
+                problemas.append(f"rodizio '{nome}' sem lista de alvos")
+            if grupo.get("exporter") not in conhecidos:
+                problemas.append(f"rodizio '{nome}' referencia exporter inexistente '{grupo.get('exporter')}'")
+            for alvo in grupo.get("alvos") or []:
+                if alvo not in nomes_alvo:
+                    problemas.append(f"rodizio '{nome}' cita alvo inexistente '{alvo}'")
         for alvo in self.alvos:
             for nome in alvo.exporters:
                 if nome not in conhecidos:
