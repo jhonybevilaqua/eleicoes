@@ -169,10 +169,34 @@ Três motivos:
 - se o PC de coleta travar, o GC **continua com o último dado no ar** — os
   arquivos não somem.
 
-### Na máquina do GC, se não houver PC sobrando
+### Na máquina do GC
 
-Funciona. O processo é leve: algumas requisições HTTP a cada 20 s e alguns KB
-gravados. Nesse caso grave numa **pasta local** (`C:\gctse\saida`), não em rede.
+Funciona, e é o cenário mais simples de configurar. O processo é leve: algumas
+requisições HTTP a cada 20 s e alguns KB gravados — não briga por recurso com o
+GC.
+
+Os caminhos da configuração já são **relativos à pasta do executável**
+(`dados/saida/...`), e o `gctse.exe` se ancora na própria pasta ao iniciar. Ou
+seja: extraiu em `C:\gctse`, os arquivos saem em `C:\gctse\dados\saida\` e o
+DataSource do LiveBoard aponta para lá. **Não precisa mexer em caminho nenhum.**
+
+Quatro cuidados que valem para esse cenário:
+
+**A janela de console.** Numa máquina de GC, um prompt aberto atrapalha e, pior,
+alguém fecha sem querer. O `5-iniciar-com-windows.bat` sobe o processo
+**minimizado**. Acompanhe pelo `painel.html`, não pelo console.
+
+**A máquina não pode dormir.** Configure o plano de energia para nunca suspender
+e nunca desligar o disco. Vale para a máquina do GC de qualquer jeito, mas com o
+coletor junto passa a ser obrigatório.
+
+**Antivírus varrendo a pasta de saída.** Se houver varredura em tempo real na
+pasta que o GC lê, cada gravação vira uma varredura. Peça exclusão da pasta
+`dados\saida` — não do executável, só da pasta de saída.
+
+**Ordem de inicialização não importa.** O `4-rodar.bat` fica em laço, então tanto
+faz quem sobe primeiro. Se o GC ainda não estiver de pé, os arquivos só ficam
+esperando.
 
 ### Se gravar em pasta de rede
 

@@ -6,6 +6,10 @@ REM E o caminho mais confiavel em maquina de operacao com login automatico:
 REM roda dentro da sessao do usuario, entao enxerga as pastas de rede que o
 REM usuario enxerga. Tarefa agendada rodando como SYSTEM NAO enxerga.
 REM
+REM O atalho sobe MINIMIZADO (WindowStyle 7). Numa maquina de GC, uma janela
+REM de console aberta atrapalha - e pior, alguem fecha sem querer. Acompanhe
+REM pelo painel.html, nao pelo console.
+REM
 REM Para desfazer: apague o atalho da pasta que este script abre no fim.
 setlocal
 cd /d "%~dp0"
@@ -32,6 +36,7 @@ powershell -NoProfile -Command ^
   "$s.TargetPath='%~dp04-rodar.bat';" ^
   "$s.WorkingDirectory='%~dp0';" ^
   "$s.Description='Apuracao TSE para o GC';" ^
+  "$s.WindowStyle=7;" ^
   "$s.Save()"
 
 if exist "%ATALHO%" (
