@@ -67,6 +67,17 @@ jobs:
           Copy-Item empacotamento\LEIA-ME.txt "$alvo\"
           Copy-Item "$alvo\config\config.recomendado.yaml" "$alvo\config\config.yaml"
 
+      - name: Listar o que foi empacotado
+        shell: pwsh
+        working-directory: dist\gctse
+        run: |
+          Write-Host "=== Raiz do pacote (o que o usuario ve ao extrair) ==="
+          Get-ChildItem | Where-Object { $_.Name -ne "_internal" } |
+            Select-Object Mode, Length, Name | Format-Table -AutoSize
+          $bats = Get-ChildItem -Filter *.bat
+          Write-Host "=== .bat encontrados: $($bats.Count) ==="
+          if ($bats.Count -lt 5) { throw "faltam .bat no pacote (esperado 5)" }
+
       - name: Conferir que o executavel roda
         shell: pwsh
         working-directory: dist\gctse
