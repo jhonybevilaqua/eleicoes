@@ -145,6 +145,72 @@ mapa de vínculos em `exemplos\mapa\`.
 
 ---
 
+## 5b. Onde instalar, na prática
+
+### Não na máquina do GC — se der para evitar
+
+O recomendado é um **PC separado** (o de operação ou automação) gravando numa
+pasta que o GC lê:
+
+```
+┌─────────────────┐   HTTPS    ┌──────────┐
+│  PC de operação │ ─────────► │   TSE    │
+│    gctse.exe    │            └──────────┘
+└────────┬────────┘
+         │ grava JSON
+         ▼
+  \\servidor\gc\eleicoes\      ◄── o GC lê daqui
+```
+
+Três motivos:
+
+- o GC fica livre para desenhar gráfico, que é o trabalho dele;
+- mexer na configuração no meio da transmissão não encosta no PC do ar;
+- se o PC de coleta travar, o GC **continua com o último dado no ar** — os
+  arquivos não somem.
+
+### Na máquina do GC, se não houver PC sobrando
+
+Funciona. O processo é leve: algumas requisições HTTP a cada 20 s e alguns KB
+gravados. Nesse caso grave numa **pasta local** (`C:\gctse\saida`), não em rede.
+
+### Se gravar em pasta de rede
+
+Use o **caminho UNC completo** na configuração:
+
+```yaml
+destino: "\\\\servidor\\gc\\eleicoes"
+```
+
+**Nunca letra de unidade mapeada** (`Z:\...`). Unidade mapeada só existe dentro
+da sessão do usuário que a mapeou — some quando o processo roda fora dela, e
+some sem aviso. É a causa número um de "funcionava e parou".
+
+A conta que roda o gctse precisa de permissão de escrita na pasta. A escrita é
+atômica (`.tmp` + renomear no mesmo destino), então funciona em SMB.
+
+### Subir sozinho com o Windows
+
+```
+5-iniciar-com-windows.bat
+```
+
+Cria um atalho na pasta Inicializar do usuário. É o caminho mais confiável em
+máquina de operação com login automático: roda **dentro da sessão do usuário**,
+então enxerga as pastas de rede que o usuário enxerga.
+
+> Tarefa Agendada rodando como SYSTEM **não** enxerga compartilhamento de rede.
+> Se precisar usar Tarefa Agendada, configure com uma conta de usuário real e
+> marque "Executar somente quando o usuário estiver conectado".
+
+O `4-rodar.bat` já reinicia sozinho se o processo cair, então o conjunto
+sobrevive a queda de rede, reinício do TSE e reboot da máquina.
+
+### Nunca
+
+Duas cópias gravando na mesma pasta. As duas escreveriam uma por cima da outra
+e o hot folder do GC ficaria piscando.
+
 ## 6. Montar a cena no LiveBoard
 
 1. No LiveBoard, crie um **DataSource** com **Type = JSON**.

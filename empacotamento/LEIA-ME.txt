@@ -16,6 +16,25 @@ COMO USAR
                          placar se mexendo. Para ensaiar com a equipe.
   4-rodar.bat            Operacao de verdade, no dia da eleicao. Fica rodando
                          e se reinicia sozinho se cair.
+  5-iniciar-com-windows.bat  Faz o sistema subir sozinho no login. Opcional,
+                         mas recomendado para a maquina ficar autonoma.
+
+ONDE INSTALAR
+
+  O recomendado NAO e a maquina do GC, e sim um PC separado (o de operacao
+  ou automacao) gravando numa pasta que o GC le. Motivos:
+
+    * o GC fica livre para desenhar grafico, que e o trabalho dele
+    * mexer na configuracao no meio da transmissao nao encosta no PC do ar
+    * se o PC de coleta travar, o GC continua com o ultimo dado no ar
+
+  Se nao houver PC sobrando, rodar na propria maquina do GC funciona - o
+  processo e leve (algumas requisicoes a cada 20s e alguns KB gravados).
+  Nesse caso grave numa pasta LOCAL, nao em rede.
+
+  Se gravar em pasta de rede, use o caminho UNC completo na config
+  (\\servidor\pasta), nunca letra de unidade mapeada (Z:). Unidade mapeada
+  nao existe fora da sessao do usuario e some sem aviso.
 
 IMPORTANTE
 
@@ -33,6 +52,9 @@ IMPORTANTE
 
   * Para a operacao real, o PC precisa de acesso a resultados.tse.jus.br na
     porta 443. Peca a liberacao a TI com antecedencia - costuma demorar.
+
+  * NAO rode duas copias gravando na mesma pasta. As duas escreveriam por
+    cima uma da outra e o hot folder do GC ficaria piscando.
 
 ONDE ESTA O RESTO
 
