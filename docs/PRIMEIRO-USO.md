@@ -57,6 +57,35 @@ Depois pule direto para o passo **6. Montar a cena no LiveBoard**, mais abaixo.
 > exigir, compilar internamente com `scripts\build.bat` numa máquina que tenha
 > Python.
 
+### O GitHub some depois do download
+
+Nada em tempo de execução depende do GitHub. O sistema conversa **só com o
+TSE**, e a pasta extraída é autocontida.
+
+Baixe o pacote **uma vez**. Dali em diante copie a pasta por pen drive, rede ou
+como preferir — ela roda em qualquer Windows sem instalar nada e sem nunca mais
+abrir o GitHub. Não há licença, chamada de casa, nem verificação online.
+
+O GitHub serve a duas coisas, as duas fora da operação:
+
+1. **guardar o código** — para não depender de uma máquina só;
+2. **compilar o `.exe`** — num runner Windows, porque PyInstaller não faz
+   compilação cruzada.
+
+Se quiser eliminar as duas, veja "Compilar internamente" abaixo.
+
+### Compilar internamente
+
+Se a política de TI exigir que nada venha compilado de fora, rode numa máquina
+Windows que tenha Python:
+
+```
+scripts\build.bat
+```
+
+Sai a mesma pasta `dist\gctse`, pronta para copiar para a máquina do GC — que
+continua não precisando de Python.
+
 ---
 
 ## Caminho B — a partir do código-fonte
