@@ -177,6 +177,9 @@ if ($Teste -and (Tem-Propriedade $cfg.tse "base_url_simulado") -and $cfg.tse.bas
     if ((Tem-Propriedade $cfg.tse "eleicao_simulado") -and $cfg.tse.eleicao_simulado) {
         $cfg.tse.eleicao = $cfg.tse.eleicao_simulado
     }
+    if (Tem-Propriedade $cfg.tse "eleicao_por_cargo_simulado") {
+        $cfg.tse.eleicao_por_cargo = $cfg.tse.eleicao_por_cargo_simulado
+    }
     Escrever-Log "MODO TESTE: lendo o ambiente de SIMULADO em $($cfg.tse.base_url)"
 }
 
@@ -198,6 +201,23 @@ function Obter-Cor {
 
 $PadraoUrlPadrao = "{base}/{ciclo}/{pleito}/dados-simplificados/{dir}/{abr}-c{cargo4}-e{eleicao6}-r.json"
 
+function Obter-Eleicao {
+    # Presidente e Governador/Senador NAO ficam na mesma eleicao. O TSE
+    # divide o pleito em eleicoes por esfera - no simulado de 2026, 21270 e
+    # a Federal (Presidente) e 21272 a Estadual (Governador, Senador). Usar
+    # um codigo so para tudo devolve 404 em metade das tarjas, e a tela fica
+    # sem governador sem ninguem entender por que.
+    param([int] $Cargo)
+    if (Tem-Propriedade $cfg.tse "eleicao_por_cargo") {
+        $mapa = $cfg.tse.eleicao_por_cargo
+        if (Tem-Propriedade $mapa "$Cargo") {
+            $v = $mapa."$Cargo"
+            if ($v) { return "$v" }
+        }
+    }
+    return "$($cfg.tse.eleicao)"
+}
+
 function Montar-Url {
     # O caminho dos arquivos mudou entre 2022 e 2026 (de dados-simplificados
     # com o codigo do PLEITO, para dados com o codigo da ELEICAO), e o TSE
@@ -217,8 +237,9 @@ function Montar-Url {
     $u = $u.Replace("{base}", $cfg.tse.base_url.TrimEnd('/'))
     $u = $u.Replace("{ciclo}", "$($cfg.tse.ciclo)")
     $u = $u.Replace("{pleito}", "$($cfg.tse.pleito)")
-    $u = $u.Replace("{eleicao6}", ("{0:000000}" -f ([int] $cfg.tse.eleicao)))
-    $u = $u.Replace("{eleicao}", "$($cfg.tse.eleicao)")
+    $ele = Obter-Eleicao $Cargo
+    $u = $u.Replace("{eleicao6}", ("{0:000000}" -f ([int] $ele)))
+    $u = $u.Replace("{eleicao}", "$ele")
     $u = $u.Replace("{cargo4}", ("{0:0000}" -f $Cargo))
     $u = $u.Replace("{cargo}", "$Cargo")
     $u = $u.Replace("{dir}", $dir)
@@ -1176,7 +1197,7 @@ if ($Conferir) {
                     if ($rot -like "3=*") { $temGovernador = $true }
                     if ($rot -like "5=*") { $temSenador = $true }
                 }
-                $geral = $temPresidente -or ($temGovernador -and $temSenador)
+                $geral = $temPresidente -or $temGovernador -or $temSenador
                 $marca = "    "
                 if ($geral) {
                     $marca = ">>> "
@@ -1185,9 +1206,20 @@ if ($Conferir) {
                             ciclo = "$(Obter-Campo $d @('c') '')"
                             pleito = "$cdPleito"
                             eleicao = "$cdEleicao"
-                            nome = $nome
+                            cargos = @{}
+                            nomes = New-Object System.Collections.ArrayList
                         }
                     }
+                    $reg = $script:Achado[$Rotulo]
+                    # Cada cargo aponta para a eleicao em que ele esta: o
+                    # Presidente numa, Governador e Senador em outra.
+                    foreach ($rot in $cargos) {
+                        $num = ($rot -split "=")[0]
+                        if (@("1","3","5") -contains $num) {
+                            $reg.cargos[$num] = "$cdEleicao"
+                        }
+                    }
+                    [void] $reg.nomes.Add("$cdEleicao = $nome")
                 }
                 Anotar ("    {0}pleito {1}  |  eleicao {2}  |  {3}" -f $marca, $cdPleito, $cdEleicao, $dt)
                 Anotar ("        {0}" -f $nome)
@@ -1222,27 +1254,47 @@ if ($Conferir) {
         Anotar "-----------------------------------------------------------"
         Anotar "COPIE ISTO PARA O config.json, dentro de `"tse`":"
         Anotar ""
-        $cicloAchado = "ele2026"
-        if ($ofi) { $cicloAchado = $ofi.ciclo } elseif ($sim) { $cicloAchado = $sim.ciclo }
+        function Mapa-Json {
+            param($Reg)
+            if (-not $Reg) { return "{}" }
+            $partes = New-Object System.Collections.ArrayList
+            foreach ($c in @("1", "3", "5")) {
+                if ($Reg.cargos.ContainsKey($c)) {
+                    [void] $partes.Add("`"$c`": `"$($Reg.cargos[$c])`"")
+                }
+            }
+            return "{ " + ($partes -join ", ") + " }"
+        }
+
+        $cicloAchado = "$($cfg.tse.ciclo)"
+        if ($ofi -and $ofi.ciclo) { $cicloAchado = $ofi.ciclo }
+        elseif ($sim -and $sim.ciclo) { $cicloAchado = $sim.ciclo }
         Anotar "      `"ciclo`": `"$cicloAchado`","
         if ($ofi) {
             Anotar "      `"pleito`": `"$($ofi.pleito)`","
             Anotar "      `"eleicao`": `"$($ofi.eleicao)`","
+            Anotar "      `"eleicao_por_cargo`": $(Mapa-Json $ofi),"
         } else {
             Anotar "      `"pleito`": `"`",      <- o oficial ainda nao publicou 2026"
             Anotar "      `"eleicao`": `"`","
+            Anotar "      `"eleicao_por_cargo`": {},"
         }
         if ($sim) {
             Anotar "      `"pleito_simulado`": `"$($sim.pleito)`","
-            Anotar "      `"eleicao_simulado`": `"$($sim.eleicao)`""
+            Anotar "      `"eleicao_simulado`": `"$($sim.eleicao)`","
+            Anotar "      `"eleicao_por_cargo_simulado`": $(Mapa-Json $sim)"
         } else {
             Anotar "      `"pleito_simulado`": `"`",   <- o simulado nao respondeu"
-            Anotar "      `"eleicao_simulado`": `"`""
+            Anotar "      `"eleicao_simulado`": `"`","
+            Anotar "      `"eleicao_por_cargo_simulado`": {}"
         }
         Anotar ""
-        if ("$cicloAchado" -ne "$($cfg.tse.ciclo)") {
-            Anotar "ATENCAO: o config.json esta com ciclo `"$($cfg.tse.ciclo)`" e a"
-            Anotar "eleicao geral encontrada esta no ciclo `"$cicloAchado`"."
+        Anotar "1 = Presidente, 3 = Governador, 5 = Senador."
+        Anotar "Os tres nao ficam na mesma eleicao: o TSE separa por esfera."
+        foreach ($reg in @($ofi, $sim)) {
+            if ($reg -and $reg.nomes.Count -gt 0) {
+                foreach ($n in $reg.nomes) { Anotar "    $n" }
+            }
         }
         Anotar "-----------------------------------------------------------"
     } else {
@@ -1291,6 +1343,9 @@ if ($Conferir) {
         $cfg.tse.base_url = $cfgSim
         $cfg.tse.pleito = $pleitoTeste
         $cfg.tse.eleicao = $eleicaoTeste
+        if (Tem-Propriedade $cfg.tse "eleicao_por_cargo_simulado") {
+            $cfg.tse.eleicao_por_cargo = $cfg.tse.eleicao_por_cargo_simulado
+        }
         $ufTeste = "sp"
         if ((Tem-Propriedade $cfg "selecao") -and $cfg.selecao.pracas) {
             $ufTeste = "$($cfg.selecao.pracas[0].uf)".ToLower()
@@ -1416,8 +1471,19 @@ if ($Modo -ne "ENSAIO") {
             $eleicaoUso = "$($cfg.tse.eleicao_simulado)"
         }
     }
-    $faltando = (-not $pleitoUso) -or (-not $eleicaoUso) -or
-                ($pleitoUso -eq "000") -or ($eleicaoUso -eq "000")
+    # O mapa por cargo tambem serve: se ele tem os codigos, ha o que buscar.
+    $temMapa = $false
+    $chaveMapa = "eleicao_por_cargo"
+    if ($Teste -and (Tem-Propriedade $cfg.tse "eleicao_por_cargo_simulado")) {
+        $chaveMapa = "eleicao_por_cargo_simulado"
+    }
+    if (Tem-Propriedade $cfg.tse $chaveMapa) {
+        foreach ($prop in $cfg.tse.$chaveMapa.PSObject.Properties) {
+            if ($prop.Value) { $temMapa = $true }
+        }
+    }
+    $faltando = (-not $pleitoUso) -or ($pleitoUso -eq "000") -or
+                ((-not $temMapa) -and ((-not $eleicaoUso) -or ($eleicaoUso -eq "000")))
     if ($faltando) {
         Write-Host ""
         if ($Teste) {

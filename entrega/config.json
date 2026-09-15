@@ -6,8 +6,14 @@
     "ciclo": "ele2026",
     "pleito": "000",
     "eleicao": "000",
-    "pleito_simulado": "",
-    "eleicao_simulado": "",
+    "eleicao_por_cargo": {},
+    "pleito_simulado": "17801",
+    "eleicao_simulado": "21270",
+    "eleicao_por_cargo_simulado": {
+      "1": "21270",
+      "3": "21272",
+      "5": "21272"
+    },
     "user_agent": "",
     "padrao_url": ""
   },
