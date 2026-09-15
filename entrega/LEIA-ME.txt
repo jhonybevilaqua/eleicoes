@@ -41,6 +41,35 @@ O QUE FAZER, NA ORDEM
 
 ---------------------------------------------------------------------------
 
+NO LIVEBOARD: LIGUE O AUTO UPDATE
+
+ No DataSource de cada tarja, ligue AUTO UPDATE com intervalo de 2 a 5
+ segundos.
+
+   * 2 a 5s: a troca de estado aparece quase na hora (o gctse responde em
+     ~1s) e a apuracao acompanha sem atraso perceptivel.
+   * menos de 1s: nao ganha nada. O gctse so reescreve o arquivo quando o
+     conteudo MUDA - dado estavel nao gera reescrita nenhuma.
+   * mais de 10s: a troca de estado fica lenta para quem esta operando.
+
+ Pode ler tranquilo: a gravacao e atomica (grava .tmp e renomeia), entao o
+ LiveBoard nunca pega o arquivo pela metade, por mais frequente que leia.
+
+ CONFIRME NO ENSAIO: alguns sistemas so atualizam no preview, nao com a
+ tarja NO AR. Suba a tarja, rode um .bat de outro estado e veja se ela
+ muda com ela no ar. Se so mudar no preview, troque o estado ANTES de subir.
+
+NOMES DOS OBJETOS (Castalia -> LiveBoard)
+
+ Os nomes que voce da aos objetos no Castalia sao os que aparecem no
+ LiveBoard na hora de assinar. Use nomes que nao se repitam:
+
+   NOME 1, PARTIDO 1, % 1     -> primeiro colocado
+   NOME 2, PARTIDO 2, % 2     -> segundo colocado
+
+ Dois objetos com o mesmo nome viram armadilha no momento de assinar, e o
+ erro so aparece no ar.
+
 COMO TROCAR O ESTADO DA TARJA
 
  Duas formas. As duas usam o MESMO arquivo, sem refazer vinculo nenhum.
