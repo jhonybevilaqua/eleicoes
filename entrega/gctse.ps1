@@ -89,11 +89,38 @@ function Formatar-Percentual {
     return ($Valor.ToString("N2", [Globalization.CultureInfo]::GetCultureInfo("pt-BR")) + "%")
 }
 
+function Decodificar-Entidades {
+    # O proprio TSE manda entidade HTML dentro do JSON ("1&#186; Turno").
+    # Sem isto a tarja mostra "1&#186; TURNO" no ar, e a entidade ainda
+    # consome 6 dos caracteres do limite de nome.
+    param([string] $Texto)
+    if (-not $Texto) { return "" }
+    $t = $Texto
+    if ($t -notmatch '&') { return $t }
+    $t = [regex]::Replace($t, '&#(\d{1,6});', {
+        param($m)
+        try { return [char][int] $m.Groups[1].Value } catch { return $m.Value }
+    })
+    $t = [regex]::Replace($t, '&#[xX]([0-9a-fA-F]{1,5});', {
+        param($m)
+        try { return [char][Convert]::ToInt32($m.Groups[1].Value, 16) } catch { return $m.Value }
+    })
+    $t = $t -replace '&aacute;', [char] 225 -replace '&eacute;', [char] 233
+    $t = $t -replace '&iacute;', [char] 237 -replace '&oacute;', [char] 243
+    $t = $t -replace '&uacute;', [char] 250 -replace '&ccedil;', [char] 231
+    $t = $t -replace '&atilde;', [char] 227 -replace '&otilde;', [char] 245
+    $t = $t -replace '&acirc;',  [char] 226 -replace '&ecirc;',  [char] 234
+    $t = $t -replace '&ocirc;',  [char] 244 -replace '&ordm;',   [char] 186
+    $t = $t -replace '&nbsp;', " " -replace '&quot;', '"'
+    $t = $t -replace '&lt;', "<" -replace '&gt;', ">" -replace '&amp;', "&"
+    return $t
+}
+
 function Limitar-Texto {
     # Corta no limite sem quebrar palavra no meio.
     param([string] $Texto, [int] $Limite)
     if ($null -eq $Texto) { return "" }
-    $t = ($Texto -replace '\s+', ' ').Trim().ToUpper()
+    $t = ((Decodificar-Entidades $Texto) -replace '\s+', ' ').Trim().ToUpper()
     if ($Limite -le 0 -or $t.Length -le $Limite) { return $t }
     $corte = $t.Substring(0, $Limite)
     if ($corte.Contains(' ')) { $corte = $corte.Substring(0, $corte.LastIndexOf(' ')) }
@@ -908,9 +935,11 @@ if ($Conferir) {
     if ((Tem-Propriedade $cfg.tse "base_url_simulado") -and $cfg.tse.base_url_simulado) {
         [void] $candidatos.Add($cfg.tse.base_url_simulado)
     }
-    foreach ($c in @("https://resultados.tse.jus.br/simulado",
-                     "https://resultados-sim.tse.jus.br/simulado",
+    foreach ($c in @("https://resultados-sim.tse.jus.br/simulado",
+                     "https://resultados.tse.jus.br/simulado",
+                     "https://resultados-sim.tse.jus.br",
                      "https://resultados-sim.tse.jus.br/oficial",
+                     "https://resultados-sim.tse.jus.br/simulado/ele2026",
                      "https://resultados.tse.jus.br/teste")) {
         if (-not $candidatos.Contains($c)) { [void] $candidatos.Add($c) }
     }
@@ -931,6 +960,15 @@ if ($Conferir) {
         }
     }
 
+    $appSim = $null
+    if ($null -eq $eleSim) {
+        # Nenhum caminho de arquivo respondeu. A pagina do simulado responder
+        # separa dois problemas muito diferentes: host bloqueado na rede
+        # (nada responde) x caminho dos arquivos diferente do que supus.
+        $appSim = Sondar-Url "https://resultados-sim.tse.jus.br/simulado/app/index.html" "PAGINA do simulado (so para saber se o host responde)"
+        Anotar ""
+    }
+
     $eleOfi = Sondar-Url "$($UrlOficial.TrimEnd('/'))/comum/config/ele-c.json" "OFICIAL (o da noite da apuracao)"
     Anotar ""
 
@@ -941,9 +979,27 @@ if ($Conferir) {
         Anotar "    resultados.tse.jus.br"
         Anotar "    resultados-sim.tse.jus.br"
     } elseif ($null -eq $eleSim) {
-        Anotar "RESULTADO: o OFICIAL responde, mas nenhum endereco de simulado respondeu."
-        Anotar "Como o oficial passa, a rede esta liberada e o programa funciona."
-        Anotar "Ou o simulado esta fora da janela de teste, ou mudou de endereco."
+        Anotar "RESULTADO: o OFICIAL responde, mas nenhum caminho de simulado respondeu."
+        Anotar "Como o oficial passa, a REDE ESTA LIBERADA e o programa funciona."
+        if ($appSim) {
+            Anotar ""
+            Anotar "A pagina do simulado respondeu, mas os arquivos JSON nao estao"
+            Anotar "nos caminhos que tentei. Ou seja: o host existe e a rede alcanca,"
+            Anotar "so o caminho dos arquivos e outro."
+            Anotar ""
+            Anotar "COMO DESCOBRIR O CAMINHO CERTO, em 2 minutos:"
+            Anotar "  1. abra no Chrome:"
+            Anotar "     https://resultados-sim.tse.jus.br/simulado/app/index.html"
+            Anotar "  2. aperte F12 e clique na aba Network (ou Rede)"
+            Anotar "  3. aperte F5 para recarregar a pagina"
+            Anotar "  4. na lista, procure as linhas que terminam em .json"
+            Anotar "  5. clique com o botao direito em uma e escolha Copy > Copy link address"
+            Anotar "  6. me envie esse endereco - e o endereco de verdade do simulado"
+        } else {
+            Anotar "Nem a pagina do simulado respondeu. Ou o ambiente esta fora da"
+            Anotar "janela de teste, ou o host esta bloqueado so para esta maquina."
+        }
+        Anotar ""
         Anotar "Envie este arquivo para analise."
     } elseif ($null -eq $eleOfi) {
         Anotar "RESULTADO: o simulado responde (da para testar), mas o OFICIAL nao."
@@ -986,25 +1042,39 @@ if ($Conferir) {
             if (-not (Tem-Propriedade $pleito "e")) { continue }
             foreach ($eleicao in $pleito.e) {
                 $cdEleicao = Obter-Campo $eleicao @("cd") "?"
-                $nome = "$(Obter-Campo $eleicao @('nm') '')"
+                $nome = Decodificar-Entidades "$(Obter-Campo $eleicao @('nm') '')"
                 $cargos = New-Object System.Collections.ArrayList
                 if (Tem-Propriedade $eleicao "abr") {
                     foreach ($a in $eleicao.abr) {
                         if (-not (Tem-Propriedade $a "cp")) { continue }
                         foreach ($cargo in $a.cp) {
-                            $rot = "$(Obter-Campo $cargo @('cd') '')=$(Obter-Campo $cargo @('ds') '')"
+                            $rot = "$(Obter-Campo $cargo @('cd') '')=$(Decodificar-Entidades "$(Obter-Campo $cargo @('ds') '')")"
                             if (-not $cargos.Contains($rot)) { [void] $cargos.Add($rot) }
                         }
                     }
                 }
+                # Data de 2026 nao basta: a lista do TSE vem cheia de eleicao
+                # suplementar de prefeito marcada com data de 2026. O que
+                # identifica a eleicao geral sao os CARGOS - Presidente, ou
+                # Governador e Senador juntos.
+                $temPresidente = $false
+                $temGovernador = $false
+                $temSenador = $false
+                foreach ($rot in $cargos) {
+                    if ($rot -like "1=*") { $temPresidente = $true }
+                    if ($rot -like "3=*") { $temGovernador = $true }
+                    if ($rot -like "5=*") { $temSenador = $true }
+                }
+                $geral = $temPresidente -or ($temGovernador -and $temSenador)
                 $marca = "    "
-                if ("$dt$nome" -match "2026") {
+                if ($geral) {
                     $marca = ">>> "
                     if (-not $script:Achado.ContainsKey($Rotulo)) {
                         $script:Achado[$Rotulo] = @{
                             ciclo = "$(Obter-Campo $d @('c') '')"
                             pleito = "$cdPleito"
                             eleicao = "$cdEleicao"
+                            nome = $nome
                         }
                     }
                 }
@@ -1017,10 +1087,16 @@ if ($Conferir) {
             }
         }
         Anotar ""
-        Anotar "    As linhas marcadas com >>> sao as de 2026."
-        Anotar "    PLEITO vai em 'pleito', ELEICAO vai em 'eleicao' no config.json."
-        Anotar "    Os CARGOS confirmam o numero de cada cargo (1 presidente,"
-        Anotar "    3 governador, 5 senador) - se o TSE mudar a numeracao, aparece aqui."
+        if ($script:Achado.ContainsKey($Rotulo)) {
+            Anotar "    A linha marcada com >>> e a ELEICAO GERAL - a que interessa."
+            Anotar "    PLEITO vai em 'pleito', ELEICAO vai em 'eleicao' no config.json."
+        } else {
+            Anotar "    NENHUMA ELEICAO GERAL nesta lista."
+            Anotar "    So aparecem eleicoes municipais e suplementares. O TSE ainda"
+            Anotar "    nao publicou a configuracao da eleicao geral neste ambiente."
+            Anotar "    Nao adianta escolher um pleito daqui - nenhum tem Presidente,"
+            Anotar "    Governador e Senador."
+        }
     }
 
     if ($eleOfi) { Resumir-EleC $eleOfi "AMBIENTE OFICIAL" }
@@ -1054,14 +1130,19 @@ if ($Conferir) {
         }
         Anotar ""
         if ("$cicloAchado" -ne "$($cfg.tse.ciclo)") {
-            Anotar "ATENCAO: o config.json esta com ciclo `"$($cfg.tse.ciclo)`" e o TSE"
-            Anotar "publicou `"$cicloAchado`". Corrija o ciclo tambem."
+            Anotar "ATENCAO: o config.json esta com ciclo `"$($cfg.tse.ciclo)`" e a"
+            Anotar "eleicao geral encontrada esta no ciclo `"$cicloAchado`"."
         }
         Anotar "-----------------------------------------------------------"
     } else {
         Anotar ""
-        Anotar "Nenhuma eleicao de 2026 apareceu na lista acima. Provavelmente o"
-        Anotar "TSE ainda nao publicou a configuracao de 2026 neste ambiente."
+        Anotar "NAO ACHEI A ELEICAO GERAL em nenhum dos ambientes que responderam."
+        Anotar "As listas acima so trazem eleicoes municipais e suplementares - "
+        Anotar "nenhuma com os cargos de Presidente, Governador e Senador."
+        Anotar ""
+        Anotar "Isso nao e defeito da maquina nem do programa: e o TSE que ainda"
+        Anotar "nao publicou a configuracao da eleicao geral neste endereco."
+        Anotar "Deixe o config.json como esta e rode este teste de novo mais tarde."
     }
 
     # O arquivo inteiro fica gravado ao lado, sem corte, para analise.
