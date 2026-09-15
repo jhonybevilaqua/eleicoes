@@ -13,7 +13,6 @@ O QUE FAZER, NA ORDEM
 
  3. Monte as cenas do Castalia apontando para a pasta TARJAS:
 
-      TARJAS\tarja-presidente.json   presidente, com foto
       TARJAS\tarja-governador.json   governador de uma praca so
       TARJAS\tarja-senador.json      senador de uma praca so
       TARJAS\lista-governador.json   governador de TODAS as pracas (uma por registro)

@@ -184,3 +184,37 @@ COMO ESTE LAUDO FOI FEITO
 
    Serve para provar por escrito que o que esta na tela e o que o TSE
    mandou - em vez de pedir que se confie.
+
+
+===========================================================================
+ VERSAO 3.0 - ENXUGADA PARA O TESTE DO TSE
+===========================================================================
+
+ Saiu tudo que nao serve para receber e exibir o dado do TSE:
+
+   - toda a funcionalidade de foto: busca por numero e por nome, copia
+     para nome fixo, pasta FOTOS, o botao FOTOS-QUAIS-NOMES.bat e os
+     campos cand1_foto, cand1_foto_existe e cand1_foto_fixa
+   - as chaves de foto do config.json
+
+ Consequencia para a cena do Castalia: a tarja de presidente agora tem os
+ MESMOS 19 campos de governador e senador. Se a cena tinha vinculo de
+ imagem, ele ficou sem origem - o resto continua igual.
+
+ A foto nao foi perdida: esta no historico do projeto e volta em uma
+ versao se for preciso em outubro. Para o teste de amanha, ela so
+ acrescentava caminho de falha sem acrescentar dado do TSE.
+
+ REVISAO COMPLETA REFEITA APOS A RETIRADA
+
+   CONFERIR: endereco, codigos e molde do TSE                      OK
+   Ciclo com dado do TSE: presidente, governador, senador          OK
+   Nenhum campo de foto sobrou em nenhuma tarja                    OK
+   27 pracas nas tres listas                                       OK
+   Validacao contra o dado cru: 36 conferencias, 0 divergencia     OK
+   INICIAR recusa boletim de simulado e nao publica                OK
+   Resposta HTML, JSON truncado, resposta vazia                    OK
+   Sem candidato, um candidato, campos nulos, empate, 0%, 100%     OK
+   Troca de praca durante a varredura: 296ms                       OK
+   Governador e senador em pracas diferentes ao mesmo tempo        OK
+   Painel servindo, com placar de atualizacoes                     OK

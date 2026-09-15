@@ -11,7 +11,6 @@
         .\gctse.ps1 -Descobrir    mostra os codigos do pleito
         .\gctse.ps1 -Conferir     testa a conexao e grava CONFERIR.txt
         .\gctse.ps1 -Validar      confere numero por numero contra o TSE
-        .\gctse.ps1 -Fotos        lista os nomes de arquivo de foto aceitos
         .\gctse.ps1 -Ensaio       dados ficticios, nao consulta o TSE
         .\gctse.ps1 -Teste        aceita o simulado do TSE (fase S)
         .\gctse.ps1               no ar: so boletim oficial
@@ -22,7 +21,6 @@ param(
     [switch] $Descobrir,
     [switch] $Conferir,
     [switch] $Validar,
-    [switch] $Fotos,
     [switch] $Preencher,
     [switch] $Ensaio,
     [switch] $Teste,
@@ -34,7 +32,7 @@ param(
 # Versao impressa na partida e no painel. Sem carimbo, "qual versao esta
 # rodando ai?" so se responde abrindo arquivo e comparando a olho - e no
 # meio de um teste com janela de horario ninguem faz isso.
-$Versao = "2.6 - 15/09/2026"
+$Versao = "3.0 - 16/09/2026"
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
@@ -212,15 +210,6 @@ $PastaSaida = $cfg.pasta_saida
 $LimiteNome = $cfg.texto.limite_nome
 $LimitePartido = $cfg.texto.limite_partido
 $SeloNaoOficial = $cfg.texto.selo_nao_oficial
-$PastaFotos = ""
-if (Tem-Propriedade $cfg.texto "pasta_fotos") { $PastaFotos = "$($cfg.texto.pasta_fotos)" }
-if ($PastaFotos -and -not [IO.Path]::IsPathRooted($PastaFotos)) {
-    $PastaFotos = Join-Path (Get-Location) $PastaFotos
-}
-$FotoReserva = ""
-if (Tem-Propriedade $cfg.texto "foto_reserva") { $FotoReserva = "$($cfg.texto.foto_reserva)" }
-$FotoNomeFixo = $false
-if (Tem-Propriedade $cfg.texto "foto_nome_fixo") { $FotoNomeFixo = [bool] $cfg.texto.foto_nome_fixo }
 $CorPadrao = $cfg.texto.cor_padrao
 
 function Obter-Cor {
@@ -570,119 +559,6 @@ function Gerar-Simulado {
 
 # --------------------------------------------------------------- montar tarja
 
-$ExtensoesFoto = @(".png", ".jpg", ".jpeg", ".webp", ".bmp")
-
-function Nome-Para-Arquivo {
-    # "JOAO DA SILVA CONCEICAO" -> "joao-da-silva-conceicao"
-    # Tira acento, poe minuscula e troca o que nao e letra ou numero por
-    # hifen, para o nome do arquivo nao depender de como o teclado escreve.
-    param([string] $Texto)
-    if (-not $Texto) { return "" }
-    $semAcento = ($Texto.Normalize([Text.NormalizationForm]::FormD).ToCharArray() |
-        Where-Object { [Globalization.CharUnicodeInfo]::GetUnicodeCategory($_) -ne
-                       [Globalization.UnicodeCategory]::NonSpacingMark }) -join ""
-    $limpo = $semAcento.ToLower() -replace '[^a-z0-9]+', '-'
-    return $limpo.Trim('-')
-}
-
-function Nomes-De-Foto-Aceitos {
-    # Todos os nomes de arquivo que servem para um candidato, na ordem em que
-    # sao procurados. O NUMERO vem primeiro porque e o que nao muda: nome de
-    # urna o TSE pode reescrever entre o simulado e o oficial, e acento e
-    # abreviacao variam. O nome existe porque quem organiza a pasta pensa em
-    # pessoa, nao em numero.
-    param([string] $Numero, [string] $Nome)
-    $nomes = New-Object System.Collections.ArrayList
-    if ($Numero) {
-        foreach ($e in $ExtensoesFoto) { [void] $nomes.Add("$Numero$e") }
-    }
-    $slug = Nome-Para-Arquivo $Nome
-    if ($slug) {
-        foreach ($e in $ExtensoesFoto) { [void] $nomes.Add("$slug$e") }
-        # primeiro nome sozinho: "LULA" de "LULA", "MARINA" de "MARINA SILVA"
-        $primeiro = ($slug -split '-')[0]
-        if ($primeiro -and $primeiro -ne $slug -and $primeiro.Length -ge 3) {
-            foreach ($e in $ExtensoesFoto) { [void] $nomes.Add("$primeiro$e") }
-        }
-    }
-    return $nomes
-}
-
-function Encontrar-Foto {
-    # Procura a foto do candidato e devolve o caminho do que achou, ou o
-    # caminho da reserva. A lista de nomes aceitos deixa a pasta ser
-    # organizada por numero ou por nome, sem o operador ter que escolher.
-    param([string] $Numero, [string] $Nome)
-    $pasta = $PastaFotos
-    if (-not $pasta) { $pasta = "FOTOS" }
-
-    # 1. mapa explicito no config: numero ou nome -> arquivo, para apelido
-    #    que nao sai do nome de urna ("13": "lula.jpg")
-    if (Tem-Propriedade $cfg.texto "fotos") {
-        foreach ($chave in @($Numero, (Nome-Para-Arquivo $Nome))) {
-            if ($chave -and (Tem-Propriedade $cfg.texto.fotos $chave)) {
-                $alvo = "$($cfg.texto.fotos.$chave)"
-                if ($alvo) {
-                    $caminho = Join-Path $pasta (Split-Path -Leaf $alvo)
-                    try { if (Test-Path $caminho) { return @{ caminho = $caminho; existe = "1" } } } catch { }
-                }
-            }
-        }
-    }
-    # 2. numero, depois nome, depois primeiro nome
-    foreach ($nomeArq in (Nomes-De-Foto-Aceitos $Numero $Nome)) {
-        $caminho = Join-Path $pasta $nomeArq
-        try { if (Test-Path $caminho) { return @{ caminho = $caminho; existe = "1" } } } catch { }
-    }
-    # 3. silhueta, para nunca deixar quadro quebrado no ar
-    if ($FotoReserva) {
-        $reserva = Join-Path $pasta (Split-Path -Leaf $FotoReserva)
-        try { if (Test-Path $reserva) { return @{ caminho = $reserva; existe = "0" } } } catch { }
-    }
-    return @{ caminho = ""; existe = "0" }
-}
-
-$script:FotosFixas = @{}   # destino -> origem ja copiada
-
-function Caminho-Fixo-Foto {
-    # Caminho ABSOLUTO, igual ao do campo cand1_foto. O gerador de
-    # caracteres resolve caminho relativo a partir da pasta DELE, nao da
-    # pasta do gctse - um caminho relativo aqui vira imagem que nao carrega
-    # na maquina do GC.
-    param([int] $Indice)
-    $pasta = $PastaSaida
-    if (-not [IO.Path]::IsPathRooted($pasta)) { $pasta = Join-Path (Get-Location) $pasta }
-    return (Join-Path $pasta ("foto-cand{0}.png" -f $Indice))
-}
-
-function Copiar-Foto-Para-Nome-Fixo {
-    # Nem todo gerador de caracteres aceita vincular o CAMINHO de uma imagem
-    # a um campo do banco. Quando nao aceita, a saida e o contrario: o
-    # caminho fica FIXO na cena e quem troca e o arquivo. O coletor copia a
-    # foto do candidato que esta em 1o para TARJAS\foto-cand1.png, e a cena
-    # aponta para esse nome que nunca muda.
-    # Copia so quando a origem muda, para nao reescrever imagem a cada ciclo
-    # enquanto o GC pode estar lendo.
-    param([string] $Origem, [string] $Destino)
-    if (-not $Origem) { return }
-    try {
-        if ($script:FotosFixas.ContainsKey($Destino) -and $script:FotosFixas[$Destino] -eq $Origem) { return }
-        if (-not (Test-Path $Origem)) { return }
-        # No primeiro ciclo a pasta de saida ainda nao existe: a montagem da
-        # tarja acontece antes da primeira gravacao que a criaria.
-        $pastaDestino = Split-Path -Parent $Destino
-        if ($pastaDestino -and -not (Test-Path $pastaDestino)) {
-            New-Item -ItemType Directory -Path $pastaDestino -Force | Out-Null
-        }
-        $temporario = "$Destino.tmp"
-        Copy-Item -Path $Origem -Destination $temporario -Force
-        Move-Item -Path $temporario -Destination $Destino -Force
-        $script:FotosFixas[$Destino] = $Origem
-    } catch {
-        Escrever-Log "nao consegui copiar a foto $Origem : $($_.Exception.Message)" "AVISO"
-    }
-}
-
 function Montar-Tarja {
     param($Boletim, $Tarja)
 
@@ -708,20 +584,6 @@ function Montar-Tarja {
             $saida[$p + "visivel"] = "0"
             $saida[$p + "nome"] = ""
             $saida[$p + "partido"] = ""
-            if ($Tarja.modelo -eq "presidente") {
-                $saida[$p + "foto"] = ""
-                $saida[$p + "foto_existe"] = "0"
-                if ($FotoNomeFixo) {
-                    $fixo = Caminho-Fixo-Foto $i
-                    $reservaVazia = ""
-                    if ($FotoReserva) {
-                        $reservaVazia = $FotoReserva
-                        if ($PastaFotos) { $reservaVazia = Join-Path $PastaFotos (Split-Path -Leaf $FotoReserva) }
-                    }
-                    Copiar-Foto-Para-Nome-Fixo $reservaVazia $fixo
-                    $saida[$p + "foto_fixa"] = $fixo
-                }
-            }
             $saida[$p + "percentual"] = ""
             $saida[$p + "barra_px"] = 0
             $saida[$p + "cor"] = ""
@@ -740,10 +602,6 @@ function Montar-Tarja {
                 $saida[$p + "visivel"] = "0"
                 $saida[$p + "nome"] = ""
                 $saida[$p + "partido"] = ""
-                if ($Tarja.modelo -eq "presidente") {
-                    $saida[$p + "foto"] = ""
-                    $saida[$p + "foto_existe"] = "0"
-                }
                 $saida[$p + "percentual"] = ""
                 $saida[$p + "barra_px"] = 0
                 $saida[$p + "cor"] = ""
@@ -753,22 +611,6 @@ function Montar-Tarja {
             $saida[$p + "visivel"] = "1"
             $saida[$p + "nome"] = $nomeCand
             $saida[$p + "partido"] = Limitar-Texto $c.Partido $LimitePartido
-            if ($Tarja.modelo -eq "presidente") {
-                # O TSE nao manda imagem nos arquivos de resultado: a foto e
-                # arquivo local, nomeado pelo numero do candidato. Entregamos
-                # o caminho e dizemos se o arquivo existe, para a cena poder
-                # esconder a moldura em vez de exibir um quadro quebrado.
-                $achada = Encontrar-Foto $c.Numero $c.Nome
-                $completo = $achada.caminho
-                $existe = $achada.existe
-                $saida[$p + "foto"] = $completo
-                $saida[$p + "foto_existe"] = $existe
-                if ($FotoNomeFixo) {
-                    $fixo = Caminho-Fixo-Foto $i
-                    Copiar-Foto-Para-Nome-Fixo $completo $fixo
-                    $saida[$p + "foto_fixa"] = $fixo
-                }
-            }
             $saida[$p + "percentual"] = Formatar-Percentual $c.Percentual
             $saida[$p + "barra_px"] = $largura
             $saida[$p + "cor"] = Obter-Cor $c.Partido
@@ -1243,105 +1085,6 @@ function Executar-Ciclo {
     Escrever-Alertas
     Escrever-Painel $linhas ([int] $cfg.intervalo_segundos) $Modo
     return $linhas
-}
-
-# ------------------------------------------------------------------ fotos
-
-if ($Fotos) {
-    # Le a lista de candidatos a presidente direto do TSE e escreve, para
-    # cada um, os nomes de arquivo que o sistema aceita. Assim ninguem precisa
-    # adivinhar como escrever o nome, nem eu preciso chutar quem sao os
-    # candidatos: quem responde isso e o proprio TSE, na hora.
-    $rel = New-Object System.Collections.ArrayList
-    function Nota {
-        param([string] $Texto = "")
-        [void] $rel.Add($Texto)
-        Write-Host $Texto
-    }
-
-    if ($Teste) {
-        if ((Tem-Propriedade $cfg.tse "pleito_simulado") -and $cfg.tse.pleito_simulado) {
-            $cfg.tse.pleito = $cfg.tse.pleito_simulado
-        }
-        if ((Tem-Propriedade $cfg.tse "eleicao_simulado") -and $cfg.tse.eleicao_simulado) {
-            $cfg.tse.eleicao = $cfg.tse.eleicao_simulado
-        }
-    }
-
-    $pasta = $PastaFotos
-    if (-not $pasta) { $pasta = Join-Path (Get-Location) "FOTOS" }
-
-    Nota "==========================================================="
-    Nota " FOTOS DOS CANDIDATOS A PRESIDENTE"
-    Nota " gctse $Versao   $(Get-Date -Format 'dd/MM/yyyy HH:mm:ss')"
-    Nota " modo: $(if ($Teste) { 'SIMULADO' } else { 'OFICIAL' })"
-    Nota "==========================================================="
-    Nota ""
-    Nota " Ponha os arquivos nesta pasta:"
-    Nota "   $pasta"
-    Nota ""
-
-    $url = Montar-Url "br" 1
-    Nota " Lendo a lista de candidatos em:"
-    Nota "   $url"
-    $bruto = Obter-Boletim $url
-    if ($bruto -eq "SEM-MUDANCA" -or $null -eq $bruto) {
-        Nota ""
-        Nota " NAO FOI POSSIVEL LER A LISTA AGORA."
-        Nota " Rode o CONFERIR.bat para descobrir o que esta faltando."
-        $utf8f = New-Object System.Text.UTF8Encoding($true)
-        [IO.File]::WriteAllText((Join-Path $pasta "LISTA-DE-FOTOS.txt"), ($rel -join "`r`n"), $utf8f)
-        exit 1
-    }
-    $b = Normalizar-Boletim $bruto "BRASIL"
-    Nota ""
-    Nota " $($b.Candidatos.Count) candidato(s) na lista do TSE."
-    Nota ""
-
-    $faltando = 0
-    foreach ($c in $b.Candidatos) {
-        Nota "-----------------------------------------------------------"
-        Nota " $($c.Nome)   ($($c.Partido))   numero $($c.Numero)"
-        $achada = Encontrar-Foto $c.Numero $c.Nome
-        if ($achada.existe -eq "1") {
-            Nota "   JA TEM FOTO: $(Split-Path -Leaf $achada.caminho)"
-        } else {
-            $faltando = $faltando + 1
-            Nota "   FALTA A FOTO. Salve o arquivo com QUALQUER um destes nomes:"
-            $vistos = @{}
-            foreach ($nomeArq in (Nomes-De-Foto-Aceitos $c.Numero $c.Nome)) {
-                $semExt = [IO.Path]::GetFileNameWithoutExtension($nomeArq)
-                if ($vistos.ContainsKey($semExt)) { continue }
-                $vistos[$semExt] = $true
-                Nota "      $semExt.png   (ou .jpg, .jpeg, .webp, .bmp)"
-            }
-        }
-        Nota ""
-    }
-
-    Nota "==========================================================="
-    if ($faltando -eq 0) {
-        Nota " TODOS OS CANDIDATOS TEM FOTO."
-    } else {
-        Nota " $faltando candidato(s) sem foto. Sem o arquivo, a tarja mostra"
-        Nota " a silhueta do sem-foto.png - nao fica quadro quebrado no ar."
-    }
-    Nota ""
-    Nota " Todas as fotos no MESMO tamanho e enquadramento, senao a tarja"
-    Nota " desalinha quando a ordem dos candidatos muda. O sem-foto.png"
-    Nota " esta em 420x560 (proporcao 3x4) e serve de referencia."
-    Nota ""
-    Nota " O numero e o nome vem do TSE: se o TSE reescrever o nome de urna,"
-    Nota " o arquivo pelo NUMERO continua valendo. Por isso, na duvida,"
-    Nota " nomeie pelo numero."
-    Nota "==========================================================="
-
-    if (-not (Test-Path $pasta)) { New-Item -ItemType Directory -Path $pasta -Force | Out-Null }
-    $utf8f = New-Object System.Text.UTF8Encoding($true)
-    [IO.File]::WriteAllText((Join-Path $pasta "LISTA-DE-FOTOS.txt"), ($rel -join "`r`n"), $utf8f)
-    Write-Host ""
-    Write-Host "  Gravado em FOTOS\LISTA-DE-FOTOS.txt" -ForegroundColor Green
-    exit 0
 }
 
 # ---------------------------------------------------------------- validar

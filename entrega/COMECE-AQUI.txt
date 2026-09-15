@@ -71,8 +71,6 @@
                         praca sem abrir o painel. A tarja acompanha em
                         menos de 1 segundo, mesmo no meio de uma varredura.
 
- FOTOS\                 as fotos de presidente, nomeadas pelo numero do
-                        candidato. Leia o LEIA-ME-FOTOS.txt.
 
  TARJAS\                o que o Castalia le. Ja vem com a estrutura
                         completa e VAZIA: todos os campos existem, com
@@ -89,22 +87,23 @@
  O QUE O CASTALIA LE
 ===========================================================================
 
- TARJAS\tarja-presidente.json    presidente, com foto
+ TARJAS\tarja-presidente.json    presidente, sempre BRASIL
  TARJAS\tarja-governador.json    governador da praca escolhida
  TARJAS\tarja-senador.json       senador da praca escolhida
  TARJAS\lista-governador.json    governador de TODAS as pracas
  TARJAS\lista-senador.json       senador de todas as pracas
  TARJAS\tarja-rodizio.json       a tarja estreita, que roda na programacao
 
- Estes arquivos ja estao preenchidos com dado de EXEMPLO. Monte a cena
- apontando para eles agora. No teste e na noite da apuracao os MESMOS
- arquivos sao reescritos com o dado real - voce nao refaz vinculo nenhum.
+ Os arquivos ja vem com a estrutura completa e VAZIA: todos os campos
+ existem, com visivel = 0. Da para montar e vincular a cena antes de
+ existir dado, e nada falso pode ir ao ar por descuido.
+
+ As tres tarjas tem os MESMOS 19 campos. No teste e na noite da apuracao
+ os MESMOS arquivos sao reescritos com o dado real - voce nao refaz
+ vinculo nenhum.
 
  No LiveBoard, ligue AUTO UPDATE com intervalo de 2 a 5 segundos.
  A gravacao e atomica, entao o LiveBoard nunca pega arquivo pela metade.
-
- Os modelos das tarjas (PDF, artes 1920x1080 e HTML) estao na pasta
- TARJAS-MODELOS.
 
 ===========================================================================
  SE ALGO DER ERRADO
