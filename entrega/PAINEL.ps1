@@ -30,6 +30,7 @@ if (-not (Test-Path $Config)) {
     exit 1
 }
 $cfg = Get-Content $Config -Raw -Encoding UTF8 | ConvertFrom-Json
+$Versao = "1.9 - 15/09/2026"
 $PastaSaida = $cfg.pasta_saida
 $ArquivoSelecao = $cfg.selecao.arquivo_selecao
 $ArquivoSelecaoSenador = $null
@@ -417,7 +418,7 @@ $divergencia
 <div class="estados">$botoes</div>
 <h2>O que está nos arquivos agora</h2>
 <div class="cards">$cartoes</div>
-<footer>As etiquetas <b>GOV</b> e <b>SEN</b> acendem quando o TSE publica boletim novo daquela
+<footer>gctse $Versao &middot; As etiquetas <b>GOV</b> e <b>SEN</b> acendem quando o TSE publica boletim novo daquela
 praça, e apagam quando você a coloca no ar. A página se atualiza sozinha a cada 5 segundos.</footer>
 </main>
 <script>

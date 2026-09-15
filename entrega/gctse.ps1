@@ -1396,29 +1396,54 @@ if ($Conferir) {
         foreach ($m in @(
             "{base}/{ciclo}/{eleicao}/dados/{dir}/{abr}-c{cargo4}-e{eleicao6}-r.json",
             "{base}/{ciclo}/{eleicao}/dados-simplificados/{dir}/{abr}-c{cargo4}-e{eleicao6}-r.json",
-            "{base}/{ciclo}/{pleito}/dados-simplificados/{dir}/{abr}-c{cargo4}-e{eleicao6}-r.json",
+            "{base}/{ciclo}/{eleicao}/dados/{dir}/{abr}-e{eleicao6}-ab.json",
+            "{base}/{ciclo}/{eleicao}/dados/{dir}/{abr}-e{eleicao6}-r.json",
+            "{base}/{ciclo}/{eleicao}/dados/{dir}/{abr}-c{cargo4}-e{eleicao6}-ab.json",
+            "{base}/{ciclo}/{eleicao}/dados/{dir}/{abr}-e{eleicao6}-e.json",
+            "{base}/{ciclo}/{eleicao}/dados/{dir}/{abr}-e{eleicao6}-u.json",
             "{base}/{ciclo}/{eleicao}/dados/{dir}/{abr}-c{cargo4}-e{eleicao6}-u.json",
-            "{base}/{ciclo}/{eleicao}/dados/{dir}/{abr}-e{eleicao6}-ab.json")) {
+            "{base}/{ciclo}/{pleito}/dados-simplificados/{dir}/{abr}-c{cargo4}-e{eleicao6}-r.json",
+            "{base}/{ciclo}/{pleito}/dados/{dir}/{abr}-c{cargo4}-e{eleicao6}-r.json")) {
             if (-not $moldes.Contains($m)) { [void] $moldes.Add($m) }
         }
 
         Anotar ""
         Anotar "Procurando o caminho dos arquivos de resultado..."
         Anotar ""
+        # Testa TODOS os moldes, nao para no primeiro que responde. Um
+        # arquivo que existe nao e necessariamente o arquivo certo - o de
+        # abrangencia responde 200 e nao traz candidato nenhum. E cada
+        # rodada destas custa tempo de janela de teste, entao vale trazer
+        # tudo de uma vez em vez de descobrir um por vez.
         $moldeBom = ""
         $i = 0
         foreach ($molde in $moldes) {
             $i = $i + 1
             $sondagem = Sondar-Url (Montar-Url "br" 1 $molde) "molde $i de $($moldes.Count)"
-            Anotar ""
             if ($sondagem) {
-                $moldeBom = $molde
-                Anotar "    >>> ESTE MOLDE FUNCIONA."
-                Anotar "    >>> Ponha no config.json, em tse.padrao_url:"
-                Anotar "    >>> $molde"
-                Anotar ""
-                break
+                $temCand = $false
+                try {
+                    $j = $sondagem | ConvertFrom-Json
+                    if ((Tem-Propriedade $j "cand") -and $j.cand -and $j.cand.Count -gt 0) { $temCand = $true }
+                } catch { }
+                if ($temCand) {
+                    Anotar "    >>> TEM CANDIDATOS. Este e o molde certo."
+                    if (-not $moldeBom) { $moldeBom = $molde }
+                } else {
+                    Anotar "    (responde, mas sem lista de candidatos - nao serve para a tarja)"
+                }
+                Anotar "    campos no topo: $(($sondagem | ConvertFrom-Json).PSObject.Properties.Name -join ', ')"
+                Anotar "    conteudo:"
+                Anotar (Recortar $sondagem 1200)
             }
+            Anotar ""
+        }
+        if ($moldeBom) {
+            Anotar "-----------------------------------------------------------"
+            Anotar "Ponha no config.json, em tse.padrao_url:"
+            Anotar "    $moldeBom"
+            Anotar "-----------------------------------------------------------"
+            Anotar ""
         }
         if (-not $moldeBom) {
             Anotar "NENHUM molde conhecido entregou boletim. O caminho mudou."
