@@ -11,18 +11,47 @@ O TSE NAO MANDA A FOTO
  A foto e arquivo SEU, nesta pasta.
 
 
-COMO NOMEAR
+COMO NOMEAR - NAO PRECISA DECORAR: O SISTEMA TE DIZ
 
- O nome do arquivo e o NUMERO do candidato na urna, com extensao .png:
+ Duplo clique em FOTOS-QUAIS-NOMES.bat
 
-     FOTOS\13.png
-     FOTOS\22.png
-     FOTOS\30.png
+ Ele le a lista de candidatos a presidente no TSE e escreve, para cada
+ um, os nomes de arquivo que servem - e marca quem ja tem foto e quem
+ falta. A lista fica em FOTOS\LISTA-DE-FOTOS.txt.
 
- O numero e o mesmo que aparece na tarja e o mesmo do teclado da urna.
- Nao use nome de pessoa, nem partido, nem ordem de colocacao - so o
- numero. Assim, se a ordem virar durante a apuracao, a foto acompanha
- sozinha, porque o sistema procura pelo numero e nao pela posicao.
+ Exemplo do que ele responde:
+
+     LULA   (PT)   numero 13
+        FALTA A FOTO. Salve o arquivo com QUALQUER um destes nomes:
+           13.png     (ou .jpg, .jpeg, .webp, .bmp)
+           lula.png   (ou .jpg, .jpeg, .webp, .bmp)
+
+
+ OS TRES JEITOS ACEITOS, na ordem em que sao procurados
+
+ 1. PELO NUMERO na urna        13.png   22.png   60.png
+    O mais seguro. Numero nao muda.
+
+ 2. PELO NOME do candidato     lula.jpg   marina-silva.png
+    Tira acento, poe minuscula e troca espaco por hifen:
+    "JOAO DA SILVA CONCEICAO" -> joao-da-silva-conceicao.png
+    O primeiro nome sozinho tambem serve: joao.png
+
+ 3. POR UM APELIDO SEU, no config.json
+    Se o nome do arquivo nao sai do nome de urna, mapeie na mao,
+    em "texto" > "fotos":
+
+        "fotos": { "13": "lula-oficial.jpg", "22": "foto-b.png" }
+
+
+ POR QUE O NUMERO E MAIS SEGURO QUE O NOME
+
+ O nome de urna pode ser reescrito pelo TSE entre o simulado e o
+ oficial - abreviacao, acento, apelido. O numero nao muda. Se voce
+ nomear pelos dois, o numero e usado primeiro e o nome fica de reserva.
+
+ E NUNCA nomeie por colocacao (primeiro.png, segundo.png): se alguem
+ ultrapassar durante a apuracao, a foto fica trocada no ar.
 
 
 QUANTOS ARQUIVOS
