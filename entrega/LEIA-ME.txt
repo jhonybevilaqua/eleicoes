@@ -79,9 +79,24 @@ COMO TROCAR O ESTADO DA TARJA
 
  1) PELO PAINEL WEB  (o jeito recomendado)
 
-    Duplo clique em PAINEL.bat. Abre uma pagina no navegador com um botao
-    por estado, o estado atual em destaque e o que esta em cada arquivo
+    Duplo clique em PAINEL.bat. Abre uma pagina no navegador com os 27
+    estados, o que esta no ar em destaque e o que esta em cada arquivo
     naquele instante. Clique no estado e pronto.
+
+    AVISO DE BOLETIM NOVO: quando o TSE publica numero novo de uma praca,
+    o botao dela acende com a etiqueta GOV e/ou SEN. Assim voce ve, sem
+    procurar, quais pracas valem entrar no ar agora. A etiqueta apaga
+    quando voce coloca aquela praca no ar (ou depois de 15 minutos).
+
+    O presidente tem o proprio aviso no alto da pagina, com o percentual
+    de urnas, e um "marcar como exibido" para apagar depois de subir.
+
+    GOVERNADOR E SENADOR, JUNTOS OU SEPARADOS: os tres botoes no canto
+    escolhem o que o clique afeta.
+      Governador + Senador  troca as duas tarjas (padrao)
+      So governador         troca so a de governador
+      So senador            troca so a de senador
+    Da para ficar com governador de SP e senador do PR ao mesmo tempo.
 
     A pagina se atualiza a cada 5 segundos, entao serve tambem para
     acompanhar a apuracao sem abrir arquivo nenhum.
@@ -140,22 +155,29 @@ LIMITE DE REQUISICOES DO TSE
 
  Com a configuracao que veio no pacote:
 
-   21 requisicoes por ciclo  (1 presidente + 10 estados x 2 cargos)
-   intervalo de 20s          = 3 ciclos por minuto
-   ------------------------------------------------------
-   63 requisicoes por minuto
+   27 estados x 2 cargos + presidente = 55 pracas para cobrir.
+   Ler todas a cada 20s daria 165 req/min e o TSE bloquearia o IP.
+
+   Por isso a leitura e ESCALONADA:
+     todo ciclo (20s)  -> presidente + as pracas que estao NO AR   (3 req)
+     a cada 3 ciclos   -> varredura de todas as 27 pracas         (55 req)
+     ----------------------------------------------------------------
+     media de 61 requisicoes por minuto
+
+   Ou seja: o que esta no ar atualiza a cada 20s, e o aviso de boletim
+   novo das outras pracas aparece em ate 60s.
+
+   Ao iniciar, o gctse imprime essa conta.
 
  Ao iniciar, o gctse imprime essa conta. Se passar do limite, ele avisa e
  segura a fila sozinho, em vez de deixar o IP ser bloqueado.
 
  Se voce aumentar o numero de estados, refaca a conta:
 
-   requisicoes por minuto = 60 x (pracas x cargos + 1) / intervalo
-
- Exemplos:
-   10 estados, 2 cargos, 20s  ->  63/min   folgado
-   27 estados, 2 cargos, 20s  -> 165/min   ESTOURA: use 35s ou mais
-   27 estados, 2 cargos, 40s  ->  83/min   ok
+ Para deixar mais rapido ou mais leve, mexa em ciclos_varredura:
+   ciclos_varredura 2  -> varredura a cada 40s, mais requisicoes
+   ciclos_varredura 3  -> varredura a cada 60s  (padrao)
+   ciclos_varredura 5  -> varredura a cada 100s, bem folgado
 
  Para ajustar: intervalo_segundos e limite_requisicoes_por_minuto no
  config.json. Deixei o limite em 80 e nao 100, para sobrar margem - se a

@@ -37,44 +37,112 @@
       "limite_nome": 22,
       "pracas": [
         {
-          "uf": "pr",
-          "nome": "PARANÁ"
+          "uf": "ac",
+          "nome": "ACRE"
         },
         {
-          "uf": "sp",
-          "nome": "SÃO PAULO"
+          "uf": "al",
+          "nome": "ALAGOAS"
         },
         {
-          "uf": "rj",
-          "nome": "RIO DE JANEIRO"
+          "uf": "ap",
+          "nome": "AMAPÁ"
         },
         {
-          "uf": "mg",
-          "nome": "MINAS GERAIS"
-        },
-        {
-          "uf": "sc",
-          "nome": "SANTA CATARINA"
-        },
-        {
-          "uf": "rs",
-          "nome": "RIO GRANDE DO SUL"
+          "uf": "am",
+          "nome": "AMAZONAS"
         },
         {
           "uf": "ba",
           "nome": "BAHIA"
         },
         {
+          "uf": "ce",
+          "nome": "CEARÁ"
+        },
+        {
+          "uf": "df",
+          "nome": "DISTRITO FEDERAL"
+        },
+        {
+          "uf": "es",
+          "nome": "ESPÍRITO SANTO"
+        },
+        {
           "uf": "go",
           "nome": "GOIÁS"
+        },
+        {
+          "uf": "ma",
+          "nome": "MARANHÃO"
+        },
+        {
+          "uf": "mt",
+          "nome": "MATO GROSSO"
+        },
+        {
+          "uf": "ms",
+          "nome": "MATO GROSSO DO SUL"
+        },
+        {
+          "uf": "mg",
+          "nome": "MINAS GERAIS"
+        },
+        {
+          "uf": "pa",
+          "nome": "PARÁ"
+        },
+        {
+          "uf": "pb",
+          "nome": "PARAÍBA"
+        },
+        {
+          "uf": "pr",
+          "nome": "PARANÁ"
         },
         {
           "uf": "pe",
           "nome": "PERNAMBUCO"
         },
         {
-          "uf": "ce",
-          "nome": "CEARÁ"
+          "uf": "pi",
+          "nome": "PIAUÍ"
+        },
+        {
+          "uf": "rj",
+          "nome": "RIO DE JANEIRO"
+        },
+        {
+          "uf": "rn",
+          "nome": "RIO GRANDE DO NORTE"
+        },
+        {
+          "uf": "rs",
+          "nome": "RIO GRANDE DO SUL"
+        },
+        {
+          "uf": "ro",
+          "nome": "RONDÔNIA"
+        },
+        {
+          "uf": "rr",
+          "nome": "RORAIMA"
+        },
+        {
+          "uf": "sc",
+          "nome": "SANTA CATARINA"
+        },
+        {
+          "uf": "sp",
+          "nome": "SÃO PAULO"
+        },
+        {
+          "uf": "se",
+          "nome": "SERGIPE"
+        },
+        {
+          "uf": "to",
+          "nome": "TOCANTINS"
         }
       ]
     },
@@ -84,44 +152,112 @@
       "limite_nome": 22,
       "pracas": [
         {
-          "uf": "pr",
-          "nome": "PARANÁ"
+          "uf": "ac",
+          "nome": "ACRE"
         },
         {
-          "uf": "sp",
-          "nome": "SÃO PAULO"
+          "uf": "al",
+          "nome": "ALAGOAS"
         },
         {
-          "uf": "rj",
-          "nome": "RIO DE JANEIRO"
+          "uf": "ap",
+          "nome": "AMAPÁ"
         },
         {
-          "uf": "mg",
-          "nome": "MINAS GERAIS"
-        },
-        {
-          "uf": "sc",
-          "nome": "SANTA CATARINA"
-        },
-        {
-          "uf": "rs",
-          "nome": "RIO GRANDE DO SUL"
+          "uf": "am",
+          "nome": "AMAZONAS"
         },
         {
           "uf": "ba",
           "nome": "BAHIA"
         },
         {
+          "uf": "ce",
+          "nome": "CEARÁ"
+        },
+        {
+          "uf": "df",
+          "nome": "DISTRITO FEDERAL"
+        },
+        {
+          "uf": "es",
+          "nome": "ESPÍRITO SANTO"
+        },
+        {
           "uf": "go",
           "nome": "GOIÁS"
+        },
+        {
+          "uf": "ma",
+          "nome": "MARANHÃO"
+        },
+        {
+          "uf": "mt",
+          "nome": "MATO GROSSO"
+        },
+        {
+          "uf": "ms",
+          "nome": "MATO GROSSO DO SUL"
+        },
+        {
+          "uf": "mg",
+          "nome": "MINAS GERAIS"
+        },
+        {
+          "uf": "pa",
+          "nome": "PARÁ"
+        },
+        {
+          "uf": "pb",
+          "nome": "PARAÍBA"
+        },
+        {
+          "uf": "pr",
+          "nome": "PARANÁ"
         },
         {
           "uf": "pe",
           "nome": "PERNAMBUCO"
         },
         {
-          "uf": "ce",
-          "nome": "CEARÁ"
+          "uf": "pi",
+          "nome": "PIAUÍ"
+        },
+        {
+          "uf": "rj",
+          "nome": "RIO DE JANEIRO"
+        },
+        {
+          "uf": "rn",
+          "nome": "RIO GRANDE DO NORTE"
+        },
+        {
+          "uf": "rs",
+          "nome": "RIO GRANDE DO SUL"
+        },
+        {
+          "uf": "ro",
+          "nome": "RONDÔNIA"
+        },
+        {
+          "uf": "rr",
+          "nome": "RORAIMA"
+        },
+        {
+          "uf": "sc",
+          "nome": "SANTA CATARINA"
+        },
+        {
+          "uf": "sp",
+          "nome": "SÃO PAULO"
+        },
+        {
+          "uf": "se",
+          "nome": "SERGIPE"
+        },
+        {
+          "uf": "to",
+          "nome": "TOCANTINS"
         }
       ]
     },
@@ -131,44 +267,112 @@
       "limite_nome": 14,
       "pracas": [
         {
-          "uf": "pr",
-          "nome": "PARANÁ"
+          "uf": "ac",
+          "nome": "ACRE"
         },
         {
-          "uf": "sp",
-          "nome": "SÃO PAULO"
+          "uf": "al",
+          "nome": "ALAGOAS"
         },
         {
-          "uf": "rj",
-          "nome": "RIO DE JANEIRO"
+          "uf": "ap",
+          "nome": "AMAPÁ"
         },
         {
-          "uf": "mg",
-          "nome": "MINAS GERAIS"
-        },
-        {
-          "uf": "sc",
-          "nome": "SANTA CATARINA"
-        },
-        {
-          "uf": "rs",
-          "nome": "RIO GRANDE DO SUL"
+          "uf": "am",
+          "nome": "AMAZONAS"
         },
         {
           "uf": "ba",
           "nome": "BAHIA"
         },
         {
+          "uf": "ce",
+          "nome": "CEARÁ"
+        },
+        {
+          "uf": "df",
+          "nome": "DISTRITO FEDERAL"
+        },
+        {
+          "uf": "es",
+          "nome": "ESPÍRITO SANTO"
+        },
+        {
           "uf": "go",
           "nome": "GOIÁS"
+        },
+        {
+          "uf": "ma",
+          "nome": "MARANHÃO"
+        },
+        {
+          "uf": "mt",
+          "nome": "MATO GROSSO"
+        },
+        {
+          "uf": "ms",
+          "nome": "MATO GROSSO DO SUL"
+        },
+        {
+          "uf": "mg",
+          "nome": "MINAS GERAIS"
+        },
+        {
+          "uf": "pa",
+          "nome": "PARÁ"
+        },
+        {
+          "uf": "pb",
+          "nome": "PARAÍBA"
+        },
+        {
+          "uf": "pr",
+          "nome": "PARANÁ"
         },
         {
           "uf": "pe",
           "nome": "PERNAMBUCO"
         },
         {
-          "uf": "ce",
-          "nome": "CEARÁ"
+          "uf": "pi",
+          "nome": "PIAUÍ"
+        },
+        {
+          "uf": "rj",
+          "nome": "RIO DE JANEIRO"
+        },
+        {
+          "uf": "rn",
+          "nome": "RIO GRANDE DO NORTE"
+        },
+        {
+          "uf": "rs",
+          "nome": "RIO GRANDE DO SUL"
+        },
+        {
+          "uf": "ro",
+          "nome": "RONDÔNIA"
+        },
+        {
+          "uf": "rr",
+          "nome": "RORAIMA"
+        },
+        {
+          "uf": "sc",
+          "nome": "SANTA CATARINA"
+        },
+        {
+          "uf": "sp",
+          "nome": "SÃO PAULO"
+        },
+        {
+          "uf": "se",
+          "nome": "SERGIPE"
+        },
+        {
+          "uf": "to",
+          "nome": "TOCANTINS"
         }
       ]
     }
@@ -176,6 +380,7 @@
   "_comentario_selecao": "O operador escolhe o estado (pasta SELECIONAR-ESTADO) e estas tarjas passam a mostrar aquele estado, na hora, sem trocar de arquivo.",
   "selecao": {
     "arquivo_selecao": "SELECAO.txt",
+    "arquivo_selecao_senador": "SELECAO-SENADOR.txt",
     "padrao": "pr",
     "saidas": [
       {
@@ -193,45 +398,120 @@
     ],
     "pracas": [
       {
-        "uf": "pr",
-        "nome": "PARANÁ"
+        "uf": "ac",
+        "nome": "ACRE"
       },
       {
-        "uf": "sp",
-        "nome": "SÃO PAULO"
+        "uf": "al",
+        "nome": "ALAGOAS"
       },
       {
-        "uf": "rj",
-        "nome": "RIO DE JANEIRO"
+        "uf": "ap",
+        "nome": "AMAPÁ"
       },
       {
-        "uf": "mg",
-        "nome": "MINAS GERAIS"
-      },
-      {
-        "uf": "sc",
-        "nome": "SANTA CATARINA"
-      },
-      {
-        "uf": "rs",
-        "nome": "RIO GRANDE DO SUL"
+        "uf": "am",
+        "nome": "AMAZONAS"
       },
       {
         "uf": "ba",
         "nome": "BAHIA"
       },
       {
+        "uf": "ce",
+        "nome": "CEARÁ"
+      },
+      {
+        "uf": "df",
+        "nome": "DISTRITO FEDERAL"
+      },
+      {
+        "uf": "es",
+        "nome": "ESPÍRITO SANTO"
+      },
+      {
         "uf": "go",
         "nome": "GOIÁS"
+      },
+      {
+        "uf": "ma",
+        "nome": "MARANHÃO"
+      },
+      {
+        "uf": "mt",
+        "nome": "MATO GROSSO"
+      },
+      {
+        "uf": "ms",
+        "nome": "MATO GROSSO DO SUL"
+      },
+      {
+        "uf": "mg",
+        "nome": "MINAS GERAIS"
+      },
+      {
+        "uf": "pa",
+        "nome": "PARÁ"
+      },
+      {
+        "uf": "pb",
+        "nome": "PARAÍBA"
+      },
+      {
+        "uf": "pr",
+        "nome": "PARANÁ"
       },
       {
         "uf": "pe",
         "nome": "PERNAMBUCO"
       },
       {
-        "uf": "ce",
-        "nome": "CEARÁ"
+        "uf": "pi",
+        "nome": "PIAUÍ"
+      },
+      {
+        "uf": "rj",
+        "nome": "RIO DE JANEIRO"
+      },
+      {
+        "uf": "rn",
+        "nome": "RIO GRANDE DO NORTE"
+      },
+      {
+        "uf": "rs",
+        "nome": "RIO GRANDE DO SUL"
+      },
+      {
+        "uf": "ro",
+        "nome": "RONDÔNIA"
+      },
+      {
+        "uf": "rr",
+        "nome": "RORAIMA"
+      },
+      {
+        "uf": "sc",
+        "nome": "SANTA CATARINA"
+      },
+      {
+        "uf": "sp",
+        "nome": "SÃO PAULO"
+      },
+      {
+        "uf": "se",
+        "nome": "SERGIPE"
+      },
+      {
+        "uf": "to",
+        "nome": "TOCANTINS"
       }
     ]
+  },
+  "_comentario_varredura": "Varredura escalonada: o estado no ar e o presidente sao lidos a cada ciclo; os outros 26 estados a cada 'ciclos_varredura' ciclos. Sem isso, 27 estados x 2 cargos a cada 20s dariam 165 req/min e o TSE bloquearia o IP.",
+  "ciclos_varredura": 3,
+  "alertas": {
+    "arquivo": "alertas.json",
+    "_comentario": "Marca qual praca/cargo recebeu boletim novo do TSE, para o painel avisar.",
+    "segundos_para_expirar": 900
   }
 }

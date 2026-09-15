@@ -495,12 +495,28 @@ $corpo
 
 # ------------------------------------------------------------------- selecao
 
+$script:Impressoes = @{}       # arquivo -> hash do conteudo, para nao reescrever a toa
+$Impressoes = $script:Impressoes
+$script:CacheBoletins = @{}    # "uf-cargo" -> ultimo boletim bom
+$script:VistosNesteCiclo = @{}
+$script:Alertas = @{}          # "uf-cargo" -> @{ desde; pct }
+$script:Impressao = @{}        # "uf-cargo" -> impressao do ultimo boletim visto
+$script:Ciclo = 0
+
 function Ler-Selecao {
-    # A praca escolhida pelo operador. Um arquivo de uma linha e proposital:
-    # qualquer .bat, bloco de notas ou script escreve nele, sem depender de
-    # interface nenhuma - e o operador nao fica refem de um programa a mais.
+    # A praca escolhida pelo operador, por cargo. Governador e senador tem
+    # selecao independente: o operador pode estar mostrando governador de SP
+    # e senador do PR ao mesmo tempo.
+    param([int] $Cargo = 3)
     if (-not (Tem-Propriedade $cfg "selecao")) { return $null }
+
     $arq = $cfg.selecao.arquivo_selecao
+    if ($Cargo -eq 5 -and (Tem-Propriedade $cfg.selecao "arquivo_selecao_senador")) {
+        $alt = $cfg.selecao.arquivo_selecao_senador
+        # se o arquivo do senador nao existe, segue o do governador
+        if (Test-Path $alt) { $arq = $alt }
+    }
+
     $uf = $cfg.selecao.padrao
     if (Test-Path $arq) {
         try {
@@ -508,21 +524,132 @@ function Ler-Selecao {
             if ($lido) { $uf = $lido }
         } catch { }
     }
-    foreach ($p in $cfg.selecao.pracas) {
-        if ($p.uf -eq $uf) { return $p }
-    }
+    foreach ($p in $cfg.selecao.pracas) { if ($p.uf -eq $uf) { return $p } }
     return $cfg.selecao.pracas[0]
 }
 
+function Obter-Impressao-Boletim {
+    # O que caracteriza "boletim novo": percentual de urnas e os votos dos
+    # dois primeiros. Nao uso a hora de geracao do TSE porque ela muda a cada
+    # republicacao, mesmo sem numero novo - o alerta perderia sentido.
+    param($Boletim)
+    if ($null -eq $Boletim) { return "" }
+    $partes = @("$($Boletim.PctUrnas)")
+    foreach ($i in 0, 1) {
+        if ($Boletim.Candidatos.Count -gt $i) {
+            $partes += "$($Boletim.Candidatos[$i].Numero):$($Boletim.Candidatos[$i].Votos)"
+        }
+    }
+    return ($partes -join "|")
+}
+
+function Marcar-Alerta {
+    # Acende o alerta daquela praca/cargo quando o numero mudou de verdade.
+    param([string] $Uf, [int] $Cargo, $Boletim)
+    $chave = "$Uf-$Cargo"
+    $nova = Obter-Impressao-Boletim $Boletim
+    if (-not $nova) { return }
+    $anterior = $null
+    if ($script:Impressao.ContainsKey($chave)) { $anterior = $script:Impressao[$chave] }
+    $script:Impressao[$chave] = $nova
+    if ($null -eq $anterior) { return }      # primeira leitura nao e "novidade"
+    if ($anterior -eq $nova) { return }
+    $script:Alertas[$chave] = @{
+        desde = (Get-Date -Format "HH:mm:ss")
+        pct   = (Formatar-Percentual $Boletim.PctUrnas)
+    }
+}
+
+function Limpar-Alerta {
+    param([string] $Uf, [int] $Cargo)
+    $chave = "$Uf-$Cargo"
+    if ($script:Alertas.ContainsKey($chave)) { $script:Alertas.Remove($chave) }
+}
+
+function Expirar-Alertas {
+    # Alerta velho polui a tela: depois de um tempo ele sai sozinho.
+    $segundos = 900
+    if ((Tem-Propriedade $cfg "alertas") -and (Tem-Propriedade $cfg.alertas "segundos_para_expirar")) {
+        $segundos = [int] $cfg.alertas.segundos_para_expirar
+    }
+    if ($segundos -le 0) { return }
+    $agora = Get-Date
+    foreach ($chave in @($script:Alertas.Keys)) {
+        try {
+            $desde = [datetime]::ParseExact($script:Alertas[$chave].desde, "HH:mm:ss", $null)
+            if (($agora - $desde).TotalSeconds -gt $segundos) { $script:Alertas.Remove($chave) }
+        } catch { }
+    }
+}
+
+function Escrever-Alertas {
+    # Arquivo que o painel web le para acender os avisos nos botoes.
+    if (-not (Tem-Propriedade $cfg "alertas")) { return }
+    $estados = [ordered]@{}
+    foreach ($p in $cfg.selecao.pracas) {
+        $gov = $null; $sen = $null
+        if ($script:Alertas.ContainsKey("$($p.uf)-3")) { $gov = $script:Alertas["$($p.uf)-3"] }
+        if ($script:Alertas.ContainsKey("$($p.uf)-5")) { $sen = $script:Alertas["$($p.uf)-5"] }
+        $estados[$p.uf] = [ordered]@{
+            nome = $p.nome
+            governador = $(if ($gov) { [ordered]@{ novo = $true; desde = $gov.desde; pct = $gov.pct } } else { $null })
+            senador    = $(if ($sen) { [ordered]@{ novo = $true; desde = $sen.desde; pct = $sen.pct } } else { $null })
+        }
+    }
+    $pres = $null
+    if ($script:Alertas.ContainsKey("br-1")) {
+        $a = $script:Alertas["br-1"]
+        $pres = [ordered]@{ novo = $true; desde = $a.desde; pct = $a.pct }
+    }
+    $corpo = [ordered]@{
+        atualizado_em = (Get-Date -Format "HH:mm:ss")
+        ciclo = $script:Ciclo
+        presidente = $pres
+        estados = $estados
+    }
+    Escrever-Arquivo (Join-Path $PastaSaida $cfg.alertas.arquivo) ($corpo | ConvertTo-Json -Depth 6)
+}
+
+function Buscar-Praca {
+    # Le uma praca/cargo do TSE (ou do simulador), guarda em cache e acende o
+    # alerta se o numero mudou. Uma praca por ciclo, no maximo.
+    param([string] $Uf, [int] $Cargo, [string] $Nome, [string] $Modo)
+    $chave = "$Uf-$Cargo"
+    if ($script:VistosNesteCiclo.ContainsKey($chave)) {
+        if ($script:CacheBoletins.ContainsKey($chave)) { return $script:CacheBoletins[$chave] }
+        return $null
+    }
+    $script:VistosNesteCiclo[$chave] = $true
+
+    $b = $null
+    if ($Ensaio) {
+        $b = Gerar-Simulado $Uf $Cargo $Nome
+    } else {
+        $bruto = Obter-Boletim (Montar-Url $Uf $Cargo)
+        if ($bruto -eq "SEM-MUDANCA") {
+            if ($script:CacheBoletins.ContainsKey($chave)) { return $script:CacheBoletins[$chave] }
+            return $null
+        }
+        if ($null -ne $bruto) { $b = Normalizar-Boletim $bruto $Nome }
+    }
+    if ($null -ne $b -and (-not $b.Oficial) -and $Modo -eq "AR") { return $null }
+    if ($null -ne $b) {
+        Marcar-Alerta $Uf $Cargo $b
+        $script:CacheBoletins[$chave] = $b
+    }
+    return $b
+}
+
 function Publicar-Selecionada {
-    # Reescreve as tarjas do seletor a partir do que ja esta em memoria.
-    # Nao consulta o TSE: trocar de estado no ar tem que ser instantaneo,
-    # nao pode esperar o proximo ciclo de coleta.
-    param($Praca, $Cache)
-    if ($null -eq $Praca) { return @() }
+    # Reescreve as tarjas do seletor a partir do cache. Nao consulta o TSE:
+    # trocar de estado no ar tem que ser instantaneo.
+    param($Cache)
+    if (-not (Tem-Propriedade $cfg "selecao")) { return @() }
     $publicados = @()
     foreach ($saida in $cfg.selecao.saidas) {
-        $chave = "$($Praca.uf)-$($saida.cargo)"
+        $praca = Ler-Selecao $saida.cargo
+        if ($null -eq $praca) { continue }
+        $chave = "$($praca.uf)-$($saida.cargo)"
         $b = $null
         if ($Cache.ContainsKey($chave)) { $b = $Cache[$chave] }
         if ($null -eq $b) {
@@ -530,13 +657,13 @@ function Publicar-Selecionada {
             # arquivo como estava: mostraria o estado ANTERIOR com o operador
             # achando que selecionou outro. Publica vazio, com o nome certo.
             $b = [pscustomobject]@{
-                Fase = "O"; Oficial = $true; Praca = $Praca.nome
+                Fase = "O"; Oficial = $true; Praca = $praca.nome
                 PctUrnas = 0.0; Geracao = ""; Candidatos = @()
             }
         } else {
             $b = $b.PSObject.Copy()
         }
-        $b.Praca = $Praca.nome
+        $b.Praca = $praca.nome
         $json = ($(Montar-Tarja $b $saida) | ConvertTo-Json -Depth 5)
         $hash = Obter-Hash $json
         if ($Impressoes[$saida.arquivo] -ne $hash) {
@@ -550,40 +677,31 @@ function Publicar-Selecionada {
 
 # --------------------------------------------------------------------- ciclo
 
-$Impressoes = @{}   # arquivo -> hash do conteudo, para nao reescrever a toa
-$CacheBoletins = @{}  # "uf-cargo" -> ultimo boletim bom, para o seletor responder na hora
-
 function Executar-Ciclo {
     param([string] $Modo)
-    $linhas = @()
+    $script:Ciclo++
     $script:VistosNesteCiclo = @{}
+    $linhas = @()
 
+    $ciclosVarredura = 3
+    if (Tem-Propriedade $cfg "ciclos_varredura") { $ciclosVarredura = [math]::Max(1, [int] $cfg.ciclos_varredura) }
+    # Varredura completa de vez em quando; o resto do tempo so o que esta no
+    # ar. E o que permite cobrir 27 estados sem estourar o limite do TSE.
+    $varredura = (($script:Ciclo - 1) % $ciclosVarredura) -eq 0
+
+    # --- tarjas fixas (presidente) : todo ciclo
     foreach ($tarja in $cfg.tarjas) {
-        $situacao = "sem dado"; $b = $null
-        if ($Ensaio) {
-            $b = Gerar-Simulado $tarja.abrangencia $tarja.cargo $tarja.praca
-        } else {
-            $bruto = Obter-Boletim (Montar-Url $tarja.abrangencia $tarja.cargo)
-            if ($bruto -eq "SEM-MUDANCA") { $situacao = "sem mudanca" }
-            elseif ($null -ne $bruto) { $b = Normalizar-Boletim $bruto $tarja.praca }
-            else { $situacao = "falha" }
-        }
-
+        $b = Buscar-Praca $tarja.abrangencia $tarja.cargo $tarja.praca $Modo
+        $situacao = "sem dado"
         if ($null -ne $b) {
-            # Trava de fase: simulado do TSE nunca vai ao ar por engano.
-            if (-not $b.Oficial -and $Modo -eq "AR") {
-                $situacao = "bloqueado (fase $($b.Fase))"
-                Escrever-Log "$($tarja.arquivo): boletim nao oficial descartado" "AVISO"
+            $json = ($(Montar-Tarja $b $tarja) | ConvertTo-Json -Depth 5)
+            $hash = Obter-Hash $json
+            if ($Impressoes[$tarja.arquivo] -eq $hash) {
+                $situacao = "sem mudanca"
             } else {
-                $json = ($(Montar-Tarja $b $tarja) | ConvertTo-Json -Depth 5)
-                $hash = Obter-Hash $json
-                if ($Impressoes[$tarja.arquivo] -eq $hash) {
-                    $situacao = "sem mudanca"
-                } else {
-                    Escrever-Arquivo (Join-Path $PastaSaida "$($tarja.arquivo).json") $json
-                    $Impressoes[$tarja.arquivo] = $hash
-                    $situacao = "publicado"
-                }
+                Escrever-Arquivo (Join-Path $PastaSaida "$($tarja.arquivo).json") $json
+                $Impressoes[$tarja.arquivo] = $hash
+                $situacao = "publicado"
             }
             $p1 = ""; $q1 = ""; $p2 = ""; $q2 = ""
             if ($b.Candidatos.Count -ge 1) {
@@ -607,59 +725,47 @@ function Executar-Ciclo {
         }
     }
 
-    # pracas do seletor: coletadas junto, para a troca ser instantanea
+    # --- pracas selecionadas : todo ciclo, para o que esta no ar ficar fresco
     if (Tem-Propriedade $cfg "selecao") {
-        foreach ($p in $cfg.selecao.pracas) {
-            foreach ($saida in $cfg.selecao.saidas) {
-                $chave = "$($p.uf)-$($saida.cargo)"
-                if ($script:VistosNesteCiclo.ContainsKey($chave)) { continue }
-                $script:VistosNesteCiclo[$chave] = $true
-                $b = $null
-                if ($Ensaio) {
-                    $b = Gerar-Simulado $p.uf $saida.cargo $p.nome
-                } else {
-                    $bruto = Obter-Boletim (Montar-Url $p.uf $saida.cargo)
-                    if ($bruto -ne "SEM-MUDANCA" -and $null -ne $bruto) {
-                        $b = Normalizar-Boletim $bruto $p.nome
-                    }
-                }
-                if ($null -ne $b -and (-not $b.Oficial) -and $Modo -eq "AR") { $b = $null }
-                if ($null -ne $b) { $script:CacheBoletins[$chave] = $b }
-            }
-        }
-        $praca = Ler-Selecao
-        $null = Publicar-Selecionada $praca $script:CacheBoletins
-        $linhas += [pscustomobject]@{
-            Tarja = "SELECIONADO"; Praca = $praca.nome; Urnas = ""
-            Primeiro = ""; Pct1 = ""; Segundo = ""; Pct2 = ""; Situacao = "selecionado"
+        foreach ($saida in $cfg.selecao.saidas) {
+            $praca = Ler-Selecao $saida.cargo
+            if ($null -eq $praca) { continue }
+            $null = Buscar-Praca $praca.uf $saida.cargo $praca.nome $Modo
         }
     }
 
-    # listas de pracas (rodizio automatico ou escolha do operador)
+    # --- varredura das demais pracas : a cada N ciclos
+    if ($varredura -and (Tem-Propriedade $cfg "selecao")) {
+        foreach ($p in $cfg.selecao.pracas) {
+            foreach ($saida in $cfg.selecao.saidas) {
+                $null = Buscar-Praca $p.uf $saida.cargo $p.nome $Modo
+            }
+        }
+    }
+
+    # --- escreve as tarjas do seletor
+    if (Tem-Propriedade $cfg "selecao") {
+        $null = Publicar-Selecionada $script:CacheBoletins
+        foreach ($saida in $cfg.selecao.saidas) {
+            $praca = Ler-Selecao $saida.cargo
+            if ($null -eq $praca) { continue }
+            # quem esta no ar nao precisa de alerta: o operador ja esta vendo
+            Limpar-Alerta $praca.uf $saida.cargo
+            $linhas += [pscustomobject]@{
+                Tarja = $saida.arquivo; Praca = $praca.nome; Urnas = ""
+                Primeiro = ""; Pct1 = ""; Segundo = ""; Pct2 = ""; Situacao = "no ar"
+            }
+        }
+    }
+
+    # --- listas de pracas
     if (Tem-Propriedade $cfg "listas") {
-        # cada praca e buscada UMA vez por ciclo, mesmo aparecendo em varias
-        # listas: governador de SP nao vale duas requisicoes ao TSE.
-        $cacheCiclo = $script:CacheBoletins
         foreach ($listaCfg in $cfg.listas) {
             $boletins = @{}
             foreach ($p in $listaCfg.pracas) {
                 $chave = "$($p.uf)-$($listaCfg.cargo)"
-                if (-not $script:VistosNesteCiclo.ContainsKey($chave)) {
-                    $script:VistosNesteCiclo[$chave] = $true
-                    $b = $null
-                    if ($Ensaio) {
-                        $b = Gerar-Simulado $p.uf $listaCfg.cargo $p.nome
-                    } else {
-                        $bruto = Obter-Boletim (Montar-Url $p.uf $listaCfg.cargo)
-                        if ($bruto -ne "SEM-MUDANCA" -and $null -ne $bruto) {
-                            $b = Normalizar-Boletim $bruto $p.nome
-                        }
-                    }
-                    if ($null -ne $b -and (-not $b.Oficial) -and $Modo -eq "AR") { $b = $null }
-                    if ($null -ne $b) { $cacheCiclo[$chave] = $b }
-                }
                 $bb = $null
-                if ($cacheCiclo.ContainsKey($chave)) { $bb = $cacheCiclo[$chave] }
+                if ($script:CacheBoletins.ContainsKey($chave)) { $bb = $script:CacheBoletins[$chave] }
                 if ($null -ne $bb) {
                     $bb = $bb.PSObject.Copy()
                     $bb.Praca = $p.nome
@@ -681,6 +787,20 @@ function Executar-Ciclo {
         }
     }
 
+    # o painel web pede baixa de alerta escrevendo no VISTO.txt
+    if (Test-Path "VISTO.txt") {
+        try {
+            $pedidos = Get-Content "VISTO.txt" -ErrorAction Stop
+            foreach ($linha in $pedidos) {
+                $chave = $linha.Trim().ToLower()
+                if ($chave -and $script:Alertas.ContainsKey($chave)) { $script:Alertas.Remove($chave) }
+            }
+            Remove-Item "VISTO.txt" -Force -ErrorAction SilentlyContinue
+        } catch { }
+    }
+
+    Expirar-Alertas
+    Escrever-Alertas
     Escrever-Painel $linhas ([int] $cfg.intervalo_segundos) $Modo
     return $linhas
 }
@@ -714,17 +834,28 @@ if ($Ensaio) { $Modo = "ENSAIO" } elseif ($Teste) { $Modo = "TESTE" }
 
 $limiteReq = 80
 if (Tem-Propriedade $cfg "limite_requisicoes_por_minuto") { $limiteReq = [int] $cfg.limite_requisicoes_por_minuto }
-$porCiclo = Contar-Requisicoes-Por-Ciclo
 $intervalo = [int] $cfg.intervalo_segundos
-$porMinuto = [math]::Round(60.0 * $porCiclo / [math]::Max(1, $intervalo), 1)
+$ciclosVar = 3
+if (Tem-Propriedade $cfg "ciclos_varredura") { $ciclosVar = [math]::Max(1, [int] $cfg.ciclos_varredura) }
+
+# Um ciclo comum le so o que esta no ar; a cada N ciclos varre todas as
+# pracas. A media por minuto e o que interessa para o limite do TSE.
+$noAr = 0
+if (Tem-Propriedade $cfg "tarjas") { $noAr += $cfg.tarjas.Count }
+if (Tem-Propriedade $cfg "selecao") { $noAr += $cfg.selecao.saidas.Count }
+$naVarredura = Contar-Requisicoes-Por-Ciclo
+$porMinuto = [math]::Round(
+    (60.0 / ($ciclosVar * $intervalo)) * ((($ciclosVar - 1) * $noAr) + $naVarredura), 1)
 
 Escrever-Log "modo $Modo | saida em $PastaSaida | intervalo ${intervalo}s" "OK"
 if (-not $Ensaio) {
-    Escrever-Log "$porCiclo requisicoes por ciclo = $porMinuto por minuto (limite $limiteReq)"
+    Escrever-Log "$noAr req por ciclo comum, $naVarredura na varredura (1 a cada $ciclosVar)"
+    Escrever-Log "media de $porMinuto requisicoes por minuto (limite $limiteReq)"
     if ($porMinuto -gt $limiteReq) {
-        $minimo = [math]::Ceiling(60.0 * $porCiclo / $limiteReq)
-        Escrever-Log "ACIMA DO LIMITE. O intervalo sera esticado automaticamente." "AVISO"
-        Escrever-Log "Para nao esticar, use intervalo_segundos de ${minimo}s ou mais, ou tire pracas." "AVISO"
+        $minimo = [math]::Ceiling(
+            (60.0 / ($ciclosVar * $limiteReq)) * ((($ciclosVar - 1) * $noAr) + $naVarredura))
+        Escrever-Log "ACIMA DO LIMITE. As requisicoes serao seguradas na fila." "AVISO"
+        Escrever-Log "Para nao segurar: intervalo_segundos ${minimo}s+, ou ciclos_varredura maior." "AVISO"
     }
 }
 if ($Modo -ne "AR") {
@@ -747,20 +878,23 @@ do {
     # estado, a tarja acompanha em ~1s em vez de esperar o ciclo inteiro.
     $gasto = ((Get-Date) - $inicio).TotalSeconds
     $espera = [math]::Max(1, [int] $cfg.intervalo_segundos - $gasto)
-    $ultimaSelecao = $null
-    if (Tem-Propriedade $cfg "selecao") { $ultimaSelecao = (Ler-Selecao).uf }
+    $ultima = ""
+    if (Tem-Propriedade $cfg "selecao") {
+        $ultima = (($cfg.selecao.saidas | ForEach-Object { (Ler-Selecao $_.cargo).uf }) -join ",")
+    }
     for ($s = 0; $s -lt $espera; $s++) {
         Start-Sleep -Seconds 1
         if (-not (Tem-Propriedade $cfg "selecao")) { continue }
-        $agora = Ler-Selecao
-        if ($agora.uf -ne $ultimaSelecao) {
-            $ultimaSelecao = $agora.uf
-            $pub = Publicar-Selecionada $agora $script:CacheBoletins
-            Escrever-Log "estado selecionado: $($agora.nome)" "OK"
-            Escrever-Painel @([pscustomobject]@{
-                Tarja = "SELECIONADO"; Praca = $agora.nome; Urnas = ""
-                Primeiro = ""; Pct1 = ""; Segundo = ""; Pct2 = ""; Situacao = "trocado agora"
-            }) ([int] $cfg.intervalo_segundos) $Modo
+        $agora = (($cfg.selecao.saidas | ForEach-Object { (Ler-Selecao $_.cargo).uf }) -join ",")
+        if ($agora -ne $ultima) {
+            $ultima = $agora
+            $null = Publicar-Selecionada $script:CacheBoletins
+            foreach ($saida in $cfg.selecao.saidas) {
+                $praca = Ler-Selecao $saida.cargo
+                if ($null -ne $praca) { Limpar-Alerta $praca.uf $saida.cargo }
+            }
+            Escrever-Alertas
+            Escrever-Log "selecao trocada: $agora" "OK"
         }
     }
 } while ($true)
