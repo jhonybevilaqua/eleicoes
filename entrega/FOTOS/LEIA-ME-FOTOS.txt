@@ -130,9 +130,19 @@ COMO VINCULAR A IMAGEM - DOIS CAMINHOS
  Para desligar a copia, ponha "foto_nome_fixo": false no config.json.
 
 
- E O SEGUNDO CAMPO, SEMPRE
- --------------------------
-     cand1_foto_existe   1 se a foto existe, 0 se nao
+ OS CAMPOS QUE APARECEM NO DATASOURCE
+ -------------------------------------
+ No arquivo TARJAS\tarja-presidente.json, por candidato:
 
- Vincule a VISIBILIDADE do grupo da foto a esse campo se preferir esconder
- a moldura em vez de mostrar a silhueta do sem-foto.png.
+   cand1_foto         caminho completo da foto DELE
+                      C:\GCTSE\FOTOS\lula.jpg
+   cand1_foto_fixa    caminho completo que NUNCA muda
+                      C:\GCTSE\TARJAS\foto-cand1.png
+   cand1_foto_existe  1 se a foto existe, 0 se nao
+
+ Os dois primeiros sao os dois caminhos do vinculo: escolha UM.
+ Os dois caminhos sao ABSOLUTOS, com a letra do drive - caminho relativo
+ seria resolvido a partir da pasta do gerador, nao da pasta do gctse.
+
+ O terceiro serve para a VISIBILIDADE do grupo da foto, se preferir
+ esconder a moldura em vez de mostrar a silhueta do sem-foto.png.

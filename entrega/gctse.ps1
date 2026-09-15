@@ -34,7 +34,7 @@ param(
 # Versao impressa na partida e no painel. Sem carimbo, "qual versao esta
 # rodando ai?" so se responde abrindo arquivo e comparando a olho - e no
 # meio de um teste com janela de horario ninguem faz isso.
-$Versao = "2.5 - 15/09/2026"
+$Versao = "2.6 - 15/09/2026"
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
@@ -644,6 +644,17 @@ function Encontrar-Foto {
 
 $script:FotosFixas = @{}   # destino -> origem ja copiada
 
+function Caminho-Fixo-Foto {
+    # Caminho ABSOLUTO, igual ao do campo cand1_foto. O gerador de
+    # caracteres resolve caminho relativo a partir da pasta DELE, nao da
+    # pasta do gctse - um caminho relativo aqui vira imagem que nao carrega
+    # na maquina do GC.
+    param([int] $Indice)
+    $pasta = $PastaSaida
+    if (-not [IO.Path]::IsPathRooted($pasta)) { $pasta = Join-Path (Get-Location) $pasta }
+    return (Join-Path $pasta ("foto-cand{0}.png" -f $Indice))
+}
+
 function Copiar-Foto-Para-Nome-Fixo {
     # Nem todo gerador de caracteres aceita vincular o CAMINHO de uma imagem
     # a um campo do banco. Quando nao aceita, a saida e o contrario: o
@@ -701,7 +712,7 @@ function Montar-Tarja {
                 $saida[$p + "foto"] = ""
                 $saida[$p + "foto_existe"] = "0"
                 if ($FotoNomeFixo) {
-                    $fixo = Join-Path $PastaSaida ("foto-cand{0}.png" -f $i)
+                    $fixo = Caminho-Fixo-Foto $i
                     $reservaVazia = ""
                     if ($FotoReserva) {
                         $reservaVazia = $FotoReserva
@@ -753,7 +764,7 @@ function Montar-Tarja {
                 $saida[$p + "foto"] = $completo
                 $saida[$p + "foto_existe"] = $existe
                 if ($FotoNomeFixo) {
-                    $fixo = Join-Path $PastaSaida ("foto-cand{0}.png" -f $i)
+                    $fixo = Caminho-Fixo-Foto $i
                     Copiar-Foto-Para-Nome-Fixo $completo $fixo
                     $saida[$p + "foto_fixa"] = $fixo
                 }
