@@ -16,22 +16,6 @@
       "cargo": 1,
       "praca": "BRASIL",
       "trilho_px": 300
-    },
-    {
-      "arquivo": "tarja-governador",
-      "modelo": "majoritaria",
-      "abrangencia": "pr",
-      "cargo": 3,
-      "praca": "PARANÁ",
-      "trilho_px": 560
-    },
-    {
-      "arquivo": "tarja-senador",
-      "modelo": "majoritaria",
-      "abrangencia": "pr",
-      "cargo": 5,
-      "praca": "PARANÁ",
-      "trilho_px": 560
     }
   ],
   "texto": {
@@ -185,5 +169,66 @@
         }
       ]
     }
-  ]
+  ],
+  "_comentario_selecao": "O operador escolhe o estado (pasta SELECIONAR-ESTADO) e estas tarjas passam a mostrar aquele estado, na hora, sem trocar de arquivo.",
+  "selecao": {
+    "arquivo_selecao": "SELECAO.txt",
+    "padrao": "pr",
+    "saidas": [
+      {
+        "arquivo": "tarja-governador",
+        "modelo": "majoritaria",
+        "cargo": 3,
+        "trilho_px": 560
+      },
+      {
+        "arquivo": "tarja-senador",
+        "modelo": "majoritaria",
+        "cargo": 5,
+        "trilho_px": 560
+      }
+    ],
+    "pracas": [
+      {
+        "uf": "pr",
+        "nome": "PARANÁ"
+      },
+      {
+        "uf": "sp",
+        "nome": "SÃO PAULO"
+      },
+      {
+        "uf": "rj",
+        "nome": "RIO DE JANEIRO"
+      },
+      {
+        "uf": "mg",
+        "nome": "MINAS GERAIS"
+      },
+      {
+        "uf": "sc",
+        "nome": "SANTA CATARINA"
+      },
+      {
+        "uf": "rs",
+        "nome": "RIO GRANDE DO SUL"
+      },
+      {
+        "uf": "ba",
+        "nome": "BAHIA"
+      },
+      {
+        "uf": "go",
+        "nome": "GOIÁS"
+      },
+      {
+        "uf": "pe",
+        "nome": "PERNAMBUCO"
+      },
+      {
+        "uf": "ce",
+        "nome": "CEARÁ"
+      }
+    ]
+  }
 }

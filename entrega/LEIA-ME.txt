@@ -41,15 +41,32 @@ O QUE FAZER, NA ORDEM
 
 ---------------------------------------------------------------------------
 
-UMA PRACA OU VARIAS?
+COMO TROCAR O ESTADO DA TARJA
 
- tarja-governador.json   uma praca fixa (a primeira do config)
- lista-governador.json   TODAS as pracas, um registro por estado
+ Duas formas. As duas usam o MESMO arquivo, sem refazer vinculo nenhum.
 
- Para trocar de estado na mesma tarja, use o arquivo lista-*.json e mande o
- Castalia trocar de REGISTRO. Nao troca arquivo, nao refaz vinculo.
- O registro 1 e o primeiro estado do config.json, o 2 e o segundo, e assim
- por diante - a ordem e a que esta la.
+ 1) O OPERADOR ESCOLHE  (o mais simples, funciona em qualquer GC)
+
+    Abra a pasta SELECIONAR-ESTADO e de duplo clique no estado.
+    Em cerca de 1 segundo, tarja-governador.json e tarja-senador.json
+    passam a mostrar aquele estado. A tarja do Castalia nem sabe que
+    mudou: ela le sempre o mesmo arquivo.
+
+    Nao precisa parar nem reiniciar nada. Pode trocar com a tarja no ar.
+
+    Por tras, o .bat so escreve a sigla no arquivo SELECAO.txt. Se preferir,
+    edite esse arquivo na mao - ou mande qualquer outro sistema escrever
+    nele (Power Automate, um botao de mesa, o que for).
+
+ 2) O CASTALIA RODA SOZINHO PELOS REGISTROS
+
+    lista-governador.json e lista-senador.json trazem TODAS as pracas,
+    uma por registro. Se o Castalia souber avancar registro, ele roda
+    sozinho. O registro 1 e o primeiro estado do config.json.
+
+ Se o estado escolhido ainda nao tem boletim daquele cargo, a tarja sai
+ VAZIA com o nome do estado certo (visivel = 0), nunca com os dados do
+ estado anterior.
 
 A ORDEM DOS CANDIDATOS
 

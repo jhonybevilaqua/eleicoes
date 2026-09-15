@@ -441,14 +441,70 @@ $corpo
     Escrever-Arquivo (Join-Path $PastaSaida "painel.html") $html
 }
 
+# ------------------------------------------------------------------- selecao
+
+function Ler-Selecao {
+    # A praca escolhida pelo operador. Um arquivo de uma linha e proposital:
+    # qualquer .bat, bloco de notas ou script escreve nele, sem depender de
+    # interface nenhuma - e o operador nao fica refem de um programa a mais.
+    if (-not (Tem-Propriedade $cfg "selecao")) { return $null }
+    $arq = $cfg.selecao.arquivo_selecao
+    $uf = $cfg.selecao.padrao
+    if (Test-Path $arq) {
+        try {
+            $lido = (Get-Content $arq -Raw -ErrorAction Stop).Trim().ToLower()
+            if ($lido) { $uf = $lido }
+        } catch { }
+    }
+    foreach ($p in $cfg.selecao.pracas) {
+        if ($p.uf -eq $uf) { return $p }
+    }
+    return $cfg.selecao.pracas[0]
+}
+
+function Publicar-Selecionada {
+    # Reescreve as tarjas do seletor a partir do que ja esta em memoria.
+    # Nao consulta o TSE: trocar de estado no ar tem que ser instantaneo,
+    # nao pode esperar o proximo ciclo de coleta.
+    param($Praca, $Cache)
+    if ($null -eq $Praca) { return @() }
+    $publicados = @()
+    foreach ($saida in $cfg.selecao.saidas) {
+        $chave = "$($Praca.uf)-$($saida.cargo)"
+        $b = $null
+        if ($Cache.ContainsKey($chave)) { $b = $Cache[$chave] }
+        if ($null -eq $b) {
+            # Sem boletim para esta praca neste cargo. NAO pode deixar o
+            # arquivo como estava: mostraria o estado ANTERIOR com o operador
+            # achando que selecionou outro. Publica vazio, com o nome certo.
+            $b = [pscustomobject]@{
+                Fase = "O"; Oficial = $true; Praca = $Praca.nome
+                PctUrnas = 0.0; Geracao = ""; Candidatos = @()
+            }
+        } else {
+            $b = $b.PSObject.Copy()
+        }
+        $b.Praca = $Praca.nome
+        $json = ($(Montar-Tarja $b $saida) | ConvertTo-Json -Depth 5)
+        $hash = Obter-Hash $json
+        if ($Impressoes[$saida.arquivo] -ne $hash) {
+            Escrever-Arquivo (Join-Path $PastaSaida "$($saida.arquivo).json") $json
+            $Impressoes[$saida.arquivo] = $hash
+            $publicados += $saida.arquivo
+        }
+    }
+    return $publicados
+}
+
 # --------------------------------------------------------------------- ciclo
 
 $Impressoes = @{}   # arquivo -> hash do conteudo, para nao reescrever a toa
-$Geracoes = @{}     # arquivo -> ultima data/hora de geracao publicada
+$CacheBoletins = @{}  # "uf-cargo" -> ultimo boletim bom, para o seletor responder na hora
 
 function Executar-Ciclo {
     param([string] $Modo)
     $linhas = @()
+    $script:VistosNesteCiclo = @{}
 
     foreach ($tarja in $cfg.tarjas) {
         $situacao = "sem dado"; $b = $null
@@ -499,16 +555,45 @@ function Executar-Ciclo {
         }
     }
 
+    # pracas do seletor: coletadas junto, para a troca ser instantanea
+    if (Tem-Propriedade $cfg "selecao") {
+        foreach ($p in $cfg.selecao.pracas) {
+            foreach ($saida in $cfg.selecao.saidas) {
+                $chave = "$($p.uf)-$($saida.cargo)"
+                if ($script:VistosNesteCiclo.ContainsKey($chave)) { continue }
+                $script:VistosNesteCiclo[$chave] = $true
+                $b = $null
+                if ($Ensaio) {
+                    $b = Gerar-Simulado $p.uf $saida.cargo $p.nome
+                } else {
+                    $bruto = Obter-Boletim (Montar-Url $p.uf $saida.cargo)
+                    if ($bruto -ne "SEM-MUDANCA" -and $null -ne $bruto) {
+                        $b = Normalizar-Boletim $bruto $p.nome
+                    }
+                }
+                if ($null -ne $b -and (-not $b.Oficial) -and $Modo -eq "AR") { $b = $null }
+                if ($null -ne $b) { $script:CacheBoletins[$chave] = $b }
+            }
+        }
+        $praca = Ler-Selecao
+        $null = Publicar-Selecionada $praca $script:CacheBoletins
+        $linhas += [pscustomobject]@{
+            Tarja = "SELECIONADO"; Praca = $praca.nome; Urnas = ""
+            Primeiro = ""; Pct1 = ""; Segundo = ""; Pct2 = ""; Situacao = "selecionado"
+        }
+    }
+
     # listas de pracas (rodizio automatico ou escolha do operador)
     if (Tem-Propriedade $cfg "listas") {
         # cada praca e buscada UMA vez por ciclo, mesmo aparecendo em varias
         # listas: governador de SP nao vale duas requisicoes ao TSE.
-        $cacheCiclo = @{}
+        $cacheCiclo = $script:CacheBoletins
         foreach ($listaCfg in $cfg.listas) {
             $boletins = @{}
             foreach ($p in $listaCfg.pracas) {
                 $chave = "$($p.uf)-$($listaCfg.cargo)"
-                if (-not $cacheCiclo.ContainsKey($chave)) {
+                if (-not $script:VistosNesteCiclo.ContainsKey($chave)) {
+                    $script:VistosNesteCiclo[$chave] = $true
                     $b = $null
                     if ($Ensaio) {
                         $b = Gerar-Simulado $p.uf $listaCfg.cargo $p.nome
@@ -519,9 +604,10 @@ function Executar-Ciclo {
                         }
                     }
                     if ($null -ne $b -and (-not $b.Oficial) -and $Modo -eq "AR") { $b = $null }
-                    $cacheCiclo[$chave] = $b
+                    if ($null -ne $b) { $cacheCiclo[$chave] = $b }
                 }
-                $bb = $cacheCiclo[$chave]
+                $bb = $null
+                if ($cacheCiclo.ContainsKey($chave)) { $bb = $cacheCiclo[$chave] }
                 if ($null -ne $bb) {
                     $bb = $bb.PSObject.Copy()
                     $bb.Praca = $p.nome
@@ -589,7 +675,25 @@ do {
         Escrever-Log "erro no ciclo: $($_.Exception.Message)" "ERRO"
     }
     if ($UmaVez) { break }
+
+    # Espera do proximo ciclo vigiando a selecao: se o operador trocar de
+    # estado, a tarja acompanha em ~1s em vez de esperar o ciclo inteiro.
     $gasto = ((Get-Date) - $inicio).TotalSeconds
     $espera = [math]::Max(1, [int] $cfg.intervalo_segundos - $gasto)
-    Start-Sleep -Seconds $espera
+    $ultimaSelecao = $null
+    if (Tem-Propriedade $cfg "selecao") { $ultimaSelecao = (Ler-Selecao).uf }
+    for ($s = 0; $s -lt $espera; $s++) {
+        Start-Sleep -Seconds 1
+        if (-not (Tem-Propriedade $cfg "selecao")) { continue }
+        $agora = Ler-Selecao
+        if ($agora.uf -ne $ultimaSelecao) {
+            $ultimaSelecao = $agora.uf
+            $pub = Publicar-Selecionada $agora $script:CacheBoletins
+            Escrever-Log "estado selecionado: $($agora.nome)" "OK"
+            Escrever-Painel @([pscustomobject]@{
+                Tarja = "SELECIONADO"; Praca = $agora.nome; Urnas = ""
+                Primeiro = ""; Pct1 = ""; Segundo = ""; Pct2 = ""; Situacao = "trocado agora"
+            }) ([int] $cfg.intervalo_segundos) $Modo
+        }
+    }
 } while ($true)
