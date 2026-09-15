@@ -286,7 +286,11 @@ function Ler-Texto-Resposta {
 function Obter-Boletim {
     param([string] $Url)
     Aguardar-Vez
-    $cabecalhos = @{ "User-Agent" = "gctse/1.0" }
+    # Configuravel porque CDN de governo as vezes recusa cliente que nao se
+    # parece com navegador, e trocar isso no ar nao pode depender de recompilar.
+    $ua = "gctse/1.0"
+    if ((Tem-Propriedade $cfg.tse "user_agent") -and $cfg.tse.user_agent) { $ua = "$($cfg.tse.user_agent)" }
+    $cabecalhos = @{ "User-Agent" = $ua; "Accept" = "application/json,text/plain,*/*" }
     if ($Cache.ContainsKey($Url)) { $cabecalhos["If-None-Match"] = $Cache[$Url] }
     try {
         $resposta = Invoke-WebRequest -Uri $Url -Headers $cabecalhos -TimeoutSec 15 -UseBasicParsing
@@ -886,12 +890,16 @@ if ($Conferir) {
     }
 
     function Sondar-Url {
-        param([string] $Url, [string] $Rotulo)
+        param([string] $Url, [string] $Rotulo, $Cabecalhos = $null)
         Anotar "--- $Rotulo"
         Anotar "    $Url"
         $t0 = Get-Date
         try {
-            $r = Invoke-WebRequest -Uri $Url -TimeoutSec 25 -UseBasicParsing
+            if ($Cabecalhos) {
+                $r = Invoke-WebRequest -Uri $Url -Headers $Cabecalhos -TimeoutSec 25 -UseBasicParsing
+            } else {
+                $r = Invoke-WebRequest -Uri $Url -TimeoutSec 25 -UseBasicParsing
+            }
             $ms = [int] ((Get-Date) - $t0).TotalMilliseconds
             $texto = Ler-Texto-Resposta $r
             Anotar "    RECEBIDO   HTTP $([int] $r.StatusCode)   $($texto.Length) caracteres   $ms ms"
@@ -899,11 +907,33 @@ if ($Conferir) {
         } catch {
             $ms = [int] ((Get-Date) - $t0).TotalMilliseconds
             $cod = "sem resposta do servidor"
+            $corpo = ""
+            $servidor = ""
             if ((Tem-Propriedade $_.Exception "Response") -and $_.Exception.Response) {
                 try { $cod = "HTTP " + [int] $_.Exception.Response.StatusCode } catch { }
+                # Quem respondeu e o que ele disse: um 403 de CDN costuma se
+                # identificar no cabecalho Server e explicar no corpo. E a
+                # diferenca entre "o TSE recusou" e "um intermediario barrou".
+                try { $servidor = $_.Exception.Response.Headers["Server"] } catch { }
+                try {
+                    $fluxo = $_.Exception.Response.GetResponseStream()
+                    $leitor = New-Object IO.StreamReader($fluxo, [Text.Encoding]::UTF8)
+                    $corpo = $leitor.ReadToEnd()
+                    $leitor.Close()
+                } catch { }
+            }
+            if (-not $corpo) {
+                try { $corpo = "$($_.ErrorDetails.Message)" } catch { }
             }
             Anotar "    NAO RECEBIDO   $cod   ($ms ms)"
             Anotar "    motivo: $($_.Exception.Message)"
+            if ($servidor) { Anotar "    quem respondeu (Server): $servidor" }
+            if ($corpo) {
+                $limpo = ($corpo -replace '<[^>]+>', ' ') -replace '\s+', ' '
+                $limpo = $limpo.Trim()
+                if ($limpo.Length -gt 300) { $limpo = $limpo.Substring(0, 300) + "..." }
+                if ($limpo) { Anotar "    o servidor explicou: $limpo" }
+            }
             return $null
         }
     }
@@ -960,12 +990,57 @@ if ($Conferir) {
         }
     }
 
+    # Se todo caminho deu 403 igual e rapido, a hipotese muda: nao e caminho
+    # errado, e o host recusando este cliente. O teste que separa as duas
+    # coisas e repetir com os mesmos cabecalhos que um navegador manda - se
+    # passar, era o cliente; se der 403 de novo, o ambiente esta fechado e a
+    # resposta esta com o TSE, nao aqui.
+    if ($null -eq $eleSim) {
+        Anotar "-----------------------------------------------------------"
+        Anotar "Nenhum caminho passou. Repetindo com cabecalhos de navegador,"
+        Anotar "para saber se o que incomoda e o caminho ou o cliente."
+        Anotar "-----------------------------------------------------------"
+        Anotar ""
+        $cabNavegador = @{
+            "User-Agent" = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36"
+            "Accept" = "application/json,text/plain,*/*"
+            "Accept-Language" = "pt-BR,pt;q=0.9"
+        }
+        $retentar = New-Object System.Collections.ArrayList
+        if ((Tem-Propriedade $cfg.tse "base_url_simulado") -and $cfg.tse.base_url_simulado) {
+            [void] $retentar.Add($cfg.tse.base_url_simulado)
+        }
+        foreach ($c in @("https://resultados-sim.tse.jus.br/simulado",
+                         "https://resultados.tse.jus.br/simulado")) {
+            if (-not $retentar.Contains($c)) { [void] $retentar.Add($c) }
+        }
+        foreach ($cand in $retentar) {
+            $resp = Sondar-Url "$($cand.TrimEnd('/'))/comum/config/ele-c.json" "SIMULADO com cabecalho de navegador" $cabNavegador
+            Anotar ""
+            if ($resp) {
+                $eleSim = $resp
+                $cfgSim = $cand
+                Anotar "    >>> PASSOU COM CABECALHO DE NAVEGADOR."
+                Anotar "    >>> Endereco do simulado: $cand"
+                Anotar "    >>> Ponha no config.json, em tse.base_url_simulado."
+                Anotar "    >>> E ponha tambem tse.user_agent com o valor de navegador."
+                Anotar ""
+                break
+            }
+        }
+    }
+
     $appSim = $null
     if ($null -eq $eleSim) {
         # Nenhum caminho de arquivo respondeu. A pagina do simulado responder
         # separa dois problemas muito diferentes: host bloqueado na rede
         # (nada responde) x caminho dos arquivos diferente do que supus.
-        $appSim = Sondar-Url "https://resultados-sim.tse.jus.br/simulado/app/index.html" "PAGINA do simulado (so para saber se o host responde)"
+        $cabPagina = @{
+            "User-Agent" = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36"
+            "Accept" = "text/html,application/xhtml+xml,*/*"
+            "Accept-Language" = "pt-BR,pt;q=0.9"
+        }
+        $appSim = Sondar-Url "https://resultados-sim.tse.jus.br/simulado/app/index.html" "PAGINA do simulado, como um navegador pediria" $cabPagina
         Anotar ""
     }
 
@@ -983,7 +1058,7 @@ if ($Conferir) {
         Anotar "Como o oficial passa, a REDE ESTA LIBERADA e o programa funciona."
         if ($appSim) {
             Anotar ""
-            Anotar "A pagina do simulado respondeu, mas os arquivos JSON nao estao"
+            Anotar "A pagina do simulado respondeu como navegador, mas os JSON nao estao"
             Anotar "nos caminhos que tentei. Ou seja: o host existe e a rede alcanca,"
             Anotar "so o caminho dos arquivos e outro."
             Anotar ""
@@ -996,8 +1071,23 @@ if ($Conferir) {
             Anotar "  5. clique com o botao direito em uma e escolha Copy > Copy link address"
             Anotar "  6. me envie esse endereco - e o endereco de verdade do simulado"
         } else {
-            Anotar "Nem a pagina do simulado respondeu. Ou o ambiente esta fora da"
-            Anotar "janela de teste, ou o host esta bloqueado so para esta maquina."
+            Anotar "NEM A PAGINA DO SIMULADO RESPONDEU, nem como navegador."
+            Anotar ""
+            Anotar "Isso muda o diagnostico: o host recusa TUDO, inclusive a pagina"
+            Anotar "que uma pessoa abriria no Chrome. Nao e caminho errado nem"
+            Anotar "cabecalho: o ambiente de simulado esta fechado para esta rede."
+            Anotar ""
+            Anotar "O TESTE QUE FECHA A QUESTAO, em 10 segundos:"
+            Anotar "  abra no Chrome desta mesma maquina:"
+            Anotar "  https://resultados-sim.tse.jus.br/simulado/app/index.html"
+            Anotar ""
+            Anotar "  - se o Chrome tambem mostrar 403/Acesso negado, o ambiente"
+            Anotar "    esta fechado e a resposta esta com o TSE. Abra chamado em"
+            Anotar "    https://30308800.tse.jus.br/ com 'Resultados - Divulgacao'"
+            Anotar "    na descricao, pedindo a URL do ambiente de simulado."
+            Anotar "  - se o Chrome ABRIR a pagina normalmente, o bloqueio e so"
+            Anotar "    para programas. Ai aperte F12, aba Network, F5, e me envie"
+            Anotar "    o endereco de qualquer linha que termine em .json."
         }
         Anotar ""
         Anotar "Envie este arquivo para analise."

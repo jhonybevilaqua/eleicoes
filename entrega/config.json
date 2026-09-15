@@ -7,7 +7,8 @@
     "pleito": "000",
     "eleicao": "000",
     "pleito_simulado": "",
-    "eleicao_simulado": ""
+    "eleicao_simulado": "",
+    "user_agent": ""
   },
   "intervalo_segundos": 20,
   "_comentario_limite": "O TSE bloqueia IP que passa do limite por minuto. 304 CONTA como requisicao. O gctse segura a fila sozinho; se estourar, aumente intervalo_segundos ou tire pracas.",
