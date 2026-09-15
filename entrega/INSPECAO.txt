@@ -121,3 +121,66 @@ COMO ESTE LAUDO FOI FEITO
    do candidato.
  - Senador em 2026 tem duas vagas por estado. Alinhar o texto da tarja
    com o Jornalismo antes do ar.
+
+
+===========================================================================
+ REVISAO ADVERSARIAL - 2.2
+ Segunda passada, procurando o que a primeira nao testou
+===========================================================================
+
+ TRES DEFEITOS ENCONTRADOS E CORRIGIDOS
+
+ 1. UMA RESPOSTA RUIM DERRUBAVA O CICLO INTEIRO
+    CDN sob carga responde HTTP 200 com pagina de erro em HTML, e conexao
+    interrompida entrega JSON pela metade. Qualquer uma das duas abortava
+    o ciclo com as 55 pracas juntas - numa noite de apuracao, com o TSE
+    sob carga, e o cenario provavel. Agora custa so a praca que veio
+    errada, e o log diz qual foi e o que chegou no lugar do JSON.
+
+ 2. A APURACAO PODIA ANDAR PARA TRAS NO AR
+    O TSE serve de CDN com varios pontos de presenca, e um deles pode
+    devolver copia velha. A guarda anti-regressao existia no projeto mas
+    nunca tinha sido portada para esta versao: 80% das urnas virava 40% na
+    tela, que parece erro da emissora. Agora o numero que regride e
+    segurado e o ultimo bom permanece. Correcao de verdade nao fica
+    presa: se o valor menor insistir 3 leituras, e aceito.
+
+ 3. CANDIDATO SEM NOME IA VISIVEL PARA A TELA
+    Nome nulo no boletim virava linha em branco no ar - pior que slot
+    escondido, porque ninguem sabe se e defeito ou se e o dado. Agora o
+    slot vem com visivel = 0.
+
+ MAIS DOIS AJUSTES DE OPERACAO
+
+ - UF invalida no arquivo de selecao caia na primeira praca da lista,
+   colocando um estado qualquer no ar sem ninguem pedir. Agora volta ao
+   padrao configurado e avisa no log.
+ - config.json com erro de digitacao mostrava pilha do PowerShell. Agora
+   diz qual e o arquivo e o que costuma ser.
+
+ O QUE FOI TESTADO NESTA PASSADA
+
+   Resposta HTML com HTTP 200 (pagina de erro de CDN)              OK
+   JSON truncado no meio                                           OK
+   Resposta vazia                                                  OK
+   Boletim sem candidato nenhum                                    OK
+   Boletim com um candidato so                                     OK
+   Boletim sem o bloco de cargos                                   OK
+   Campos nulos (nome, numero, votos, percentual)                  OK
+   Empate em votos: ordem estavel, nao pisca entre ciclos          OK
+   0% das urnas e 100% das urnas                                   OK
+   Copia velha do CDN (regressao)                                  OK
+   Arquivo de selecao vazio, com espacos, maiusculo, com lixo      OK
+   Arquivo de selecao ausente                                      OK
+   Pasta com espaco no nome (tipo C:\Program Files)                OK
+   config.json quebrado                                            OK
+   Corrida longa: 5 ciclos, 61 req/min, 6 MB, zero erro, zero .tmp OK
+
+ NOVO: VALIDAR-SIMULADO.bat e VALIDAR-OFICIAL.bat
+
+   Pegam o boletim CRU do TSE e comparam com o arquivo da tarja, numero
+   por numero: praca, % de urnas, nome, partido, percentual e a largura
+   da barra em pixels, com o dado dos dois lados na mesma linha.
+
+   Serve para provar por escrito que o que esta na tela e o que o TSE
+   mandou - em vez de pedir que se confie.

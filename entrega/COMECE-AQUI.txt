@@ -44,6 +44,16 @@
     E por ali que voce escolhe o estado no ar, ve o sino aceso quando
     chega dado novo do TSE, e ve o aviso vermelho se a coleta parar.
 
+ 6. Com o TESTE rodando, duplo clique em VALIDAR-SIMULADO.bat
+
+    Ele pega o boletim CRU do TSE e compara, numero por numero, com o
+    que esta no arquivo da tarja: praca, % de urnas, nome, partido,
+    percentual e a largura da barra em pixels.
+
+    Sai a conferencia lado a lado e o veredito no fim. Grava tudo em
+    VALIDACAO.txt. Na noite da apuracao, o equivalente e o
+    VALIDAR-OFICIAL.bat.
+
 ===========================================================================
  NA NOITE DA APURACAO
 ===========================================================================

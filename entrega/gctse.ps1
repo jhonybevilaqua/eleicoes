@@ -10,6 +10,7 @@
         .\gctse.ps1 -Preencher    enche TARJAS com exemplos, para montar a cena
         .\gctse.ps1 -Descobrir    mostra os codigos do pleito
         .\gctse.ps1 -Conferir     testa a conexao e grava CONFERIR.txt
+        .\gctse.ps1 -Validar      confere numero por numero contra o TSE
         .\gctse.ps1 -Ensaio       dados ficticios, nao consulta o TSE
         .\gctse.ps1 -Teste        aceita o simulado do TSE (fase S)
         .\gctse.ps1               no ar: so boletim oficial
@@ -19,6 +20,7 @@
 param(
     [switch] $Descobrir,
     [switch] $Conferir,
+    [switch] $Validar,
     [switch] $Preencher,
     [switch] $Ensaio,
     [switch] $Teste,
@@ -30,7 +32,7 @@ param(
 # Versao impressa na partida e no painel. Sem carimbo, "qual versao esta
 # rodando ai?" so se responde abrindo arquivo e comparando a olho - e no
 # meio de um teste com janela de horario ninguem faz isso.
-$Versao = "2.1 - 15/09/2026"
+$Versao = "2.2 - 15/09/2026"
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
@@ -168,7 +170,23 @@ if (-not (Test-Path $Config)) {
     Escrever-Log "Arquivo $Config nao encontrado nesta pasta." "ERRO"
     exit 1
 }
-$cfg = Get-Content $Config -Raw -Encoding UTF8 | ConvertFrom-Json
+# Um erro de virgula no config derrubava o programa com pilha do PowerShell
+# na tela - ilegivel para quem so precisa saber qual linha consertar.
+try {
+    $cfg = Get-Content $Config -Raw -Encoding UTF8 | ConvertFrom-Json
+} catch {
+    Escrever-Log "O arquivo $Config esta com erro de digitacao." "ERRO"
+    Write-Host ""
+    Write-Host "  O Windows nao conseguiu ler o config.json. Quase sempre e"
+    Write-Host "  virgula a mais, virgula a menos ou aspas faltando."
+    Write-Host ""
+    Write-Host "  Detalhe tecnico: $($_.Exception.Message)"
+    Write-Host ""
+    Write-Host "  Se nao achar o erro, cole o config.json em jsonlint.com ou"
+    Write-Host "  peca uma copia nova."
+    Write-Host ""
+    exit 1
+}
 $UrlOficial = $cfg.tse.base_url
 
 # O simulado do TSE fica em OUTRO endereco (resultados-sim..., prefixo
@@ -398,8 +416,24 @@ function Obter-Boletim {
         return $null
     }
     try { $Cache[$Url] = $resposta.Headers["ETag"] } catch { }
+    # CDN sob carga responde HTTP 200 com pagina de erro em HTML, e conexao
+    # interrompida entrega JSON pela metade. Sem esta protecao, uma resposta
+    # ruim derrubava o ciclo INTEIRO - as 55 pracas - em vez de custar so a
+    # praca que veio errada. Numa noite de apuracao isso e a diferenca entre
+    # perder um numero e perder a tela.
+    $texto = Ler-Texto-Resposta $resposta
+    try {
+        $objeto = $texto | ConvertFrom-Json
+    } catch {
+        $inicio = ""
+        if ($texto) { $inicio = $texto.Substring(0, [math]::Min(80, $texto.Length)) -replace '\s+', ' ' }
+        Escrever-Log "resposta nao e JSON em $Url : $inicio" "AVISO"
+        # ETag de resposta ruim nao serve: forca releitura no proximo ciclo.
+        if ($Cache.ContainsKey($Url)) { $Cache.Remove($Url) }
+        return $null
+    }
     $script:BoletinsOk = $script:BoletinsOk + 1
-    return ((Ler-Texto-Resposta $resposta) | ConvertFrom-Json)
+    return $objeto
 }
 
 function Obter-Campo {
@@ -572,8 +606,26 @@ function Montar-Tarja {
                 $largura = [int] [math]::Round($trilho * $c.Percentual / 100.0)
                 if ($c.Percentual -gt 0 -and $largura -lt 6) { $largura = 6 }
             }
+            # Candidato sem nome vira linha em branco na tela, que e pior do
+            # que slot escondido: o operador ve um espaco vazio no ar e nao
+            # tem como saber se e defeito ou se e o dado.
+            $nomeCand = Limitar-Texto $c.Nome $LimiteNome
+            if (-not $nomeCand) {
+                $saida[$p + "visivel"] = "0"
+                $saida[$p + "nome"] = ""
+                $saida[$p + "partido"] = ""
+                if ($Tarja.modelo -eq "presidente") {
+                    $saida[$p + "foto"] = ""
+                    $saida[$p + "foto_existe"] = "0"
+                }
+                $saida[$p + "percentual"] = ""
+                $saida[$p + "barra_px"] = 0
+                $saida[$p + "cor"] = ""
+                $saida[$p + "eleito"] = "0"
+                continue
+            }
             $saida[$p + "visivel"] = "1"
-            $saida[$p + "nome"] = Limitar-Texto $c.Nome $LimiteNome
+            $saida[$p + "nome"] = $nomeCand
             $saida[$p + "partido"] = Limitar-Texto $c.Partido $LimitePartido
             if ($Tarja.modelo -eq "presidente") {
                 # O TSE nao manda imagem nos arquivos de resultado: a foto e
@@ -718,6 +770,7 @@ $script:CacheBoletins = @{}    # "uf-cargo" -> ultimo boletim bom
 $script:VistosNesteCiclo = @{}
 $script:Alertas = @{}          # "uf-cargo" -> @{ desde; pct }
 $script:Impressao = @{}        # "uf-cargo" -> impressao do ultimo boletim visto
+$script:RegressaoVista = @{}   # "uf-cargo" -> quantas vezes o numero menor insistiu
 $script:Ciclo = 0
 
 function Ler-Selecao {
@@ -742,6 +795,13 @@ function Ler-Selecao {
         } catch { }
     }
     foreach ($p in $cfg.selecao.pracas) { if ($p.uf -eq $uf) { return $p } }
+    # UF que nao existe na lista: cair na primeira praca poe um estado
+    # qualquer no ar sem ninguem pedir. Melhor voltar ao padrao configurado
+    # e dizer em voz alta que o arquivo de selecao esta com lixo.
+    if ($uf -ne $cfg.selecao.padrao) {
+        Escrever-Log "selecao '$uf' nao existe na lista de pracas: usando o padrao '$($cfg.selecao.padrao)'" "AVISO"
+        foreach ($p in $cfg.selecao.pracas) { if ($p.uf -eq $cfg.selecao.padrao) { return $p } }
+    }
     return $cfg.selecao.pracas[0]
 }
 
@@ -854,6 +914,41 @@ function Buscar-Praca {
         if ($null -ne $bruto) { $b = Normalizar-Boletim $bruto $Nome }
     }
     if ($null -ne $b -and (-not $b.Oficial) -and $Modo -eq "AR") { return $null }
+
+    # ANTI-REGRESSAO. O TSE serve de CDN com varios pontos de presenca, e um
+    # deles pode devolver copia velha. No ar isso aparece como a apuracao
+    # ANDANDO PARA TRAS - 80% virando 40% - que parece erro da emissora e e
+    # editorialmente grave. Seguramos o numero que regride e mantemos o
+    # ultimo bom.
+    # Mas correcao de verdade existe: se o valor menor insistir em aparecer,
+    # nao e copia velha, e o TSE corrigindo. Depois de 3 leituras iguais,
+    # aceitamos - senao a tarja ficaria presa num numero que nao existe mais.
+    if ($null -ne $b -and $script:CacheBoletins.ContainsKey($chave)) {
+        $velho = $script:CacheBoletins[$chave]
+        $votosNovos = 0
+        $votosVelhos = 0
+        foreach ($c in $b.Candidatos) { $votosNovos += $c.Votos }
+        foreach ($c in $velho.Candidatos) { $votosVelhos += $c.Votos }
+        $regrediu = ($b.PctUrnas -lt $velho.PctUrnas - 0.001) -or
+                    ($votosNovos -lt $votosVelhos -and $velho.Candidatos.Count -gt 0)
+        if ($regrediu) {
+            $impressao = Obter-Impressao-Boletim $b
+            if ($script:RegressaoVista.ContainsKey($chave) -and
+                $script:RegressaoVista[$chave].impressao -eq $impressao) {
+                $script:RegressaoVista[$chave].vezes = $script:RegressaoVista[$chave].vezes + 1
+            } else {
+                $script:RegressaoVista[$chave] = @{ impressao = $impressao; vezes = 1 }
+            }
+            $vezes = $script:RegressaoVista[$chave].vezes
+            if ($vezes -lt 3) {
+                Escrever-Log ("$chave regrediu de {0:N2}% para {1:N2}% das urnas: mantendo o ultimo bom ({2}a vez)" -f `
+                    $velho.PctUrnas, $b.PctUrnas, $vezes) "AVISO"
+                return $velho
+            }
+            Escrever-Log ("${chave}: numero menor confirmado {0} vezes, aceitando como correcao do TSE" -f $vezes) "AVISO"
+        }
+        $script:RegressaoVista.Remove($chave)
+    }
     if ($null -ne $b) {
         Marcar-Alerta $Uf $Cargo $b
         $script:CacheBoletins[$chave] = $b
@@ -1024,6 +1119,149 @@ function Executar-Ciclo {
     Escrever-Alertas
     Escrever-Painel $linhas ([int] $cfg.intervalo_segundos) $Modo
     return $linhas
+}
+
+# ---------------------------------------------------------------- validar
+
+if ($Validar) {
+    # Conferencia numero a numero: pega o boletim CRU do TSE e compara com o
+    # que o sistema poe na tarja. Responde "o que esta na tela e o que o TSE
+    # mandou?" por escrito, com o dado dos dois lados na mesma linha, em vez
+    # de exigir que alguem confie.
+    $linhasV = New-Object System.Collections.ArrayList
+    function Diz {
+        param([string] $Texto = "")
+        [void] $linhasV.Add($Texto)
+        Write-Host $Texto
+    }
+    $script:Falhas = 0
+    function Confere {
+        param([string] $Item, $Esperado, $Obtido)
+        $igual = ("$Esperado" -eq "$Obtido")
+        if (-not $igual) { $script:Falhas = $script:Falhas + 1 }
+        $marca = "OK   "
+        if (-not $igual) { $marca = "FALHA" }
+        Diz ("   {0}  {1,-28} TSE: {2,-24} tarja: {3}" -f $marca, $Item, "$Esperado", "$Obtido")
+    }
+
+    if ($Teste) {
+        if ((Tem-Propriedade $cfg.tse "pleito_simulado") -and $cfg.tse.pleito_simulado) {
+            $cfg.tse.pleito = $cfg.tse.pleito_simulado
+        }
+        if ((Tem-Propriedade $cfg.tse "eleicao_simulado") -and $cfg.tse.eleicao_simulado) {
+            $cfg.tse.eleicao = $cfg.tse.eleicao_simulado
+        }
+    }
+
+    Diz "==========================================================="
+    Diz " gctse $Versao - validacao contra o dado cru do TSE"
+    Diz " $(Get-Date -Format 'dd/MM/yyyy HH:mm:ss')   modo: $(if ($Teste) { 'SIMULADO' } else { 'OFICIAL' })"
+    Diz "==========================================================="
+
+    $alvos = @()
+    # A chave 'praca' precisa existir em todos: sob StrictMode, ler chave
+    # ausente de hashtable e erro, nao valor vazio.
+    $alvos += @{ abr = "br"; cargo = 1; rotulo = "PRESIDENTE - BRASIL"
+                 arquivo = "tarja-presidente"; praca = "BRASIL" }
+    if (Tem-Propriedade $cfg "selecao") {
+        foreach ($saida in $cfg.selecao.saidas) {
+            $praca = Ler-Selecao $saida.cargo
+            if ($null -eq $praca) { continue }
+            $alvos += @{ abr = $praca.uf; cargo = [int] $saida.cargo
+                         rotulo = "$(Obter-NomeCargo ([int] $saida.cargo)) - $($praca.nome)"
+                         arquivo = $saida.arquivo; praca = $praca.nome }
+        }
+    }
+
+    foreach ($alvo in $alvos) {
+        Diz ""
+        Diz "-----------------------------------------------------------"
+        Diz $alvo.rotulo
+        $url = Montar-Url $alvo.abr $alvo.cargo
+        Diz "   $url"
+        $bruto = Obter-Boletim $url
+        if ($bruto -eq "SEM-MUDANCA" -or $null -eq $bruto) {
+            Diz "   NAO FOI POSSIVEL LER ESTE BOLETIM AGORA."
+            continue
+        }
+        $nomePraca = $alvo.praca
+        if (-not $nomePraca) { $nomePraca = "BRASIL" }
+        $b = Normalizar-Boletim $bruto $nomePraca
+
+        Diz ""
+        Diz "   O QUE O TSE MANDOU, CRU:"
+        Diz "      fase: $($b.Fase)   gerado: $($b.Geracao)   urnas: $($b.PctUrnas)%"
+        $i = 0
+        foreach ($c in $b.Candidatos) {
+            $i = $i + 1
+            if ($i -gt 4) { break }
+            Diz ("      {0}o {1,-26} {2,-10} {3,12} votos   {4}%" -f $i, $c.Nome, $c.Partido, $c.Votos, $c.Percentual)
+        }
+
+        $caminho = Join-Path $PastaSaida "$($alvo.arquivo).json"
+        if (-not (Test-Path $caminho)) {
+            Diz ""
+            Diz "   O arquivo $($alvo.arquivo).json ainda nao existe. Rode o TESTE/INICIAR antes."
+            continue
+        }
+        $tarja = Get-Content $caminho -Raw -Encoding UTF8 | ConvertFrom-Json
+        Diz ""
+        Diz "   COMPARACAO COM O QUE ESTA NO ARQUIVO DA TARJA:"
+        Confere "praca" $nomePraca $tarja.abrangencia
+        Confere "% de urnas apuradas" (Formatar-Percentual $b.PctUrnas) $tarja.apuracao_pct
+        for ($k = 1; $k -le 2; $k++) {
+            if ($b.Candidatos.Count -ge $k) {
+                $c = $b.Candidatos[$k - 1]
+                Confere "${k}o nome" (Limitar-Texto $c.Nome $LimiteNome) $tarja."cand${k}_nome"
+                Confere "${k}o partido" (Limitar-Texto $c.Partido $LimitePartido) $tarja."cand${k}_partido"
+                Confere "${k}o percentual" (Formatar-Percentual $c.Percentual) $tarja."cand${k}_percentual"
+                Confere "${k}o visivel" "1" $tarja."cand${k}_visivel"
+            } else {
+                Confere "${k}o visivel (sem candidato)" "0" $tarja."cand${k}_visivel"
+            }
+        }
+        # A barra e a conta que mais assusta: aqui ela e refeita a mao.
+        $trilho = 0
+        foreach ($tj in $cfg.tarjas) {
+            if ($tj.arquivo -eq $alvo.arquivo -and (Tem-Propriedade $tj "trilho_px")) {
+                $trilho = [int] $tj.trilho_px
+            }
+        }
+        if (-not $trilho -and (Tem-Propriedade $cfg "selecao")) {
+            foreach ($sd in $cfg.selecao.saidas) {
+                if ($sd.arquivo -eq $alvo.arquivo -and (Tem-Propriedade $sd "trilho_px")) {
+                    $trilho = [int] $sd.trilho_px
+                }
+            }
+        }
+        if ($trilho -gt 0) {
+            for ($k = 1; $k -le 2; $k++) {
+                if ($b.Candidatos.Count -lt $k) { continue }
+                $pc = $b.Candidatos[$k - 1].Percentual
+                $esperada = [int] [math]::Round($trilho * $pc / 100.0)
+                if ($pc -gt 0 -and $esperada -lt 6) { $esperada = 6 }
+                Confere "${k}a barra ($pc% de ${trilho}px)" $esperada $tarja."cand${k}_barra_px"
+            }
+        }
+    }
+
+    Diz ""
+    Diz "==========================================================="
+    if ($script:Falhas -eq 0) {
+        Diz " NENHUMA DIVERGENCIA. O que esta na tarja e o que o TSE mandou."
+    } else {
+        Diz " $($script:Falhas) DIVERGENCIA(S) ACIMA. Envie este arquivo para analise."
+    }
+    Diz " Observacao: se a coleta estiver rodando, um boletim novo pode ter"
+    Diz " chegado entre a leitura desta conferencia e a gravacao da tarja."
+    Diz " Nesse caso, rode de novo: divergencia de verdade se repete."
+    Diz "==========================================================="
+
+    $utf8v = New-Object System.Text.UTF8Encoding($true)
+    [IO.File]::WriteAllText((Join-Path (Get-Location) "VALIDACAO.txt"), ($linhasV -join "`r`n"), $utf8v)
+    Write-Host ""
+    Write-Host "  Gravado em VALIDACAO.txt, nesta mesma pasta." -ForegroundColor Green
+    exit 0
 }
 
 # ---------------------------------------------------------------- conferir
