@@ -30,7 +30,7 @@ param(
 # Versao impressa na partida e no painel. Sem carimbo, "qual versao esta
 # rodando ai?" so se responde abrindo arquivo e comparando a olho - e no
 # meio de um teste com janela de horario ninguem faz isso.
-$Versao = "1.9 - 15/09/2026"
+$Versao = "2.0 - 15/09/2026"
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
@@ -214,7 +214,7 @@ function Obter-Cor {
 # Caminho de 2026, confirmado pelas URLs do simulado: o diretorio e o
 # codigo da ELEICAO e a pasta e "dados". Em 2022 era o codigo do pleito e
 # "dados-simplificados" - por isso o caminho vive no config, nao aqui.
-$PadraoUrlPadrao = "{base}/{ciclo}/{eleicao}/dados/{dir}/{abr}-c{cargo4}-e{eleicao6}-r.json"
+$PadraoUrlPadrao = "{base}/{ciclo}/{eleicao}/dados/{dir}/{abr}-c{cargo4}-e{eleicao6}-u.json"
 
 function Obter-Eleicao {
     # Presidente e Governador/Senador NAO ficam na mesma eleicao. O TSE
@@ -379,6 +379,26 @@ function Obter-Campo {
     return $Padrao
 }
 
+function Montar-Candidato {
+    param($C, [string] $Sigla, [int] $Validos)
+    $votos = Converter-Inteiro (Obter-Campo $C @("vap", "votos"))
+    $perc = Converter-Decimal (Obter-Campo $C @("pvap"))
+    if ($perc -eq 0 -and $Validos -gt 0) { $perc = [math]::Round(100.0 * $votos / $Validos, 2) }
+    $eleito = "0"
+    if ("$(Obter-Campo $C @('e'))".ToLower() -eq "s") { $eleito = "1" }
+    if ("$(Obter-Campo $C @('st'))" -match "^Eleito") { $eleito = "1" }
+    $partido = $Sigla
+    if (-not $partido) { $partido = "$(Obter-Campo $C @('cc','sgp') '')" }
+    return [pscustomobject]@{
+        Numero     = "$(Obter-Campo $C @('n') '')"
+        Nome       = "$(Obter-Campo $C @('nmu','nm','nmurna') '')"
+        Partido    = "$partido"
+        Votos      = $votos
+        Percentual = $perc
+        Eleito     = $eleito
+    }
+}
+
 function Normalizar-Boletim {
     # JSON do TSE -> objeto simples, com o que as tarjas usam.
     param($Bruto, [string] $Praca)
@@ -386,23 +406,36 @@ function Normalizar-Boletim {
     $secoes = Obter-Campo $Bruto @("s")
     $pct = Converter-Decimal (Obter-Campo $secoes @("pst") (Obter-Campo $Bruto @("pst")))
     $validos = Converter-Inteiro (Obter-Campo $Bruto @("vv", "vvc"))
+    if ($validos -eq 0) {
+        # No formato de 2026 os votos validos ficam no bloco "v" (votacao).
+        $votacao = Obter-Campo $Bruto @("v")
+        $validos = Converter-Inteiro (Obter-Campo $votacao @("vv", "tvv", "vnom"))
+    }
+
+    # Em 2022 os candidatos vinham numa lista rasa no topo ("cand"). Em 2026
+    # vem aninhados: carg[] -> agr[] -> par[] -> cand[], e a SIGLA DO PARTIDO
+    # nao esta no candidato, esta no nivel do partido que o contem. Por isso
+    # o achatamento precisa carregar a sigla para baixo em vez de so juntar
+    # as listas.
+    $candidatos = @()
 
     $lista = Obter-Campo $Bruto @("cand", "candidatos")
-    $candidatos = @()
     if ($lista) {
         foreach ($c in $lista) {
-            $votos = Converter-Inteiro (Obter-Campo $c @("vap", "votos"))
-            $perc = Converter-Decimal (Obter-Campo $c @("pvap"))
-            if ($perc -eq 0 -and $validos -gt 0) { $perc = [math]::Round(100.0 * $votos / $validos, 2) }
-            $eleito = "0"
-            if ("$(Obter-Campo $c @('e'))".ToLower() -eq "s") { $eleito = "1" }
-            $candidatos += [pscustomobject]@{
-                Numero     = "$(Obter-Campo $c @('n') '')"
-                Nome       = "$(Obter-Campo $c @('nm','nmurna') '')"
-                Partido    = "$(Obter-Campo $c @('cc') '')"
-                Votos      = $votos
-                Percentual = $perc
-                Eleito     = $eleito
+            $candidatos += Montar-Candidato $c "$(Obter-Campo $c @('cc') '')" $validos
+        }
+    } elseif (Tem-Propriedade $Bruto "carg") {
+        foreach ($cargo in $Bruto.carg) {
+            if (-not (Tem-Propriedade $cargo "agr")) { continue }
+            foreach ($agr in $cargo.agr) {
+                if (-not (Tem-Propriedade $agr "par")) { continue }
+                foreach ($par in $agr.par) {
+                    $sigla = "$(Obter-Campo $par @('sg','nm') '')"
+                    if (-not (Tem-Propriedade $par "cand")) { continue }
+                    foreach ($c in $par.cand) {
+                        $candidatos += Montar-Candidato $c $sigla $validos
+                    }
+                }
             }
         }
     }
@@ -1399,6 +1432,7 @@ if ($Conferir) {
             [void] $moldes.Add("$($cfg.tse.padrao_url)")
         }
         foreach ($m in @(
+            "{base}/{ciclo}/{eleicao}/dados/{dir}/{abr}-c{cargo4}-e{eleicao6}-u.json",
             "{base}/{ciclo}/{eleicao}/dados/{dir}/{abr}-c{cargo4}-e{eleicao6}-r.json",
             "{base}/{ciclo}/{eleicao}/dados-simplificados/{dir}/{abr}-c{cargo4}-e{eleicao6}-r.json",
             "{base}/{ciclo}/{eleicao}/dados/{dir}/{abr}-e{eleicao6}-ab.json",
@@ -1430,6 +1464,10 @@ if ($Conferir) {
                 try {
                     $j = $sondagem | ConvertFrom-Json
                     if ((Tem-Propriedade $j "cand") -and $j.cand -and $j.cand.Count -gt 0) { $temCand = $true }
+                    # 2026 aninha os candidatos dentro de carg/agr/par - o
+                    # teste raso dizia "sem candidatos" para o arquivo certo.
+                    $b = Normalizar-Boletim $j "teste"
+                    if ($b.Candidatos.Count -gt 0) { $temCand = $true }
                 } catch { }
                 if ($temCand) {
                     Anotar "    >>> TEM CANDIDATOS. Este e o molde certo."

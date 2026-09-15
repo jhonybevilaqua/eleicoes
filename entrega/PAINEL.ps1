@@ -30,7 +30,7 @@ if (-not (Test-Path $Config)) {
     exit 1
 }
 $cfg = Get-Content $Config -Raw -Encoding UTF8 | ConvertFrom-Json
-$Versao = "1.9 - 15/09/2026"
+$Versao = "2.0 - 15/09/2026"
 $PastaSaida = $cfg.pasta_saida
 $ArquivoSelecao = $cfg.selecao.arquivo_selecao
 $ArquivoSelecaoSenador = $null

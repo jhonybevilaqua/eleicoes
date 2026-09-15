@@ -15,7 +15,7 @@
       "5": "21272"
     },
     "user_agent": "",
-    "padrao_url": "{base}/{ciclo}/{eleicao}/dados/{dir}/{abr}-c{cargo4}-e{eleicao6}-r.json"
+    "padrao_url": "{base}/{ciclo}/{eleicao}/dados/{dir}/{abr}-c{cargo4}-e{eleicao6}-u.json"
   },
   "intervalo_segundos": 20,
   "_comentario_limite": "O TSE bloqueia IP que passa do limite por minuto. 304 CONTA como requisicao. O gctse segura a fila sozinho; se estourar, aumente intervalo_segundos ou tire pracas.",
