@@ -88,6 +88,11 @@
  SE ALGO DER ERRADO
 ===========================================================================
 
+ Se o CONFERIR acusar 403 (Proibido) e disser que PASSOU COM CABECALHO DE
+ NAVEGADOR, preencha "user_agent" no config.json, dentro de "tse", com o
+ valor que ele indicou. Alguns servidores de governo recusam programa que
+ nao se identifica como navegador - isso se resolve nessa linha.
+
  Rode CONFERIR.bat e me envie o CONFERIR.txt. Ele diz, por escrito, se o
  problema e rede, codigo errado no config.json ou mudanca de formato do
  TSE - e ja traz a versao do Windows e do PowerShell da maquina.
