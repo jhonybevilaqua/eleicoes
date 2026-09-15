@@ -19,14 +19,19 @@
 
     Sem isso nada funciona, e nao adianta mexer no programa.
 
- 3. Abra config.json no Bloco de Notas e preencha os codigos do TSE.
+ 3. Confira a ETAPA 3 do CONFERIR.txt.
 
-    Os codigos aparecem na ETAPA 2 do CONFERIR.txt.
+    Os codigos do SIMULADO ja vem preenchidos no config.json, conforme o
+    TSE publicou: pleito 17801, eleicao 21270 (Presidente) e 21272
+    (Governador e Senador).
 
-        "pleito"  e  "eleicao"             <- do ambiente OFICIAL
-        "pleito_simulado" e "eleicao_simulado"  <- do SIMULADO
+    Se a ETAPA 3 trouxer boletim de presidente, governador e senador, nao
+    ha nada a ajustar. Se disser que nenhum molde funcionou, envie o
+    CONFERIR.txt para analise.
 
-    Na duvida, me envie o CONFERIR.txt que eu devolvo preenchido.
+    Os codigos do OFICIAL ("pleito" e "eleicao") continuam zerados: o TSE
+    so publica os da eleicao geral perto de outubro. Ate la o INICIAR.bat
+    recusa a partida e explica o motivo.
 
  4. Duplo clique em TESTE.bat   e deixe a janela ABERTA.
 
@@ -49,19 +54,22 @@
  recusa e proposital: e o que impede numero de teste de ir ao ar.
 
 ===========================================================================
- OS OUTROS BOTOES
+ O QUE MAIS TEM NA PASTA
 ===========================================================================
 
- ENSAIO.bat             apuracao ficticia de 0 a 100% em 10 minutos, sem
-                        internet. Para treinar a equipe sem depender do TSE.
-
- PREENCHER-EXEMPLOS.bat repoe os dados de exemplo na pasta TARJAS.
-
- DESCOBRIR.bat          codigos do ambiente oficial.
- DESCOBRIR-SIMULADO.bat codigos do ambiente de simulado.
-
  SELECIONAR-ESTADO\     27 atalhos, um por estado, caso prefira trocar a
-                        praca sem abrir o painel.
+                        praca sem abrir o painel. A tarja acompanha em
+                        menos de 1 segundo, mesmo no meio de uma varredura.
+
+ FOTOS\                 as fotos de presidente, nomeadas pelo numero do
+                        candidato. Leia o LEIA-ME-FOTOS.txt.
+
+ TARJAS\                o que o Castalia le. Ja vem com a estrutura
+                        completa e VAZIA: todos os campos existem, com
+                        visivel = 0. Da para montar e vincular a cena
+                        antes de existir dado, e nada falso pode ir ao ar.
+
+ logs\                  historico por dia, gravado sozinho.
 
 ===========================================================================
  O QUE O CASTALIA LE

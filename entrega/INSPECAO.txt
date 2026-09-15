@@ -1,0 +1,123 @@
+===========================================================================
+ LAUDO DE INSPECAO - gctse 2.1
+ 15/09/2026, na vespera do simulado do TSE
+===========================================================================
+
+COMO ESTE LAUDO FOI FEITO
+
+ Foi montado um servidor reproduzindo a arvore de arquivos que o TSE
+ publicou nas instrucoes do simulado, com as sete URLs de exemplo, as 27
+ UFs e o formato JSON aninhado de 2026. O sistema foi rodado contra ele.
+
+ Isto NAO substitui o teste no ambiente do TSE. Prova que o sistema le o
+ formato e a estrutura corretos; nao prova latencia, volume nem
+ comportamento do TSE sob carga.
+
+---------------------------------------------------------------------------
+ 1. CONFERENCIA CONTRA AS INSTRUCOES DO TSE
+---------------------------------------------------------------------------
+
+ TSE publicou                        config.json                    bate?
+ ---------------------------------   ---------------------------    -----
+ url .../simulado                    base_url_simulado               sim
+ ambiente simulado2026               (no fim da base_url_simulado)   sim
+ pleito 17801                        pleito_simulado                 sim
+ 21270 Federal (Presidente)          eleicao_por_cargo "1"           sim
+ 21272 Estadual (Gov e Senador)      eleicao_por_cargo "3" e "5"     sim
+ ciclo ele2026                       ciclo                           sim
+
+ URLs montadas pelo sistema, conferidas uma a uma contra os exemplos
+ oficiais:
+
+   Presidente (Brasil)
+   .../simulado2026/ele2026/21270/dados/br/br-c0001-e021270-u.json   igual
+   Governador (AC)
+   .../simulado2026/ele2026/21272/dados/ac/ac-c0003-e021272-u.json   igual
+   Senador (AC)
+   .../simulado2026/ele2026/21272/dados/ac/ac-c0005-e021272-u.json   igual
+   Configuracao das eleicoes
+   .../simulado2026/comum/config/ele-c.json                          igual
+
+---------------------------------------------------------------------------
+ 2. O QUE FOI VERIFICADO, E O RESULTADO
+---------------------------------------------------------------------------
+
+ LEITURA DO FORMATO DE 2026
+   Candidatos aninhados carg/agr/par/cand, achatados corretamente    OK
+   Sigla do partido puxada do nivel do partido                       OK
+   Acentuacao (UNIAO, PARANA, SAO PAULO, JOAO)                       OK
+   Entidade HTML do TSE decodificada                                 OK
+   Nome hostil do TSE, com aspas e simbolos, cortado sem quebrar     OK
+
+ GEOMETRIA FIXA (o vinculo do Castalia nunca quebra)
+   tarja-presidente: 23 campos, sempre os mesmos                     OK
+   tarja-governador e tarja-senador: 19 campos, sempre os mesmos     OK
+   Slot sem candidato vem com visivel = 0, e nao sumido              OK
+
+ NUMEROS
+   Ordem por votos, do maior para o menor                            OK
+   Barra proporcional: 48,10% -> 269px num trilho de 560             OK
+   Barra do presidente: 37,52% -> 113px num trilho de 300            OK
+   As 27 pracas nas tres listas                                      OK
+
+ SEGURANCA NO AR
+   INICIAR recusa boletim de simulado (fase S) e nao publica         OK
+   INICIAR recusa a partida sem os codigos, em vez de martelar 404    OK
+   Escrita atomica: nenhum .tmp sobrando, arquivo nunca pela metade  OK
+   JSON de saida valido e sem BOM, em todos os arquivos              OK
+   Coletor morto: o GC segue com o ultimo dado bom, congelado        OK
+   Painel acusa A COLETA PAROU depois de 75s sem ciclo               OK
+
+ OPERACAO
+   Limite de requisicoes: pico de 61/min, limite do TSE e 100        OK
+   Nenhum estrangulamento do limitador no intervalo de producao      OK
+   Troca de praca acompanha em 877ms, mesmo no meio da varredura     OK
+   Governador e senador em pracas diferentes ao mesmo tempo          OK
+   Alerta acende na praca certa quando o numero muda de verdade      OK
+   Placar conta as mudancas reais                                    OK
+   Painel web servindo e refletindo tudo                             OK
+
+---------------------------------------------------------------------------
+ 3. DOIS DEFEITOS ENCONTRADOS NESTA INSPECAO, E CORRIGIDOS
+---------------------------------------------------------------------------
+
+ TROCA DE PRACA PRESA ATE O FIM DO CICLO
+   A varredura das 27 pracas leva varios segundos, e a selecao so era
+   lida entre ciclos. Escolher um estado no meio de uma varredura
+   deixava o estado errado no ar ate a varredura acabar - as vezes sem
+   acompanhar nunca, quando o limitador segurava a coleta.
+   Agora a selecao e atendida tambem durante o ciclo. Medido: 877ms.
+
+ REGULAGEM RUIM NAO APARECIA
+   Intervalo curto demais para 27 pracas faz o limitador estrangular a
+   coleta: as varreduras ficam raras e os alertas atrasam. Nao havia
+   nada na tela dizendo isso. Agora a partida avisa e sugere o valor.
+
+---------------------------------------------------------------------------
+ 4. O QUE ESTE LAUDO NAO GARANTE
+---------------------------------------------------------------------------
+
+ - O sistema nunca rodou contra o TSE de verdade entregando boletim. O
+   caminho dos arquivos foi confirmado pelas instrucoes do TSE e pelo
+   diagnostico na maquina do GC, mas o conteudo real so aparece no teste.
+
+ - Os codigos OFICIAIS de outubro ainda nao existem. Serao diferentes dos
+   do simulado. Por isso os campos sao separados no config.json.
+
+ - Uma maquina so e um ponto unico de falha. Entrada manual no GC precisa
+   continuar sendo o plano B da cobertura.
+
+ - O simulado do TSE tem janela de horario. Fora dela, nao ha o que ler.
+
+---------------------------------------------------------------------------
+ 5. PENDENCIAS DE OPERACAO, NAO DE PROGRAMA
+---------------------------------------------------------------------------
+
+ - Medir o limite de nome contra a tarja real e ajustar limite_nome. Os
+   nomes de teste do TSE sao propositalmente longos e com simbolos: e um
+   bom pior caso para conferir na tela.
+ - Conferir o trilho_px contra a largura real da barra no Castalia.
+ - Fotos de presidente: arquivos PNG na pasta FOTOS, nomeados pelo numero
+   do candidato.
+ - Senador em 2026 tem duas vagas por estado. Alinhar o texto da tarja
+   com o Jornalismo antes do ar.

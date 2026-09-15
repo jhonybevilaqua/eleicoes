@@ -65,19 +65,3 @@ O CAMPO A VINCULAR NO CASTALIA
      cand1_foto_existe  1 se o arquivo existe, 0 se nao
 
  Vincule a IMAGEM ao campo cand1_foto (e cand2_foto para o segundo).
-
-
----------------------------------------------------------------------------
- AS FOTOS DE EXEMPLO (11, 22, 33 e 44)
----------------------------------------------------------------------------
-
- Os arquivos 11.png, 22.png, 33.png e 44.png sao silhuetas coloridas, uma
- por candidato do ENSAIO. Servem para voce testar o vinculo da IMAGEM no
- Castalia AGORA, sem esperar as fotos reais: rode o ENSAIO.bat e veja a
- foto trocar de lugar sozinha quando a ordem dos candidatos virar.
-
- Cada uma tem cor e numero de faixas diferentes no rodape, justamente
- para dar para ver a troca a olho nu.
-
- APAGUE as quatro antes da apuracao de verdade, e ponha as fotos reais
- nomeadas pelo numero de cada candidato.

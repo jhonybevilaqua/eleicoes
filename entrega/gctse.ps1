@@ -30,7 +30,7 @@ param(
 # Versao impressa na partida e no painel. Sem carimbo, "qual versao esta
 # rodando ai?" so se responde abrindo arquivo e comparando a olho - e no
 # meio de um teste com janela de horario ninguem faz isso.
-$Versao = "2.0 - 15/09/2026"
+$Versao = "2.1 - 15/09/2026"
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
@@ -268,8 +268,30 @@ $Cache = @{}    # url -> ETag, para nao rebaixar a origem do TSE
 $script:Requisicoes = New-Object System.Collections.ArrayList
 $script:MudancasTotal = 0
 $script:BoletinsOk = 0
+$script:UltimaSelecao = $null
+$script:DesdeUltimaOlhada = 0
 $script:UltimaMudanca = $null
 $script:TotalRequisicoes = 0
+
+function Atender-Troca-De-Praca {
+    # A troca de praca nao pode esperar o ciclo terminar. Uma varredura das
+    # 27 pracas leva varios segundos, e se o operador escolhe um estado no
+    # meio dela, a tarja so acompanharia depois - tempo demais com o estado
+    # errado no ar. Esta funcao so le cache e grava arquivo, nao faz
+    # requisicao nenhuma, entao pode ser chamada de dentro do ciclo.
+    if (-not (Tem-Propriedade $cfg "selecao")) { return $false }
+    $agora = (($cfg.selecao.saidas | ForEach-Object { (Ler-Selecao $_.cargo).uf }) -join ",")
+    if ($agora -eq $script:UltimaSelecao) { return $false }
+    $script:UltimaSelecao = $agora
+    $null = Publicar-Selecionada $script:CacheBoletins
+    foreach ($saida in $cfg.selecao.saidas) {
+        $praca = Ler-Selecao $saida.cargo
+        if ($null -ne $praca) { Limpar-Alerta $praca.uf $saida.cargo }
+    }
+    Escrever-Alertas
+    Escrever-Log "selecao trocada: $agora" "OK"
+    return $true
+}
 
 function Aguardar-Vez {
     # O TSE bloqueia IP que passa do limite de requisicoes por minuto, e uma
@@ -290,7 +312,14 @@ function Aguardar-Vez {
         $esperar = 60 - ($agora - $script:Requisicoes[0]).TotalSeconds
         if ($esperar -gt 0) {
             Escrever-Log ("limite de {0} req/min atingido: aguardando {1:N1}s" -f $limite, $esperar) "AVISO"
-            Start-Sleep -Milliseconds ([int] ($esperar * 1000) + 200)
+            # Espera vigiando a selecao: e justamente aqui que o coletor passa
+            # mais tempo parado, e seria o pior momento para ignorar o operador.
+            $restante = [int] [math]::Ceiling($esperar)
+            for ($e = 0; $e -lt $restante; $e++) {
+                Start-Sleep -Milliseconds 1000
+                $null = Atender-Troca-De-Praca
+            }
+            Start-Sleep -Milliseconds 200
         }
     }
     $null = $script:Requisicoes.Add((Get-Date))
@@ -299,6 +328,13 @@ function Aguardar-Vez {
     $gap = 120
     if (Tem-Propriedade $cfg "intervalo_minimo_ms") { $gap = [int] $cfg.intervalo_minimo_ms }
     if ($gap -gt 0) { Start-Sleep -Milliseconds $gap }
+    # A cada requisicao, um olhar na selecao: numa varredura de 55 leituras
+    # isso da ao operador resposta em fracao de segundo em vez de ciclo.
+    $script:DesdeUltimaOlhada = $script:DesdeUltimaOlhada + 1
+    if ($script:DesdeUltimaOlhada -ge 5) {
+        $script:DesdeUltimaOlhada = 0
+        $null = Atender-Troca-De-Praca
+    }
 }
 
 function Contar-Requisicoes-Por-Ciclo {
@@ -1630,6 +1666,18 @@ if ($Modo -ne "ENSAIO") { Escrever-Log "caminho: $(Montar-Url 'br' 1)" }
 if (-not $Ensaio) {
     Escrever-Log "$noAr req por ciclo comum, $naVarredura na varredura (1 a cada $ciclosVar)"
     Escrever-Log "media de $porMinuto requisicoes por minuto (limite $limiteReq)"
+    # Projecao acima do limite significa que o limitador vai estrangular a
+    # coleta: as varreduras ficam raras e os alertas chegam atrasados. E
+    # regulagem de config, nao defeito - mas precisa aparecer na partida.
+    if ($porMinuto -gt $limiteReq) {
+        Escrever-Log "o intervalo de ${intervalo}s pede mais requisicoes do que o limite permite." "AVISO"
+        $sugerido = [int] [math]::Ceiling($intervalo * $porMinuto / [double] $limiteReq)
+        Write-Host ""
+        Write-Host "  A coleta vai ser freada pelo limitador e as varreduras ficarao raras."
+        Write-Host "  Aumente 'intervalo_segundos' no config.json para ${sugerido} ou mais,"
+        Write-Host "  ou aumente 'ciclos_varredura'."
+        Write-Host ""
+    }
     if ($porMinuto -gt $limiteReq) {
         $minimo = [math]::Ceiling(
             (60.0 / ($ciclosVar * $limiteReq)) * ((($ciclosVar - 1) * $noAr) + $naVarredura))
@@ -1639,6 +1687,12 @@ if (-not $Ensaio) {
 }
 if ($Modo -ne "AR") {
     Escrever-Log "dados NAO OFICIAIS neste modo. Nao use no ar." "AVISO"
+}
+
+# Fotografa a selecao antes do primeiro ciclo: sem isto, a primeira olhada
+# leria "mudou" e publicaria tarja vazia por cima do que estiver na pasta.
+if (Tem-Propriedade $cfg "selecao") {
+    $script:UltimaSelecao = (($cfg.selecao.saidas | ForEach-Object { (Ler-Selecao $_.cargo).uf }) -join ",")
 }
 
 do {
@@ -1690,23 +1744,8 @@ do {
     # estado, a tarja acompanha em ~1s em vez de esperar o ciclo inteiro.
     $gasto = ((Get-Date) - $inicio).TotalSeconds
     $espera = [math]::Max(1, [int] $cfg.intervalo_segundos - $gasto)
-    $ultima = ""
-    if (Tem-Propriedade $cfg "selecao") {
-        $ultima = (($cfg.selecao.saidas | ForEach-Object { (Ler-Selecao $_.cargo).uf }) -join ",")
-    }
     for ($s = 0; $s -lt $espera; $s++) {
         Start-Sleep -Seconds 1
-        if (-not (Tem-Propriedade $cfg "selecao")) { continue }
-        $agora = (($cfg.selecao.saidas | ForEach-Object { (Ler-Selecao $_.cargo).uf }) -join ",")
-        if ($agora -ne $ultima) {
-            $ultima = $agora
-            $null = Publicar-Selecionada $script:CacheBoletins
-            foreach ($saida in $cfg.selecao.saidas) {
-                $praca = Ler-Selecao $saida.cargo
-                if ($null -ne $praca) { Limpar-Alerta $praca.uf $saida.cargo }
-            }
-            Escrever-Alertas
-            Escrever-Log "selecao trocada: $agora" "OK"
-        }
+        $null = Atender-Troca-De-Praca
     }
 } while ($true)
