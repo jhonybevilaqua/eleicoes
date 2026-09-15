@@ -62,6 +62,25 @@
    painel: trazem tudo, sempre.
 
 ---------------------------------------------------------------------------
+ A FOTO DO PRESIDENTE
+---------------------------------------------------------------------------
+
+ O TSE nao manda imagem. A foto e arquivo seu, em FOTOS\, nomeada pelo
+ NUMERO do candidato na urna: 13.png, 22.png, 60.png.
+
+ Nomear pelo numero e o que faz a foto acompanhar a troca de ordem
+ sozinha. Se nomeasse por colocacao, a foto ficaria trocada no ar assim
+ que alguem ultrapassasse.
+
+ Dois jeitos de vincular no gerador - o LEIA-ME-FOTOS.txt explica os dois:
+
+   A) vincular a imagem ao campo cand1_foto (caminho muda junto)
+   B) apontar para TARJAS\foto-cand1.png, que o gctse reescreve
+
+ Teste qual o seu gerador aceita ANTES do ar, forcando uma troca de
+ lideranca e vendo se a imagem troca na tela.
+
+---------------------------------------------------------------------------
  TRES JEITOS DE TROCAR A PRACA - todos fazem a mesma coisa
 ---------------------------------------------------------------------------
 

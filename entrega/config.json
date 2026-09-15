@@ -39,6 +39,7 @@
     "padrao_foto": "fotos/{numero}.png",
     "pasta_fotos": "FOTOS",
     "foto_reserva": "sem-foto.png",
+    "foto_nome_fixo": true,
     "cor_padrao": "#6b86ab",
     "cores_partido": {}
   },

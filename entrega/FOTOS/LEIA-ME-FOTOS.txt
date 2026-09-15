@@ -58,10 +58,52 @@ QUANDO FALTA A FOTO
  do grupo da foto a esse campo.
 
 
-O CAMPO A VINCULAR NO CASTALIA
+COMO VINCULAR A IMAGEM - DOIS CAMINHOS
+=======================================
 
-     cand1_foto         caminho completo do arquivo, ex.:
-                        C:\GCTSE\FOTOS\13.png
-     cand1_foto_existe  1 se o arquivo existe, 0 se nao
+ O problema a resolver e a TROCA DE ORDEM: se alguem ultrapassar durante a
+ apuracao, a foto tem que trocar de lugar junto com o nome. Os dois
+ caminhos abaixo resolvem isso. Teste qual o seu gerador aceita.
 
- Vincule a IMAGEM ao campo cand1_foto (e cand2_foto para o segundo).
+
+ CAMINHO A - o caminho da imagem vem do banco  (prefira este)
+ ------------------------------------------------------------
+ Vincule a ORIGEM da imagem ao campo:
+
+     cand1_foto    C:\GCTSE\FOTOS\82.png
+     cand2_foto    C:\GCTSE\FOTOS\60.png
+
+ Quando a ordem vira, o caminho muda sozinho e a imagem acompanha. Como o
+ caminho muda, o gerador sempre recarrega - nao ha risco de cache.
+
+ So funciona se o seu gerador aceitar vincular o caminho de uma imagem a
+ um campo de dados. Nem todos aceitam.
+
+
+ CAMINHO B - o caminho e fixo e o arquivo e trocado
+ ---------------------------------------------------
+ Se o gerador so aceita caminho fixo na cena, aponte para:
+
+     TARJAS\foto-cand1.png    sempre a foto de quem esta em 1o
+     TARJAS\foto-cand2.png    sempre a foto de quem esta em 2o
+
+ O gctse copia a foto certa para esses nomes a cada mudanca de ordem. O
+ caminho nunca muda; o conteudo do arquivo e que muda.
+
+ ATENCAO: alguns geradores guardam a imagem em cache quando o caminho nao
+ muda, e continuam exibindo a foto antiga. TESTE ISSO ANTES DO AR: rode o
+ sistema, force uma troca de lideranca e veja se a imagem troca na tela.
+ Se nao trocar, use o CAMINHO A.
+
+ A copia so acontece quando a foto muda, e e feita com arquivo temporario
+ e renomeacao - o gerador nunca pega imagem pela metade.
+
+ Para desligar a copia, ponha "foto_nome_fixo": false no config.json.
+
+
+ E O SEGUNDO CAMPO, SEMPRE
+ --------------------------
+     cand1_foto_existe   1 se a foto existe, 0 se nao
+
+ Vincule a VISIBILIDADE do grupo da foto a esse campo se preferir esconder
+ a moldura em vez de mostrar a silhueta do sem-foto.png.

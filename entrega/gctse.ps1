@@ -32,7 +32,7 @@ param(
 # Versao impressa na partida e no painel. Sem carimbo, "qual versao esta
 # rodando ai?" so se responde abrindo arquivo e comparando a olho - e no
 # meio de um teste com janela de horario ninguem faz isso.
-$Versao = "2.3 - 15/09/2026"
+$Versao = "2.4 - 15/09/2026"
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
@@ -218,6 +218,8 @@ if ($PastaFotos -and -not [IO.Path]::IsPathRooted($PastaFotos)) {
 }
 $FotoReserva = ""
 if (Tem-Propriedade $cfg.texto "foto_reserva") { $FotoReserva = "$($cfg.texto.foto_reserva)" }
+$FotoNomeFixo = $false
+if (Tem-Propriedade $cfg.texto "foto_nome_fixo") { $FotoNomeFixo = [bool] $cfg.texto.foto_nome_fixo }
 $CorPadrao = $cfg.texto.cor_padrao
 
 function Obter-Cor {
@@ -567,6 +569,36 @@ function Gerar-Simulado {
 
 # --------------------------------------------------------------- montar tarja
 
+$script:FotosFixas = @{}   # destino -> origem ja copiada
+
+function Copiar-Foto-Para-Nome-Fixo {
+    # Nem todo gerador de caracteres aceita vincular o CAMINHO de uma imagem
+    # a um campo do banco. Quando nao aceita, a saida e o contrario: o
+    # caminho fica FIXO na cena e quem troca e o arquivo. O coletor copia a
+    # foto do candidato que esta em 1o para TARJAS\foto-cand1.png, e a cena
+    # aponta para esse nome que nunca muda.
+    # Copia so quando a origem muda, para nao reescrever imagem a cada ciclo
+    # enquanto o GC pode estar lendo.
+    param([string] $Origem, [string] $Destino)
+    if (-not $Origem) { return }
+    try {
+        if ($script:FotosFixas.ContainsKey($Destino) -and $script:FotosFixas[$Destino] -eq $Origem) { return }
+        if (-not (Test-Path $Origem)) { return }
+        # No primeiro ciclo a pasta de saida ainda nao existe: a montagem da
+        # tarja acontece antes da primeira gravacao que a criaria.
+        $pastaDestino = Split-Path -Parent $Destino
+        if ($pastaDestino -and -not (Test-Path $pastaDestino)) {
+            New-Item -ItemType Directory -Path $pastaDestino -Force | Out-Null
+        }
+        $temporario = "$Destino.tmp"
+        Copy-Item -Path $Origem -Destination $temporario -Force
+        Move-Item -Path $temporario -Destination $Destino -Force
+        $script:FotosFixas[$Destino] = $Origem
+    } catch {
+        Escrever-Log "nao consegui copiar a foto $Origem : $($_.Exception.Message)" "AVISO"
+    }
+}
+
 function Montar-Tarja {
     param($Boletim, $Tarja)
 
@@ -595,6 +627,16 @@ function Montar-Tarja {
             if ($Tarja.modelo -eq "presidente") {
                 $saida[$p + "foto"] = ""
                 $saida[$p + "foto_existe"] = "0"
+                if ($FotoNomeFixo) {
+                    $fixo = Join-Path $PastaSaida ("foto-cand{0}.png" -f $i)
+                    $reservaVazia = ""
+                    if ($FotoReserva) {
+                        $reservaVazia = $FotoReserva
+                        if ($PastaFotos) { $reservaVazia = Join-Path $PastaFotos (Split-Path -Leaf $FotoReserva) }
+                    }
+                    Copiar-Foto-Para-Nome-Fixo $reservaVazia $fixo
+                    $saida[$p + "foto_fixa"] = $fixo
+                }
             }
             $saida[$p + "percentual"] = ""
             $saida[$p + "barra_px"] = 0
@@ -644,6 +686,11 @@ function Montar-Tarja {
                 }
                 $saida[$p + "foto"] = $completo
                 $saida[$p + "foto_existe"] = $existe
+                if ($FotoNomeFixo) {
+                    $fixo = Join-Path $PastaSaida ("foto-cand{0}.png" -f $i)
+                    Copiar-Foto-Para-Nome-Fixo $completo $fixo
+                    $saida[$p + "foto_fixa"] = $fixo
+                }
             }
             $saida[$p + "percentual"] = Formatar-Percentual $c.Percentual
             $saida[$p + "barra_px"] = $largura
