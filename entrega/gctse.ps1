@@ -1249,6 +1249,43 @@ if ($Preencher) { $Ensaio = $true; $UmaVez = $true; $DuracaoEnsaio = 0 }
 $Modo = "AR"
 if ($Ensaio) { $Modo = "ENSAIO" } elseif ($Teste) { $Modo = "TESTE" }
 
+# Sem os codigos do pleito nao ha o que buscar: cada ciclo montaria 55 URLs
+# invalidas, tomaria 55 respostas 404 e ainda assim gastaria o limite de
+# requisicoes por minuto do TSE. Melhor parar na porta e dizer o porque.
+if ($Modo -ne "ENSAIO") {
+    $pleitoUso = "$($cfg.tse.pleito)"
+    $eleicaoUso = "$($cfg.tse.eleicao)"
+    if ($Teste) {
+        if ((Tem-Propriedade $cfg.tse "pleito_simulado") -and $cfg.tse.pleito_simulado) {
+            $pleitoUso = "$($cfg.tse.pleito_simulado)"
+        }
+        if ((Tem-Propriedade $cfg.tse "eleicao_simulado") -and $cfg.tse.eleicao_simulado) {
+            $eleicaoUso = "$($cfg.tse.eleicao_simulado)"
+        }
+    }
+    $faltando = (-not $pleitoUso) -or (-not $eleicaoUso) -or
+                ($pleitoUso -eq "000") -or ($eleicaoUso -eq "000")
+    if ($faltando) {
+        Write-Host ""
+        if ($Teste) {
+            Escrever-Log "Sem os codigos do SIMULADO no config.json." "ERRO"
+            Write-Host "  Preencha 'pleito_simulado' e 'eleicao_simulado' no config.json."
+        } else {
+            Escrever-Log "Sem os codigos da eleicao no config.json." "ERRO"
+            Write-Host "  Preencha 'pleito' e 'eleicao' no config.json."
+        }
+        Write-Host ""
+        Write-Host "  Para descobrir os codigos: rode CONFERIR.bat."
+        Write-Host ""
+        Write-Host "  Se o CONFERIR disser que nao existe eleicao geral publicada,"
+        Write-Host "  nao ha nada a fazer ainda: o TSE publica os codigos da eleicao"
+        Write-Host "  geral perto da data. Ate la, use ENSAIO.bat para treinar a"
+        Write-Host "  equipe e montar as cenas - ele nao depende do TSE."
+        Write-Host ""
+        exit 1
+    }
+}
+
 $limiteReq = 80
 if (Tem-Propriedade $cfg "limite_requisicoes_por_minuto") { $limiteReq = [int] $cfg.limite_requisicoes_por_minuto }
 $intervalo = [int] $cfg.intervalo_segundos
