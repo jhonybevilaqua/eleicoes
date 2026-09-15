@@ -105,6 +105,38 @@ A ORDEM DOS CANDIDATOS
  e o antigo primeiro vira cand2_. Nunca fica nome de um com o percentual
  de outro - todos os campos saem do mesmo boletim, gravados de uma vez.
 
+LIMITE DE REQUISICOES DO TSE
+
+ O TSE bloqueia o IP que passa do limite por minuto. Atencao: uma resposta
+ "sem mudanca" (304) TAMBEM conta - o cache economiza banda, nao contagem.
+
+ O gctse controla isso sozinho. Ele conta cada praca+cargo UMA vez por
+ ciclo, mesmo que a praca apareca em varias tarjas e listas.
+
+ Com a configuracao que veio no pacote:
+
+   21 requisicoes por ciclo  (1 presidente + 10 estados x 2 cargos)
+   intervalo de 20s          = 3 ciclos por minuto
+   ------------------------------------------------------
+   63 requisicoes por minuto
+
+ Ao iniciar, o gctse imprime essa conta. Se passar do limite, ele avisa e
+ segura a fila sozinho, em vez de deixar o IP ser bloqueado.
+
+ Se voce aumentar o numero de estados, refaca a conta:
+
+   requisicoes por minuto = 60 x (pracas x cargos + 1) / intervalo
+
+ Exemplos:
+   10 estados, 2 cargos, 20s  ->  63/min   folgado
+   27 estados, 2 cargos, 20s  -> 165/min   ESTOURA: use 35s ou mais
+   27 estados, 2 cargos, 40s  ->  83/min   ok
+
+ Para ajustar: intervalo_segundos e limite_requisicoes_por_minuto no
+ config.json. Deixei o limite em 80 e nao 100, para sobrar margem - se a
+ emissora tiver outro sistema consultando o TSE pelo mesmo IP, as duas
+ contagens somam no mesmo IP.
+
 O QUE PRECISA ESTAR LIBERADO
 
  A maquina precisa alcancar  resultados.tse.jus.br  na porta 443.

@@ -165,9 +165,61 @@ function Montar-Url {
 # ------------------------------------------------------------------- coleta
 
 $Cache = @{}    # url -> ETag, para nao rebaixar a origem do TSE
+$script:Requisicoes = New-Object System.Collections.ArrayList
+$script:TotalRequisicoes = 0
+
+function Aguardar-Vez {
+    # O TSE bloqueia IP que passa do limite de requisicoes por minuto, e uma
+    # resposta 304 CONTA como requisicao - o cache por ETag economiza banda,
+    # nao contagem. Este controle e o que impede o bloqueio: segura a fila
+    # antes de estourar, em vez de descobrir no ar que o IP caiu.
+    $limite = 80
+    if (Tem-Propriedade $cfg "limite_requisicoes_por_minuto") {
+        $limite = [int] $cfg.limite_requisicoes_por_minuto
+    }
+    while ($true) {
+        $agora = Get-Date
+        while ($script:Requisicoes.Count -gt 0 -and
+               ($agora - $script:Requisicoes[0]).TotalSeconds -ge 60) {
+            $script:Requisicoes.RemoveAt(0)
+        }
+        if ($script:Requisicoes.Count -lt $limite) { break }
+        $esperar = 60 - ($agora - $script:Requisicoes[0]).TotalSeconds
+        if ($esperar -gt 0) {
+            Escrever-Log ("limite de {0} req/min atingido: aguardando {1:N1}s" -f $limite, $esperar) "AVISO"
+            Start-Sleep -Milliseconds ([int] ($esperar * 1000) + 200)
+        }
+    }
+    $null = $script:Requisicoes.Add((Get-Date))
+    $script:TotalRequisicoes++
+    # respiro minimo entre requisicoes, para nao chegar em rajada
+    $gap = 120
+    if (Tem-Propriedade $cfg "intervalo_minimo_ms") { $gap = [int] $cfg.intervalo_minimo_ms }
+    if ($gap -gt 0) { Start-Sleep -Milliseconds $gap }
+}
+
+function Contar-Requisicoes-Por-Ciclo {
+    # Quantas requisicoes um ciclo faz, contando cada par praca+cargo uma vez.
+    $pares = @{}
+    if (Tem-Propriedade $cfg "tarjas") {
+        foreach ($tj in $cfg.tarjas) { $pares["$($tj.abrangencia)-$($tj.cargo)"] = $true }
+    }
+    if (Tem-Propriedade $cfg "selecao") {
+        foreach ($p in $cfg.selecao.pracas) {
+            foreach ($s in $cfg.selecao.saidas) { $pares["$($p.uf)-$($s.cargo)"] = $true }
+        }
+    }
+    if (Tem-Propriedade $cfg "listas") {
+        foreach ($l in $cfg.listas) {
+            foreach ($p in $l.pracas) { $pares["$($p.uf)-$($l.cargo)"] = $true }
+        }
+    }
+    return $pares.Count
+}
 
 function Obter-Boletim {
     param([string] $Url)
+    Aguardar-Vez
     $cabecalhos = @{ "User-Agent" = "gctse/1.0" }
     if ($Cache.ContainsKey($Url)) { $cabecalhos["If-None-Match"] = $Cache[$Url] }
     try {
@@ -660,7 +712,21 @@ if ($Preencher) { $Ensaio = $true; $UmaVez = $true; $DuracaoEnsaio = 0 }
 $Modo = "AR"
 if ($Ensaio) { $Modo = "ENSAIO" } elseif ($Teste) { $Modo = "TESTE" }
 
-Escrever-Log "modo $Modo | saida em $PastaSaida | intervalo $($cfg.intervalo_segundos)s" "OK"
+$limiteReq = 80
+if (Tem-Propriedade $cfg "limite_requisicoes_por_minuto") { $limiteReq = [int] $cfg.limite_requisicoes_por_minuto }
+$porCiclo = Contar-Requisicoes-Por-Ciclo
+$intervalo = [int] $cfg.intervalo_segundos
+$porMinuto = [math]::Round(60.0 * $porCiclo / [math]::Max(1, $intervalo), 1)
+
+Escrever-Log "modo $Modo | saida em $PastaSaida | intervalo ${intervalo}s" "OK"
+if (-not $Ensaio) {
+    Escrever-Log "$porCiclo requisicoes por ciclo = $porMinuto por minuto (limite $limiteReq)"
+    if ($porMinuto -gt $limiteReq) {
+        $minimo = [math]::Ceiling(60.0 * $porCiclo / $limiteReq)
+        Escrever-Log "ACIMA DO LIMITE. O intervalo sera esticado automaticamente." "AVISO"
+        Escrever-Log "Para nao esticar, use intervalo_segundos de ${minimo}s ou mais, ou tire pracas." "AVISO"
+    }
+}
 if ($Modo -ne "AR") {
     Escrever-Log "dados NAO OFICIAIS neste modo. Nao use no ar." "AVISO"
 }
@@ -670,7 +736,8 @@ do {
     try {
         $linhas = Executar-Ciclo $Modo
         $resumo = ($linhas | ForEach-Object { "$($_.Tarja)=$($_.Situacao)" }) -join "  "
-        Escrever-Log $resumo
+        $naJanela = $script:Requisicoes.Count
+        Escrever-Log "$resumo | req: $naJanela no ultimo minuto"
     } catch {
         Escrever-Log "erro no ciclo: $($_.Exception.Message)" "ERRO"
     }
