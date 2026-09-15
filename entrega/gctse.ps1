@@ -234,6 +234,28 @@ function Contar-Requisicoes-Por-Ciclo {
     return $pares.Count
 }
 
+function Ler-Texto-Resposta {
+    # O TSE serve JSON em UTF-8 SEM declarar charset no cabecalho. O
+    # Invoke-WebRequest do PowerShell 5.1, sem charset, decodifica como
+    # ISO-8859-1 - e "SAO PAULO" com til vira "SAƒO PAULO" no ar. Por isso
+    # lemos os BYTES e decodificamos como UTF-8 na mao.
+    param($Resposta)
+    try {
+        $fluxo = $Resposta.RawContentStream
+        if ($fluxo) {
+            $bytes = $fluxo.ToArray()
+            if ($bytes.Length -gt 0) {
+                $texto = [Text.Encoding]::UTF8.GetString($bytes)
+                if ($texto.Length -gt 0 -and [int] $texto[0] -eq 65279) {
+                    $texto = $texto.Substring(1)   # descarta BOM
+                }
+                return $texto
+            }
+        }
+    } catch { }
+    return "$($Resposta.Content)"
+}
+
 function Obter-Boletim {
     param([string] $Url)
     Aguardar-Vez
@@ -250,7 +272,7 @@ function Obter-Boletim {
         return $null
     }
     try { $Cache[$Url] = $resposta.Headers["ETag"] } catch { }
-    return ($resposta.Content | ConvertFrom-Json)
+    return ((Ler-Texto-Resposta $resposta) | ConvertFrom-Json)
 }
 
 function Obter-Campo {
@@ -844,10 +866,9 @@ if ($Conferir) {
         try {
             $r = Invoke-WebRequest -Uri $Url -TimeoutSec 25 -UseBasicParsing
             $ms = [int] ((Get-Date) - $t0).TotalMilliseconds
-            $tam = 0
-            if ($r.Content) { $tam = "$($r.Content)".Length }
-            Anotar "    RECEBIDO   HTTP $([int] $r.StatusCode)   $tam caracteres   $ms ms"
-            return "$($r.Content)"
+            $texto = Ler-Texto-Resposta $r
+            Anotar "    RECEBIDO   HTTP $([int] $r.StatusCode)   $($texto.Length) caracteres   $ms ms"
+            return $texto
         } catch {
             $ms = [int] ((Get-Date) - $t0).TotalMilliseconds
             $cod = "sem resposta do servidor"
@@ -878,47 +899,183 @@ if ($Conferir) {
     Anotar "ETAPA 1 - a maquina alcanca o TSE?"
     Anotar ""
 
-    $cfgSim = $UrlOficial
+    # O endereco do simulado nao esta documentado de forma estavel, e o
+    # ele-c.json do proprio TSE descreve os caminhos como
+    # <base>/<ambiente>/<ciclo>/... - ou seja, "simulado" e um AMBIENTE, que
+    # pode morar no mesmo host do oficial. Em vez de apostar num endereco,
+    # testamos os candidatos e relatamos qual respondeu.
+    $candidatos = New-Object System.Collections.ArrayList
     if ((Tem-Propriedade $cfg.tse "base_url_simulado") -and $cfg.tse.base_url_simulado) {
-        $cfgSim = $cfg.tse.base_url_simulado
+        [void] $candidatos.Add($cfg.tse.base_url_simulado)
+    }
+    foreach ($c in @("https://resultados.tse.jus.br/simulado",
+                     "https://resultados-sim.tse.jus.br/simulado",
+                     "https://resultados-sim.tse.jus.br/oficial",
+                     "https://resultados.tse.jus.br/teste")) {
+        if (-not $candidatos.Contains($c)) { [void] $candidatos.Add($c) }
     }
 
-    $eleSim = Sondar-Url "$($cfgSim.TrimEnd('/'))/comum/config/ele-c.json" "SIMULADO (o do teste)"
-    Anotar ""
+    $eleSim = $null
+    $cfgSim = $null
+    $n = 0
+    foreach ($cand in $candidatos) {
+        $n = $n + 1
+        $resp = Sondar-Url "$($cand.TrimEnd('/'))/comum/config/ele-c.json" "SIMULADO - tentativa $n de $($candidatos.Count)"
+        Anotar ""
+        if ($resp) {
+            $eleSim = $resp
+            $cfgSim = $cand
+            Anotar "    >>> ESTE E O ENDERECO DO SIMULADO: $cand"
+            Anotar ""
+            break
+        }
+    }
+
     $eleOfi = Sondar-Url "$($UrlOficial.TrimEnd('/'))/comum/config/ele-c.json" "OFICIAL (o da noite da apuracao)"
     Anotar ""
 
     if ($null -eq $eleSim -and $null -eq $eleOfi) {
         Anotar "RESULTADO: a maquina NAO esta recebendo dado nenhum do TSE."
-        Anotar "Os dois enderecos falharam. Isso e liberacao de rede, nao e o programa."
+        Anotar "Nenhum endereco respondeu. Isso e liberacao de rede, nao e o programa."
         Anotar "Peca a TI a liberacao de saida HTTPS (porta 443) para:"
         Anotar "    resultados.tse.jus.br"
         Anotar "    resultados-sim.tse.jus.br"
     } elseif ($null -eq $eleSim) {
-        Anotar "RESULTADO: o oficial responde, mas o SIMULADO nao."
-        Anotar "O teste nao roda assim. Peca a liberacao de resultados-sim.tse.jus.br:443."
+        Anotar "RESULTADO: o OFICIAL responde, mas nenhum endereco de simulado respondeu."
+        Anotar "Como o oficial passa, a rede esta liberada e o programa funciona."
+        Anotar "Ou o simulado esta fora da janela de teste, ou mudou de endereco."
+        Anotar "Envie este arquivo para analise."
     } elseif ($null -eq $eleOfi) {
         Anotar "RESULTADO: o simulado responde (da para testar), mas o OFICIAL nao."
         Anotar "O teste roda, a noite da apuracao NAO. Peca resultados.tse.jus.br:443."
     } else {
-        Anotar "RESULTADO: os dois enderecos respondem. A maquina esta recebendo dado do TSE."
+        Anotar "RESULTADO: os dois ambientes respondem. A maquina esta recebendo dado do TSE."
     }
 
     Anotar ""
     Anotar "==========================================================="
-    Anotar "ETAPA 2 - conteudo da configuracao de eleicoes (ele-c.json)"
+    Anotar "ETAPA 2 - quais eleicoes o TSE esta publicando"
     Anotar "Daqui saem os codigos de pleito e de eleicao para o config.json."
     Anotar "==========================================================="
-    if ($eleSim) {
+
+    $script:Achado = @{}
+
+    function Resumir-EleC {
+        # Le o ele-c.json e imprime a lista de pleitos em tabela, em vez de
+        # despejar 20 mil caracteres que ninguem consegue ler numa tela de
+        # operacao. Marca com >>> o que e de 2026.
+        param([string] $Json, [string] $Rotulo)
         Anotar ""
-        Anotar ">>> SIMULADO:"
-        Anotar (Recortar $eleSim 5000)
+        Anotar ">>> $Rotulo"
+        try {
+            $d = $Json | ConvertFrom-Json
+        } catch {
+            Anotar "    nao consegui abrir como JSON."
+            return
+        }
+        if (Tem-Propriedade $d "c") { Anotar "    ciclo publicado neste arquivo: $($d.c)" }
+        if (Tem-Propriedade $d "dg") { Anotar "    gerado em: $($d.dg) $(Obter-Campo $d @('hg') '')" }
+        if (-not (Tem-Propriedade $d "pl")) {
+            Anotar "    o arquivo nao traz a lista de pleitos (campo pl)."
+            return
+        }
+        Anotar ""
+        foreach ($pleito in $d.pl) {
+            $cdPleito = Obter-Campo $pleito @("cd") "?"
+            $dt = Obter-Campo $pleito @("dt") ""
+            if (-not (Tem-Propriedade $pleito "e")) { continue }
+            foreach ($eleicao in $pleito.e) {
+                $cdEleicao = Obter-Campo $eleicao @("cd") "?"
+                $nome = "$(Obter-Campo $eleicao @('nm') '')"
+                $cargos = New-Object System.Collections.ArrayList
+                if (Tem-Propriedade $eleicao "abr") {
+                    foreach ($a in $eleicao.abr) {
+                        if (-not (Tem-Propriedade $a "cp")) { continue }
+                        foreach ($cargo in $a.cp) {
+                            $rot = "$(Obter-Campo $cargo @('cd') '')=$(Obter-Campo $cargo @('ds') '')"
+                            if (-not $cargos.Contains($rot)) { [void] $cargos.Add($rot) }
+                        }
+                    }
+                }
+                $marca = "    "
+                if ("$dt$nome" -match "2026") {
+                    $marca = ">>> "
+                    if (-not $script:Achado.ContainsKey($Rotulo)) {
+                        $script:Achado[$Rotulo] = @{
+                            ciclo = "$(Obter-Campo $d @('c') '')"
+                            pleito = "$cdPleito"
+                            eleicao = "$cdEleicao"
+                        }
+                    }
+                }
+                Anotar ("    {0}pleito {1}  |  eleicao {2}  |  {3}" -f $marca, $cdPleito, $cdEleicao, $dt)
+                Anotar ("        {0}" -f $nome)
+                if ($cargos.Count -gt 0) {
+                    Anotar ("        cargos: {0}" -f ($cargos -join "   "))
+                }
+                Anotar ""
+            }
+        }
+        Anotar ""
+        Anotar "    As linhas marcadas com >>> sao as de 2026."
+        Anotar "    PLEITO vai em 'pleito', ELEICAO vai em 'eleicao' no config.json."
+        Anotar "    Os CARGOS confirmam o numero de cada cargo (1 presidente,"
+        Anotar "    3 governador, 5 senador) - se o TSE mudar a numeracao, aparece aqui."
     }
+
+    if ($eleOfi) { Resumir-EleC $eleOfi "AMBIENTE OFICIAL" }
+    if ($eleSim) { Resumir-EleC $eleSim "AMBIENTE DE SIMULADO ($cfgSim)" }
+
+    $ofi = $null
+    $sim = $null
+    foreach ($k in $script:Achado.Keys) {
+        if ($k -eq "AMBIENTE OFICIAL") { $ofi = $script:Achado[$k] } else { $sim = $script:Achado[$k] }
+    }
+    if ($ofi -or $sim) {
+        Anotar "-----------------------------------------------------------"
+        Anotar "COPIE ISTO PARA O config.json, dentro de `"tse`":"
+        Anotar ""
+        $cicloAchado = "ele2026"
+        if ($ofi) { $cicloAchado = $ofi.ciclo } elseif ($sim) { $cicloAchado = $sim.ciclo }
+        Anotar "      `"ciclo`": `"$cicloAchado`","
+        if ($ofi) {
+            Anotar "      `"pleito`": `"$($ofi.pleito)`","
+            Anotar "      `"eleicao`": `"$($ofi.eleicao)`","
+        } else {
+            Anotar "      `"pleito`": `"`",      <- o oficial ainda nao publicou 2026"
+            Anotar "      `"eleicao`": `"`","
+        }
+        if ($sim) {
+            Anotar "      `"pleito_simulado`": `"$($sim.pleito)`","
+            Anotar "      `"eleicao_simulado`": `"$($sim.eleicao)`""
+        } else {
+            Anotar "      `"pleito_simulado`": `"`",   <- o simulado nao respondeu"
+            Anotar "      `"eleicao_simulado`": `"`""
+        }
+        Anotar ""
+        if ("$cicloAchado" -ne "$($cfg.tse.ciclo)") {
+            Anotar "ATENCAO: o config.json esta com ciclo `"$($cfg.tse.ciclo)`" e o TSE"
+            Anotar "publicou `"$cicloAchado`". Corrija o ciclo tambem."
+        }
+        Anotar "-----------------------------------------------------------"
+    } else {
+        Anotar ""
+        Anotar "Nenhuma eleicao de 2026 apareceu na lista acima. Provavelmente o"
+        Anotar "TSE ainda nao publicou a configuracao de 2026 neste ambiente."
+    }
+
+    # O arquivo inteiro fica gravado ao lado, sem corte, para analise.
+    $utf8sb = New-Object System.Text.UTF8Encoding($true)
     if ($eleOfi) {
+        [IO.File]::WriteAllText((Join-Path (Get-Location) "ele-c-OFICIAL.json"), $eleOfi, $utf8sb)
         Anotar ""
-        Anotar ">>> OFICIAL:"
-        Anotar (Recortar $eleOfi 5000)
+        Anotar "    O arquivo completo foi gravado em ele-c-OFICIAL.json."
     }
+    if ($eleSim) {
+        [IO.File]::WriteAllText((Join-Path (Get-Location) "ele-c-SIMULADO.json"), $eleSim, $utf8sb)
+        Anotar "    O arquivo completo foi gravado em ele-c-SIMULADO.json."
+    }
+    if ($null -eq $cfgSim) { $cfgSim = $UrlOficial }
 
     Anotar ""
     Anotar "==========================================================="
