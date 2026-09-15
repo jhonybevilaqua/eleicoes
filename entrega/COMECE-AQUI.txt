@@ -1,0 +1,107 @@
+===========================================================================
+ COMECE AQUI - 5 PASSOS
+ Nao instala nada. Usa o PowerShell que ja vem no Windows.
+===========================================================================
+
+ 1. Copie esta pasta inteira para a maquina do GC.  Ex.: C:\GCTSE
+
+    Copie a PASTA, nao os arquivos soltos. Os botoes .bat procuram o
+    resto do sistema ao lado deles.
+
+ 2. Duplo clique em CONFERIR.bat
+
+    Testa a conexao com o TSE e grava CONFERIR.txt nesta pasta.
+    Se der "NAO RECEBIDO" nos dois enderecos, pare aqui: e liberacao de
+    rede. Peca a TI a saida HTTPS (porta 443) para:
+
+        resultados.tse.jus.br
+        resultados-sim.tse.jus.br
+
+    Sem isso nada funciona, e nao adianta mexer no programa.
+
+ 3. Abra config.json no Bloco de Notas e preencha os codigos do TSE.
+
+    Os codigos aparecem na ETAPA 2 do CONFERIR.txt.
+
+        "pleito"  e  "eleicao"             <- do ambiente OFICIAL
+        "pleito_simulado" e "eleicao_simulado"  <- do SIMULADO
+
+    Na duvida, me envie o CONFERIR.txt que eu devolvo preenchido.
+
+ 4. Duplo clique em TESTE.bat   e deixe a janela ABERTA.
+
+    TESTE.bat le o ambiente de simulado do TSE e aceita boletim fase S.
+    Enquanto a janela estiver aberta, os arquivos da pasta TARJAS sao
+    atualizados sozinhos. Se fechar a janela, a coleta para.
+
+ 5. Duplo clique em PAINEL.bat   e abra http://localhost:8099
+
+    E por ali que voce escolhe o estado no ar, ve o sino aceso quando
+    chega dado novo do TSE, e ve o aviso vermelho se a coleta parar.
+
+===========================================================================
+ NA NOITE DA APURACAO
+===========================================================================
+
+ Troque so o passo 4: em vez de TESTE.bat, use INICIAR.bat.
+
+ INICIAR.bat so aceita boletim OFICIAL (fase O) e recusa simulado. Essa
+ recusa e proposital: e o que impede numero de teste de ir ao ar.
+
+===========================================================================
+ OS OUTROS BOTOES
+===========================================================================
+
+ ENSAIO.bat             apuracao ficticia de 0 a 100% em 10 minutos, sem
+                        internet. Para treinar a equipe sem depender do TSE.
+
+ PREENCHER-EXEMPLOS.bat repoe os dados de exemplo na pasta TARJAS.
+
+ DESCOBRIR.bat          codigos do ambiente oficial.
+ DESCOBRIR-SIMULADO.bat codigos do ambiente de simulado.
+
+ SELECIONAR-ESTADO\     27 atalhos, um por estado, caso prefira trocar a
+                        praca sem abrir o painel.
+
+===========================================================================
+ O QUE O CASTALIA LE
+===========================================================================
+
+ TARJAS\tarja-presidente.json    presidente, com foto
+ TARJAS\tarja-governador.json    governador da praca escolhida
+ TARJAS\tarja-senador.json       senador da praca escolhida
+ TARJAS\lista-governador.json    governador de TODAS as pracas
+ TARJAS\lista-senador.json       senador de todas as pracas
+ TARJAS\tarja-rodizio.json       a tarja estreita, que roda na programacao
+
+ Estes arquivos ja estao preenchidos com dado de EXEMPLO. Monte a cena
+ apontando para eles agora. No teste e na noite da apuracao os MESMOS
+ arquivos sao reescritos com o dado real - voce nao refaz vinculo nenhum.
+
+ No LiveBoard, ligue AUTO UPDATE com intervalo de 2 a 5 segundos.
+ A gravacao e atomica, entao o LiveBoard nunca pega arquivo pela metade.
+
+ Os modelos das tarjas (PDF, artes 1920x1080 e HTML) estao na pasta
+ TARJAS-MODELOS.
+
+===========================================================================
+ SE ALGO DER ERRADO
+===========================================================================
+
+ Rode CONFERIR.bat e me envie o CONFERIR.txt. Ele diz, por escrito, se o
+ problema e rede, codigo errado no config.json ou mudanca de formato do
+ TSE - e ja traz a versao do Windows e do PowerShell da maquina.
+
+ O historico fica em logs\gctse-AAAA-MM-DD.log.
+
+---------------------------------------------------------------------------
+ DUAS COISAS QUE NAO PODEM DAR ERRADO NO AR
+---------------------------------------------------------------------------
+
+ 1. As duas porcentagens sao DIFERENTES e nunca trocam de lugar:
+       apuracao_pct       quanto das URNAS foi apurado
+       cand1_percentual   quanto dos VOTOS VALIDOS o candidato tem
+
+ 2. Senador em 2026 tem DUAS VAGAS por estado. O 1o e o 2o colocados
+    podem ser eleitos os dois. Alinhe o texto da tarja com o Jornalismo
+    antes do ar.
