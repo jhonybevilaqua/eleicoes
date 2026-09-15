@@ -1,0 +1,73 @@
+===========================================================================
+ gctse - Apuracao do TSE para o Castalia
+ Nao instala nada. Nao precisa de Python, nem de .exe, nem de GitHub.
+ Usa o PowerShell que ja vem no Windows.
+===========================================================================
+
+O QUE FAZER, NA ORDEM
+
+ 1. Copie esta pasta para a maquina do GC. Ex.: C:\gctse
+
+ 2. Duplo clique em PREENCHER-EXEMPLOS.bat
+    A pasta TARJAS fica com os arquivos preenchidos, com dados de exemplo.
+
+ 3. Monte as cenas do Castalia apontando para a pasta TARJAS:
+
+      TARJAS\tarja-presidente.json   presidente, com foto
+      TARJAS\tarja-governador.json   governador de uma praca so
+      TARJAS\tarja-senador.json      senador de uma praca so
+      TARJAS\lista-governador.json   governador de TODAS as pracas (uma por registro)
+      TARJAS\lista-senador.json      senador de todas as pracas
+      TARJAS\tarja-rodizio.json      a tarja estreita, que roda no ar
+
+    ESTES SAO OS CAMINHOS DEFINITIVOS. No teste e na noite da apuracao os
+    MESMOS arquivos sao reescritos com o dado real. Voce nunca troca o
+    caminho e nunca refaz vinculo.
+
+ 4. Abra config.json no Bloco de Notas e preencha os dois codigos do TSE.
+    Para descobrir quais sao: duplo clique em DESCOBRIR.bat
+
+ 5. Use os botoes:
+
+      ENSAIO.bat   dados inventados, apuracao completa em 10 min.
+                   Nao usa internet. Para treinar com a equipe.
+
+      TESTE.bat    le o SIMULADO do TSE (fase S). E o do dia do teste.
+
+      INICIAR.bat  no ar. So aceita boletim oficial.
+                   Reinicia sozinho se cair.
+
+ 6. Para acompanhar: abra TARJAS\painel.html no navegador.
+
+---------------------------------------------------------------------------
+
+UMA PRACA OU VARIAS?
+
+ tarja-governador.json   uma praca fixa (a primeira do config)
+ lista-governador.json   TODAS as pracas, um registro por estado
+
+ Para trocar de estado na mesma tarja, use o arquivo lista-*.json e mande o
+ Castalia trocar de REGISTRO. Nao troca arquivo, nao refaz vinculo.
+ O registro 1 e o primeiro estado do config.json, o 2 e o segundo, e assim
+ por diante - a ordem e a que esta la.
+
+A ORDEM DOS CANDIDATOS
+
+ cand1_ e sempre QUEM ESTA EM PRIMEIRO AGORA, nao um candidato fixo.
+ Se o terceiro colocado virar e passar para primeiro, cand1_nome,
+ cand1_partido, cand1_percentual e cand1_barra_px mudam JUNTOS para ele,
+ e o antigo primeiro vira cand2_. Nunca fica nome de um com o percentual
+ de outro - todos os campos saem do mesmo boletim, gravados de uma vez.
+
+O QUE PRECISA ESTAR LIBERADO
+
+ A maquina precisa alcancar  resultados.tse.jus.br  na porta 443.
+
+O QUE NAO FAZER
+
+ * Nao rode duas copias gravando na mesma pasta.
+ * Nao deixe a maquina suspender (plano de energia: nunca suspender).
+
+SE DER PROBLEMA
+
+ Olhe a pasta logs. Cada dia tem seu arquivo.

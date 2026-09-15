@@ -1,0 +1,189 @@
+{
+  "_comentario": "Preencha pleito e eleicao. Rode DESCOBRIR.bat para saber quais sao.",
+  "tse": {
+    "base_url": "https://resultados.tse.jus.br/oficial",
+    "ciclo": "ele2026",
+    "pleito": "000",
+    "eleicao": "000"
+  },
+  "intervalo_segundos": 20,
+  "pasta_saida": "TARJAS",
+  "tarjas": [
+    {
+      "arquivo": "tarja-presidente",
+      "modelo": "presidente",
+      "abrangencia": "br",
+      "cargo": 1,
+      "praca": "BRASIL",
+      "trilho_px": 300
+    },
+    {
+      "arquivo": "tarja-governador",
+      "modelo": "majoritaria",
+      "abrangencia": "pr",
+      "cargo": 3,
+      "praca": "PARANÁ",
+      "trilho_px": 560
+    },
+    {
+      "arquivo": "tarja-senador",
+      "modelo": "majoritaria",
+      "abrangencia": "pr",
+      "cargo": 5,
+      "praca": "PARANÁ",
+      "trilho_px": 560
+    }
+  ],
+  "texto": {
+    "limite_nome": 22,
+    "limite_partido": 12,
+    "selo_nao_oficial": "PARCIAL - NAO OFICIAL",
+    "padrao_foto": "fotos/{numero}.png",
+    "cor_padrao": "#6b86ab",
+    "cores_partido": {}
+  },
+  "_comentario_listas": "Cada lista vira UM arquivo com um registro por praca. Trocar de estado na tarja = trocar de registro, sem trocar de arquivo.",
+  "listas": [
+    {
+      "arquivo": "lista-governador",
+      "cargo": 3,
+      "limite_nome": 22,
+      "pracas": [
+        {
+          "uf": "pr",
+          "nome": "PARANÁ"
+        },
+        {
+          "uf": "sp",
+          "nome": "SÃO PAULO"
+        },
+        {
+          "uf": "rj",
+          "nome": "RIO DE JANEIRO"
+        },
+        {
+          "uf": "mg",
+          "nome": "MINAS GERAIS"
+        },
+        {
+          "uf": "sc",
+          "nome": "SANTA CATARINA"
+        },
+        {
+          "uf": "rs",
+          "nome": "RIO GRANDE DO SUL"
+        },
+        {
+          "uf": "ba",
+          "nome": "BAHIA"
+        },
+        {
+          "uf": "go",
+          "nome": "GOIÁS"
+        },
+        {
+          "uf": "pe",
+          "nome": "PERNAMBUCO"
+        },
+        {
+          "uf": "ce",
+          "nome": "CEARÁ"
+        }
+      ]
+    },
+    {
+      "arquivo": "lista-senador",
+      "cargo": 5,
+      "limite_nome": 22,
+      "pracas": [
+        {
+          "uf": "pr",
+          "nome": "PARANÁ"
+        },
+        {
+          "uf": "sp",
+          "nome": "SÃO PAULO"
+        },
+        {
+          "uf": "rj",
+          "nome": "RIO DE JANEIRO"
+        },
+        {
+          "uf": "mg",
+          "nome": "MINAS GERAIS"
+        },
+        {
+          "uf": "sc",
+          "nome": "SANTA CATARINA"
+        },
+        {
+          "uf": "rs",
+          "nome": "RIO GRANDE DO SUL"
+        },
+        {
+          "uf": "ba",
+          "nome": "BAHIA"
+        },
+        {
+          "uf": "go",
+          "nome": "GOIÁS"
+        },
+        {
+          "uf": "pe",
+          "nome": "PERNAMBUCO"
+        },
+        {
+          "uf": "ce",
+          "nome": "CEARÁ"
+        }
+      ]
+    },
+    {
+      "arquivo": "tarja-rodizio",
+      "cargo": 3,
+      "limite_nome": 14,
+      "pracas": [
+        {
+          "uf": "pr",
+          "nome": "PARANÁ"
+        },
+        {
+          "uf": "sp",
+          "nome": "SÃO PAULO"
+        },
+        {
+          "uf": "rj",
+          "nome": "RIO DE JANEIRO"
+        },
+        {
+          "uf": "mg",
+          "nome": "MINAS GERAIS"
+        },
+        {
+          "uf": "sc",
+          "nome": "SANTA CATARINA"
+        },
+        {
+          "uf": "rs",
+          "nome": "RIO GRANDE DO SUL"
+        },
+        {
+          "uf": "ba",
+          "nome": "BAHIA"
+        },
+        {
+          "uf": "go",
+          "nome": "GOIÁS"
+        },
+        {
+          "uf": "pe",
+          "nome": "PERNAMBUCO"
+        },
+        {
+          "uf": "ce",
+          "nome": "CEARÁ"
+        }
+      ]
+    }
+  ]
+}
