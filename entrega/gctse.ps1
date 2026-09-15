@@ -212,7 +212,6 @@ $PastaSaida = $cfg.pasta_saida
 $LimiteNome = $cfg.texto.limite_nome
 $LimitePartido = $cfg.texto.limite_partido
 $SeloNaoOficial = $cfg.texto.selo_nao_oficial
-$PadraoFoto = $cfg.texto.padrao_foto
 $PastaFotos = ""
 if (Tem-Propriedade $cfg.texto "pasta_fotos") { $PastaFotos = "$($cfg.texto.pasta_fotos)" }
 if ($PastaFotos -and -not [IO.Path]::IsPathRooted($PastaFotos)) {
