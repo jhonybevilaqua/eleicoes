@@ -188,6 +188,13 @@ $LimiteNome = $cfg.texto.limite_nome
 $LimitePartido = $cfg.texto.limite_partido
 $SeloNaoOficial = $cfg.texto.selo_nao_oficial
 $PadraoFoto = $cfg.texto.padrao_foto
+$PastaFotos = ""
+if (Tem-Propriedade $cfg.texto "pasta_fotos") { $PastaFotos = "$($cfg.texto.pasta_fotos)" }
+if ($PastaFotos -and -not [IO.Path]::IsPathRooted($PastaFotos)) {
+    $PastaFotos = Join-Path (Get-Location) $PastaFotos
+}
+$FotoReserva = ""
+if (Tem-Propriedade $cfg.texto "foto_reserva") { $FotoReserva = "$($cfg.texto.foto_reserva)" }
 $CorPadrao = $cfg.texto.cor_padrao
 
 function Obter-Cor {
@@ -251,6 +258,8 @@ function Montar-Url {
 
 $Cache = @{}    # url -> ETag, para nao rebaixar a origem do TSE
 $script:Requisicoes = New-Object System.Collections.ArrayList
+$script:MudancasTotal = 0
+$script:UltimaMudanca = $null
 $script:TotalRequisicoes = 0
 
 function Aguardar-Vez {
@@ -470,7 +479,10 @@ function Montar-Tarja {
             $saida[$p + "visivel"] = "0"
             $saida[$p + "nome"] = ""
             $saida[$p + "partido"] = ""
-            if ($Tarja.modelo -eq "presidente") { $saida[$p + "foto"] = "" }
+            if ($Tarja.modelo -eq "presidente") {
+                $saida[$p + "foto"] = ""
+                $saida[$p + "foto_existe"] = "0"
+            }
             $saida[$p + "percentual"] = ""
             $saida[$p + "barra_px"] = 0
             $saida[$p + "cor"] = ""
@@ -485,7 +497,22 @@ function Montar-Tarja {
             $saida[$p + "nome"] = Limitar-Texto $c.Nome $LimiteNome
             $saida[$p + "partido"] = Limitar-Texto $c.Partido $LimitePartido
             if ($Tarja.modelo -eq "presidente") {
-                $saida[$p + "foto"] = $PadraoFoto.Replace("{numero}", $c.Numero)
+                # O TSE nao manda imagem nos arquivos de resultado: a foto e
+                # arquivo local, nomeado pelo numero do candidato. Entregamos
+                # o caminho e dizemos se o arquivo existe, para a cena poder
+                # esconder a moldura em vez de exibir um quadro quebrado.
+                $arquivo = $PadraoFoto.Replace("{numero}", $c.Numero)
+                $completo = $arquivo
+                if ($PastaFotos) { $completo = Join-Path $PastaFotos (Split-Path -Leaf $arquivo) }
+                $existe = "0"
+                try { if (Test-Path $completo) { $existe = "1" } } catch { }
+                if ($existe -eq "0" -and $FotoReserva) {
+                    $reserva = $FotoReserva
+                    if ($PastaFotos) { $reserva = Join-Path $PastaFotos (Split-Path -Leaf $FotoReserva) }
+                    try { if (Test-Path $reserva) { $completo = $reserva } } catch { }
+                }
+                $saida[$p + "foto"] = $completo
+                $saida[$p + "foto_existe"] = $existe
             }
             $saida[$p + "percentual"] = Formatar-Percentual $c.Percentual
             $saida[$p + "barra_px"] = $largura
@@ -665,6 +692,10 @@ function Marcar-Alerta {
     $script:Impressao[$chave] = $nova
     if ($null -eq $anterior) { return }      # primeira leitura nao e "novidade"
     if ($anterior -eq $nova) { return }
+    # Placar de mudancas: responde "o TSE esta mandando numero novo?" sem
+    # depender de alguem ficar olhando a tarja e tentando notar diferenca.
+    $script:MudancasTotal = $script:MudancasTotal + 1
+    $script:UltimaMudanca = Get-Date
     $script:Alertas[$chave] = @{
         desde = (Get-Date -Format "HH:mm:ss")
         pct   = (Formatar-Percentual $Boletim.PctUrnas)
@@ -1554,6 +1585,9 @@ do {
             intervalo_segundos = [int] $cfg.intervalo_segundos
             requisicoes_no_minuto = $naJanela
             tarjas = $resumo
+            mudancas_total = $script:MudancasTotal
+            ultima_mudanca = $(if ($script:UltimaMudanca) { $script:UltimaMudanca.ToString("HH:mm:ss") } else { "" })
+            segundos_sem_mudanca = $(if ($script:UltimaMudanca) { [int] ((Get-Date) - $script:UltimaMudanca).TotalSeconds } else { -1 })
         }
         Escrever-Arquivo (Join-Path $PastaSaida "coleta.json") ($batida | ConvertTo-Json -Depth 4)
     } catch {

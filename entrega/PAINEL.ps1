@@ -192,12 +192,48 @@ function Montar-Pagina {
     if (Tem-Propriedade $cfg "intervalo_segundos") { $intervaloCfg = [int] $cfg.intervalo_segundos }
     $limiteIdade = 3 * $intervaloCfg + 15
     $arqBatida = Join-Path $PastaSaida "coleta.json"
+    # Placar de mudancas: a pergunta "esta atualizando?" nao se responde
+    # olhando a tarja e tentando notar diferenca. Se o contador nao sobe, o
+    # TSE nao mandou numero novo - e isso e diferente de estar quebrado.
+    $placar = ""
     if (-not (Test-Path $arqBatida)) {
         $paradoAviso = "<div class='parado'><span>A coleta ainda nao rodou nenhum ciclo. " +
                        "Abra o <b>INICIAR.bat</b> (ou <b>TESTE.bat</b>) e deixe a janela aberta. " +
                        "Enquanto isso as tarjas nao tem dado nenhum.</span></div>"
     } else {
         $idade = [int] ((Get-Date) - (Get-Item $arqBatida).LastWriteTime).TotalSeconds
+        try {
+            $bat = Get-Content $arqBatida -Raw -Encoding UTF8 | ConvertFrom-Json
+            $qtd = 0
+            if (Tem-Propriedade $bat "mudancas_total") { $qtd = [int] $bat.mudancas_total }
+            $ciclos = 0
+            if (Tem-Propriedade $bat "ciclo") { $ciclos = [int] $bat.ciclo }
+            $modoBat = ""
+            if (Tem-Propriedade $bat "modo") { $modoBat = "$($bat.modo)" }
+            $desde = ""
+            if ((Tem-Propriedade $bat "segundos_sem_mudanca") -and ([int] $bat.segundos_sem_mudanca) -ge 0) {
+                $desde = " &middot; ultima ha $([int] $bat.segundos_sem_mudanca)s"
+            }
+            $classe = "placar"
+            $frase = "<b>$qtd</b> numeros novos do TSE em $ciclos ciclos$desde"
+            if ($qtd -eq 0 -and $ciclos -gt 3) {
+                $classe = "placar quieto"
+                $frase = "<b>nenhum numero novo</b> em $ciclos ciclos - a coleta esta viva, " +
+                         "mas o TSE nao mudou nada ainda"
+            }
+            if ($modoBat -eq "ENSAIO") {
+                # No ensaio nao existe TSE: dizer "numeros do TSE" aqui
+                # daria a impressao errada de que o teste ja passou.
+                $classe = "placar ensaio"
+                $frase = "MODO ENSAIO - dados inventados, sem internet. " +
+                         "<b>$qtd</b> numeros novos em $ciclos ciclos$desde"
+                if ($qtd -eq 0 -and $ciclos -gt 3) {
+                    $frase = "MODO ENSAIO - dados inventados, sem internet. " +
+                             "<b>nenhum numero novo</b> em $ciclos ciclos"
+                }
+            }
+            $placar = "<div class='$classe'><span>$frase</span></div>"
+        } catch { }
         if ($idade -gt $limiteIdade) {
             $paradoAviso = "<div class='parado'><span>A COLETA PAROU. O ultimo ciclo fechou ha " +
                            "<b>$idade segundos</b> (o normal e no maximo $limiteIdade). " +
@@ -341,6 +377,17 @@ h2::after{content:"";flex:1;height:1px;background:var(--fio)}
 .parado b{color:#5f0d0d}
 .parado::before{content:"";flex:none;width:19px;height:19px;border-radius:50%;
   background:#c22a2a;box-shadow:0 0 0 4px rgba(194,42,42,.18);animation:pulsa 1.4s ease-in-out infinite}
+.placar{background:#eef4fb;border:1px solid #c3d6ec;color:#1d5aa8;padding:11px 16px;
+  border-radius:10px;margin-bottom:16px;font-size:13.5px;display:flex;gap:9px;align-items:baseline}
+.placar b{color:#123f77}
+.placar::before{content:"";flex:none;width:9px;height:9px;border-radius:50%;background:#1d5aa8;
+  margin-top:5px;animation:pulsa 1.8s ease-in-out infinite}
+.placar.quieto{background:#f6f7f9;border-color:#dfe3e8;color:#5c6670}
+.placar.quieto b{color:#39424b}
+.placar.quieto::before{background:#9aa4ae;animation:none}
+.placar.ensaio{background:#fdf6e6;border-color:#e8d5a3;color:#7a5a12}
+.placar.ensaio b{color:#5a4109}
+.placar.ensaio::before{background:#c79a20}
 .alerta{background:#fff4ec;border:1px solid #f3c9a8;color:#8f4a12;padding:13px 17px;
   border-radius:10px;margin-bottom:20px;font-size:14px;display:flex;gap:10px;align-items:baseline}
 .alerta b{color:#5f2f06}
@@ -362,6 +409,7 @@ footer b{color:var(--tinta2s)}
 </header>
 <main id="vivo">
 $paradoAviso
+$placar
 $divergencia
 <h2>Presidente</h2>
 <div class="cards">$cardPres</div>
