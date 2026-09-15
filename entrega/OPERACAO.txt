@@ -1,0 +1,120 @@
+===========================================================================
+ COMO A OPERACAO ESTA MONTADA
+===========================================================================
+
+ TRES JANELAS, TRES PAPEIS DIFERENTES
+
+   TESTE.bat / INICIAR.bat     E O UNICO QUE ESCREVE DADO.
+   (janela preta)              Le o TSE e grava os arquivos da pasta
+                               TARJAS. Se essa janela fechar, NADA mais
+                               atualiza - o painel continua respondendo,
+                               mas os numeros congelam.
+
+   PAINEL.bat + navegador      NAO ESCREVE DADO NENHUM.
+   (localhost:8099)            E um controle remoto: grava so QUAL PRACA
+                               voce quer no ar, num arquivo de uma linha.
+                               Quem le esse arquivo e obedece e o coletor.
+
+   LiveBoard / Castalia        SO LE. Nunca escreve.
+
+ Esta divisao e proposital: um so escritor por arquivo. O painel nao pode
+ corromper dado porque nao toca em dado.
+
+---------------------------------------------------------------------------
+ O CAMINHO DE UMA ATUALIZACAO, DO TSE ATE A TELA
+---------------------------------------------------------------------------
+
+   TSE  ->  coletor  ->  TARJAS\*.json  ->  LiveBoard  ->  ar
+                ^
+                |
+           SELECAO.txt   <-  painel (so diz QUAL praca)
+
+ O painel nao passa dado para o coletor. Ele so troca o nome da praca. O
+ coletor ja tem os numeros das 27 pracas em memoria e reescreve o arquivo
+ mestre com a praca pedida - por isso a troca aparece em menos de 1
+ segundo, sem esperar nova consulta ao TSE.
+
+---------------------------------------------------------------------------
+ OS SEIS ARQUIVOS QUE O CASTALIA LE
+---------------------------------------------------------------------------
+
+ PRESIDENTE - praca fixa, sem escolha
+   TARJAS\tarja-presidente.json
+   Sempre BRASIL. Atualiza sozinho a cada ciclo. Nao tem seletor porque
+   nao ha o que selecionar. Trilho da barra: 300px.
+
+ GOVERNADOR - praca escolhida pelo operador
+   TARJAS\tarja-governador.json
+   Mostra UMA praca por vez, a que o painel mandou. Trilho: 560px.
+
+ SENADOR - praca escolhida SEPARADAMENTE
+   TARJAS\tarja-senador.json
+   Escolha independente da de governador: da para ter governador do
+   PARANA e senador de SAO PAULO no ar ao mesmo tempo. Trilho: 560px.
+
+ AS TRES LISTAS - todas as 27 pracas de uma vez
+   TARJAS\lista-governador.json
+   TARJAS\lista-senador.json
+   TARJAS\tarja-rodizio.json
+   Um registro por praca, 27 registros, sempre na mesma ordem. Servem
+   para a tarja estreita que roda durante a programacao e para qualquer
+   cena que precise percorrer varios estados. Nao dependem da selecao do
+   painel: trazem tudo, sempre.
+
+---------------------------------------------------------------------------
+ TRES JEITOS DE TROCAR A PRACA - todos fazem a mesma coisa
+---------------------------------------------------------------------------
+
+ 1. Painel web, clicando no estado.        (o normal)
+ 2. SELECIONAR-ESTADO\16 - PARANA.bat      (sem abrir navegador)
+ 3. Editando SELECAO.txt no Bloco de Notas (ultimo recurso)
+
+ Os tres escrevem a mesma linha no mesmo arquivo. Nao ha ordem de
+ prioridade nem conflito: vale o ultimo que escreveu.
+
+ SELECAO.txt          -> praca do GOVERNADOR
+ SELECAO-SENADOR.txt  -> praca do SENADOR
+
+---------------------------------------------------------------------------
+ O QUE O PAINEL MOSTRA, E PARA QUE SERVE CADA COISA
+---------------------------------------------------------------------------
+
+ Placar azul no topo     quantos numeros novos o TSE mandou. Se parar de
+                         subir com a coleta viva, o TSE e que nao mudou
+                         nada - diferente de estar quebrado.
+
+ Faixa vermelha          A COLETA PAROU. A janela preta fechou ou travou.
+                         Os numeros no ar estao congelados. Reabra.
+
+ Sino no botao do estado chegou boletim novo daquela praca. Apaga sozinho
+                         quando voce poe a praca no ar.
+
+ GOV NO AR / SEN NO AR   qual praca esta em cada arquivo agora.
+
+---------------------------------------------------------------------------
+ A SEQUENCIA DE UMA COBERTURA
+---------------------------------------------------------------------------
+
+ 1. INICIAR.bat          abre e fica aberto a noite toda
+ 2. PAINEL.bat           abre e fica aberto
+ 3. navegador            localhost:8099, num canto de tela
+ 4. LiveBoard            auto update de 2 a 5 segundos
+ 5. VALIDAR-OFICIAL.bat  uma vez, no comeco, para conferir por escrito
+
+ Durante a cobertura, o operador so clica no estado. Mais nada.
+
+---------------------------------------------------------------------------
+ SE ALGO DER ERRADO NO AR
+---------------------------------------------------------------------------
+
+ Numeros congelados         -> olhe a faixa vermelha do painel. Janela
+                               preta fechada? Reabra o INICIAR.bat.
+ Estado errado no ar        -> o painel avisa em amarelo quando a selecao
+                               e o arquivo divergem. Clique de novo.
+ Tarja vazia                -> aquela praca ainda nao tem boletim. Os
+                               campos vem com visivel = 0 de proposito.
+ Duvida se o numero confere -> VALIDAR-OFICIAL.bat. Ele compara com o
+                               dado cru do TSE e grava VALIDACAO.txt.
+
+ O PLANO B CONTINUA SENDO ENTRADA MANUAL NO GC. Uma maquina so e um ponto
+ unico de falha, e nenhum programa resolve isso.

@@ -81,6 +81,10 @@
 
  logs\                  historico por dia, gravado sozinho.
 
+ OPERACAO.txt          como a operacao esta montada: quem escreve o que,
+                        o caminho de uma atualizacao do TSE ate a tela, e
+                        o que fazer quando algo der errado no ar.
+
 ===========================================================================
  O QUE O CASTALIA LE
 ===========================================================================
