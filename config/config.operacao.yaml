@@ -1,0 +1,116 @@
+# ===========================================================================
+#  gctse - CONFIGURACAO UNICA
+#
+#  Serve para o teste com o simulado do TSE E para a noite da apuracao.
+#  Os arquivos saem sempre na pasta TARJAS. O Castalia aponta para la uma vez
+#  e nunca mais precisa mudar.
+#
+#  SO TEM UMA COISA PARA PREENCHER: os dois codigos abaixo, em 'tse'.
+#  Rode  gctse.exe descobrir  que ele mostra quais sao.
+# ===========================================================================
+
+tse:
+  base_url: https://resultados.tse.jus.br/oficial
+  ciclo: ele2026
+  pleito: "000"     # <<< PREENCHER  (gctse.exe descobrir)
+  eleicao: "000"    # <<< PREENCHER  (gctse.exe descobrir)
+  turno: 1
+
+# --- daqui para baixo, so mexa se precisar --------------------------------
+
+log: {nivel: INFO, arquivo: logs/gctse.log}
+
+coleta:
+  fonte: tse
+  intervalo_segundos: 20
+  paralelismo: 4
+  timeout_segundos: 8
+  tentativas: 3
+  cache_condicional: true
+  arquivo_estado: dados/estado.json
+  arquivo_painel: TARJAS/painel.html
+
+seguranca:
+  bloquear_nao_oficial: true    # o TESTE.bat desliga isto so durante o teste
+  bloquear_regressao: true
+
+texto:
+  caixa: alta
+  formatar_numeros: true
+  separador_milhar: "."
+  casas_percentual: 2
+  sufixo_percentual: "%"
+  selo_nao_oficial: "PARCIAL - NAO OFICIAL"
+  padrao_foto: "fotos/{numero}.png"
+  cor_padrao: "#6b86ab"
+  cores_partido: {}
+  limites: {nome: 22, partido: 12, cargo: 24, abrangencia: 24}
+
+saida: {destino: TARJAS, encoding: utf-8, quebra_linha: crlf}
+
+exporters:
+
+  presidente:
+    tipo: classx
+    formato: json
+    estrutura: plano
+    slots: 2
+    destino: TARJAS
+    nome_arquivo: "tarja-presidente"
+    barra: {trilho_px: 300, minimo_px: 6}
+    campos_resumo: [cargo, abrangencia, apuracao_pct, selo, hora_atualizacao]
+    campos_candidato: [visivel, nome, partido, foto, percentual, barra_px, cor, eleito]
+
+  majoritaria:
+    tipo: classx
+    formato: json
+    estrutura: plano
+    slots: 2
+    destino: TARJAS
+    nome_arquivo: "tarja-{alvo}"
+    barra: {trilho_px: 560, minimo_px: 6}
+    campos_resumo: [cargo, abrangencia, apuracao_pct, selo, hora_atualizacao]
+    campos_candidato: [visivel, nome, partido, percentual, barra_px, cor, eleito]
+
+  rodizio:
+    tipo: rodizio
+    formato: json
+    destino: TARJAS
+    barra: {trilho_px: 0}
+    texto: {limites: {nome: 14}}
+    campos: [ordem, visivel, praca, cargo, apuracao_pct, selo,
+             cand1_nome, cand1_partido, cand1_percentual, cand1_cor,
+             cand2_nome, cand2_partido, cand2_percentual, cand2_cor]
+
+alertas: {ativo: false}
+mapeamento: {}
+
+# --- o que vai ao ar ------------------------------------------------------
+# Troque as UFs pelas que a emissora cobre.
+
+alvos:
+  - {nome: presidente, abrangencia: br, cargo: 1, exporters: [presidente]}
+
+  - {nome: governador, abrangencia: pr, cargo: 3, apelido_abrangencia: "PARANÁ",
+     exporters: [majoritaria]}
+  - {nome: senador, abrangencia: pr, cargo: 5, apelido_abrangencia: "PARANÁ",
+     exporters: [majoritaria]}
+
+  # as 10 pracas do rodizio (so alimentam a lista, sem arquivo proprio)
+  - {nome: rod-pr, abrangencia: pr, cargo: 3, apelido_abrangencia: "PARANÁ", exporters: []}
+  - {nome: rod-sp, abrangencia: sp, cargo: 3, apelido_abrangencia: "SÃO PAULO", exporters: []}
+  - {nome: rod-rj, abrangencia: rj, cargo: 3, apelido_abrangencia: "RIO DE JANEIRO", exporters: []}
+  - {nome: rod-mg, abrangencia: mg, cargo: 3, apelido_abrangencia: "MINAS GERAIS", exporters: []}
+  - {nome: rod-sc, abrangencia: sc, cargo: 3, apelido_abrangencia: "SANTA CATARINA", exporters: []}
+  - {nome: rod-rs, abrangencia: rs, cargo: 3, apelido_abrangencia: "RIO GRANDE DO SUL", exporters: []}
+  - {nome: rod-ba, abrangencia: ba, cargo: 3, apelido_abrangencia: "BAHIA", exporters: []}
+  - {nome: rod-go, abrangencia: go, cargo: 3, apelido_abrangencia: "GOIÁS", exporters: []}
+  - {nome: rod-pe, abrangencia: pe, cargo: 3, apelido_abrangencia: "PERNAMBUCO", exporters: []}
+  - {nome: rod-ce, abrangencia: ce, cargo: 3, apelido_abrangencia: "CEARÁ", exporters: []}
+
+rodizios:
+  estados:
+    exporter: rodizio
+    nome_arquivo: tarja-rodizio
+    alvos: [rod-pr, rod-sp, rod-rj, rod-mg, rod-sc,
+            rod-rs, rod-ba, rod-go, rod-pe, rod-ce]

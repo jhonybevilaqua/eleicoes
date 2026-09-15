@@ -59,33 +59,36 @@ jobs:
         shell: pwsh
         run: |
           $alvo = "dist\gctse"
-          New-Item -ItemType Directory -Force -Path "$alvo\config", "$alvo\docs" | Out-Null
-          Copy-Item config\*.yaml "$alvo\config\"
+          New-Item -ItemType Directory -Force -Path "$alvo\docs" | Out-Null
+          # a config que a pessoa edita fica na RAIZ, com nome obvio
+          Copy-Item config\config.operacao.yaml "$alvo\config.yaml"
           Copy-Item docs\*.md "$alvo\docs\"
-          Copy-Item README.md "$alvo\"
           Copy-Item empacotamento\*.bat "$alvo\"
           Copy-Item empacotamento\LEIA-ME.txt "$alvo\"
-          Copy-Item "$alvo\config\config.recomendado.yaml" "$alvo\config\config.yaml"
 
-      - name: Listar o que foi empacotado
+      - name: Preencher a pasta TARJAS com dados de exemplo
         shell: pwsh
         working-directory: dist\gctse
         run: |
-          Write-Host "=== Raiz do pacote (o que o usuario ve ao extrair) ==="
-          Get-ChildItem | Where-Object { $_.Name -ne "_internal" } |
-            Select-Object Mode, Length, Name | Format-Table -AutoSize
-          $bats = Get-ChildItem -Filter *.bat
-          Write-Host "=== .bat encontrados: $($bats.Count) ==="
-          if ($bats.Count -lt 5) { throw "faltam .bat no pacote (esperado 5)" }
+          # O Castalia ja pode ser amarrado ao extrair o pacote: os arquivos
+          # nascem nos caminhos DEFINITIVOS, com dados ficticios. No teste e
+          # no ar, estes mesmos arquivos sao reescritos - nunca troca caminho.
+          .\gctse.exe exemplo --destinos-reais --progresso 63
+          if (-not (Test-Path "TARJAS\tarja-presidente.json")) { throw "TARJAS nao foi preenchida" }
+          Get-ChildItem TARJAS | Select-Object Length, Name | Format-Table -AutoSize
 
-      - name: Conferir que o executavel roda
+      - name: Conferir o pacote
         shell: pwsh
         working-directory: dist\gctse
         run: |
           .\gctse.exe --version
-          .\gctse.exe validar
-          .\gctse.exe exemplo
-          if (-not (Test-Path "exemplos\mapa")) { throw "mapa de vinculos nao foi gerado" }
+          .\gctse.exe validar          # acha config.yaml na raiz sozinho
+          Write-Host "=== Raiz do pacote (o que a pessoa ve ao extrair) ==="
+          Get-ChildItem | Where-Object { $_.Name -ne "_internal" } |
+            Select-Object Mode, Length, Name | Format-Table -AutoSize
+          foreach ($f in @("INICIAR.bat","TESTE.bat","ENSAIO.bat","LEIA-ME.txt","config.yaml")) {
+            if (-not (Test-Path $f)) { throw "faltou $f no pacote" }
+          }
 
       - name: Publicar o zip como artefato
         uses: actions/upload-artifact@v4

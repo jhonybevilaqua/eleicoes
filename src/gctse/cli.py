@@ -31,6 +31,18 @@ from .tse.descoberta import inspecionar, listar_eleicoes
 from .tse.endpoints import Endpoints
 from .util.log import configurar
 
+def _config_padrao() -> str:
+    """config.yaml na raiz da pasta; config/config.yaml como alternativa.
+
+    Na raiz e onde a pessoa espera encontrar - e onde ela vai editar. A pasta
+    config/ segue valendo para quem trabalha a partir do codigo-fonte.
+    """
+    for candidato in ("config.yaml", "config/config.yaml"):
+        if Path(candidato).exists():
+            return candidato
+    return "config.yaml"
+
+
 PADRAO_CONFIG = "config/config.yaml"
 
 
@@ -47,7 +59,7 @@ def _ancorar_na_pasta_do_executavel() -> None:
 
 
 def _cfg(args):
-    return carregar(args.config)
+    return carregar(args.config or _config_padrao())
 
 
 def _iniciar_log(cfg, args) -> None:
@@ -210,20 +222,30 @@ def cmd_exemplo(args) -> int:
     Serve para o time montar e amarrar a cena do GC agora, meses antes de o
     TSE publicar qualquer coisa: os nomes de campo, a estrutura e os caminhos
     sao os mesmos do dia da eleicao - so o conteudo e inventado.
+
+    Com --destinos-reais grava nas pastas que a config ja usa, em vez de numa
+    pasta separada. E o modo recomendado para montar a cena: o GC passa a
+    apontar, desde o primeiro dia, para o MESMO caminho que recebera o dado
+    real - nao existe o passo de "trocar o caminho antes do ar", que e onde
+    esse tipo de montagem costuma falhar.
     """
     cfg = _cfg(args)
     _iniciar_log(cfg, args)
 
+    reais = bool(getattr(args, "destinos_reais", False))
     pasta = Path(args.pasta)
     coleta = cfg.bruto.setdefault("coleta", {})
     coleta["fonte"] = "simulador"
     coleta["simulador_progresso"] = args.progresso
-    coleta["arquivo_estado"] = str(pasta / ".estado.json")
+    coleta["arquivo_estado"] = str(pasta / ".estado.json") if not reais else coleta.get(
+        "arquivo_estado", "dados/estado/estado.json"
+    )
     coleta.pop("arquivo_saude", None)
     cfg.bruto.setdefault("seguranca", {})["bloquear_nao_oficial"] = False
-    cfg.bruto.setdefault("saida", {})["destino"] = str(pasta)
-    for nome, opcoes in cfg.exporters.items():
-        opcoes["destino"] = str(pasta / nome)
+    if not reais:
+        cfg.bruto.setdefault("saida", {})["destino"] = str(pasta)
+        for nome, opcoes in cfg.exporters.items():
+            opcoes["destino"] = str(pasta / nome)
 
     problemas = cfg.validar()
     if problemas:
@@ -240,21 +262,37 @@ def cmd_exemplo(args) -> int:
     for nome, situacao in sorted(resultados.items()):
         print(f"  {nome}: {situacao}")
 
-    estado = pasta / ".estado.json"
-    if estado.exists():
-        estado.unlink()
+    if not reais:
+        estado = pasta / ".estado.json"
+        if estado.exists():
+            estado.unlink()
 
     args.pasta = str(pasta / "mapa")
     print()
     cmd_celulas(args, cfg)
 
-    print(f"\nArquivos de exemplo em {pasta}. Aponte o DataSource do GC para eles")
-    print("e monte a cena agora; no dia, os mesmos caminhos recebem o dado real.")
+    if reais:
+        print("\nArquivos gravados NOS DESTINOS REAIS da configuracao.")
+        print("Aponte o DataSource do GC para eles e monte a cena: quando o sistema")
+        print("rodar, estes mesmos arquivos passam a receber o dado do TSE.")
+        print("Nao ha caminho para trocar depois - que e onde esse tipo de montagem falha.")
+    else:
+        print(f"\nArquivos de exemplo em {pasta}. Aponte o DataSource do GC para eles")
+        print("e monte a cena agora; no dia, os mesmos caminhos recebem o dado real.")
     print("ATENCAO: conteudo ficticio, fase 'S'. Nao use no ar.")
     return 0
 
 
 def _executar(cfg, args, uma_vez: bool) -> int:
+    if getattr(args, "permitir_nao_oficial", False):
+        # Trava por invocacao, nao por arquivo: no teste com o simulado do TSE
+        # e preciso aceitar fase 'S', e uma flag de linha de comando nao pode
+        # ser esquecida ligada - o proximo 'rodar' ja volta protegido.
+        cfg.bruto.setdefault("seguranca", {})["bloquear_nao_oficial"] = False
+        print("!" * 66)
+        print("  ATENCAO: aceitando boletim NAO OFICIAL (fase 'S').")
+        print("  Use so em teste. Nao coloque esta saida no ar.")
+        print("!" * 66)
     problemas = cfg.validar()
     if problemas:
         print("Configuracao invalida; corrija antes de executar:")
@@ -305,7 +343,8 @@ def construir_parser() -> argparse.ArgumentParser:
         prog="gctse",
         description="Automacao de apuracao eleitoral do TSE para sistemas de GC.",
     )
-    parser.add_argument("-c", "--config", default=PADRAO_CONFIG, help=f"arquivo de configuracao (padrao: {PADRAO_CONFIG})")
+    parser.add_argument("-c", "--config", default=None,
+                        help="arquivo de configuracao (padrao: config.yaml na pasta do programa)")
     parser.add_argument("--log", help="nivel de log: DEBUG, INFO, WARNING, ERROR")
     parser.add_argument("-v", "--version", action="version", version=f"gctse {__version__}")
 
@@ -328,8 +367,15 @@ def construir_parser() -> argparse.ArgumentParser:
     p_celulas.add_argument("--pasta", help="grava o mapa em CSV nesta pasta")
     p_celulas.set_defaults(func=cmd_celulas)
 
-    sub.add_parser("uma-vez", help="executa um unico ciclo").set_defaults(func=cmd_uma_vez)
-    sub.add_parser("rodar", help="loop continuo de operacao").set_defaults(func=cmd_rodar)
+    p_uma = sub.add_parser("uma-vez", help="executa um unico ciclo")
+    p_uma.set_defaults(func=cmd_uma_vez)
+    p_rodar = sub.add_parser("rodar", help="loop continuo de operacao")
+    p_rodar.set_defaults(func=cmd_rodar)
+    for sub_parser in (p_uma, p_rodar):
+        sub_parser.add_argument(
+            "--permitir-nao-oficial", action="store_true",
+            help="aceita boletim em fase 'S' (simulado do TSE). SO PARA TESTE.",
+        )
 
     p_ensaio = sub.add_parser("ensaio", help="loop continuo com dados simulados")
     p_ensaio.add_argument("--duracao", type=int, default=900, help="segundos ate 100%% apurado (padrao: 900)")
@@ -339,6 +385,8 @@ def construir_parser() -> argparse.ArgumentParser:
     p_exemplo = sub.add_parser("exemplo", help="gera arquivos de exemplo + mapa para montar a cena")
     p_exemplo.add_argument("--pasta", default="exemplos", help="pasta de destino (padrao: exemplos)")
     p_exemplo.add_argument("--progresso", type=float, default=63.0, help="percentual apurado (padrao: 63)")
+    p_exemplo.add_argument("--destinos-reais", action="store_true",
+                           help="grava nas pastas da config, nao numa pasta separada")
     p_exemplo.set_defaults(func=cmd_exemplo)
 
     return parser

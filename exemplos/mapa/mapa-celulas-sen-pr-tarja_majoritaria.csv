@@ -1,0 +1,20 @@
+﻿arquivo;caminho;campo;observacao
+tarja-sen-pr.json;cargo;cargo;resumo
+tarja-sen-pr.json;abrangencia;abrangencia;resumo
+tarja-sen-pr.json;apuracao_pct;apuracao_pct;resumo
+tarja-sen-pr.json;selo;selo;resumo
+tarja-sen-pr.json;hora_atualizacao;hora_atualizacao;resumo
+tarja-sen-pr.json;cand1_visivel;cand1_visivel;1o colocado no momento
+tarja-sen-pr.json;cand1_nome;cand1_nome;1o colocado no momento
+tarja-sen-pr.json;cand1_partido;cand1_partido;1o colocado no momento
+tarja-sen-pr.json;cand1_percentual;cand1_percentual;1o colocado no momento
+tarja-sen-pr.json;cand1_barra_px;cand1_barra_px;1o colocado no momento
+tarja-sen-pr.json;cand1_cor;cand1_cor;1o colocado no momento
+tarja-sen-pr.json;cand1_eleito;cand1_eleito;1o colocado no momento
+tarja-sen-pr.json;cand2_visivel;cand2_visivel;2o colocado no momento
+tarja-sen-pr.json;cand2_nome;cand2_nome;2o colocado no momento
+tarja-sen-pr.json;cand2_partido;cand2_partido;2o colocado no momento
+tarja-sen-pr.json;cand2_percentual;cand2_percentual;2o colocado no momento
+tarja-sen-pr.json;cand2_barra_px;cand2_barra_px;2o colocado no momento
+tarja-sen-pr.json;cand2_cor;cand2_cor;2o colocado no momento
+tarja-sen-pr.json;cand2_eleito;cand2_eleito;2o colocado no momento

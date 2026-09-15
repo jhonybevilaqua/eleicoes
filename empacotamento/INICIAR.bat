@@ -1,12 +1,15 @@
 @echo off
-REM Operacao real. Reinicia sozinho se o processo cair.
+title gctse - apuracao no ar
 cd /d "%~dp0"
 echo ================================================================
-echo  OPERACAO - lendo o TSE. Ctrl+C encerra.
+echo   NO AR - lendo o TSE e gravando na pasta TARJAS
+echo   Acompanhe abrindo TARJAS\painel.html
+echo   Ctrl+C encerra
 echo ================================================================
+echo.
 :loop
 gctse.exe rodar
 echo.
-echo Processo encerrou (codigo %ERRORLEVEL%). Reiniciando em 10s...
+echo Encerrou (codigo %ERRORLEVEL%). Reiniciando em 10s...
 timeout /t 10 /nobreak >nul
 goto loop

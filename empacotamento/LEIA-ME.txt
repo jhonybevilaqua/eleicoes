@@ -1,71 +1,57 @@
 ===========================================================================
  gctse - Apuracao TSE para o GC
- Versao executavel: NAO precisa instalar Python nem nada.
 ===========================================================================
 
-COMO USAR
+O QUE FAZER, NA ORDEM
 
-  Copie esta pasta inteira para o PC de operacao (ex.: C:\gctse) e rode os
-  arquivos .bat na ordem. Basta dar duplo clique.
+ 1. Copie esta pasta inteira para a maquina do GC. Ex.: C:\gctse
+    Nao instala nada. Para desinstalar, apague a pasta.
 
-  1-validar.bat          Confere se esta tudo certo. Comece por aqui.
-  2-gerar-exemplos.bat   Cria a pasta exemplos\ com os arquivos que o GC vai
-                         ler, mais o mapa de qual campo esta onde. E com eles
-                         que o time monta e amarra a cena no LiveBoard.
-  3-ensaio.bat           Simula uma apuracao completa em 10 minutos, com o
-                         placar se mexendo. Para ensaiar com a equipe.
-  4-rodar.bat            Operacao de verdade, no dia da eleicao. Fica rodando
-                         e se reinicia sozinho se cair.
-  5-iniciar-com-windows.bat  Faz o sistema subir sozinho no login. Opcional,
-                         mas recomendado para a maquina ficar autonoma.
+ 2. Abra a pasta TARJAS. Os arquivos ja estao la, com dados de exemplo.
+    Aponte o Castalia para eles e monte as cenas:
 
-ONDE INSTALAR
+        TARJAS\tarja-presidente.json    presidente, com foto
+        TARJAS\tarja-governador.json    governador
+        TARJAS\tarja-senador.json       senador
+        TARJAS\tarja-rodizio.json       rodizio dos 10 estados
 
-  O recomendado NAO e a maquina do GC, e sim um PC separado (o de operacao
-  ou automacao) gravando numa pasta que o GC le. Motivos:
+    ESTE E O CAMINHO DEFINITIVO. No teste e na noite da apuracao os mesmos
+    arquivos sao reescritos com o dado real. Voce nunca troca o caminho.
 
-    * o GC fica livre para desenhar grafico, que e o trabalho dele
-    * mexer na configuracao no meio da transmissao nao encosta no PC do ar
-    * se o PC de coleta travar, o GC continua com o ultimo dado no ar
+ 3. Abra config.yaml no Bloco de Notas e preencha os dois codigos do TSE.
+    Para saber quais sao, rode na pasta:  gctse.exe descobrir
 
-  Se nao houver PC sobrando, rodar na propria maquina do GC funciona - o
-  processo e leve (algumas requisicoes a cada 20s e alguns KB gravados).
-  Nesse caso grave numa pasta LOCAL, nao em rede.
+ 4. Use os botoes:
 
-  Se gravar em pasta de rede, use o caminho UNC completo na config
-  (\\servidor\pasta), nunca letra de unidade mapeada (Z:). Unidade mapeada
-  nao existe fora da sessao do usuario e some sem aviso.
+        ENSAIO.bat    dados inventados, apuracao completa em 10 min.
+                      Nao usa internet. Para treinar com a equipe.
 
-IMPORTANTE
+        TESTE.bat     le os boletins de SIMULADO do TSE (fase S).
+                      E o que voce roda no dia do teste.
 
-  * A pasta e autocontida: nao instala nada no Windows, nao mexe no registro.
-    Para desinstalar, apague a pasta.
+        INICIAR.bat   no ar. Le so boletim oficial.
+                      Reinicia sozinho se cair.
 
-  * Mantenha o gctse.exe junto da pasta _internal e da pasta config. Se
-    separar, nao funciona.
+ 5. Para acompanhar, abra TARJAS\painel.html no navegador.
+    Ele mostra as pracas, o percentual e quem esta na frente,
+    e se atualiza sozinho.
 
-  * O que voce vai editar e config\config.yaml, num editor de texto comum
-    (Bloco de Notas serve).
+ 6. Opcional: INICIAR-COM-O-WINDOWS.bat faz o sistema subir sozinho,
+    minimizado, quando alguem logar na maquina.
 
-  * O 3-ensaio.bat usa dados INVENTADOS, com selo "PARCIAL - NAO OFICIAL".
-    Nunca coloque a saida do ensaio no ar.
+---------------------------------------------------------------------------
 
-  * Para a operacao real, o PC precisa de acesso a resultados.tse.jus.br na
-    porta 443. Peca a liberacao a TI com antecedencia - costuma demorar.
+O QUE PRECISA ESTAR LIBERADO
 
-  * NAO rode duas copias gravando na mesma pasta. As duas escreveriam por
-    cima uma da outra e o hot folder do GC ficaria piscando.
+ A maquina precisa alcancar  resultados.tse.jus.br  na porta 443.
+ Sem isso nao ha coleta. Peca a TI com antecedencia.
 
-ONDE ESTA O RESTO
+O QUE NAO FAZER
 
-  docs\PRIMEIRO-USO.md      passo a passo, do zero ao placar na cena
-  docs\GC-INTEGRACAO.md     como amarrar a cena no ClassX LiveBoard
-  docs\OPERACAO.md          checklist e contingencia do dia da eleicao
-  docs\TSE-API.md           a fonte de dados e o que confirmar em 2026
+ * Nao apague a pasta _internal - o gctse.exe nao roda sem ela.
+ * Nao rode duas copias gravando na mesma pasta.
+ * Nao deixe a maquina suspender (plano de energia: nunca suspender).
 
-SE O ANTIVIRUS RECLAMAR
+SE DER PROBLEMA
 
-  Executaveis gerados por PyInstaller as vezes sao sinalizados por engano.
-  Peca a TI para liberar a pasta. O codigo-fonte e o processo de compilacao
-  estao publicos no repositorio, entao da para auditar e ate recompilar
-  internamente se a politica exigir.
+ Olhe logs\gctse.log. A documentacao completa esta na pasta docs.
