@@ -27,6 +27,11 @@ param(
     [string] $Config = "config.json"
 )
 
+# Versao impressa na partida e no painel. Sem carimbo, "qual versao esta
+# rodando ai?" so se responde abrindo arquivo e comparando a olho - e no
+# meio de um teste com janela de horario ninguem faz isso.
+$Versao = "1.9 - 15/09/2026"
+
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 
@@ -1581,7 +1586,9 @@ $naVarredura = Contar-Requisicoes-Por-Ciclo
 $porMinuto = [math]::Round(
     (60.0 / ($ciclosVar * $intervalo)) * ((($ciclosVar - 1) * $noAr) + $naVarredura), 1)
 
+Escrever-Log "gctse versao $Versao" "OK"
 Escrever-Log "modo $Modo | saida em $PastaSaida | intervalo ${intervalo}s" "OK"
+if ($Modo -ne "ENSAIO") { Escrever-Log "caminho: $(Montar-Url 'br' 1)" }
 if (-not $Ensaio) {
     Escrever-Log "$noAr req por ciclo comum, $naVarredura na varredura (1 a cada $ciclosVar)"
     Escrever-Log "media de $porMinuto requisicoes por minuto (limite $limiteReq)"
