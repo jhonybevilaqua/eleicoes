@@ -184,6 +184,28 @@ function Montar-Pagina {
                     "<span class='urnas'>$(Html-Seguro $d.apuracao_pct) das urnas</span></div>$linhas</div>"
     }
 
+    # --- a coleta ainda esta viva?
+    # Este e o aviso mais importante da tela. Sem ele, um coletor morto deixa
+    # numeros plausiveis e CONGELADOS no ar, e ninguem percebe.
+    $paradoAviso = ""
+    $intervaloCfg = 20
+    if (Tem-Propriedade $cfg "intervalo_segundos") { $intervaloCfg = [int] $cfg.intervalo_segundos }
+    $limiteIdade = 3 * $intervaloCfg + 15
+    $arqBatida = Join-Path $PastaSaida "coleta.json"
+    if (-not (Test-Path $arqBatida)) {
+        $paradoAviso = "<div class='parado'><span>A coleta ainda nao rodou nenhum ciclo. " +
+                       "Abra o <b>INICIAR.bat</b> (ou <b>TESTE.bat</b>) e deixe a janela aberta. " +
+                       "Enquanto isso as tarjas nao tem dado nenhum.</span></div>"
+    } else {
+        $idade = [int] ((Get-Date) - (Get-Item $arqBatida).LastWriteTime).TotalSeconds
+        if ($idade -gt $limiteIdade) {
+            $paradoAviso = "<div class='parado'><span>A COLETA PAROU. O ultimo ciclo fechou ha " +
+                           "<b>$idade segundos</b> (o normal e no maximo $limiteIdade). " +
+                           "Os numeros no ar estao CONGELADOS - nao sobem mais. " +
+                           "Verifique a janela do INICIAR/TESTE e reabra se estiver fechada.</span></div>"
+        }
+    }
+
     # --- divergencia entre o que foi escolhido e o que esta no arquivo
     $divergencia = ""
     $gov = Ler-Json "tarja-governador"
@@ -313,6 +335,12 @@ h2::after{content:"";flex:1;height:1px;background:var(--fio)}
   letter-spacing:-.02em}
 .nada{color:var(--tinta3);font-size:13px;margin:8px 0 0}
 
+.parado{background:#fdecec;border:1px solid #e7a9a9;color:#8a1f1f;padding:14px 18px;
+  border-radius:10px;margin-bottom:20px;font-size:14.5px;font-weight:600;display:flex;gap:11px;
+  align-items:baseline}
+.parado b{color:#5f0d0d}
+.parado::before{content:"";flex:none;width:19px;height:19px;border-radius:50%;
+  background:#c22a2a;box-shadow:0 0 0 4px rgba(194,42,42,.18);animation:pulsa 1.4s ease-in-out infinite}
 .alerta{background:#fff4ec;border:1px solid #f3c9a8;color:#8f4a12;padding:13px 17px;
   border-radius:10px;margin-bottom:20px;font-size:14px;display:flex;gap:10px;align-items:baseline}
 .alerta b{color:#5f2f06}
@@ -333,6 +361,7 @@ footer b{color:var(--tinta2s)}
   </div>
 </header>
 <main id="vivo">
+$paradoAviso
 $divergencia
 <h2>Presidente</h2>
 <div class="cards">$cardPres</div>

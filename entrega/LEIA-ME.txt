@@ -24,8 +24,16 @@ O QUE FAZER, NA ORDEM
     MESMOS arquivos sao reescritos com o dado real. Voce nunca troca o
     caminho e nunca refaz vinculo.
 
- 4. Abra config.json no Bloco de Notas e preencha os dois codigos do TSE.
-    Para descobrir quais sao: duplo clique em DESCOBRIR.bat
+ 4. Abra config.json no Bloco de Notas e preencha os codigos do TSE.
+    Para descobrir quais sao:
+
+      DESCOBRIR.bat            codigos do ambiente OFICIAL
+      DESCOBRIR-SIMULADO.bat   codigos do ambiente de SIMULADO (o do teste)
+
+    Do oficial, copie para "pleito" e "eleicao".
+    Do simulado, copie para "pleito_simulado" e "eleicao_simulado".
+    Se os dois ambientes usarem o mesmo codigo, deixe os campos _simulado
+    vazios: o teste cai no mesmo codigo do oficial.
 
  5. Use os botoes:
 
@@ -41,6 +49,41 @@ O QUE FAZER, NA ORDEM
                    Deixe rodando junto com o INICIAR/TESTE.
 
  6. Para acompanhar: abra TARJAS\painel.html no navegador.
+
+---------------------------------------------------------------------------
+
+O SIMULADO DO TSE FICA EM OUTRO ENDERECO
+
+ O ambiente de teste NAO e o endereco oficial. Sao dois hosts diferentes:
+
+   oficial   https://resultados.tse.jus.br/oficial
+   simulado  https://resultados-sim.tse.jus.br/simulado
+
+ Voce nao precisa mexer nisso na mao. O TESTE.bat ja faz as duas coisas de
+ uma vez: aponta para o endereco de simulado E aceita boletim de fase S.
+ O INICIAR.bat continua no oficial e continua recusando fase S.
+
+ PECA A TI A LIBERACAO DOS DOIS na saida de internet da maquina do GC:
+
+   resultados.tse.jus.br:443
+   resultados-sim.tse.jus.br:443
+
+ E o unico item que trava o teste por inteiro. Se so o oficial estiver
+ liberado, o dia do teste nao funciona - e no dia da apuracao, so o
+ simulado liberado tambem nao adianta.
+
+---------------------------------------------------------------------------
+
+SE A COLETA PARAR, O PAINEL AVISA
+
+ A cada ciclo fechado, o gctse grava TARJAS\coleta.json. O painel web olha
+ a IDADE desse arquivo. Se passar de 3 ciclos + 15 segundos sem ciclo novo,
+ a tela mostra em vermelho A COLETA PAROU.
+
+ Isso existe porque a falha perigosa nao e a tela em branco - e a tela com
+ numero plausivel e CONGELADO. O GC continua exibindo o ultimo dado bom,
+ que e o comportamento certo, mas alguem precisa saber que ele parou de
+ subir. Deixe o painel aberto num canto de tela durante a cobertura.
 
 ---------------------------------------------------------------------------
 

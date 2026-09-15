@@ -136,6 +136,20 @@ if (-not (Test-Path $Config)) {
 }
 $cfg = Get-Content $Config -Raw -Encoding UTF8 | ConvertFrom-Json
 
+# O simulado do TSE fica em OUTRO endereco (resultados-sim..., prefixo
+# /simulado) e nao no endereco oficial. O -Teste troca os dois de uma vez:
+# aponta para o ambiente de simulado E aceita boletins de fase S.
+if ($Teste -and (Tem-Propriedade $cfg.tse "base_url_simulado") -and $cfg.tse.base_url_simulado) {
+    $cfg.tse.base_url = $cfg.tse.base_url_simulado
+    if ((Tem-Propriedade $cfg.tse "pleito_simulado") -and $cfg.tse.pleito_simulado) {
+        $cfg.tse.pleito = $cfg.tse.pleito_simulado
+    }
+    if ((Tem-Propriedade $cfg.tse "eleicao_simulado") -and $cfg.tse.eleicao_simulado) {
+        $cfg.tse.eleicao = $cfg.tse.eleicao_simulado
+    }
+    Escrever-Log "MODO TESTE: lendo o ambiente de SIMULADO em $($cfg.tse.base_url)"
+}
+
 $PastaSaida = $cfg.pasta_saida
 $LimiteNome = $cfg.texto.limite_nome
 $LimitePartido = $cfg.texto.limite_partido
@@ -819,7 +833,7 @@ if ($Descobrir) {
         Write-Host "Copie o codigo do pleito de 2026 para 'pleito' e 'eleicao' no config.json."
     } catch {
         Escrever-Log "nao foi possivel consultar: $($_.Exception.Message)" "ERRO"
-        Escrever-Log "se for erro de conexao, peca a TI a liberacao de resultados.tse.jus.br:443" "ERRO"
+        Escrever-Log "se for erro de conexao, peca a TI a liberacao de resultados.tse.jus.br:443 E resultados-sim.tse.jus.br:443" "ERRO"
         exit 1
     }
     exit 0
@@ -869,6 +883,20 @@ do {
         $resumo = ($linhas | ForEach-Object { "$($_.Tarja)=$($_.Situacao)" }) -join "  "
         $naJanela = $script:Requisicoes.Count
         Escrever-Log "$resumo | req: $naJanela no ultimo minuto"
+
+        # Batida do coracao. O painel usa a IDADE deste arquivo para saber se
+        # a coleta continua viva: so e gravado quando o ciclo fecha inteiro.
+        # Ciclo que estoura nao bate - e o painel acusa em poucos segundos,
+        # antes que os numeros congelados do GC virem erro no ar.
+        $batida = [ordered]@{
+            atualizado_em = (Get-Date -Format "dd/MM/yyyy HH:mm:ss")
+            ciclo = $script:Ciclo
+            modo = $Modo
+            intervalo_segundos = [int] $cfg.intervalo_segundos
+            requisicoes_no_minuto = $naJanela
+            tarjas = $resumo
+        }
+        Escrever-Arquivo (Join-Path $PastaSaida "coleta.json") ($batida | ConvertTo-Json -Depth 4)
     } catch {
         Escrever-Log "erro no ciclo: $($_.Exception.Message)" "ERRO"
     }
