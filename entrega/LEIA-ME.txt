@@ -35,6 +35,16 @@ O QUE FAZER, NA ORDEM
     Se os dois ambientes usarem o mesmo codigo, deixe os campos _simulado
     vazios: o teste cai no mesmo codigo do oficial.
 
+ 4b. ESTAMOS RECEBENDO DADO? Duplo clique em CONFERIR.bat
+
+    Em menos de um minuto ele testa os dois enderecos do TSE, mostra os
+    codigos de pleito e eleicao, baixa um boletim de verdade e grava tudo
+    em CONFERIR.txt nesta pasta. Se algo nao funcionar, envie esse arquivo
+    inteiro para analise: ele diz se o problema e liberacao de rede, codigo
+    errado no config.json ou mudanca no formato do TSE.
+
+    Pode rodar a qualquer momento, inclusive durante a apuracao.
+
  5. Use os botoes:
 
       ENSAIO.bat   dados inventados, apuracao completa em 10 min.

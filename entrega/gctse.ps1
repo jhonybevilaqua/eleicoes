@@ -9,6 +9,7 @@
 
         .\gctse.ps1 -Preencher    enche TARJAS com exemplos, para montar a cena
         .\gctse.ps1 -Descobrir    mostra os codigos do pleito
+        .\gctse.ps1 -Conferir     testa a conexao e grava CONFERIR.txt
         .\gctse.ps1 -Ensaio       dados ficticios, nao consulta o TSE
         .\gctse.ps1 -Teste        aceita o simulado do TSE (fase S)
         .\gctse.ps1               no ar: so boletim oficial
@@ -17,6 +18,7 @@
 [CmdletBinding()]
 param(
     [switch] $Descobrir,
+    [switch] $Conferir,
     [switch] $Preencher,
     [switch] $Ensaio,
     [switch] $Teste,
@@ -135,6 +137,7 @@ if (-not (Test-Path $Config)) {
     exit 1
 }
 $cfg = Get-Content $Config -Raw -Encoding UTF8 | ConvertFrom-Json
+$UrlOficial = $cfg.tse.base_url
 
 # O simulado do TSE fica em OUTRO endereco (resultados-sim..., prefixo
 # /simulado) e nao no endereco oficial. O -Teste troca os dois de uma vez:
@@ -817,6 +820,168 @@ function Executar-Ciclo {
     Escrever-Alertas
     Escrever-Painel $linhas ([int] $cfg.intervalo_segundos) $Modo
     return $linhas
+}
+
+# ---------------------------------------------------------------- conferir
+
+if ($Conferir) {
+    # Diagnostico de um clique: responde "estamos recebendo dado do TSE?"
+    # sem depender de ninguem saber ler log. Grava tudo em CONFERIR.txt para
+    # o arquivo poder ser enviado inteiro a quem for analisar.
+    $rel = New-Object System.Collections.ArrayList
+
+    function Anotar {
+        param([string] $Texto = "")
+        [void] $rel.Add($Texto)
+        Write-Host $Texto
+    }
+
+    function Sondar-Url {
+        param([string] $Url, [string] $Rotulo)
+        Anotar "--- $Rotulo"
+        Anotar "    $Url"
+        $t0 = Get-Date
+        try {
+            $r = Invoke-WebRequest -Uri $Url -TimeoutSec 25 -UseBasicParsing
+            $ms = [int] ((Get-Date) - $t0).TotalMilliseconds
+            $tam = 0
+            if ($r.Content) { $tam = "$($r.Content)".Length }
+            Anotar "    RECEBIDO   HTTP $([int] $r.StatusCode)   $tam caracteres   $ms ms"
+            return "$($r.Content)"
+        } catch {
+            $ms = [int] ((Get-Date) - $t0).TotalMilliseconds
+            $cod = "sem resposta do servidor"
+            if ((Tem-Propriedade $_.Exception "Response") -and $_.Exception.Response) {
+                try { $cod = "HTTP " + [int] $_.Exception.Response.StatusCode } catch { }
+            }
+            Anotar "    NAO RECEBIDO   $cod   ($ms ms)"
+            Anotar "    motivo: $($_.Exception.Message)"
+            return $null
+        }
+    }
+
+    function Recortar {
+        param([string] $Texto, [int] $Maximo = 5000)
+        if ($null -eq $Texto) { return "" }
+        if ($Texto.Length -le $Maximo) { return $Texto }
+        return $Texto.Substring(0, $Maximo) + "`r`n[... cortado, o arquivo tem $($Texto.Length) caracteres ...]"
+    }
+
+    Anotar "==========================================================="
+    Anotar " gctse - conferencia de recebimento de dados do TSE"
+    Anotar " $(Get-Date -Format 'dd/MM/yyyy HH:mm:ss')"
+    Anotar " maquina...: $env:COMPUTERNAME"
+    Anotar " PowerShell: $($PSVersionTable.PSVersion)"
+    Anotar " Windows...: $([Environment]::OSVersion.VersionString)"
+    Anotar "==========================================================="
+    Anotar ""
+    Anotar "ETAPA 1 - a maquina alcanca o TSE?"
+    Anotar ""
+
+    $cfgSim = $UrlOficial
+    if ((Tem-Propriedade $cfg.tse "base_url_simulado") -and $cfg.tse.base_url_simulado) {
+        $cfgSim = $cfg.tse.base_url_simulado
+    }
+
+    $eleSim = Sondar-Url "$($cfgSim.TrimEnd('/'))/comum/config/ele-c.json" "SIMULADO (o do teste)"
+    Anotar ""
+    $eleOfi = Sondar-Url "$($UrlOficial.TrimEnd('/'))/comum/config/ele-c.json" "OFICIAL (o da noite da apuracao)"
+    Anotar ""
+
+    if ($null -eq $eleSim -and $null -eq $eleOfi) {
+        Anotar "RESULTADO: a maquina NAO esta recebendo dado nenhum do TSE."
+        Anotar "Os dois enderecos falharam. Isso e liberacao de rede, nao e o programa."
+        Anotar "Peca a TI a liberacao de saida HTTPS (porta 443) para:"
+        Anotar "    resultados.tse.jus.br"
+        Anotar "    resultados-sim.tse.jus.br"
+    } elseif ($null -eq $eleSim) {
+        Anotar "RESULTADO: o oficial responde, mas o SIMULADO nao."
+        Anotar "O teste nao roda assim. Peca a liberacao de resultados-sim.tse.jus.br:443."
+    } elseif ($null -eq $eleOfi) {
+        Anotar "RESULTADO: o simulado responde (da para testar), mas o OFICIAL nao."
+        Anotar "O teste roda, a noite da apuracao NAO. Peca resultados.tse.jus.br:443."
+    } else {
+        Anotar "RESULTADO: os dois enderecos respondem. A maquina esta recebendo dado do TSE."
+    }
+
+    Anotar ""
+    Anotar "==========================================================="
+    Anotar "ETAPA 2 - conteudo da configuracao de eleicoes (ele-c.json)"
+    Anotar "Daqui saem os codigos de pleito e de eleicao para o config.json."
+    Anotar "==========================================================="
+    if ($eleSim) {
+        Anotar ""
+        Anotar ">>> SIMULADO:"
+        Anotar (Recortar $eleSim 5000)
+    }
+    if ($eleOfi) {
+        Anotar ""
+        Anotar ">>> OFICIAL:"
+        Anotar (Recortar $eleOfi 5000)
+    }
+
+    Anotar ""
+    Anotar "==========================================================="
+    Anotar "ETAPA 3 - um boletim de verdade"
+    Anotar "==========================================================="
+
+    $pleitoTeste = $cfg.tse.pleito
+    $eleicaoTeste = $cfg.tse.eleicao
+    if ((Tem-Propriedade $cfg.tse "pleito_simulado") -and $cfg.tse.pleito_simulado) {
+        $pleitoTeste = $cfg.tse.pleito_simulado
+    }
+    if ((Tem-Propriedade $cfg.tse "eleicao_simulado") -and $cfg.tse.eleicao_simulado) {
+        $eleicaoTeste = $cfg.tse.eleicao_simulado
+    }
+
+    if ("$pleitoTeste" -eq "000" -or -not "$pleitoTeste" -or "$eleicaoTeste" -eq "000" -or -not "$eleicaoTeste") {
+        Anotar ""
+        Anotar "PULADA: os codigos ainda estao zerados no config.json."
+        Anotar "Pegue os codigos na ETAPA 2 acima, preencha o config.json e rode de novo."
+    } else {
+        $cfg.tse.base_url = $cfgSim
+        $cfg.tse.pleito = $pleitoTeste
+        $cfg.tse.eleicao = $eleicaoTeste
+        $ufTeste = "sp"
+        if ((Tem-Propriedade $cfg "selecao") -and $cfg.selecao.pracas) {
+            $ufTeste = "$($cfg.selecao.pracas[0].uf)".ToLower()
+        }
+        $alvos = @(
+            @{ abr = "br"; cargo = 1; rotulo = "PRESIDENTE - Brasil" },
+            @{ abr = $ufTeste; cargo = 3; rotulo = "GOVERNADOR - $($ufTeste.ToUpper())" },
+            @{ abr = $ufTeste; cargo = 5; rotulo = "SENADOR - $($ufTeste.ToUpper())" }
+        )
+        foreach ($alvo in $alvos) {
+            Anotar ""
+            $corpo = Sondar-Url (Montar-Url $alvo.abr $alvo.cargo) $alvo.rotulo
+            if ($corpo) {
+                try {
+                    $b = $corpo | ConvertFrom-Json
+                    $chaves = (($b.PSObject.Properties | ForEach-Object { $_.Name }) -join ", ")
+                    Anotar "    campos no topo: $chaves"
+                    if (Tem-Propriedade $b "f") { Anotar "    fase: $($b.f)   (S = simulado, O = oficial)" }
+                    if (Tem-Propriedade $b "pst") { Anotar "    urnas apuradas: $($b.pst)%" }
+                    if (Tem-Propriedade $b "cand") { Anotar "    candidatos no arquivo: $($b.cand.Count)" }
+                } catch {
+                    Anotar "    o conteudo veio, mas nao e um JSON que eu consiga abrir."
+                }
+                Anotar "    --- inicio do arquivo, para conferencia dos nomes de campo ---"
+                Anotar (Recortar $corpo 2500)
+            }
+        }
+    }
+
+    Anotar ""
+    Anotar "==========================================================="
+    Anotar "Fim. Envie este arquivo inteiro para analise."
+    Anotar "==========================================================="
+
+    $utf8 = New-Object System.Text.UTF8Encoding($true)
+    [IO.File]::WriteAllText((Join-Path (Get-Location) "CONFERIR.txt"), ($rel -join "`r`n"), $utf8)
+    Write-Host ""
+    Write-Host "  Gravado em CONFERIR.txt, nesta mesma pasta." -ForegroundColor Green
+    Write-Host "  Envie esse arquivo para analise." -ForegroundColor Green
+    exit 0
 }
 
 # ---------------------------------------------------------------- descobrir
