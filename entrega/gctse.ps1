@@ -196,14 +196,34 @@ function Obter-Cor {
     return $CorPadrao
 }
 
+$PadraoUrlPadrao = "{base}/{ciclo}/{pleito}/dados-simplificados/{dir}/{abr}-c{cargo4}-e{eleicao6}-r.json"
+
 function Montar-Url {
-    param([string] $Abrangencia, [int] $Cargo)
+    # O caminho dos arquivos mudou entre 2022 e 2026 (de dados-simplificados
+    # com o codigo do PLEITO, para dados com o codigo da ELEICAO), e o TSE
+    # pode mexer nisso de novo antes de outubro. Por isso o caminho e um
+    # molde no config.json, e nao codigo: descobrir o caminho certo no
+    # CONFERIR e usa-lo vira edicao de uma linha, nao versao nova.
+    param([string] $Abrangencia, [int] $Cargo, [string] $Molde = "")
     $dir = $Abrangencia
     if ($Abrangencia.Length -gt 2) { $dir = $Abrangencia.Substring(0, 2) }
-    $c = "{0:0000}" -f $Cargo
-    $e = "{0:000000}" -f ([int] $cfg.tse.eleicao)
-    return "{0}/{1}/{2}/dados-simplificados/{3}/{4}-c{5}-e{6}-r.json" -f `
-        $cfg.tse.base_url.TrimEnd('/'), $cfg.tse.ciclo, $cfg.tse.pleito, $dir, $Abrangencia, $c, $e
+    if (-not $Molde) {
+        $Molde = $PadraoUrlPadrao
+        if ((Tem-Propriedade $cfg.tse "padrao_url") -and $cfg.tse.padrao_url) {
+            $Molde = "$($cfg.tse.padrao_url)"
+        }
+    }
+    $u = $Molde
+    $u = $u.Replace("{base}", $cfg.tse.base_url.TrimEnd('/'))
+    $u = $u.Replace("{ciclo}", "$($cfg.tse.ciclo)")
+    $u = $u.Replace("{pleito}", "$($cfg.tse.pleito)")
+    $u = $u.Replace("{eleicao6}", ("{0:000000}" -f ([int] $cfg.tse.eleicao)))
+    $u = $u.Replace("{eleicao}", "$($cfg.tse.eleicao)")
+    $u = $u.Replace("{cargo4}", ("{0:0000}" -f $Cargo))
+    $u = $u.Replace("{cargo}", "$Cargo")
+    $u = $u.Replace("{dir}", $dir)
+    $u = $u.Replace("{abr}", $Abrangencia)
+    return $u
 }
 
 # ------------------------------------------------------------------- coleta
@@ -965,7 +985,8 @@ if ($Conferir) {
     if ((Tem-Propriedade $cfg.tse "base_url_simulado") -and $cfg.tse.base_url_simulado) {
         [void] $candidatos.Add($cfg.tse.base_url_simulado)
     }
-    foreach ($c in @("https://resultados-sim.tse.jus.br/simulado",
+    foreach ($c in @("https://resultados-sim.tse.jus.br/simulado/simulado2026",
+                     "https://resultados-sim.tse.jus.br/simulado",
                      "https://resultados.tse.jus.br/simulado",
                      "https://resultados-sim.tse.jus.br",
                      "https://resultados-sim.tse.jus.br/oficial",
@@ -1010,8 +1031,8 @@ if ($Conferir) {
         if ((Tem-Propriedade $cfg.tse "base_url_simulado") -and $cfg.tse.base_url_simulado) {
             [void] $retentar.Add($cfg.tse.base_url_simulado)
         }
-        foreach ($c in @("https://resultados-sim.tse.jus.br/simulado",
-                         "https://resultados.tse.jus.br/simulado")) {
+        foreach ($c in @("https://resultados-sim.tse.jus.br/simulado/simulado2026",
+                         "https://resultados-sim.tse.jus.br/simulado")) {
             if (-not $retentar.Contains($c)) { [void] $retentar.Add($c) }
         }
         foreach ($cand in $retentar) {
@@ -1274,14 +1295,56 @@ if ($Conferir) {
         if ((Tem-Propriedade $cfg "selecao") -and $cfg.selecao.pracas) {
             $ufTeste = "$($cfg.selecao.pracas[0].uf)".ToLower()
         }
+        # O caminho dos arquivos de resultado mudou de 2022 para 2026. Em vez
+        # de supor um, testamos os moldes conhecidos com o cargo de
+        # presidente e ficamos com o primeiro que entregar um boletim.
+        $moldes = New-Object System.Collections.ArrayList
+        if ((Tem-Propriedade $cfg.tse "padrao_url") -and $cfg.tse.padrao_url) {
+            [void] $moldes.Add("$($cfg.tse.padrao_url)")
+        }
+        foreach ($m in @(
+            "{base}/{ciclo}/{eleicao}/dados/{dir}/{abr}-c{cargo4}-e{eleicao6}-r.json",
+            "{base}/{ciclo}/{eleicao}/dados-simplificados/{dir}/{abr}-c{cargo4}-e{eleicao6}-r.json",
+            "{base}/{ciclo}/{pleito}/dados-simplificados/{dir}/{abr}-c{cargo4}-e{eleicao6}-r.json",
+            "{base}/{ciclo}/{eleicao}/dados/{dir}/{abr}-c{cargo4}-e{eleicao6}-u.json",
+            "{base}/{ciclo}/{eleicao}/dados/{dir}/{abr}-e{eleicao6}-ab.json")) {
+            if (-not $moldes.Contains($m)) { [void] $moldes.Add($m) }
+        }
+
+        Anotar ""
+        Anotar "Procurando o caminho dos arquivos de resultado..."
+        Anotar ""
+        $moldeBom = ""
+        $i = 0
+        foreach ($molde in $moldes) {
+            $i = $i + 1
+            $sondagem = Sondar-Url (Montar-Url "br" 1 $molde) "molde $i de $($moldes.Count)"
+            Anotar ""
+            if ($sondagem) {
+                $moldeBom = $molde
+                Anotar "    >>> ESTE MOLDE FUNCIONA."
+                Anotar "    >>> Ponha no config.json, em tse.padrao_url:"
+                Anotar "    >>> $molde"
+                Anotar ""
+                break
+            }
+        }
+        if (-not $moldeBom) {
+            Anotar "NENHUM molde conhecido entregou boletim. O caminho mudou."
+            Anotar "Me envie a URL de um arquivo .json de resultado que voce veja"
+            Anotar "funcionando (pelo F12 do navegador, aba Network) e eu monto o molde."
+            Anotar ""
+        }
+
         $alvos = @(
             @{ abr = "br"; cargo = 1; rotulo = "PRESIDENTE - Brasil" },
             @{ abr = $ufTeste; cargo = 3; rotulo = "GOVERNADOR - $($ufTeste.ToUpper())" },
             @{ abr = $ufTeste; cargo = 5; rotulo = "SENADOR - $($ufTeste.ToUpper())" }
         )
         foreach ($alvo in $alvos) {
+            if (-not $moldeBom) { break }
             Anotar ""
-            $corpo = Sondar-Url (Montar-Url $alvo.abr $alvo.cargo) $alvo.rotulo
+            $corpo = Sondar-Url (Montar-Url $alvo.abr $alvo.cargo $moldeBom) $alvo.rotulo
             if ($corpo) {
                 try {
                     $b = $corpo | ConvertFrom-Json
