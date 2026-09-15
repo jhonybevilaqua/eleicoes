@@ -1,4 +1,4 @@
-<#
+﻿<#
     gctse - Apuracao do TSE para o gerador de caracteres
     ------------------------------------------------------------------
     Roda direto no Windows. Nao instala nada, nao precisa de Python e nao

@@ -1,4 +1,4 @@
-<#
+﻿<#
     Painel web do gctse
     ------------------------------------------------------------------
     Abre uma pagina no navegador para o operador escolher o estado e
@@ -138,7 +138,7 @@ function Montar-Pagina {
 
     # --- presidente
     $pres = Ler-Json "tarja-presidente"
-    $cardPres = "<div class='card vazio'><h3>Presidente</h3><p>arquivo ainda nao gerado</p></div>"
+    $cardPres = "<div class='card vazio'><h3>Presidente</h3><p>arquivo ainda não gerado</p></div>"
     if ($null -ne $pres) {
         $novoPres = ""
         if ($null -ne $al -and $al.presidente) {
@@ -165,7 +165,7 @@ function Montar-Pagina {
     foreach ($t in @(@("tarja-governador","Governador no ar"), @("tarja-senador","Senador no ar"))) {
         $d = Ler-Json $t[0]
         if ($null -eq $d) {
-            $cartoes += "<div class='card vazio'><h3>$($t[1])</h3><p>arquivo ainda nao gerado</p></div>"
+            $cartoes += "<div class='card vazio'><h3>$($t[1])</h3><p>arquivo ainda não gerado</p></div>"
             continue
         }
         $linhas = ""
@@ -189,94 +189,181 @@ function Montar-Pagina {
     $gov = Ler-Json "tarja-governador"
     if ($null -ne $gov -and $gov.abrangencia -and $gov.abrangencia -ne $nomeGov) {
         $divergencia = "<div class='alerta'>Voce selecionou <b>$(Html-Seguro $nomeGov)</b>, mas o " +
-                       "arquivo ainda esta com <b>$(Html-Seguro $gov.abrangencia)</b>. " +
-                       "A janela do INICIAR/TESTE esta rodando?</div>"
+                       "arquivo ainda está com <b>$(Html-Seguro $gov.abrangencia)</b>. " +
+                       "A janela do INICIAR/TESTE está rodando?</div>"
     }
 
     $aviso = ""
     if ($qtdNovos -gt 0) {
-        $aviso = "<span class='contador'>$qtdNovos praça(s) com boletim novo</span>"
+        $plural = "praças"; if ($qtdNovos -eq 1) { $plural = "praça" }
+        $aviso = "<span class='sino'><i></i>$qtdNovos $plural com boletim novo</span>"
     }
 
     return @"
 <!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta http-equiv="refresh" content="5">
-<title>Painel da apuracao</title><style>
+<noscript><meta http-equiv="refresh" content="5"></noscript>
+<title>Apuração 2026</title><style>
+/* Tema claro. Fontes do sistema de proposito: a maquina do GC pode nao ter
+   internet liberada alem do TSE, e fonte da web viraria espera no carregamento. */
+:root{
+  --fundo:#f5f7fb; --papel:#ffffff; --papel2:#eef2f8;
+  --tinta:#0f1a2c; --tinta2:#47587292; --tinta2s:#475872; --tinta3:#8090a8;
+  --fio:#e4eaf3; --fio2:#eef2f8;
+  --azul:#1d5aa8; --azul-claro:#e9f1fc; --azul-borda:#b9d3f0;
+  --verde:#0d7a55; --verde-claro:#e5f6ee; --verde-borda:#a9ddc6;
+  --ambar:#a8650a; --ambar-claro:#fff3e0; --ambar-borda:#f0cf9c;
+  --sombra:0 1px 2px rgba(15,26,44,.05), 0 6px 16px -6px rgba(15,26,44,.10);
+  --sombra-alta:0 2px 4px rgba(15,26,44,.06), 0 14px 32px -12px rgba(15,26,44,.18);
+}
 *{box-sizing:border-box}
-body{margin:0;background:#0b1220;color:#e8eef8;font:15px/1.5 "Segoe UI",system-ui,sans-serif}
-header{padding:18px 26px;border-bottom:1px solid #22314a;display:flex;align-items:center;
-  gap:14px;flex-wrap:wrap}
-h1{margin:0;font-size:19px;font-weight:600}
-.contador{background:#7a4a10;color:#ffd489;font-size:12.5px;font-weight:600;padding:3px 10px;
-  border-radius:999px}
-.agora{margin-left:auto;color:#8ea3c0;font-size:13.5px;text-align:right}
-.agora b{color:#fff}
-main{padding:20px 26px 60px;max-width:1500px;margin:0 auto}
-h2{font-size:12px;text-transform:uppercase;letter-spacing:.11em;color:#8ea3c0;font-weight:600;
-  margin:26px 0 10px;display:flex;align-items:center;gap:12px}
+html{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body{margin:0;background:var(--fundo);color:var(--tinta);
+  font:15px/1.55 "Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,sans-serif}
+a{color:inherit}
+
+/* ---------- cabecalho ---------- */
+header{position:sticky;top:0;z-index:5;background:rgba(245,247,251,.86);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--fio);
+  padding:15px 30px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.marca{display:flex;align-items:baseline;gap:10px}
+.marca h1{margin:0;font-size:17px;font-weight:650;letter-spacing:-.01em}
+.marca span{font-size:11px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--azul);background:var(--azul-claro);padding:3px 9px;border-radius:999px}
+.sino{display:inline-flex;align-items:center;gap:7px;background:var(--ambar-claro);
+  color:var(--ambar);border:1px solid var(--ambar-borda);font-size:12.5px;font-weight:600;
+  padding:4px 12px;border-radius:999px}
+.sino i{width:7px;height:7px;border-radius:50%;background:var(--ambar);
+  animation:pulsa 1.8s ease-in-out infinite}
+@keyframes pulsa{0%,100%{opacity:1}50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.sino i{animation:none}}
+.resumo{margin-left:auto;display:flex;gap:22px;align-items:center}
+.res{text-align:right;line-height:1.3}
+.res u{display:block;text-decoration:none;font-size:10.5px;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--tinta3);font-weight:600}
+.res b{font-size:14.5px;font-weight:650}
+.hora{font-variant-numeric:tabular-nums;color:var(--tinta2s);font-size:13px;
+  padding-left:22px;border-left:1px solid var(--fio)}
+
+main{padding:26px 30px 70px;max-width:1520px;margin:0 auto}
+h2{font-size:11px;text-transform:uppercase;letter-spacing:.13em;color:var(--tinta3);
+  font-weight:650;margin:34px 0 13px;display:flex;align-items:center;gap:14px}
 h2:first-of-type{margin-top:0}
-.abas{display:flex;gap:6px;margin-left:auto}
-.aba{font-size:12px;padding:4px 11px;border-radius:999px;background:#16223a;color:#9db1cc;
-  text-decoration:none;border:1px solid #22314a;text-transform:none;letter-spacing:0}
-.aba:hover{border-color:#3b6fb5}
-.aba.on{background:#1d4d92;border-color:#4a90d9;color:#fff}
-.estados{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:8px}
-.btn{position:relative;display:flex;flex-direction:column;gap:3px;padding:10px 13px;
-  border-radius:7px;background:#16223a;border:1px solid #22314a;text-decoration:none;
-  color:#cfdcee;transition:background .12s,border-color .12s}
-.btn:hover{background:#1d2c4a;border-color:#3b6fb5}
-.btn b{font-size:13.5px;font-weight:600;line-height:1.25}
-.btn .tags{display:flex;gap:4px;min-height:16px}
-.btn em{font-style:normal;font-size:10px;font-weight:700;letter-spacing:.06em;padding:1px 5px;
-  border-radius:3px}
-.btn em.g{background:#7a4a10;color:#ffd489}
-.btn em.s{background:#16513a;color:#7ae0ae}
-.btn em.vazio{padding:0}
-.btn u{text-decoration:none;font-size:10px;letter-spacing:.07em;color:#8fbdf0;text-transform:uppercase}
-.btn.novo{border-color:#a8702a;box-shadow:0 0 0 1px #a8702a inset}
-.btn.ativo{background:#1d4d92;border-color:#4a90d9;color:#fff}
-.btn.ativo u{color:#cfe4fb}
-.btn.ativo.gov{background:#1d4d92}
-.btn.ativo.sen{background:#155741;border-color:#3fae83}
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
-.card{background:#111c30;border:1px solid #22314a;border-radius:8px;padding:14px 16px}
-.card.destaque{border-color:#3b6fb5}
-.card.vazio{color:#7e93b2}
-.card h3{margin:0 0 8px;font-size:12.5px;text-transform:uppercase;letter-spacing:.07em;
-  color:#8ea3c0;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.selo{background:#3a2f12;color:#f0c674;font-size:10px;padding:2px 6px;border-radius:3px}
-.badge{background:#7a4a10;color:#ffd489;font-size:10.5px;padding:2px 7px;border-radius:3px;
-  letter-spacing:.04em}
-.visto{font-size:10.5px;color:#8fbdf0;text-decoration:none;border-bottom:1px dotted #4a7cb5}
-.praca{font-size:18px;font-weight:600;margin-bottom:9px;display:flex;align-items:baseline;gap:10px}
-.urnas{font-size:12px;font-weight:400;color:#8ea3c0;margin-left:auto;white-space:nowrap}
-.cand{display:flex;align-items:baseline;gap:8px;padding:6px 0;border-top:1px solid #1b2841}
-.pos{color:#7e93b2;font-size:11.5px;width:18px}
-.nome{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.part{color:#8ea3c0;font-size:11.5px}
-.pct{margin-left:auto;font-weight:700;font-variant-numeric:tabular-nums}
-.nada{color:#7e93b2;font-size:13px;margin:6px 0 0}
-.alerta{background:#3a1f12;border:1px solid #7a4a22;color:#f0c07a;padding:11px 15px;
-  border-radius:7px;margin-bottom:18px;font-size:14px}
-.alerta b{color:#fff}
-footer{color:#7e93b2;font-size:12.5px;margin-top:30px;padding-top:14px;border-top:1px solid #22314a}
+h2::after{content:"";flex:1;height:1px;background:var(--fio)}
+
+/* ---------- abas de modo ---------- */
+.abas{display:flex;gap:4px;background:var(--papel2);padding:3px;border-radius:999px;
+  border:1px solid var(--fio)}
+.aba{font-size:12px;font-weight:600;padding:5px 13px;border-radius:999px;color:var(--tinta2s);
+  text-decoration:none;letter-spacing:0;text-transform:none;white-space:nowrap}
+.aba:hover{color:var(--azul)}
+.aba.on{background:var(--papel);color:var(--azul);box-shadow:var(--sombra)}
+
+/* ---------- grade de estados ---------- */
+.estados{display:grid;grid-template-columns:repeat(auto-fill,minmax(176px,1fr));gap:9px}
+.btn{position:relative;display:flex;flex-direction:column;gap:7px;padding:13px 15px 12px;
+  border-radius:10px;background:var(--papel);border:1px solid var(--fio);
+  text-decoration:none;color:var(--tinta);box-shadow:var(--sombra);
+  transition:transform .12s ease,box-shadow .12s ease,border-color .12s ease}
+.btn:hover{transform:translateY(-1px);box-shadow:var(--sombra-alta);border-color:var(--azul-borda)}
+.btn b{font-size:13.5px;font-weight:650;line-height:1.25;letter-spacing:-.005em}
+.btn .tags{display:flex;gap:5px;min-height:18px;align-items:center}
+.btn em{font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.07em;
+  padding:2px 7px;border-radius:999px;border:1px solid transparent}
+.btn em.g{background:var(--ambar-claro);color:var(--ambar);border-color:var(--ambar-borda)}
+.btn em.s{background:var(--verde-claro);color:var(--verde);border-color:var(--verde-borda)}
+.btn em.vazio{padding:0;border:0}
+.btn u{text-decoration:none;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
+  font-weight:700;color:var(--tinta3)}
+.btn.novo{border-color:var(--ambar-borda);background:linear-gradient(180deg,#fffaf2,#fff)}
+.btn.ativo{color:#fff;border-color:transparent;box-shadow:var(--sombra-alta)}
+.btn.ativo u{color:rgba(255,255,255,.78)}
+.btn.ativo em.g{background:rgba(255,255,255,.2);color:#fff;border-color:transparent}
+.btn.ativo em.s{background:rgba(255,255,255,.2);color:#fff;border-color:transparent}
+.btn.ativo.gov{background:linear-gradient(165deg,#2a6cc0,#1a5099)}
+.btn.ativo.sen{background:linear-gradient(165deg,#12906a,#0b6a49)}
+.btn.ativo.ambos{background:linear-gradient(165deg,#2a6cc0 0%,#1a5099 52%,#0f7a57 52%,#0b6a49 100%)}
+
+/* ---------- cartoes ---------- */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:13px}
+.card{background:var(--papel);border:1px solid var(--fio);border-radius:12px;
+  padding:17px 20px 15px;box-shadow:var(--sombra)}
+.card.destaque{border-color:var(--azul-borda);box-shadow:var(--sombra-alta)}
+.card.vazio{color:var(--tinta3);background:var(--papel2);box-shadow:none}
+.card h3{margin:0 0 11px;font-size:10.5px;text-transform:uppercase;letter-spacing:.12em;
+  color:var(--tinta3);font-weight:700;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.selo{background:var(--ambar-claro);color:var(--ambar);border:1px solid var(--ambar-borda);
+  font-size:9.5px;padding:2px 7px;border-radius:999px;letter-spacing:.06em}
+.badge{background:var(--ambar);color:#fff;font-size:10px;padding:3px 9px;border-radius:999px;
+  letter-spacing:.05em;font-weight:700}
+.visto{font-size:10.5px;color:var(--azul);text-decoration:none;font-weight:600;
+  border-bottom:1px solid var(--azul-borda);padding-bottom:1px}
+.visto:hover{border-bottom-color:var(--azul)}
+.praca{font-size:21px;font-weight:680;letter-spacing:-.015em;margin-bottom:11px;
+  display:flex;align-items:baseline;gap:12px}
+.urnas{font-size:12px;font-weight:500;color:var(--tinta2s);margin-left:auto;white-space:nowrap;
+  font-variant-numeric:tabular-nums;background:var(--papel2);padding:3px 9px;border-radius:999px}
+.cand{display:flex;align-items:baseline;gap:10px;padding:9px 0;border-top:1px solid var(--fio2)}
+.pos{color:var(--tinta3);font-size:11px;font-weight:700;width:19px}
+.nome{font-weight:640;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  letter-spacing:-.005em}
+.part{color:var(--tinta2s);font-size:11.5px;font-weight:600;background:var(--papel2);
+  padding:1px 7px;border-radius:4px}
+.pct{margin-left:auto;font-weight:700;font-size:17px;font-variant-numeric:tabular-nums;
+  letter-spacing:-.02em}
+.nada{color:var(--tinta3);font-size:13px;margin:8px 0 0}
+
+.alerta{background:#fff4ec;border:1px solid #f3c9a8;color:#8f4a12;padding:13px 17px;
+  border-radius:10px;margin-bottom:20px;font-size:14px;display:flex;gap:10px;align-items:baseline}
+.alerta b{color:#5f2f06}
+.alerta::before{content:"!";flex:none;width:19px;height:19px;border-radius:50%;
+  background:#c2661a;color:#fff;font-size:12px;font-weight:700;text-align:center;line-height:19px}
+
+footer{color:var(--tinta3);font-size:12.5px;margin-top:34px;padding-top:16px;
+  border-top:1px solid var(--fio)}
+footer b{color:var(--tinta2s)}
 </style></head><body>
-<header><h1>Painel da apuracao</h1>$aviso
-  <div class="agora">governador <b>$(Html-Seguro $nomeGov)</b> &middot;
-    senador <b>$(Html-Seguro $nomeSen)</b><br>
-    atualizado <b>$(Get-Date -Format 'HH:mm:ss')</b></div></header>
-<main>
+<header>
+  <div class="marca"><h1>Apuração</h1><span>Eleições 2026</span></div>
+  $aviso
+  <div class="resumo">
+    <div class="res"><u>Governador</u><b>$(Html-Seguro $nomeGov)</b></div>
+    <div class="res"><u>Senador</u><b>$(Html-Seguro $nomeSen)</b></div>
+    <div class="hora" id="hora">$(Get-Date -Format 'HH:mm:ss')</div>
+  </div>
+</header>
+<main id="vivo">
 $divergencia
 <h2>Presidente</h2>
 <div class="cards">$cardPres</div>
-<h2>Escolher a praca <span class="abas">$abas</span></h2>
+<h2>Escolher a praça <span class="abas">$abas</span></h2>
 <div class="estados">$botoes</div>
-<h2>O que esta nos arquivos agora</h2>
+<h2>O que está nos arquivos agora</h2>
 <div class="cards">$cartoes</div>
 <footer>As etiquetas <b>GOV</b> e <b>SEN</b> acendem quando o TSE publica boletim novo daquela
-praca. Elas apagam quando voce coloca a praca no ar. A pagina se atualiza a cada 5 segundos.</footer>
-</main></body></html>
+praça, e apagam quando você a coloca no ar. A página se atualiza sozinha a cada 5 segundos.</footer>
+</main>
+<script>
+// Troca o conteudo sem recarregar a pagina: sem piscada branca e sem perder
+// a posicao do scroll, que numa tela de operacao faz diferenca.
+(function () {
+  var parado = false;
+  setInterval(function () {
+    if (parado) return;
+    fetch(location.pathname, { cache: 'no-store' })
+      .then(function (r) { return r.text(); })
+      .then(function (texto) {
+        var doc = new DOMParser().parseFromString(texto, 'text/html');
+        var novo = doc.getElementById('vivo');
+        var cab = doc.querySelector('header');
+        if (novo) { document.getElementById('vivo').innerHTML = novo.innerHTML; }
+        if (cab) { document.querySelector('header').innerHTML = cab.innerHTML; }
+      })
+      .catch(function () { parado = true; location.reload(); });
+  }, 5000);
+})();
+</script>
+</body></html>
 "@
 }
 
