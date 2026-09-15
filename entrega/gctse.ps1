@@ -206,7 +206,10 @@ function Obter-Cor {
     return $CorPadrao
 }
 
-$PadraoUrlPadrao = "{base}/{ciclo}/{pleito}/dados-simplificados/{dir}/{abr}-c{cargo4}-e{eleicao6}-r.json"
+# Caminho de 2026, confirmado pelas URLs do simulado: o diretorio e o
+# codigo da ELEICAO e a pasta e "dados". Em 2022 era o codigo do pleito e
+# "dados-simplificados" - por isso o caminho vive no config, nao aqui.
+$PadraoUrlPadrao = "{base}/{ciclo}/{eleicao}/dados/{dir}/{abr}-c{cargo4}-e{eleicao6}-r.json"
 
 function Obter-Eleicao {
     # Presidente e Governador/Senador NAO ficam na mesma eleicao. O TSE
@@ -259,6 +262,7 @@ function Montar-Url {
 $Cache = @{}    # url -> ETag, para nao rebaixar a origem do TSE
 $script:Requisicoes = New-Object System.Collections.ArrayList
 $script:MudancasTotal = 0
+$script:BoletinsOk = 0
 $script:UltimaMudanca = $null
 $script:TotalRequisicoes = 0
 
@@ -353,6 +357,7 @@ function Obter-Boletim {
         return $null
     }
     try { $Cache[$Url] = $resposta.Headers["ETag"] } catch { }
+    $script:BoletinsOk = $script:BoletinsOk + 1
     return ((Ler-Texto-Resposta $resposta) | ConvertFrom-Json)
 }
 
@@ -1573,6 +1578,22 @@ do {
         $resumo = ($linhas | ForEach-Object { "$($_.Tarja)=$($_.Situacao)" }) -join "  "
         $naJanela = $script:Requisicoes.Count
         Escrever-Log "$resumo | req: $naJanela no ultimo minuto"
+
+        # Primeiro ciclo sem nenhum boletim e quase sempre caminho errado, e
+        # nao ausencia de dado. Sem este aviso o operador fica olhando tarja
+        # vazia sem nada na tela explicando o que houve.
+        if ($script:Ciclo -eq 1 -and $Modo -ne "ENSAIO") {
+            if ($script:BoletinsOk -eq 0) {
+                Escrever-Log "NENHUM boletim voltou do TSE neste primeiro ciclo." "ERRO"
+                Write-Host ""
+                Write-Host "  Isso quase nunca e falta de dado - e endereco errado."
+                Write-Host "  Rode CONFERIR.bat: ele testa os caminhos e diz qual funciona."
+                Write-Host ""
+                Write-Host "  Buscando em:"
+                Write-Host "    $(Montar-Url 'br' 1)"
+                Write-Host ""
+            }
+        }
 
         # Batida do coracao. O painel usa a IDADE deste arquivo para saber se
         # a coleta continua viva: so e gravado quando o ciclo fecha inteiro.
