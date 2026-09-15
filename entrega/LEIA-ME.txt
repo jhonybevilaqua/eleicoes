@@ -37,6 +37,9 @@ O QUE FAZER, NA ORDEM
       INICIAR.bat  no ar. So aceita boletim oficial.
                    Reinicia sozinho se cair.
 
+      PAINEL.bat   abre o painel web para escolher o estado e acompanhar.
+                   Deixe rodando junto com o INICIAR/TESTE.
+
  6. Para acompanhar: abra TARJAS\painel.html no navegador.
 
 ---------------------------------------------------------------------------
@@ -74,7 +77,29 @@ COMO TROCAR O ESTADO DA TARJA
 
  Duas formas. As duas usam o MESMO arquivo, sem refazer vinculo nenhum.
 
- 1) O OPERADOR ESCOLHE  (o mais simples, funciona em qualquer GC)
+ 1) PELO PAINEL WEB  (o jeito recomendado)
+
+    Duplo clique em PAINEL.bat. Abre uma pagina no navegador com um botao
+    por estado, o estado atual em destaque e o que esta em cada arquivo
+    naquele instante. Clique no estado e pronto.
+
+    A pagina se atualiza a cada 5 segundos, entao serve tambem para
+    acompanhar a apuracao sem abrir arquivo nenhum.
+
+    Se voce selecionar um estado e o arquivo NAO acompanhar, a pagina
+    avisa em amarelo - quase sempre quer dizer que a janela do
+    INICIAR/TESTE foi fechada e a coleta parou.
+
+    O painel roda em processo SEPARADO do coletor: fechar a janela do
+    painel nao para a coleta, e travar o painel nao tira a tarja do ar.
+
+    Para acessar de outra maquina da rede (o diretor trocando o estado do
+    switcher, por exemplo):
+       powershell -ExecutionPolicy Bypass -File PAINEL.ps1 -Rede
+    e, UMA VEZ como administrador:
+       netsh http add urlacl url=http://+:8099/ user=Todos
+
+ 2) PELOS ATALHOS .BAT  (sem navegador)
 
     Abra a pasta SELECIONAR-ESTADO e de duplo clique no estado.
     Em cerca de 1 segundo, tarja-governador.json e tarja-senador.json
@@ -87,7 +112,7 @@ COMO TROCAR O ESTADO DA TARJA
     edite esse arquivo na mao - ou mande qualquer outro sistema escrever
     nele (Power Automate, um botao de mesa, o que for).
 
- 2) O CASTALIA RODA SOZINHO PELOS REGISTROS
+ 3) O CASTALIA RODA SOZINHO PELOS REGISTROS
 
     lista-governador.json e lista-senador.json trazem TODAS as pracas,
     uma por registro. Se o Castalia souber avancar registro, ele roda
