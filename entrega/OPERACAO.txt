@@ -95,7 +95,10 @@
  A SEQUENCIA DE UMA COBERTURA
 ---------------------------------------------------------------------------
 
- 1. INICIAR.bat          abre e fica aberto a noite toda
+ 1. INICIAR.bat          abre e fica aberto a noite toda. Se o PowerShell
+                         cair, a janela reinicia sozinha em 10 segundos -
+                         por isso ela precisa ficar aberta, nao minimizada
+                         num canto onde ninguem olha.
  2. PAINEL.bat           abre e fica aberto
  3. navegador            localhost:8099, num canto de tela
  4. LiveBoard            auto update de 2 a 5 segundos
