@@ -117,6 +117,9 @@
  O QUE O PAINEL MOSTRA, E PARA QUE SERVE CADA COISA
 ---------------------------------------------------------------------------
 
+ A pagina nao recarrega ao clicar: a rolagem fica onde estava, e so o
+ conteudo e redesenhado. Com 27 botoes na tela isso importa.
+
  Placar azul no topo     quantos numeros novos o TSE mandou. Se parar de
                          subir com a coleta viva, o TSE e que nao mudou
                          nada - diferente de estar quebrado.

@@ -30,7 +30,7 @@ if (-not (Test-Path $Config)) {
     exit 1
 }
 $cfg = Get-Content $Config -Raw -Encoding UTF8 | ConvertFrom-Json
-$Versao = "3.3 - 16/09/2026"
+$Versao = "3.4 - 16/09/2026"
 $PastaSaida = $cfg.pasta_saida
 $ArquivoSelecao = $cfg.selecao.arquivo_selecao
 $ArquivoSelecaoSenador = $null
@@ -551,13 +551,13 @@ $paradoAviso
 $congeladoAviso
 $placar
 $divergencia
-<h2>Presidente</h2>
-<div class="cards">$cardPres</div>
 <h2>Escolher a praça <span class="abas">$abas</span></h2>
 <div class="estados">$botoes</div>
 $blocoPrevia
 <h2>O que está nos arquivos agora</h2>
 <div class="cards">$cartoes</div>
+<h2>Presidente</h2>
+<div class="cards">$cardPres</div>
 <p style="margin:26px 0 0"><a class="btncongela$(if ($congelado) { ' ativo' })" href="/congelar">$rotuloCongelar</a></p>
 <footer>gctse $Versao &middot; As etiquetas <b>GOV</b> e <b>SEN</b> acendem quando o TSE publica boletim novo daquela
 praça, e apagam quando você a coloca no ar. A página se atualiza sozinha a cada 5 segundos.</footer>
@@ -567,17 +567,44 @@ praça, e apagam quando você a coloca no ar. A página se atualiza sozinha a ca
 // a posicao do scroll, que numa tela de operacao faz diferenca.
 (function () {
   var parado = false;
+
+  function redesenhar(texto) {
+    var doc = new DOMParser().parseFromString(texto, 'text/html');
+    var novo = doc.getElementById('vivo');
+    var cab = doc.querySelector('header');
+    if (novo) { document.getElementById('vivo').innerHTML = novo.innerHTML; }
+    if (cab) { document.querySelector('header').innerHTML = cab.innerHTML; }
+  }
+
+  function buscar() {
+    return fetch('/', { cache: 'no-store' })
+      .then(function (r) { return r.text(); })
+      .then(redesenhar);
+  }
+
+  // Clicar num estado navegava e recarregava a pagina, jogando a rolagem
+  // para o topo - com 27 botoes na tela, isso faz perder de vista onde se
+  // estava. Agora o clique vai por fetch e so o conteudo e redesenhado: a
+  // rolagem fica exatamente onde estava.
+  document.addEventListener('click', function (ev) {
+    var a = ev.target.closest ? ev.target.closest('a') : null;
+    if (!a) { return; }
+    var href = a.getAttribute('href') || '';
+    if (href.charAt(0) !== '/') { return; }
+    if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.button !== 0) { return; }
+    ev.preventDefault();
+    var y = window.scrollY;
+    fetch(href, { cache: 'no-store' })
+      .then(function () { return buscar(); })
+      .then(function () { window.scrollTo(0, y); })
+      .catch(function () { location.href = href; });
+  });
+
   setInterval(function () {
     if (parado) return;
-    fetch(location.pathname, { cache: 'no-store' })
-      .then(function (r) { return r.text(); })
-      .then(function (texto) {
-        var doc = new DOMParser().parseFromString(texto, 'text/html');
-        var novo = doc.getElementById('vivo');
-        var cab = doc.querySelector('header');
-        if (novo) { document.getElementById('vivo').innerHTML = novo.innerHTML; }
-        if (cab) { document.querySelector('header').innerHTML = cab.innerHTML; }
-      })
+    var y = window.scrollY;
+    buscar()
+      .then(function () { window.scrollTo(0, y); })
       .catch(function () { parado = true; location.reload(); });
   }, 5000);
 })();
