@@ -35,6 +35,7 @@ O QUE FAZER, NA ORDEM
     vazios: o teste cai no mesmo codigo do oficial.
 
  4b. ESTAMOS RECEBENDO DADO? Duplo clique em CONFERIR.bat
+ 4c. TARJA EMBARALHADA NO AR? Duplo clique em CONFERIR-COLUNAS.bat
 
     Em menos de um minuto ele testa os dois enderecos do TSE, mostra os
     codigos de pleito e eleicao, baixa um boletim de verdade e grava tudo

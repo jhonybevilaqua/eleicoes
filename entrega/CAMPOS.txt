@@ -1,6 +1,6 @@
 ===========================================================================
  CAMPOS DE CADA ARQUIVO - referencia para vincular no Castalia
- gctse 3.6
+ gctse 3.7
 ===========================================================================
 
  REGRA: as 19 PRIMEIRAS posicoes sao iguais nas tres tarjas e NUNCA
@@ -117,7 +117,38 @@
    Idem para o 2o colocado, trocando cand1_ por cand2_.
 
 ===========================================================================
- DOIS ERROS QUE JA ACONTECERAM NESTE PROJETO
+ A TARJA APARECEU EMBARALHADA NO AR - o que fazer
+===========================================================================
+
+ Rode CONFERIR-COLUNAS.bat. Ele mostra, numeradas, as colunas de cada
+ arquivo, com a hora em que cada um foi gravado, e diz se a ordem confere.
+ O mesmo texto fica salvo em CAMPOS-AGORA.txt.
+
+ Compare, numero por numero, com a lista que o DataSource Editor do
+ Castalia mostra. A coluna 7 do arquivo e o nome do candidato. Se no ar
+ a coluna 7 mostrar o nome do estado, o arquivo esta certo e o vinculo
+ da cena e que esta deslocado.
+
+ Tres causas, em ordem de frequencia:
+
+ 1. A cena esta lendo OUTRO arquivo. Uma copia que alguem fez para a
+    pasta do ClassX, por exemplo: ela abre, o Status fica verde, e fica
+    parada para sempre. A hora de gravacao no CONFERIR-COLUNAS.bat
+    resolve a duvida: se ela anda e a tarja no ar nao, e copia.
+
+ 2. A cena esta lendo uma LISTA. Ver o erro 2 mais abaixo.
+
+ 3. Os vinculos foram feitos contra uma versao anterior. Remova e refaca
+    os vinculos usando a numeracao desta folha.
+
+ Do lado do gctse a ordem esta travada: existe uma lista fixa de colunas
+ por modelo dentro do gctse.ps1, e a tarja e reordenada por ela antes de
+ ser gravada. Campo que alguem acrescente por engano no meio do codigo
+ vai para o FIM do arquivo e o log reclama em ERRO - nunca empurra as
+ colunas que a cena ja usa. Foi assim que isso quebrou antes.
+
+===========================================================================
+ TRES ERROS QUE JA ACONTECERAM NESTE PROJETO
 ===========================================================================
 
  1. Vincular texto ao campo 'eleito'. Ele imprime 0 na tela quando o
@@ -128,6 +159,11 @@
     tarja-governador.json. Nao da erro: o arquivo abre, o Status fica
     verde, e a cena nao acha os campos.
     Confira: a arvore tem que mostrar cand1_nome no primeiro nivel.
+
+ 3. Um campo novo inserido no MEIO da tarja. Empurrou tudo o que vinha
+    depois e a tarja foi ao ar com o nome do estado onde ia o nome do
+    candidato. E por isso que a ordem hoje e travada em lista, e nao
+    apenas por convencao.
 
 ===========================================================================
  AS DUAS PORCENTAGENS - nao confundir

@@ -122,6 +122,14 @@
  problema e rede, codigo errado no config.json ou mudanca de formato do
  TSE - e ja traz a versao do Windows e do PowerShell da maquina.
 
+ SE A TARJA APARECER EMBARALHADA NO AR - dado no lugar errado, nome do
+ estado onde ia o nome do candidato - rode CONFERIR-COLUNAS.bat. Ele
+ mostra as colunas de cada arquivo numeradas, com a hora em que cada um
+ foi gravado, e diz se a ordem confere. Compare com o que o DataSource
+ Editor do Castalia mostra: se a ordem confere no arquivo e nao no ar, o
+ problema esta no vinculo da cena ou no caminho do arquivo, nao na
+ coleta. O texto fica salvo em CAMPOS-AGORA.txt, pode me mandar junto.
+
  O historico fica em logs\gctse-AAAA-MM-DD.log.
 
 ---------------------------------------------------------------------------

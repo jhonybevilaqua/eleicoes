@@ -12,6 +12,7 @@
         .\gctse.ps1 -Conferir     testa a conexao e grava CONFERIR.txt
         .\gctse.ps1 -Validar      confere numero por numero contra o TSE
         .\gctse.ps1 -Fotos        lista os nomes de arquivo de foto aceitos
+        .\gctse.ps1 -Campos       mostra as colunas dos arquivos, numeradas
         .\gctse.ps1 -Ensaio       dados ficticios, nao consulta o TSE
         .\gctse.ps1 -Teste        aceita o simulado do TSE (fase S)
         .\gctse.ps1               no ar: so boletim oficial
@@ -23,6 +24,7 @@ param(
     [switch] $Conferir,
     [switch] $Validar,
     [switch] $Fotos,
+    [switch] $Campos,
     [switch] $Preencher,
     [switch] $Ensaio,
     [switch] $Teste,
@@ -34,7 +36,7 @@ param(
 # Versao impressa na partida e no painel. Sem carimbo, "qual versao esta
 # rodando ai?" so se responde abrindo arquivo e comparando a olho - e no
 # meio de um teste com janela de horario ninguem faz isso.
-$Versao = "3.6 - 16/09/2026"
+$Versao = "3.7 - 16/09/2026"
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
@@ -224,6 +226,70 @@ $FotoReserva = ""
 if (Tem-Propriedade $cfg.texto "foto_reserva") { $FotoReserva = "$($cfg.texto.foto_reserva)" }
 $FotoNomeFixo = $false
 if (Tem-Propriedade $cfg.texto "foto_nome_fixo") { $FotoNomeFixo = [bool] $cfg.texto.foto_nome_fixo }
+
+# ------------------------------------------------ ordem travada das colunas
+#
+# O Castalia vincula por POSICAO da coluna, nao pelo nome. Um campo que entre
+# no meio empurra todos os seguintes e a tarja vai ao ar com o nome do estado
+# no lugar do nome do candidato. Ja aconteceu duas vezes.
+#
+# Por isso a ordem nao e mais um efeito do codigo que monta a tarja: e esta
+# lista. Montar-Tarja termina reordenando a saida por ela. Quem editar a
+# funcao pode inserir campo onde quiser - a saida continua saindo nesta
+# ordem. Campo que nao esteja na lista vai para o FIM e grita no log.
+#
+# As 19 primeiras sao iguais nos tres modelos, de proposito: uma cena
+# montada para governador funciona no senador e no presidente.
+#
+# REGRA: campo novo entra SEMPRE no fim da lista do modelo. Nunca no meio.
+# Mexer aqui = remontar a cena no Castalia.
+
+$OrdemBase = @(
+    "cargo", "abrangencia", "apuracao_pct", "selo", "hora_atualizacao",
+    "cand1_visivel", "cand1_nome", "cand1_partido", "cand1_percentual",
+    "cand1_barra_px", "cand1_cor", "cand1_eleito",
+    "cand2_visivel", "cand2_nome", "cand2_partido", "cand2_percentual",
+    "cand2_barra_px", "cand2_cor", "cand2_eleito"
+)
+$OrdemMajoritaria = $OrdemBase + @("cand1_eleito_rotulo", "cand2_eleito_rotulo")
+$OrdemPresidente  = $OrdemBase + @(
+    "cand1_foto", "cand1_foto_existe", "cand1_foto_fixa", "cand1_eleito_rotulo",
+    "cand2_foto", "cand2_foto_existe", "cand2_foto_fixa", "cand2_eleito_rotulo"
+)
+
+function Ordem-Do-Modelo {
+    param([string] $Modelo)
+    if ($Modelo -eq "presidente") { return $OrdemPresidente }
+    return $OrdemMajoritaria
+}
+
+$script:OrdemJaAvisada = @{}
+
+function Ordenar-Tarja {
+    # Devolve a tarja na ordem travada. Campo previsto que faltar entra vazio
+    # (posicao vazia nao desloca nada; posicao ausente desloca TUDO). Campo
+    # nao previsto vai para o fim, onde nao empurra ninguem, e o log avisa.
+    param($Tarja, [string] $Modelo, [string] $Arquivo)
+    $ordem = Ordem-Do-Modelo $Modelo
+    $final = [ordered]@{}
+    foreach ($chave in $ordem) {
+        if ($Tarja.Contains($chave)) { $final[$chave] = $Tarja[$chave] }
+        else { $final[$chave] = "" }
+    }
+    $sobra = @()
+    foreach ($chave in $Tarja.Keys) {
+        if ($final.Contains($chave)) { continue }
+        $final[$chave] = $Tarja[$chave]
+        $sobra += $chave
+    }
+    if ($sobra.Count -gt 0 -and -not $script:OrdemJaAvisada.ContainsKey($Arquivo)) {
+        $script:OrdemJaAvisada[$Arquivo] = $true
+        Escrever-Log ("$Arquivo tem campo fora da ordem travada: " + ($sobra -join ", ") +
+                      ". Foi para o fim do arquivo para nao deslocar as colunas da cena. " +
+                      "Inclua na lista de ordem antes de usar no ar.") "ERRO"
+    }
+    return $final
+}
 
 function Obter-Cor {
     param([string] $Partido)
@@ -720,6 +786,7 @@ function Montar-Tarja {
             if ($Tarja.modelo -eq "presidente") {
                 $extras[$p + "foto"] = ""
                 $extras[$p + "foto_existe"] = "0"
+                $extras[$p + "foto_fixa"] = ""
                 if ($FotoNomeFixo) {
                     $fixo = Caminho-Fixo-Foto $i
                     $reservaVazia = ""
@@ -753,6 +820,7 @@ function Montar-Tarja {
                 if ($Tarja.modelo -eq "presidente") {
                     $extras[$p + "foto"] = ""
                     $extras[$p + "foto_existe"] = "0"
+                    $extras[$p + "foto_fixa"] = ""
                     if ($FotoNomeFixo) { $extras[$p + "foto_fixa"] = Caminho-Fixo-Foto $i }
                 }
                 $saida[$p + "percentual"] = ""
@@ -771,6 +839,7 @@ function Montar-Tarja {
                 $achada = Encontrar-Foto $c.Numero $c.Nome
                 $extras[$p + "foto"] = $achada.caminho
                 $extras[$p + "foto_existe"] = $achada.existe
+                $extras[$p + "foto_fixa"] = ""
                 if ($FotoNomeFixo) {
                     $fixo = Caminho-Fixo-Foto $i
                     Copiar-Foto-Para-Nome-Fixo $achada.caminho $fixo
@@ -788,13 +857,18 @@ function Montar-Tarja {
             # NAO chamar esta variavel de $rotuloEleito: no PowerShell ela
             # seria a MESMA que $RotuloEleito, que guarda o texto do config -
             # e a atribuicao de "" apagaria o texto antes de usa-lo.
-            $selo = ""
-            if ($c.Eleito -eq "1") { $selo = $RotuloEleito }
-            $extras[$p + "eleito_rotulo"] = $selo
+            # Nome proprio: $selo la em cima e o "PARCIAL - NAO OFICIAL".
+            # Reaproveitar a mesma variavel para duas coisas diferentes na
+            # mesma funcao e como este arquivo ja quebrou antes.
+            $seloEleito = ""
+            if ($c.Eleito -eq "1") { $seloEleito = $RotuloEleito }
+            $extras[$p + "eleito_rotulo"] = $seloEleito
         }
     }
     foreach ($chave in $extras.Keys) { $saida[$chave] = $extras[$chave] }
-    return $saida
+    $arquivo = "tarja"
+    if (Tem-Propriedade $Tarja "arquivo") { $arquivo = "$($Tarja.arquivo)" }
+    return (Ordenar-Tarja $saida "$($Tarja.modelo)" $arquivo)
 }
 
 function Obter-NomeCargo {
@@ -1381,6 +1455,127 @@ if ($Fotos) {
     [IO.File]::WriteAllText((Join-Path $pasta "LISTA-DE-FOTOS.txt"), ($rel -join "`r`n"), $utf8f)
     Write-Host ""
     Write-Host "  Gravado em FOTOS\LISTA-DE-FOTOS.txt" -ForegroundColor Green
+    exit 0
+}
+
+# ---------------------------------------------------------------- campos
+
+if ($Campos) {
+    # Existe por um motivo concreto: duas vezes a tarja foi ao ar com dado no
+    # lugar errado, e nas duas o arquivo estava certo - o que estava errado
+    # era o vinculo na cena, ou o arquivo que a cena estava lendo. Discutir
+    # isso por mensagem custa meia hora. Esta tela responde em dez segundos:
+    # a coluna 7 do arquivo e o nome do candidato, ponto. Se no ar a coluna 7
+    # mostra o estado, o problema esta na cena, nao aqui.
+    $linhas = @()
+    $linhas += "Colunas dos arquivos em $PastaSaida"
+    $linhas += "gctse versao $Versao   -   $(Get-Date -Format 'dd/MM/yyyy HH:mm:ss')"
+    $linhas += ""
+    $linhas += "Compare com a lista que o DataSource Editor do Castalia mostra."
+    $linhas += "Tem que bater NUMERO POR NUMERO. A cena vincula por posicao."
+    $linhas += ""
+
+    if (-not (Test-Path $PastaSaida)) {
+        Escrever-Log "a pasta $PastaSaida ainda nao existe. Rode INICIAR ou TESTE uma vez." "ERRO"
+        exit 1
+    }
+
+    $arquivos = Get-ChildItem -Path $PastaSaida -Filter "*.json" | Sort-Object Name
+    foreach ($arq in $arquivos) {
+        $linhas += "==============================================================="
+        $linhas += $arq.Name
+        $linhas += "   gravado em: $($arq.LastWriteTime.ToString('dd/MM/yyyy HH:mm:ss'))"
+        $linhas += "   caminho:    $($arq.FullName)"
+        $linhas += ""
+        $dado = $null
+        try {
+            $dado = (Get-Content -Path $arq.FullName -Raw -Encoding UTF8) | ConvertFrom-Json
+        } catch {
+            $linhas += "   NAO E JSON VALIDO: $($_.Exception.Message)"
+            $linhas += ""
+            continue
+        }
+
+        $chaves = @($dado.PSObject.Properties | ForEach-Object { $_.Name })
+        $ehTarja = ($arq.Name -like "tarja-*") -and -not ($chaves -contains "pracas")
+        $ehLista = ($chaves -contains "pracas")
+        if (-not $ehTarja -and -not $ehLista) {
+            # alertas.json e coleta.json sao do painel e do log. Nao tem
+            # ordem travada porque nenhuma cena le esses dois.
+            $linhas += "   (arquivo auxiliar do painel - nenhuma cena le este)"
+            $linhas += ""
+        }
+        if ($ehLista) {
+            # A confusao classica. Este arquivo tem 4 colunas no topo e os 27
+            # estados escondidos dentro de "pracas". Se a cena de tarja for
+            # apontada para ele, a coluna 1 vira o nome da lista e nada mais
+            # bate. Ja aconteceu neste projeto.
+            $linhas += "   *** ESTE NAO E ARQUIVO DE TARJA. ***"
+            $linhas += "   E uma LISTA (placar de varios estados de uma vez)."
+            $linhas += "   Serve para uma cena de tabela, nunca para a tarja de"
+            $linhas += "   um estado so. Para a tarja use tarja-governador.json,"
+            $linhas += "   tarja-senador.json ou tarja-presidente.json."
+            $linhas += ""
+        }
+
+        $i = 0
+        foreach ($prop in $dado.PSObject.Properties) {
+            $i++
+            $valor = $prop.Value
+            if ($valor -is [array]) { $valor = "[ lista com $($valor.Count) itens ]" }
+            elseif ($null -eq $valor) { $valor = "(vazio)" }
+            elseif ("$valor" -eq "") { $valor = "(vazio)" }
+            $linhas += ("   {0,2}  {1,-22} = {2}" -f $i, $prop.Name, $valor)
+        }
+        $linhas += ""
+
+        if ($ehTarja) {
+            $modelo = "majoritaria"
+            if ($arq.Name -like "*presidente*") { $modelo = "presidente" }
+            $esperado = Ordem-Do-Modelo $modelo
+            $divergencias = @()
+            for ($k = 0; $k -lt $esperado.Count; $k++) {
+                $tem = ""
+                if ($k -lt $chaves.Count) { $tem = $chaves[$k] }
+                if ($tem -ne $esperado[$k]) {
+                    $divergencias += ("   posicao {0}: o arquivo tem '{1}' e a ordem travada pede '{2}'" -f ($k + 1), $tem, $esperado[$k])
+                }
+            }
+            if ($chaves.Count -ne $esperado.Count) {
+                $divergencias += ("   o arquivo tem {0} colunas e o modelo {1} pede {2}" -f $chaves.Count, $modelo, $esperado.Count)
+            }
+            if ($divergencias.Count -eq 0) {
+                $linhas += "   ORDEM CONFERE: $($esperado.Count) colunas, na ordem travada do modelo $modelo."
+            } else {
+                $linhas += "   ORDEM NAO CONFERE com o modelo $($modelo):"
+                $linhas += $divergencias
+            }
+            $linhas += ""
+        }
+    }
+
+    $linhas += "==============================================================="
+    $linhas += ""
+    $linhas += "Se a ordem CONFERE aqui e no ar a tarja aparece embaralhada, o"
+    $linhas += "arquivo esta certo e o problema esta na cena do Castalia:"
+    $linhas += ""
+    $linhas += "  1. no DataSource Editor, confirme o CAMINHO do arquivo -"
+    $linhas += "     tem que terminar em tarja-governador.json (e nao em"
+    $linhas += "     lista-governador.json, nem numa copia antiga sua)."
+    $linhas += "  2. confirme a HORA de gravacao impressa acima. Se ela nao"
+    $linhas += "     anda, a cena esta lendo uma copia parada, nao o original."
+    $linhas += "  3. remova e refaca o vinculo dos objetos de texto. Vincular"
+    $linhas += "     na ordem: 7 = nome do 1o, 9 = percentual do 1o,"
+    $linhas += "     14 = nome do 2o, 16 = percentual do 2o."
+    $linhas += ""
+    $linhas += "A referencia completa das colunas esta em CAMPOS.txt."
+
+    $texto = ($linhas -join [Environment]::NewLine)
+    Write-Host ""
+    Write-Host $texto
+    Write-Host ""
+    Escrever-Arquivo "CAMPOS-AGORA.txt" $texto
+    Escrever-Log "gravei CAMPOS-AGORA.txt - pode mandar esse arquivo junto se a duvida continuar" "OK"
     exit 0
 }
 
