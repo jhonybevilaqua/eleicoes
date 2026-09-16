@@ -91,6 +91,14 @@
 
  GOV NO AR / SEN NO AR   qual praca esta em cada arquivo agora.
 
+ Faixa cinza + botao     TARJAS CONGELADAS. Os numeros no ar estao parados
+ DESCONGELAR             de proposito. Use quando o apresentador estiver
+                         lendo os numeros em voz alta: nada muda embaixo
+                         dele. A coleta continua rodando por tras, e ao
+                         descongelar entra o numero mais novo de uma vez.
+                         Trocar de praca durante o congelamento tambem
+                         vale - so entra no ar quando descongelar.
+
 ---------------------------------------------------------------------------
  A SEQUENCIA DE UMA COBERTURA
 ---------------------------------------------------------------------------

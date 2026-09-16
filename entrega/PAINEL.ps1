@@ -30,7 +30,7 @@ if (-not (Test-Path $Config)) {
     exit 1
 }
 $cfg = Get-Content $Config -Raw -Encoding UTF8 | ConvertFrom-Json
-$Versao = "3.1 - 16/09/2026"
+$Versao = "3.2 - 16/09/2026"
 $PastaSaida = $cfg.pasta_saida
 $ArquivoSelecao = $cfg.selecao.arquivo_selecao
 $ArquivoSelecaoSenador = $null
@@ -188,6 +188,19 @@ function Montar-Pagina {
     # --- a coleta ainda esta viva?
     # Este e o aviso mais importante da tela. Sem ele, um coletor morto deixa
     # numeros plausiveis e CONGELADOS no ar, e ninguem percebe.
+    # --- tarjas congeladas
+    $congelado = Test-Path (Join-Path $Raiz "CONGELADO.txt")
+    $congeladoAviso = ""
+    $rotuloCongelar = "CONGELAR AS TARJAS"
+    if ($congelado) {
+        $desde = ""
+        try { $desde = (Get-Content (Join-Path $Raiz "CONGELADO.txt") -Raw).Trim() } catch { }
+        $congeladoAviso = "<div class='congelado'><span>TARJAS CONGELADAS desde <b>$desde</b>. " +
+                          "Os numeros no ar estao parados de proposito. A coleta continua rodando " +
+                          "por tras - ao descongelar, entra o numero mais novo.</span></div>"
+        $rotuloCongelar = "DESCONGELAR"
+    }
+
     $paradoAviso = ""
     $intervaloCfg = 20
     if (Tem-Propriedade $cfg "intervalo_segundos") { $intervaloCfg = [int] $cfg.intervalo_segundos }
@@ -378,6 +391,17 @@ h2::after{content:"";flex:1;height:1px;background:var(--fio)}
 .parado b{color:#5f0d0d}
 .parado::before{content:"";flex:none;width:19px;height:19px;border-radius:50%;
   background:#c22a2a;box-shadow:0 0 0 4px rgba(194,42,42,.18);animation:pulsa 1.4s ease-in-out infinite}
+.congelado{background:#eef2f7;border:1px solid #b9c6d6;color:#24405f;padding:13px 17px;
+  border-radius:10px;margin-bottom:16px;font-size:14px;font-weight:600;display:flex;gap:10px;
+  align-items:baseline}
+.congelado b{color:#122b47}
+.congelado::before{content:"";flex:none;width:15px;height:15px;border-radius:3px;background:#4a6fa5;
+  margin-top:2px}
+.btncongela{display:inline-block;padding:9px 18px;border-radius:8px;border:1px solid #c3d0de;
+  background:#fff;color:#24405f;font-size:13px;font-weight:700;text-decoration:none;
+  letter-spacing:.02em}
+.btncongela:hover{background:#eef2f7}
+.btncongela.ativo{background:#24405f;border-color:#24405f;color:#fff}
 .placar{background:#eef4fb;border:1px solid #c3d6ec;color:#1d5aa8;padding:11px 16px;
   border-radius:10px;margin-bottom:16px;font-size:13.5px;display:flex;gap:9px;align-items:baseline}
 .placar b{color:#123f77}
@@ -410,6 +434,7 @@ footer b{color:var(--tinta2s)}
 </header>
 <main id="vivo">
 $paradoAviso
+$congeladoAviso
 $placar
 $divergencia
 <h2>Presidente</h2>
@@ -418,6 +443,7 @@ $divergencia
 <div class="estados">$botoes</div>
 <h2>O que está nos arquivos agora</h2>
 <div class="cards">$cartoes</div>
+<p style="margin:26px 0 0"><a class="btncongela$(if ($congelado) { ' ativo' })" href="/congelar">$rotuloCongelar</a></p>
 <footer>gctse $Versao &middot; As etiquetas <b>GOV</b> e <b>SEN</b> acendem quando o TSE publica boletim novo daquela
 praça, e apagam quando você a coloca no ar. A página se atualiza sozinha a cada 5 segundos.</footer>
 </main>
@@ -493,6 +519,22 @@ while ($ouvinte.IsListening) {
             $m = $ctx.Request.QueryString["m"]
             if ($m -in @("ambos", "gov", "sen")) {
                 [IO.File]::WriteAllText((Join-Path $Raiz "PAINEL-MODO.txt"), $m, $utf8)
+            }
+            $resposta.StatusCode = 303; $resposta.RedirectLocation = "/"; $resposta.Close(); continue
+        }
+
+        if ($caminho -eq "/congelar") {
+            # Arquivo-bandeira: o coletor olha a existencia dele a cada
+            # publicacao. Nao ha protocolo nem porta entre os dois programas -
+            # um arquivo que existe ou nao existe nao tem como falhar pela
+            # metade.
+            $arqCong = Join-Path $Raiz "CONGELADO.txt"
+            if (Test-Path $arqCong) {
+                Remove-Item $arqCong -Force -ErrorAction SilentlyContinue
+                Write-Host ("{0} tarjas DESCONGELADAS" -f (Get-Date -Format "HH:mm:ss"))
+            } else {
+                [IO.File]::WriteAllText($arqCong, (Get-Date -Format "dd/MM/yyyy HH:mm:ss"), $utf8)
+                Write-Host ("{0} tarjas CONGELADAS" -f (Get-Date -Format "HH:mm:ss"))
             }
             $resposta.StatusCode = 303; $resposta.RedirectLocation = "/"; $resposta.Close(); continue
         }

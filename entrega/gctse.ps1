@@ -32,7 +32,7 @@ param(
 # Versao impressa na partida e no painel. Sem carimbo, "qual versao esta
 # rodando ai?" so se responde abrindo arquivo e comparando a olho - e no
 # meio de um teste com janela de horario ninguem faz isso.
-$Versao = "3.1 - 16/09/2026"
+$Versao = "3.2 - 16/09/2026"
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
@@ -922,6 +922,14 @@ function Buscar-Praca {
     return $b
 }
 
+function Tarjas-Congeladas {
+    # Congelar e a unica protecao contra o pior momento no ar: o numero
+    # mudando enquanto o apresentador le em voz alta. A coleta continua -
+    # alertas, placar e listas seguem vivos - so as tres tarjas que o GC le
+    # param de ser reescritas, ate alguem descongelar.
+    return (Test-Path "CONGELADO.txt")
+}
+
 function Publicar-Selecionada {
     # Reescreve as tarjas do seletor a partir do cache. Nao consulta o TSE:
     # trocar de estado no ar tem que ser instantaneo.
@@ -946,6 +954,14 @@ function Publicar-Selecionada {
             $b = $b.PSObject.Copy()
         }
         $b.Praca = $praca.nome
+        if (Tarjas-Congeladas) {
+            # Congelada: nao publica agora. Zerar a impressao faz o arquivo
+            # ser reescrito no primeiro ciclo depois do descongelamento -
+            # sem isso, uma troca de praca feita durante o congelamento
+            # ficaria perdida e o operador veria o estado antigo no ar.
+            $script:Impressoes[$saida.arquivo] = ""
+            continue
+        }
         $json = ($(Montar-Tarja $b $saida) | ConvertTo-Json -Depth 5)
         $hash = Obter-Hash $json
         if ($Impressoes[$saida.arquivo] -ne $hash) {
@@ -978,7 +994,12 @@ function Executar-Ciclo {
         if ($null -ne $b) {
             $json = ($(Montar-Tarja $b $tarja) | ConvertTo-Json -Depth 5)
             $hash = Obter-Hash $json
-            if ($Impressoes[$tarja.arquivo] -eq $hash) {
+            if (Tarjas-Congeladas) {
+                # Congelada: nao grava, mas o resto do ciclo segue igual - a
+                # linha continua saindo no log e a impressao NAO e guardada,
+                # para que ao descongelar o arquivo seja reescrito na hora.
+                $situacao = "congelada"
+            } elseif ($Impressoes[$tarja.arquivo] -eq $hash) {
                 $situacao = "sem mudanca"
             } else {
                 Escrever-Arquivo (Join-Path $PastaSaida "$($tarja.arquivo).json") $json
