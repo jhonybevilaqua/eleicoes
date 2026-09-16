@@ -30,7 +30,7 @@ if (-not (Test-Path $Config)) {
     exit 1
 }
 $cfg = Get-Content $Config -Raw -Encoding UTF8 | ConvertFrom-Json
-$Versao = "3.2 - 16/09/2026"
+$Versao = "3.3 - 16/09/2026"
 $PastaSaida = $cfg.pasta_saida
 $ArquivoSelecao = $cfg.selecao.arquivo_selecao
 $ArquivoSelecaoSenador = $null
@@ -62,6 +62,44 @@ function Ler-Alertas {
     return (Ler-Json ([IO.Path]::GetFileNameWithoutExtension($cfg.alertas.arquivo)))
 }
 
+function Ler-Previa {
+    # A praca que o operador esta OLHANDO, que ainda nao foi para o ar. Fica
+    # num arquivo separado do SELECAO: o coletor nao conhece este arquivo, e
+    # por isso escolher praca aqui nao mexe em nada do que esta no ar.
+    param([int] $Cargo = 3)
+    $arq = Join-Path $Raiz "PREVIA.txt"
+    if ($Cargo -eq 5) { $arq = Join-Path $Raiz "PREVIA-SENADOR.txt" }
+    if (Test-Path $arq) {
+        try {
+            $lido = (Get-Content $arq -Raw -ErrorAction Stop).Trim().ToLower()
+            if ($lido) { return $lido }
+        } catch { }
+    }
+    return ""
+}
+
+function Nome-Da-Praca {
+    param([string] $Uf)
+    foreach ($p in $cfg.selecao.pracas) { if ($p.uf -eq $Uf) { return $p.nome } }
+    return $Uf.ToUpper()
+}
+
+function Previa-Da-Praca {
+    # Monta a previa a partir da lista das 27 pracas, que o coletor ja grava
+    # a cada varredura. Nao ha consulta nova ao TSE nem arquivo novo: o dado
+    # para a previa ja esta no disco.
+    param([string] $Uf, [int] $Cargo)
+    $arquivo = "lista-governador"
+    if ($Cargo -eq 5) { $arquivo = "lista-senador" }
+    $lista = Ler-Json $arquivo
+    if ($null -eq $lista -or -not (Tem-Propriedade $lista "pracas")) { return $null }
+    $nome = Nome-Da-Praca $Uf
+    foreach ($linha in $lista.pracas) {
+        if ($linha.praca -eq $nome) { return $linha }
+    }
+    return $null
+}
+
 function Ler-Modo {
     # Qual tarja o clique afeta: ambos, so governador ou so senador.
     if (Test-Path "PAINEL-MODO.txt") {
@@ -79,6 +117,12 @@ function Tem-Propriedade {
     foreach ($prop in $Objeto.PSObject.Properties) { if ($prop.Name -eq $Nome) { return $true } }
     return $false
 }
+
+$ConfirmarAntes = $true
+if (Tem-Propriedade $cfg.selecao "confirmar_antes") {
+    $ConfirmarAntes = [bool] $cfg.selecao.confirmar_antes
+}
+
 
 function Html-Seguro {
     param($Texto)
@@ -105,6 +149,9 @@ function Montar-Pagina {
         $abas += "<a class='$cls' href='/modo?m=$($m[0])'>$($m[1])</a>"
     }
 
+    $prevGov = Ler-Previa 3
+    $prevSen = Ler-Previa 5
+
     # --- botoes de estado, com aviso de boletim novo
     $botoes = ""
     $qtdNovos = 0
@@ -122,6 +169,7 @@ function Montar-Pagina {
         elseif ($p.uf -eq $ufGov) { $classe = "btn ativo gov" }
         elseif ($p.uf -eq $ufSen) { $classe = "btn ativo sen" }
         if ($novoG -or $novoS) { $classe += " novo" }
+        if ($ConfirmarAntes -and ($p.uf -eq $prevGov -or $p.uf -eq $prevSen)) { $classe += " previa" }
 
         $tags = ""
         if ($novoG) { $tags += "<em class='g'>GOV</em>" }
@@ -132,9 +180,60 @@ function Montar-Pagina {
         if ($p.uf -eq $ufGov -and $p.uf -eq $ufSen) { $marca = "<u>no ar</u>" }
         elseif ($p.uf -eq $ufGov) { $marca = "<u>gov no ar</u>" }
         elseif ($p.uf -eq $ufSen) { $marca = "<u>sen no ar</u>" }
+        if ($ConfirmarAntes -and -not $marca -and ($p.uf -eq $prevGov -or $p.uf -eq $prevSen)) {
+            $marca = "<u class='p'>na prévia</u>"
+        }
 
-        $botoes += "<a class='$classe' href='/selecionar?uf=$($p.uf)'>" +
+        $rota = "/selecionar?uf=$($p.uf)"
+        if ($ConfirmarAntes) { $rota = "/previa?uf=$($p.uf)" }
+        $botoes += "<a class='$classe' href='$rota'>" +
                    "<b>$(Html-Seguro $p.nome)</b><span class='tags'>$tags</span>$marca</a>`n"
+    }
+
+    # --- previa: o que entra no ar se voce aprovar
+    $blocoPrevia = ""
+    if ($ConfirmarAntes) {
+        $cartoes = ""
+        $temPendente = $false
+        foreach ($par in @(@(3, "GOVERNADOR", $prevGov, $ufGov), @(5, "SENADOR", $prevSen, $ufSen))) {
+            $cargoP = $par[0]; $rotuloP = $par[1]; $ufPrev = $par[2]; $ufAr = $par[3]
+            if (-not $ufPrev) { continue }
+            $nomePrev = Nome-Da-Praca $ufPrev
+            $igual = ($ufPrev -eq $ufAr)
+            if (-not $igual) { $temPendente = $true }
+            $d = Previa-Da-Praca $ufPrev $cargoP
+            $corpo = "<p class='nada'>ainda sem boletim para esta praça</p>"
+            if ($null -ne $d -and $d.visivel -eq "1") {
+                $corpo = "<div class='praca'>$(Html-Seguro $d.praca)" +
+                         "<span class='urnas'>$(Html-Seguro $d.apuracao_pct) das urnas</span></div>"
+                foreach ($k in 1, 2) {
+                    $nm = $d."cand${k}_nome"
+                    if (-not $nm) { continue }
+                    $corpo += "<div class='cand'><span class='pos'>$k&ordm;</span>" +
+                              "<span class='nome'>$(Html-Seguro $nm)</span>" +
+                              "<span class='part'>$(Html-Seguro $d."cand${k}_partido")</span>" +
+                              "<span class='pct'>$(Html-Seguro $d."cand${k}_percentual")</span></div>"
+                }
+            } elseif ($null -ne $d) {
+                $corpo = "<div class='praca'>$(Html-Seguro $d.praca)</div>" +
+                         "<p class='nada'>sem candidato ainda</p>"
+            }
+            $estado = "<span class='jaNoAr'>já está no ar</span>"
+            if (-not $igual) { $estado = "<span class='vaiEntrar'>entra ao aprovar</span>" }
+            $cartoes += "<div class='card previa'><h3>$rotuloP &middot; $(Html-Seguro $nomePrev) $estado</h3>$corpo</div>"
+        }
+        if ($cartoes) {
+            $acao = ""
+            if ($temPendente) {
+                $acao = "<p class='acoes'><a class='aprovar' href='/aprovar'>COLOCAR NO AR</a>" +
+                        "<a class='descartar' href='/descartar'>descartar</a></p>"
+            } else {
+                $acao = "<p class='acoes'><span class='semAcao'>nada pendente: a prévia é o que já está no ar</span>" +
+                        "<a class='descartar' href='/descartar'>limpar prévia</a></p>"
+            }
+            $blocoPrevia = "<h2>Prévia &middot; o que entra no ar se você aprovar</h2>" +
+                           "<div class='cards'>$cartoes</div>$acao"
+        }
     }
 
     # --- presidente
@@ -391,6 +490,21 @@ h2::after{content:"";flex:1;height:1px;background:var(--fio)}
 .parado b{color:#5f0d0d}
 .parado::before{content:"";flex:none;width:19px;height:19px;border-radius:50%;
   background:#c22a2a;box-shadow:0 0 0 4px rgba(194,42,42,.18);animation:pulsa 1.4s ease-in-out infinite}
+.card.previa{border-color:#9fc0e4;background:#fbfdff}
+.card.previa h3{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
+.jaNoAr{font-size:11px;font-weight:700;letter-spacing:.06em;color:#0d7a55;
+  background:#e7f5ef;border:1px solid #bfe3d4;border-radius:5px;padding:2px 7px}
+.vaiEntrar{font-size:11px;font-weight:700;letter-spacing:.06em;color:#a8650a;
+  background:#fdf4e5;border:1px solid #edd6a8;border-radius:5px;padding:2px 7px}
+.acoes{display:flex;gap:12px;align-items:center;margin:16px 0 0;flex-wrap:wrap}
+.aprovar{display:inline-block;padding:13px 30px;border-radius:9px;background:#0d7a55;
+  color:#fff;font-size:15px;font-weight:800;letter-spacing:.04em;text-decoration:none;
+  box-shadow:0 2px 0 #0a5f43}
+.aprovar:hover{background:#0f8a60}
+.descartar{color:var(--tinta3);font-size:13px;text-decoration:underline}
+.semAcao{color:var(--tinta3);font-size:13px}
+.btn.previa{border-color:#7ea8d8;box-shadow:inset 0 0 0 2px #dceaf8}
+u.p{color:#1d5aa8}
 .congelado{background:#eef2f7;border:1px solid #b9c6d6;color:#24405f;padding:13px 17px;
   border-radius:10px;margin-bottom:16px;font-size:14px;font-weight:600;display:flex;gap:10px;
   align-items:baseline}
@@ -441,6 +555,7 @@ $divergencia
 <div class="cards">$cardPres</div>
 <h2>Escolher a praça <span class="abas">$abas</span></h2>
 <div class="estados">$botoes</div>
+$blocoPrevia
 <h2>O que está nos arquivos agora</h2>
 <div class="cards">$cartoes</div>
 <p style="margin:26px 0 0"><a class="btncongela$(if ($congelado) { ' ativo' })" href="/congelar">$rotuloCongelar</a></p>
@@ -520,6 +635,53 @@ while ($ouvinte.IsListening) {
             if ($m -in @("ambos", "gov", "sen")) {
                 [IO.File]::WriteAllText((Join-Path $Raiz "PAINEL-MODO.txt"), $m, $utf8)
             }
+            $resposta.StatusCode = 303; $resposta.RedirectLocation = "/"; $resposta.Close(); continue
+        }
+
+        if ($caminho -eq "/previa") {
+            # So anota o que o operador quer OLHAR. Nao encosta no SELECAO,
+            # entao nada muda no ar enquanto ele decide.
+            $uf = $ctx.Request.QueryString["uf"]
+            $valida = $false
+            foreach ($p in $cfg.selecao.pracas) { if ($p.uf -eq $uf) { $valida = $true } }
+            if ($valida) {
+                $modo = Ler-Modo
+                if ($modo -eq "ambos" -or $modo -eq "gov") {
+                    [IO.File]::WriteAllText((Join-Path $Raiz "PREVIA.txt"), $uf, $utf8)
+                }
+                if ($modo -eq "ambos" -or $modo -eq "sen") {
+                    [IO.File]::WriteAllText((Join-Path $Raiz "PREVIA-SENADOR.txt"), $uf, $utf8)
+                }
+                Write-Host ("{0} previa ({1}): {2}" -f (Get-Date -Format "HH:mm:ss"), $modo, $uf.ToUpper())
+            }
+            $resposta.StatusCode = 303; $resposta.RedirectLocation = "/"; $resposta.Close(); continue
+        }
+
+        if ($caminho -eq "/aprovar") {
+            # Aqui, e so aqui, a previa vira o que esta no ar: copia para o
+            # SELECAO, que e o arquivo que o coletor obedece.
+            foreach ($par in @(@("PREVIA.txt", $ArquivoSelecao), @("PREVIA-SENADOR.txt", $ArquivoSelecaoSenador))) {
+                $de = Join-Path $Raiz $par[0]
+                if (-not $par[1]) { continue }
+                $para = Join-Path $Raiz $par[1]
+                if (-not (Test-Path $de)) { continue }
+                try {
+                    $uf = (Get-Content $de -Raw -ErrorAction Stop).Trim().ToLower()
+                    if ($uf) {
+                        [IO.File]::WriteAllText($para, $uf, $utf8)
+                        Write-Host ("{0} APROVADO em {1}: {2}" -f (Get-Date -Format "HH:mm:ss"),
+                                    $par[1], $uf.ToUpper())
+                    }
+                } catch { }
+            }
+            $resposta.StatusCode = 303; $resposta.RedirectLocation = "/"; $resposta.Close(); continue
+        }
+
+        if ($caminho -eq "/descartar") {
+            foreach ($arq in @("PREVIA.txt", "PREVIA-SENADOR.txt")) {
+                Remove-Item (Join-Path $Raiz $arq) -Force -ErrorAction SilentlyContinue
+            }
+            Write-Host ("{0} previa descartada" -f (Get-Date -Format "HH:mm:ss"))
             $resposta.StatusCode = 303; $resposta.RedirectLocation = "/"; $resposta.Close(); continue
         }
 

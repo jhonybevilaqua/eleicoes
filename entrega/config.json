@@ -392,6 +392,7 @@
     "arquivo_selecao": "SELECAO.txt",
     "arquivo_selecao_senador": "SELECAO-SENADOR.txt",
     "padrao": "pr",
+    "confirmar_antes": true,
     "saidas": [
       {
         "arquivo": "tarja-governador",

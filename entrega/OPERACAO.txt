@@ -62,15 +62,36 @@
    painel: trazem tudo, sempre.
 
 ---------------------------------------------------------------------------
- TRES JEITOS DE TROCAR A PRACA - todos fazem a mesma coisa
+ COMO TROCAR A PRACA NO AR - EM DOIS PASSOS
 ---------------------------------------------------------------------------
 
- 1. Painel web, clicando no estado.        (o normal)
- 2. SELECIONAR-ESTADO\16 - PARANA.bat      (sem abrir navegador)
- 3. Editando SELECAO.txt no Bloco de Notas (ultimo recurso)
+ 1. CLIQUE NO ESTADO no painel.
+    Isso NAO muda nada no ar. So diz o que voce quer olhar. Aparece o
+    bloco PREVIA com o que entraria: praca, % de urnas, 1o e 2o com
+    partido e percentual, marcado como "entra ao aprovar".
 
- Os tres escrevem a mesma linha no mesmo arquivo. Nao ha ordem de
- prioridade nem conflito: vale o ultimo que escreveu.
+ 2. CONFIRA E CLIQUE EM "COLOCAR NO AR".
+    E so aqui que o arquivo mestre muda. Em menos de 1 segundo o coletor
+    reescreve, e o LiveBoard pega no auto update seguinte.
+
+ Mudou de ideia antes de aprovar: clique em "descartar", ou clique em
+ outro estado. Nada foi para o ar.
+
+ O botao do estado que esta na previa fica com borda azul e a etiqueta
+ "na previa". O que esta no ar continua com "gov no ar" / "sen no ar".
+
+ PARA VOLTAR AO CLIQUE DIRETO, sem confirmacao, ponha
+ "confirmar_antes": false no config.json, dentro de "selecao". O clique
+ passa a ir direto para o ar, como era antes.
+
+ OS ATALHOS .BAT VAO DIRETO PARA O AR, sem previa - continuam existindo
+ como plano B, quando o navegador nao abrir:
+
+    SELECIONAR-ESTADO\16 - PARANA.bat
+    ou editar SELECAO.txt no Bloco de Notas
+
+ CONGELADO + APROVAR: a aprovacao fica guardada e entra no ar no momento
+ do descongelamento. Nada se perde.
 
  SELECAO.txt          -> praca do GOVERNADOR
  SELECAO-SENADOR.txt  -> praca do SENADOR
