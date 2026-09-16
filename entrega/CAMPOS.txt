@@ -1,0 +1,140 @@
+===========================================================================
+ CAMPOS DE CADA ARQUIVO - referencia para vincular no Castalia
+ gctse 3.6
+===========================================================================
+
+ REGRA: as 19 PRIMEIRAS posicoes sao iguais nas tres tarjas e NUNCA
+ mudam de lugar. Campo novo entra sempre depois da 19.
+
+---------------------------------------------------------------------------
+ TARJA-GOVERNADOR.JSON e TARJA-SENADOR.JSON   (21 campos)
+ Uma praca por vez, a que o painel mandou.
+---------------------------------------------------------------------------
+    1. cargo                  PRESIDENTE / GOVERNADOR / SENADOR
+    2. abrangencia            nome da praca: BRASIL, PARANA, SAO PAULO
+    3. apuracao_pct           % das URNAS apuradas  <- NAO e o voto do candidato
+    4. selo                   PARCIAL - NAO OFICIAL, ou vazio quando oficial
+    5. hora_atualizacao       hora da ultima gravacao, HH:MM
+    6. cand1_visivel          1 mostra, 0 esconde  -> visibilidade do grupo
+    7. cand1_nome             nome de urna, ja cortado no limite
+    8. cand1_partido          sigla do partido
+    9. cand1_percentual       % dos VOTOS VALIDOS do candidato
+   10. cand1_barra_px         largura da barra EM PIXELS, ja calculada
+   11. cand1_cor              cor do partido, #rrggbb
+   12. cand1_eleito           1 ou 0  -> VISIBILIDADE de um selo grafico
+   13. cand2_visivel          1 mostra, 0 esconde  -> visibilidade do grupo
+   14. cand2_nome             nome de urna, ja cortado no limite
+   15. cand2_partido          sigla do partido
+   16. cand2_percentual       % dos VOTOS VALIDOS do candidato
+   17. cand2_barra_px         largura da barra EM PIXELS, ja calculada
+   18. cand2_cor              cor do partido, #rrggbb
+   19. cand2_eleito           1 ou 0  -> VISIBILIDADE de um selo grafico
+   20. cand1_eleito_rotulo    ELEITO ou vazio  -> objeto de TEXTO
+   21. cand2_eleito_rotulo    ELEITO ou vazio  -> objeto de TEXTO
+
+---------------------------------------------------------------------------
+ TARJA-PRESIDENTE.JSON   (27 campos)
+ Sempre BRASIL. As 19 primeiras iguais as de cima; depois, foto e selo.
+---------------------------------------------------------------------------
+    1. cargo                  PRESIDENTE / GOVERNADOR / SENADOR
+    2. abrangencia            nome da praca: BRASIL, PARANA, SAO PAULO
+    3. apuracao_pct           % das URNAS apuradas  <- NAO e o voto do candidato
+    4. selo                   PARCIAL - NAO OFICIAL, ou vazio quando oficial
+    5. hora_atualizacao       hora da ultima gravacao, HH:MM
+    6. cand1_visivel          1 mostra, 0 esconde  -> visibilidade do grupo
+    7. cand1_nome             nome de urna, ja cortado no limite
+    8. cand1_partido          sigla do partido
+    9. cand1_percentual       % dos VOTOS VALIDOS do candidato
+   10. cand1_barra_px         largura da barra EM PIXELS, ja calculada
+   11. cand1_cor              cor do partido, #rrggbb
+   12. cand1_eleito           1 ou 0  -> VISIBILIDADE de um selo grafico
+   13. cand2_visivel          1 mostra, 0 esconde  -> visibilidade do grupo
+   14. cand2_nome             nome de urna, ja cortado no limite
+   15. cand2_partido          sigla do partido
+   16. cand2_percentual       % dos VOTOS VALIDOS do candidato
+   17. cand2_barra_px         largura da barra EM PIXELS, ja calculada
+   18. cand2_cor              cor do partido, #rrggbb
+   19. cand2_eleito           1 ou 0  -> VISIBILIDADE de um selo grafico
+   20. cand1_foto             caminho completo da foto do candidato
+   21. cand1_foto_existe      1 se a foto existe, 0 se caiu na silhueta
+   22. cand1_foto_fixa        caminho que nunca muda (plano B, ver LEIA-ME-FOTOS)
+   23. cand1_eleito_rotulo    ELEITO ou vazio  -> objeto de TEXTO
+   24. cand2_foto             caminho completo da foto do candidato
+   25. cand2_foto_existe      1 se a foto existe, 0 se caiu na silhueta
+   26. cand2_foto_fixa        caminho que nunca muda (plano B, ver LEIA-ME-FOTOS)
+   27. cand2_eleito_rotulo    ELEITO ou vazio  -> objeto de TEXTO
+
+---------------------------------------------------------------------------
+ LISTA-GOVERNADOR.JSON, LISTA-SENADOR.JSON, TARJA-RODIZIO.JSON
+ As 27 pracas de uma vez. Estrutura DIFERENTE das tarjas.
+---------------------------------------------------------------------------
+
+   No topo, so 4 campos:
+      lista        'lista-governador'
+      total        2
+      com_dado     2
+      pracas       <- ARRAY com os 27 registros
+
+   Cada registro dentro de 'pracas':
+      ordem                ordem na lista
+      visivel              1 mostra, 0 esconde  -> visibilidade do grupo
+      praca                nome da praca
+      cargo                PRESIDENTE / GOVERNADOR / SENADOR
+      apuracao_pct         % das URNAS apuradas  <- NAO e o voto do candidato
+      selo                 PARCIAL - NAO OFICIAL, ou vazio quando oficial
+      cand1_nome           nome de urna, ja cortado no limite
+      cand1_partido        sigla do partido
+      cand1_percentual     % dos VOTOS VALIDOS do candidato
+      cand1_cor            cor do partido, #rrggbb
+      cand2_nome           nome de urna, ja cortado no limite
+      cand2_partido        sigla do partido
+      cand2_percentual     % dos VOTOS VALIDOS do candidato
+      cand2_cor            cor do partido, #rrggbb
+
+   No Castalia, aponte o Record para o array 'pracas'.
+   NAO use estes arquivos para a tarja de um estado so - o DataSource
+   vai mostrar 'lista/total/pracas/com_dado' em vez dos campos.
+
+===========================================================================
+ O QUE VINCULAR EM QUE - resumo
+===========================================================================
+
+   objeto da cena            campo
+   ----------------------    --------------------
+   Nome 1                    cand1_nome
+   Partido 1                 cand1_partido
+   Percentual 1              cand1_percentual
+   LARGURA da barra 1        cand1_barra_px
+   Cor da barra 1            cand1_cor
+   Visibilidade do grupo 1   cand1_visivel
+   Selo de eleito (grafico)  cand1_eleito         (visibilidade)
+   Selo de eleito (texto)    cand1_eleito_rotulo  (texto)
+   Foto 1                    cand1_foto           (so presidente)
+   Estado / praca            abrangencia
+   N de urnas                apuracao_pct
+   Selo parcial              selo
+
+   Idem para o 2o colocado, trocando cand1_ por cand2_.
+
+===========================================================================
+ DOIS ERROS QUE JA ACONTECERAM NESTE PROJETO
+===========================================================================
+
+ 1. Vincular texto ao campo 'eleito'. Ele imprime 0 na tela quando o
+    candidato nao e eleito - um zero solto ao lado do nome, no ar.
+    Campo eleito -> visibilidade. Campo eleito_rotulo -> texto.
+
+ 2. Apontar o DataSource para lista-governador.json quando se queria
+    tarja-governador.json. Nao da erro: o arquivo abre, o Status fica
+    verde, e a cena nao acha os campos.
+    Confira: a arvore tem que mostrar cand1_nome no primeiro nivel.
+
+===========================================================================
+ AS DUAS PORCENTAGENS - nao confundir
+===========================================================================
+
+   apuracao_pct        quanto das URNAS foi apurado      43,21%
+   cand1_percentual    quanto dos VOTOS o candidato tem  37,52%
+
+ Sao numeros diferentes. Trocar os dois de lugar e o erro mais caro
+ que pode ir ao ar nesta cobertura.

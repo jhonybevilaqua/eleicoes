@@ -79,6 +79,10 @@
 
  logs\                  historico por dia, gravado sozinho.
 
+ CAMPOS.txt            todos os campos de todos os arquivos, com o que
+                        significa cada um e o que vincular em que. E a
+                        folha de consulta na hora de montar a cena.
+
  OPERACAO.txt          como a operacao esta montada: quem escreve o que,
                         o caminho de uma atualizacao do TSE ate a tela, e
                         o que fazer quando algo der errado no ar.
