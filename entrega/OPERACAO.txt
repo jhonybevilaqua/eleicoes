@@ -77,6 +77,29 @@
    Campos: cand1_foto (caminho completo), cand1_foto_fixa (caminho que
    nunca muda) e cand1_foto_existe (1 ou 0).
 
+ A ORDEM DOS CAMPOS NUNCA MUDA - E ISSO E UMA REGRA, NAO UM ACASO
+
+   As tres tarjas comecam com os MESMOS 19 campos, sempre na mesma ordem:
+
+     1 cargo            6 cand1_visivel      13 cand2_visivel
+     2 abrangencia      7 cand1_nome         14 cand2_nome
+     3 apuracao_pct     8 cand1_partido      15 cand2_partido
+     4 selo             9 cand1_percentual   16 cand2_percentual
+     5 hora_atualizacao 10 cand1_barra_px    17 cand2_barra_px
+                        11 cand1_cor         18 cand2_cor
+                        12 cand1_eleito      19 cand2_eleito
+
+   Campo novo entra SEMPRE no fim, depois do 19. Nunca no meio.
+
+   O motivo: gerador de caracteres costuma vincular pela POSICAO da
+   coluna, nao pelo nome. Um campo inserido no meio empurra todos os
+   seguintes, e a tarja vai ao ar com o nome do estado onde deveria estar
+   o nome do candidato. Isso ja aconteceu neste projeto, na janela de
+   teste da tarde do dia 16.
+
+   Se um dia a tarja aparecer com os dados trocados de lugar, e isto:
+   confira se a quantidade de campos mudou.
+
  CUIDADO AO APONTAR O DATASOURCE: "tarja-" ou "lista-"?
 
    Os nomes sao parecidos e o erro nao da mensagem nenhuma - o arquivo

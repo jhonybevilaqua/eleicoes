@@ -34,7 +34,7 @@ param(
 # Versao impressa na partida e no painel. Sem carimbo, "qual versao esta
 # rodando ai?" so se responde abrindo arquivo e comparando a olho - e no
 # meio de um teste com janela de horario ninguem faz isso.
-$Versao = "3.5 - 16/09/2026"
+$Versao = "3.6 - 16/09/2026"
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
@@ -702,6 +702,13 @@ function Montar-Tarja {
     $trilho = 0
     if (Tem-Propriedade $Tarja "trilho_px") { $trilho = [int] $Tarja.trilho_px }
 
+    # Campo novo NUNCA entra no meio. O gerador de caracteres pode vincular
+    # por POSICAO da coluna, e nao pelo nome: um campo inserido no meio
+    # empurra todos os seguintes e a tarja vai ao ar com nome no lugar de
+    # percentual. Aconteceu. Por isso o que e novo se acumula aqui e so e
+    # anexado no fim, depois dos campos que ja existiam.
+    $extras = [ordered]@{}
+
     for ($i = 1; $i -le 2; $i++) {
         $c = $null
         if ($Boletim.Candidatos.Count -ge $i) { $c = $Boletim.Candidatos[$i - 1] }
@@ -711,8 +718,8 @@ function Montar-Tarja {
             $saida[$p + "nome"] = ""
             $saida[$p + "partido"] = ""
             if ($Tarja.modelo -eq "presidente") {
-                $saida[$p + "foto"] = ""
-                $saida[$p + "foto_existe"] = "0"
+                $extras[$p + "foto"] = ""
+                $extras[$p + "foto_existe"] = "0"
                 if ($FotoNomeFixo) {
                     $fixo = Caminho-Fixo-Foto $i
                     $reservaVazia = ""
@@ -721,14 +728,14 @@ function Montar-Tarja {
                         if ($PastaFotos) { $reservaVazia = Join-Path $PastaFotos (Split-Path -Leaf $FotoReserva) }
                     }
                     Copiar-Foto-Para-Nome-Fixo $reservaVazia $fixo
-                    $saida[$p + "foto_fixa"] = $fixo
+                    $extras[$p + "foto_fixa"] = $fixo
                 }
             }
             $saida[$p + "percentual"] = ""
             $saida[$p + "barra_px"] = 0
             $saida[$p + "cor"] = ""
             $saida[$p + "eleito"] = "0"
-            $saida[$p + "eleito_rotulo"] = ""
+            $extras[$p + "eleito_rotulo"] = ""
         } else {
             $largura = 0
             if ($trilho -gt 0) {
@@ -744,15 +751,15 @@ function Montar-Tarja {
                 $saida[$p + "nome"] = ""
                 $saida[$p + "partido"] = ""
                 if ($Tarja.modelo -eq "presidente") {
-                    $saida[$p + "foto"] = ""
-                    $saida[$p + "foto_existe"] = "0"
-                    if ($FotoNomeFixo) { $saida[$p + "foto_fixa"] = Caminho-Fixo-Foto $i }
+                    $extras[$p + "foto"] = ""
+                    $extras[$p + "foto_existe"] = "0"
+                    if ($FotoNomeFixo) { $extras[$p + "foto_fixa"] = Caminho-Fixo-Foto $i }
                 }
                 $saida[$p + "percentual"] = ""
                 $saida[$p + "barra_px"] = 0
                 $saida[$p + "cor"] = ""
                 $saida[$p + "eleito"] = "0"
-                $saida[$p + "eleito_rotulo"] = ""
+                $extras[$p + "eleito_rotulo"] = ""
                 continue
             }
             $saida[$p + "visivel"] = "1"
@@ -762,12 +769,12 @@ function Montar-Tarja {
                 # O TSE nao manda imagem: a foto e arquivo local, procurado
                 # pelo numero do candidato e, em seguida, pelo nome.
                 $achada = Encontrar-Foto $c.Numero $c.Nome
-                $saida[$p + "foto"] = $achada.caminho
-                $saida[$p + "foto_existe"] = $achada.existe
+                $extras[$p + "foto"] = $achada.caminho
+                $extras[$p + "foto_existe"] = $achada.existe
                 if ($FotoNomeFixo) {
                     $fixo = Caminho-Fixo-Foto $i
                     Copiar-Foto-Para-Nome-Fixo $achada.caminho $fixo
-                    $saida[$p + "foto_fixa"] = $fixo
+                    $extras[$p + "foto_fixa"] = $fixo
                 }
             }
             $saida[$p + "percentual"] = Formatar-Percentual $c.Percentual
@@ -783,9 +790,10 @@ function Montar-Tarja {
             # e a atribuicao de "" apagaria o texto antes de usa-lo.
             $selo = ""
             if ($c.Eleito -eq "1") { $selo = $RotuloEleito }
-            $saida[$p + "eleito_rotulo"] = $selo
+            $extras[$p + "eleito_rotulo"] = $selo
         }
     }
+    foreach ($chave in $extras.Keys) { $saida[$chave] = $extras[$chave] }
     return $saida
 }
 
