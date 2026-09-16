@@ -36,6 +36,11 @@
     "limite_nome": 22,
     "limite_partido": 12,
     "selo_nao_oficial": "PARCIAL - NAO OFICIAL",
+    "rotulo_eleito": "ELEITO",
+    "pasta_fotos": "FOTOS",
+    "foto_reserva": "sem-foto.png",
+    "foto_nome_fixo": true,
+    "fotos": {},
     "cor_padrao": "#6b86ab",
     "cores_partido": {}
   },

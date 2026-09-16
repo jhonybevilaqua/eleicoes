@@ -1,0 +1,148 @@
+===========================================================================
+ FOTOS DOS CANDIDATOS
+===========================================================================
+
+O TSE NAO MANDA A FOTO
+
+ Os arquivos de resultado do TSE trazem apenas texto e numero: nome,
+ partido, votos e percentual. Imagem nao vem, em nenhum formato e em
+ nenhum endereco da divulgacao de resultados.
+
+ A foto e arquivo SEU, nesta pasta.
+
+
+COMO NOMEAR - NAO PRECISA DECORAR: O SISTEMA TE DIZ
+
+ Duplo clique em FOTOS-QUAIS-NOMES.bat
+
+ Ele le a lista de candidatos a presidente no TSE e escreve, para cada
+ um, os nomes de arquivo que servem - e marca quem ja tem foto e quem
+ falta. A lista fica em FOTOS\LISTA-DE-FOTOS.txt.
+
+ Exemplo do que ele responde:
+
+     LULA   (PT)   numero 13
+        FALTA A FOTO. Salve o arquivo com QUALQUER um destes nomes:
+           13.png     (ou .jpg, .jpeg, .webp, .bmp)
+           lula.png   (ou .jpg, .jpeg, .webp, .bmp)
+
+
+ OS TRES JEITOS ACEITOS, na ordem em que sao procurados
+
+ 1. PELO NUMERO na urna        13.png   22.png   60.png
+    O mais seguro. Numero nao muda.
+
+ 2. PELO NOME do candidato     lula.jpg   marina-silva.png
+    Tira acento, poe minuscula e troca espaco por hifen:
+    "JOAO DA SILVA CONCEICAO" -> joao-da-silva-conceicao.png
+    O primeiro nome sozinho tambem serve: joao.png
+
+ 3. POR UM APELIDO SEU, no config.json
+    Se o nome do arquivo nao sai do nome de urna, mapeie na mao,
+    em "texto" > "fotos":
+
+        "fotos": { "13": "lula-oficial.jpg", "22": "foto-b.png" }
+
+
+ POR QUE O NUMERO E MAIS SEGURO QUE O NOME
+
+ O nome de urna pode ser reescrito pelo TSE entre o simulado e o
+ oficial - abreviacao, acento, apelido. O numero nao muda. Se voce
+ nomear pelos dois, o numero e usado primeiro e o nome fica de reserva.
+
+ E NUNCA nomeie por colocacao (primeiro.png, segundo.png): se alguem
+ ultrapassar durante a apuracao, a foto fica trocada no ar.
+
+
+QUANTOS ARQUIVOS
+
+ So presidente usa foto, e sao poucos candidatos - da para fazer a mao,
+ uma vez, antes da apuracao. Governador e senador nao usam foto nos
+ modelos entregues.
+
+
+ONDE CONSEGUIR
+
+ As fotos oficiais saem do sistema de candidaturas do TSE
+ (DivulgaCandContas) e do portal de Dados Abertos, em download separado
+ da divulgacao de resultados. Assessoria de imprensa dos partidos
+ costuma ter versao em melhor resolucao.
+
+
+TAMANHO
+
+ Use todas as fotos no MESMO tamanho e no mesmo enquadramento, senao a
+ tarja fica desalinhada quando a ordem muda. O sem-foto.png desta pasta
+ esta em 420x560 (proporcao 3x4) - vale usar essa medida como padrao.
+
+
+QUANDO FALTA A FOTO
+
+ sem-foto.png e usado no lugar de qualquer foto que nao exista, para a
+ tarja nunca mostrar quadro quebrado no ar. Troque por uma silhueta na
+ identidade visual da emissora se quiser.
+
+ O sistema tambem entrega o campo cand1_foto_existe (1 ou 0). Se preferir
+ ESCONDER a moldura em vez de mostrar a silhueta, vincule a visibilidade
+ do grupo da foto a esse campo.
+
+
+COMO VINCULAR A IMAGEM - DOIS CAMINHOS
+=======================================
+
+ O problema a resolver e a TROCA DE ORDEM: se alguem ultrapassar durante a
+ apuracao, a foto tem que trocar de lugar junto com o nome. Os dois
+ caminhos abaixo resolvem isso. Teste qual o seu gerador aceita.
+
+
+ CAMINHO A - o caminho da imagem vem do banco  (prefira este)
+ ------------------------------------------------------------
+ Vincule a ORIGEM da imagem ao campo:
+
+     cand1_foto    C:\GCTSE\FOTOS\82.png
+     cand2_foto    C:\GCTSE\FOTOS\60.png
+
+ Quando a ordem vira, o caminho muda sozinho e a imagem acompanha. Como o
+ caminho muda, o gerador sempre recarrega - nao ha risco de cache.
+
+ So funciona se o seu gerador aceitar vincular o caminho de uma imagem a
+ um campo de dados. Nem todos aceitam.
+
+
+ CAMINHO B - o caminho e fixo e o arquivo e trocado
+ ---------------------------------------------------
+ Se o gerador so aceita caminho fixo na cena, aponte para:
+
+     TARJAS\foto-cand1.png    sempre a foto de quem esta em 1o
+     TARJAS\foto-cand2.png    sempre a foto de quem esta em 2o
+
+ O gctse copia a foto certa para esses nomes a cada mudanca de ordem. O
+ caminho nunca muda; o conteudo do arquivo e que muda.
+
+ ATENCAO: alguns geradores guardam a imagem em cache quando o caminho nao
+ muda, e continuam exibindo a foto antiga. TESTE ISSO ANTES DO AR: rode o
+ sistema, force uma troca de lideranca e veja se a imagem troca na tela.
+ Se nao trocar, use o CAMINHO A.
+
+ A copia so acontece quando a foto muda, e e feita com arquivo temporario
+ e renomeacao - o gerador nunca pega imagem pela metade.
+
+ Para desligar a copia, ponha "foto_nome_fixo": false no config.json.
+
+
+ OS CAMPOS QUE APARECEM NO DATASOURCE
+ -------------------------------------
+ No arquivo TARJAS\tarja-presidente.json, por candidato:
+
+   cand1_foto         caminho completo da foto DELE
+                      C:\GCTSE\FOTOS\lula.jpg
+   cand1_foto_fixa    caminho completo que NUNCA muda
+                      C:\GCTSE\TARJAS\foto-cand1.png
+   cand1_foto_existe  1 se a foto existe, 0 se nao
+
+ Os dois primeiros sao os dois caminhos do vinculo: escolha UM.
+ Os dois caminhos sao ABSOLUTOS, com a letra do drive - caminho relativo
+ seria resolvido a partir da pasta do gerador, nao da pasta do gctse.
+
+ O terceiro serve para a VISIBILIDADE do grupo da foto, se preferir
+ esconder a moldura em vez de mostrar a silhueta do sem-foto.png.

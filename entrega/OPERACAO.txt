@@ -52,6 +52,31 @@
    Escolha independente da de governador: da para ter governador do
    PARANA e senador de SAO PAULO no ar ao mesmo tempo. Trilho: 560px.
 
+ O SELO DE ELEITO
+
+   Quando o TSE declara o eleito, dois campos mudam sozinhos:
+
+     cand1_eleito         "1" ou "0"     -> para VISIBILIDADE de um
+                                            grafico de selo ja desenhado
+     cand1_eleito_rotulo  "ELEITO" ou "" -> para um objeto de TEXTO ao
+                                            lado do nome
+
+   Use UM dos dois, o que a sua cena preferir. O texto do rotulo sai de
+   "rotulo_eleito" no config - trocando la, muda na tela sem mexer na cena.
+
+   O TSE marca o eleito no proprio boletim (campos "e" e "st"). Nao ha
+   nada para o operador apertar: quando chega, aparece.
+
+ A FOTO DO PRESIDENTE
+
+   O TSE nao manda imagem. A foto e arquivo seu, na pasta FOTOS, aceita
+   nomeada pelo NUMERO (13.png) ou pelo NOME (lula.jpg). Duplo clique em
+   FOTOS-QUAIS-NOMES.bat e ele diz, lendo o TSE, com que nome salvar cada
+   uma. Detalhes no FOTOS\LEIA-ME-FOTOS.txt.
+
+   Campos: cand1_foto (caminho completo), cand1_foto_fixa (caminho que
+   nunca muda) e cand1_foto_existe (1 ou 0).
+
  CUIDADO AO APONTAR O DATASOURCE: "tarja-" ou "lista-"?
 
    Os nomes sao parecidos e o erro nao da mensagem nenhuma - o arquivo
