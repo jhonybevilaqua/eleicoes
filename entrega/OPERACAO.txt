@@ -52,6 +52,23 @@
    Escolha independente da de governador: da para ter governador do
    PARANA e senador de SAO PAULO no ar ao mesmo tempo. Trilho: 560px.
 
+ CUIDADO AO APONTAR O DATASOURCE: "tarja-" ou "lista-"?
+
+   Os nomes sao parecidos e o erro nao da mensagem nenhuma - o arquivo
+   abre, o Status fica verde, e a cena simplesmente nao acha os campos.
+
+   tarja-governador.json   UM estado. Os 19 campos no primeiro nivel:
+                           cand1_nome, cand1_percentual, cand1_barra_px...
+                           E ESTE que a tarja de um estado usa.
+
+   lista-governador.json   os 27 estados. So 4 campos no topo - lista,
+                           total, pracas, com_dado - com tudo aninhado
+                           dentro de "pracas". Serve para a tarja de
+                           rodizio, apontando o Record para esse array.
+
+   Como saber que apontou certo: a arvore do DataSource tem que mostrar
+   cand1_nome no primeiro nivel. Se mostrar "pracas", e o arquivo errado.
+
  AS TRES LISTAS - todas as 27 pracas de uma vez
    TARJAS\lista-governador.json
    TARJAS\lista-senador.json
