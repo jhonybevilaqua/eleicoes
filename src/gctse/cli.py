@@ -241,6 +241,11 @@ def cmd_exemplo(args) -> int:
         "arquivo_estado", "dados/estado/estado.json"
     )
     coleta.pop("arquivo_saude", None)
+    if not reais:
+        # O exemplo nao pode escrever no historico de verdade: um ponto
+        # ficticio no meio da serie estragaria a curva e a previsao do dia.
+        coleta["arquivo_historico"] = str(pasta / ".historico.jsonl")
+        coleta["arquivo_graficos"] = str(pasta / "graficos.json")
     cfg.bruto.setdefault("seguranca", {})["bloquear_nao_oficial"] = False
     if not reais:
         cfg.bruto.setdefault("saida", {})["destino"] = str(pasta)
@@ -263,9 +268,9 @@ def cmd_exemplo(args) -> int:
         print(f"  {nome}: {situacao}")
 
     if not reais:
-        estado = pasta / ".estado.json"
-        if estado.exists():
-            estado.unlink()
+        for temporario in (pasta / ".estado.json", pasta / ".historico.jsonl"):
+            if temporario.exists():
+                temporario.unlink()
 
     args.pasta = str(pasta / "mapa")
     print()
@@ -330,6 +335,10 @@ def cmd_ensaio(args) -> int:
     _iniciar_log(cfg, args)
     # ensaio nunca toca o TSE e nao herda o bloqueio de fase simulada
     cfg.bruto.setdefault("coleta", {})["fonte"] = "simulador"
+    # Ensaio tem historico proprio: a curva do ensaio nao entra na serie que o
+    # coordenador vai ler no dia.
+    cfg.bruto["coleta"]["arquivo_historico"] = "dados/estado/ensaio-historico.jsonl"
+    cfg.bruto["coleta"]["arquivo_graficos"] = "dados/estado/ensaio-graficos.json"
     cfg.bruto["coleta"]["simulador_duracao_segundos"] = args.duracao
     if args.progresso is not None:
         cfg.bruto["coleta"]["simulador_progresso"] = args.progresso

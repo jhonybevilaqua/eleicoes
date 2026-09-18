@@ -40,6 +40,13 @@ coleta:
   segundos_sem_dado_para_alerta: 300
   pasta_amostras: dados/amostras
   simulador_duracao_segundos: 900
+  # Serie temporal: uma linha por boletim publicado. Sem isso nao ha curva de
+  # apuracao, previsao de fechamento nem marco de virada - o estado.json guarda
+  # so o ultimo boletim de cada alvo. Ver docs/GRAFICOS.md.
+  historico: true
+  arquivo_historico: dados/estado/historico.jsonl
+  arquivo_graficos: dados/estado/graficos.json
+  pontos_por_grafico: 240    # pontos por alvo no graficos.json (0 = todos)
 
 # --- Guardas de seguranca no ar ---------------------------------------------
 seguranca:
@@ -61,6 +68,12 @@ texto:
   casas_percentual: 2
   sufixo_percentual: "%"
   selo_nao_oficial: "PARCIAL - NAO OFICIAL"
+  # Cor por partido (sigla em CAIXA ALTA). Alimenta a barra, a tarja e a
+  # pintura de cada estado no mapa. Sem entrada aqui vale 'cor_padrao'.
+  cor_padrao: "#7d93b3"
+  cores_partido: {}        # ex.: { PVL: "#2f97e8", PDR: "#c0392b" }
+  # Foto nomeada pelo NUMERO da urna, que e o identificador estavel.
+  padrao_foto: ""          # ex.: "fotos/{numero}.png"
   limites:                 # corte por campo, em caracteres (0 = sem limite)
     nome: 22
     nome_completo: 40
@@ -158,6 +171,36 @@ exporters:
   #   formato: gc
   #   cabecalhos:
   #     Authorization: Bearer ${GC_TOKEN}
+
+  # --- Mapa do Brasil (ver docs/GRAFICOS.md) --------------------------------
+  # mapa_partido:
+  #   tipo: mapa
+  #   modo: partido          # partido | apuracao
+  #   destino: dados/saida/mapa
+  #   titulo: "PRESIDENTE - LIDERANCA POR ESTADO"
+  #   rotulo: sigla_pct      # sigla | sigla_pct | sigla_lider
+  #   formatos: [svg, json]  # SVG 1920x1080 pintado, JSON por UF
+  #   cor_sem_dado: "#6b7688"    # praca ainda sem boletim
+  #   cor_escala: "#2f97e8"      # cor cheia no modo 'apuracao'
+  #   paleta_reserva: true       # da cor a partido sem cor definida
+  #   fundo_transparente: false  # true para compor sobre a cena do GC
+  #   painel: true               # bloco lateral com partidos e composicao
+
+# --- Geometria do grafico de composicao (brancos, nulos, abstencao) ---------
+# Pode ficar em 'texto' (vale para todos) ou dentro de um exporter. Gera
+# comp_*_px (barra empilhada) e rosca_* (dasharray/offset/graus) ja calculados.
+#   composicao:
+#     trilho_px: 900
+#     rosca_raio: 120
+#     base: apurados       # apurados (validos+brancos+nulos) | eleitorado
+
+# --- Grupos de mapa ---------------------------------------------------------
+# Mesma forma do rodizio: um exporter, uma lista de alvos. As 27 UFs num
+# arquivo so, reescrito apenas quando alguma praca muda.
+# mapas:
+#   mapa-presidente:
+#     exporter: mapa_partido
+#     alvos: [mapa-ac, mapa-al, mapa-am, ...]
 
 # --- Alertas para o plantao -------------------------------------------------
 alertas:

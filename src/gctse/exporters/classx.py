@@ -99,6 +99,23 @@ CAMPOS_NUMERICOS = {
     "barra_trilho_px",
 }
 
+# Alem da lista acima, sao numericos: tudo que termina em '_num' e a geometria
+# do grafico de composicao. Regra em vez de lista porque os nomes da geometria
+# variam com as fatias configuradas (comp_nulos_px, rosca_brancos_graus...).
+PREFIXOS_NUMERICOS = ("comp_", "rosca_")
+# ... com estas excecoes, que sao texto: 'comp_base' nomeia a base escolhida,
+# 'comp_total' sai formatado para exibicao e '_dash' e um par "arco resto"
+# que o SVG le como atributo, nao como numero.
+NAO_NUMERICOS = {"comp_base", "comp_total"}
+
+
+def eh_numerico(campo: str) -> bool:
+    if campo in CAMPOS_NUMERICOS or campo.endswith("_num"):
+        return True
+    if campo in NAO_NUMERICOS or campo.endswith("_dash"):
+        return False
+    return campo.startswith(PREFIXOS_NUMERICOS)
+
 
 def letra_coluna(indice: int) -> str:
     """0 -> A, 1 -> B, 26 -> AA (notacao de planilha)."""
@@ -197,7 +214,7 @@ class ExporterClassX(Exporter):
 
     def _tipar(self, campo: str, valor: str):
         """Devolve numero de verdade nos campos numericos; texto no resto."""
-        if campo not in CAMPOS_NUMERICOS:
+        if not eh_numerico(campo):
             return valor
         texto = str(valor).strip()
         if not texto:

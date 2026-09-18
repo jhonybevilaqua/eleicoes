@@ -15,6 +15,7 @@ from .arquivo_xml import ExporterXML
 from .caspar import ExporterCasparCG
 from .classx import ExporterClassX
 from .http_push import ExporterHTTP
+from .mapa import ExporterMapa
 from .rodizio import ExporterRodizio
 from .viz_tab import ExporterVizTab
 
@@ -25,6 +26,7 @@ REGISTRO: dict[str, Type[Exporter]] = {
     "casparcg": ExporterCasparCG,
     "classx": ExporterClassX,
     "http": ExporterHTTP,
+    "mapa": ExporterMapa,
     "rodizio": ExporterRodizio,
     "viz_tab": ExporterVizTab,
 }

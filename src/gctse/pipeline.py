@@ -23,6 +23,7 @@ from .estado import Estado
 from .exporters import criar
 from .exporters.base import Exporter
 from .fontes import criar_fonte
+from .historico import Historico, Ponto, projecao, viradas
 from .modelos import Apuracao
 from .painel import renderizar as renderizar_painel
 from .tse.cliente import ClienteTSE
@@ -38,6 +39,14 @@ class Pipeline:
         self.cfg = cfg
         self.alertas = Alertas(cfg.alertas)
         self.estado = Estado(cfg.coleta.get("arquivo_estado", "dados/estado/estado.json"))
+        # Serie temporal: alimenta curva de apuracao, previsao de fechamento e
+        # marcos de virada. Carregada uma vez na partida e mantida em memoria,
+        # para o ciclo nao reler o arquivo inteiro a cada 20 segundos.
+        self.historico = Historico(
+            cfg.coleta.get("arquivo_historico", "dados/estado/historico.jsonl"),
+            ativo=bool(cfg.coleta.get("historico", True)),
+        )
+        self._serie: dict[str, list[Ponto]] = self.historico.series() if self.historico.ativo else {}
 
         self.endpoints = Endpoints(cfg.tse)
         self.cliente = ClienteTSE(
@@ -53,6 +62,7 @@ class Pipeline:
             nome: criar(nome, opcoes, cfg.texto, cfg.saida) for nome, opcoes in cfg.exporters.items()
         }
         self.alvos: list[Alvo] = cfg.alvos
+        self.grupos = cfg.grupos
 
         # ultima apuracao boa de cada alvo, para montar os rodizios no fim do
         # ciclo. Mantida mesmo quando o boletim nao mudou, senao a praca sumiria
@@ -100,6 +110,7 @@ class Pipeline:
         self.ciclos += 1
         self.estado.salvar()
         self._escrever_saude(resultados)
+        self._escrever_graficos()
         self._escrever_painel(resultados, rodizios)
         return resultados
 
@@ -223,6 +234,7 @@ class Pipeline:
             ap.gerado_em,
             {"pct": ap.pct_secoes, "fase": ap.fase, "arquivos": [str(p) for p in escritos]},
         )
+        self._registrar_historico(alvo.nome, ap)
         log.info(
             "alvo '%s': %.2f%% apurado, %d candidato(s), %d arquivo(s)",
             alvo.nome, ap.pct_secoes, len(ap.candidatos), len(escritos),
@@ -230,10 +242,15 @@ class Pipeline:
         return f"publicado({ap.pct_secoes:.2f}%)"
 
     def _publicar_rodizios(self) -> dict[str, tuple[int, int]]:
-        """Junta varias pracas num arquivo so, na ordem configurada."""
+        """Junta varias pracas num arquivo so: rodizio de tarja e mapa.
+
+        Os dois tem a mesma forma - uma lista de pracas, um arquivo - e por
+        isso passam pelo mesmo caminho, com o mesmo dedupe: o mapa tambem so e
+        reescrito quando alguma praca do grupo muda.
+        """
         situacao: dict[str, tuple[int, int]] = {}
         apelidos = {a.nome: (a.apelido_abrangencia or a.abrangencia.upper()) for a in self.alvos}
-        for nome, grupo in self.cfg.rodizios.items():
+        for nome, grupo in self.grupos.items():
             exporter = self.exporters.get(grupo.get("exporter", ""))
             if exporter is None or not hasattr(exporter, "exportar_lista"):
                 continue
@@ -248,22 +265,84 @@ class Pipeline:
             impressao = hashlib.sha1(
                 json.dumps(exporter.montar(itens), ensure_ascii=False, sort_keys=True).encode("utf-8")
             ).hexdigest()
-            chave = f"rodizio:{nome}"
+            chave = f"grupo:{nome}"
             situacao[nome] = (len(itens), sum(1 for _, _, ap in itens if ap))
             if not self.estado.mudou(chave, impressao) and not bool(self.cfg.saida.get("reescrever_sempre", False)):
                 continue
             try:
                 escritos = exporter.exportar_lista(itens, arquivo)
             except Exception as exc:
-                log.exception("rodizio '%s' falhou", nome)
-                self.alertas.enviar(f"rodizio:{nome}", f"rodizio '{nome}' falhou: {exc}", "ERRO")
+                log.exception("grupo '%s' falhou", nome)
+                self.alertas.enviar(f"grupo:{nome}", f"grupo '{nome}' falhou: {exc}", "ERRO")
                 continue
             com_dado = sum(1 for _, _, ap in itens if ap)
             situacao[nome] = (len(itens), com_dado)
             self.estado.registrar(chave, impressao, None, {"pracas": len(itens), "com_dado": com_dado})
-            log.info("rodizio '%s': %d de %d praca(s) com dado, %d arquivo(s)",
+            log.info("grupo '%s': %d de %d praca(s) com dado, %d arquivo(s)",
                      nome, com_dado, len(itens), len(escritos))
         return situacao
+
+    # --- historico e projecao ---
+
+    def _registrar_historico(self, nome_alvo: str, ap: Apuracao) -> None:
+        if not self.historico.ativo:
+            return
+        if self.historico.registrar(nome_alvo, ap):
+            self._serie.setdefault(nome_alvo, []).append(
+                Ponto(
+                    instante=ap.gerado_em or ap.capturado_em or datetime.now(),
+                    pct=ap.pct_secoes,
+                    secoes_totalizadas=ap.secoes_totalizadas,
+                    secoes_total=ap.secoes_total,
+                    candidatos=[(c.numero, c.votos, c.percentual) for c in ap.candidatos],
+                )
+            )
+
+    def projecoes(self) -> dict[str, dict]:
+        """Previsao de fechamento por alvo, a partir da serie em memoria."""
+        return {nome: projecao(pontos) for nome, pontos in self._serie.items() if pontos}
+
+    def _escrever_graficos(self) -> None:
+        """Arquivo unico com o que os graficos de evolucao precisam.
+
+        Serie, previsao de fechamento e marcos de virada, por alvo. Sai
+        separado do 'saude.json' porque tem outro publico: saude e para o
+        monitoramento da emissora, este e para grafico, site e conferencia.
+        """
+        caminho = self.cfg.coleta.get("arquivo_graficos")
+        if not caminho or not self._serie:
+            return
+        limite = int(self.cfg.coleta.get("pontos_por_grafico", 240))
+        corpo = {
+            "atualizado_em": datetime.now().isoformat(timespec="seconds"),
+            "alvos": {
+                nome: {
+                    "projecao": projecao(pontos),
+                    "viradas": viradas(pontos),
+                    "serie": [
+                        {
+                            "hora": ponto.instante.strftime("%H:%M:%S"),
+                            "pct": ponto.pct,
+                            "secoes_totalizadas": ponto.secoes_totalizadas,
+                            "candidatos": [
+                                {"numero": n, "votos": v, "percentual": pc}
+                                for n, v, pc in ponto.candidatos
+                            ],
+                        }
+                        # Grafico nao ganha nada com 700 pontos numa linha de
+                        # 600px: os ultimos N bastam, e o arquivo fica leve
+                        # para quem le pela rede.
+                        for ponto in pontos[-limite:]
+                    ],
+                }
+                for nome, pontos in self._serie.items()
+                if pontos
+            },
+        }
+        try:
+            escrever_texto(Path(caminho), json.dumps(corpo, ensure_ascii=False, indent=2), nova_linha="\n")
+        except OSError as exc:
+            log.error("nao foi possivel escrever o arquivo de graficos: %s", exc)
 
     # --- supervisao ---
 
@@ -295,6 +374,7 @@ class Pipeline:
                 resultados=resultados,
                 apuracoes=self._ultima,
                 rodizios=rodizios,
+                projecoes=self.projecoes(),
             )
         except OSError as exc:
             log.error("nao foi possivel escrever o painel: %s", exc)

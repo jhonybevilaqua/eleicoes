@@ -124,6 +124,7 @@ alvos:
 | `casparcg` | `templateData` XML + JSON | CasparCG |
 | `viz_tab` | texto com TAB | Viz Trio (import de tab fields) |
 | `http` | POST/PUT JSON | API do GC, broker, Power Automate/Teams |
+| `mapa` | SVG 1920×1080 pintado + JSON por UF | **mapa do Brasil** na cena, site, segunda tela |
 
 Cada exporter tem `destino`, `encoding` e `nome_arquivo` próprios, então dá
 para escrever ao mesmo tempo no hot folder do GC, na pasta do web e num
@@ -135,6 +136,28 @@ primeiro ao último boletim. Em JSON/XML o vínculo é por nome, então não há
 célula para deslocar; em CSV, a geometria garantida faz a célula continuar
 válida. Campos numéricos vêm em versão crua (`votos_num`) para o `Sort` com
 "As number". `gctse celulas` imprime o mapa de onde cada campo está.
+
+## Mapas e gráficos
+
+Além do placar, o mesmo boletim sustenta o mapa do Brasil, a composição do voto
+e a curva de apuração — tudo com a geometria já calculada, para o GC não fazer
+conta:
+
+```bash
+gctse exemplo                              # gera também os dois SVGs de mapa
+python scripts/gerar_modelos_graficos.py   # regera a arte de referência
+```
+
+- **Mapa por partido** — cada UF na cor do partido de quem lidera ali.
+- **Mapa por urnas** — cada UF pela fração de seções totalizadas; enche ao vivo.
+- **Brancos, nulos e abstenção** — percentuais prontos, mais `stroke-dasharray`
+  da rosca e as larguras da barra empilhada em pixels.
+- **Curva e previsão de fechamento** — a que horas as urnas terminam, no ritmo
+  dos últimos boletins. Para escala e intervalo, não para o ar.
+
+A arte de referência com as medidas e o campo que alimenta cada elemento está
+em [`graficos/modelos.html`](graficos/modelos.html). Receita completa em
+[`docs/GRAFICOS.md`](docs/GRAFICOS.md).
 
 ## Guardas de segurança no ar
 
@@ -161,6 +184,10 @@ mínimo de seções totalizadas.
   situação de cada alvo. Recarrega sozinha; é arquivo estático, sem servidor.
 - `dados/estado/saude.json` — situação de cada alvo a cada ciclo, para o
   monitoramento da emissora acompanhar.
+- `dados/estado/historico.jsonl` — uma linha por boletim publicado. É o que
+  permite curva de apuração, previsão de fechamento e marco de virada.
+- `dados/estado/graficos.json` — série, projeção e viradas por alvo, reescrito
+  a cada ciclo.
 - `logs/gctse.log` — log rotativo diário, 14 dias.
 - `alertas` — webhook (Teams ou Power Automate) para falha repetida, alvo
   parado ou fase inesperada, com supressão de repetição.
@@ -172,6 +199,7 @@ mínimo de seções totalizadas.
 - [`docs/TSE-API.md`](docs/TSE-API.md) — endpoints, campos e o que confirmar em 2026
 - [`docs/GC-INTEGRACAO.md`](docs/GC-INTEGRACAO.md) — receita por marca de GC
 - [`docs/TARJAS.md`](docs/TARJAS.md) — os seis modelos de tarja, o HTML e o PDF
+- [`docs/GRAFICOS.md`](docs/GRAFICOS.md) — mapa do Brasil, brancos e nulos, curva de apuração
 - [`docs/CASTALIA.md`](docs/CASTALIA.md) — fazer o gráfico acompanhar o percentual no Castalia
 - [`docs/TESTE-SIMULADO.md`](docs/TESTE-SIMULADO.md) — testar com o simulado do TSE
 - [`docs/OPERACAO.md`](docs/OPERACAO.md) — runbook do dia da eleição e contingência

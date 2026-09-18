@@ -36,12 +36,12 @@ def _classe(situacao: str) -> tuple[str, str]:
     return "neutro", situacao
 
 
-def _linha_alvo(nome: str, situacao: str, ap: Apuracao | None) -> str:
+def _linha_alvo(nome: str, situacao: str, ap: Apuracao | None, previsao: dict | None = None) -> str:
     classe, rotulo = _classe(situacao)
     if ap is None:
         return (
             f'<tr class="{classe}"><td class="nome">{html.escape(nome)}</td>'
-            f'<td colspan="5" class="vazio">sem boletim</td>'
+            f'<td colspan="7" class="vazio">sem boletim</td>'
             f'<td><span class="tag {classe}">{html.escape(rotulo)}</span></td></tr>'
         )
 
@@ -57,12 +57,21 @@ def _linha_alvo(nome: str, situacao: str, ap: Apuracao | None) -> str:
         return (f'<td>{html.escape(c.nome)}{sigla}{eleito}</td>'
                 f'<td class="num">{c.percentual:.2f}%</td>')
 
+    # Previsao de fechamento: existe so depois de alguns boletins, e some
+    # quando a apuracao para - melhor uma celula vazia do que um horario que o
+    # coordenador usaria para liberar equipe sem base nenhuma.
+    prev = (previsao or {}).get("previsao") or "—"
+    if (previsao or {}).get("totalizada"):
+        prev = "fechado"
+
     return (
         f'<tr class="{classe}">'
         f'<td class="nome">{html.escape(nome)} {oficial}</td>'
         f'<td>{html.escape(ap.cargo_nome)}</td>'
         f'<td class="num forte">{ap.pct_secoes:.2f}%</td>'
         f'{cand(lider)}{cand(segundo)}'
+        f'<td class="num">{ap.pct_brancos_nulos:.2f}%</td>'
+        f'<td class="num">{html.escape(prev)}</td>'
         f'<td><span class="tag {classe}">{html.escape(rotulo)}</span></td>'
         f"</tr>"
     )
@@ -84,19 +93,21 @@ def renderizar(
     resultados: dict[str, str],
     apuracoes: dict[str, Apuracao],
     rodizios: dict[str, tuple[int, int]],
+    projecoes: dict[str, dict] | None = None,
 ) -> Path:
     agora = datetime.now()
     ensaio = fonte != "tse"
 
+    projecoes = projecoes or {}
     linhas = "".join(
-        _linha_alvo(nome, resultados[nome], apuracoes.get(nome))
+        _linha_alvo(nome, resultados[nome], apuracoes.get(nome), projecoes.get(nome))
         for nome in sorted(resultados)
     )
     bloco_rodizio = ""
     if rodizios:
         corpo = "".join(_linha_rodizio(n, t, c) for n, (t, c) in sorted(rodizios.items()))
         bloco_rodizio = (
-            '<h2>Rodízios</h2><table class="rod"><tbody>' + corpo + "</tbody></table>"
+            '<h2>Grupos (rodízio e mapa)</h2><table class="rod"><tbody>' + corpo + "</tbody></table>"
         )
 
     faixa = (
@@ -163,11 +174,14 @@ footer{{color:var(--tx2);font-size:12px;margin-top:26px;padding-top:14px;
 <table><thead><tr>
   <th>Alvo</th><th>Cargo</th><th class="num">Urnas</th>
   <th>1º colocado</th><th class="num">%</th>
-  <th>2º colocado</th><th class="num">%</th><th>Situação</th>
+  <th>2º colocado</th><th class="num">%</th>
+  <th class="num">Br+Nu</th><th class="num">Fecha</th><th>Situação</th>
 </tr></thead><tbody>{linhas}</tbody></table>
 {bloco_rodizio}
 <footer>Página estática reescrita a cada ciclo. Percentuais de urnas e de votos
-válidos vêm do mesmo boletim exibido no ar.</footer>
+válidos vêm do mesmo boletim exibido no ar. <b>Br+Nu</b> é a soma de brancos e
+nulos sobre os votos apurados. <b>Fecha</b> é a previsão de 100% no ritmo dos
+últimos boletins — serve para escala e intervalo, não para o ar.</footer>
 </main></body></html>"""
 
     return escrever_texto(Path(caminho), documento, encoding="utf-8", nova_linha="\n")

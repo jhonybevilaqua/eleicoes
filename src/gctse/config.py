@@ -98,6 +98,27 @@ class Config:
         return self.bruto.get("rodizios", {}) or {}
 
     @property
+    def mapas(self) -> dict[str, dict[str, Any]]:
+        """Grupos de UFs que viram um mapa.
+
+        Mesma forma do rodizio - um exporter e uma lista de alvos - porque o
+        problema e o mesmo: varias pracas num arquivo so. O nome separado
+        existe para a config dizer o que a pessoa quis, e nao 'rodizio' para
+        uma coisa que e mapa.
+
+        mapas:
+          mapa-presidente:
+            exporter: mapa_br
+            alvos: [pres-ac, pres-al, ...]
+        """
+        return self.bruto.get("mapas", {}) or {}
+
+    @property
+    def grupos(self) -> dict[str, dict[str, Any]]:
+        """Rodizios e mapas juntos: tudo que o pipeline publica em lote."""
+        return {**self.rodizios, **self.mapas}
+
+    @property
     def intervalo(self) -> int:
         return int(self.coleta.get("intervalo_segundos", 20))
 
@@ -144,14 +165,17 @@ class Config:
 
         conhecidos = set(self.exporters.keys())
         nomes_alvo = {a.nome for a in self.alvos}
-        for nome, grupo in self.rodizios.items():
-            if not grupo.get("alvos"):
-                problemas.append(f"rodizio '{nome}' sem lista de alvos")
-            if grupo.get("exporter") not in conhecidos:
-                problemas.append(f"rodizio '{nome}' referencia exporter inexistente '{grupo.get('exporter')}'")
-            for alvo in grupo.get("alvos") or []:
-                if alvo not in nomes_alvo:
-                    problemas.append(f"rodizio '{nome}' cita alvo inexistente '{alvo}'")
+        for rotulo, colecao in (("rodizio", self.rodizios), ("mapa", self.mapas)):
+            for nome, grupo in colecao.items():
+                if not grupo.get("alvos"):
+                    problemas.append(f"{rotulo} '{nome}' sem lista de alvos")
+                if grupo.get("exporter") not in conhecidos:
+                    problemas.append(
+                        f"{rotulo} '{nome}' referencia exporter inexistente '{grupo.get('exporter')}'"
+                    )
+                for alvo in grupo.get("alvos") or []:
+                    if alvo not in nomes_alvo:
+                        problemas.append(f"{rotulo} '{nome}' cita alvo inexistente '{alvo}'")
         for alvo in self.alvos:
             for nome in alvo.exporters:
                 if nome not in conhecidos:

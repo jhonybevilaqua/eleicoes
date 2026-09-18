@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import math
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
@@ -91,13 +92,121 @@ class Exporter(ABC):
             "votos_brancos": self._num(ap.votos_brancos),
             "votos_nulos": self._num(ap.votos_nulos),
             "total_apurado": self._num(ap.total_apurado),
+            "votos_apurados": self._num(ap.votos_apurados),
+            "votos_brancos_nulos": self._num(ap.votos_brancos + ap.votos_nulos),
             "diferenca_lider": self._num(ap.diferenca_lider),
+            "diferenca_lider_num": str(ap.diferenca_lider),
+            "diferenca_pct": self._pct(ap.diferenca_pct),
+            "diferenca_pct_num": f"{ap.diferenca_pct:.2f}",
+            # Composicao do voto ja em percentual: a conta nao volta para o GC.
+            "pct_validos": self._pct(ap.pct_validos),
+            "pct_validos_num": f"{ap.pct_validos:.2f}",
+            "pct_brancos": self._pct(ap.pct_brancos),
+            "pct_brancos_num": f"{ap.pct_brancos:.2f}",
+            "pct_nulos": self._pct(ap.pct_nulos),
+            "pct_nulos_num": f"{ap.pct_nulos:.2f}",
+            "pct_brancos_nulos": self._pct(ap.pct_brancos_nulos),
+            "pct_brancos_nulos_num": f"{ap.pct_brancos_nulos:.2f}",
+            "pct_comparecimento": self._pct(ap.pct_comparecimento),
+            "pct_comparecimento_num": f"{ap.pct_comparecimento:.2f}",
+            "pct_abstencao": self._pct(ap.pct_abstencao),
+            "pct_abstencao_num": f"{ap.pct_abstencao:.2f}",
+            # Ritmo: quanto falta, e se a diferenca ainda cabe no que falta.
+            "secoes_restantes": self._num(ap.secoes_restantes),
+            "secoes_restantes_num": str(ap.secoes_restantes),
+            "votos_restantes": self._num(ap.votos_restantes),
+            "votos_restantes_num": str(ap.votos_restantes),
+            "reversivel": "1" if ap.reversivel else "0",
             "gerado_em": ap.gerado_em.strftime("%d/%m/%Y %H:%M:%S") if ap.gerado_em else "",
             "hora_geracao": ap.gerado_em.strftime("%H:%M") if ap.gerado_em else "",
             "atualizado_em": (ap.capturado_em or datetime.now()).strftime("%d/%m/%Y %H:%M:%S"),
             "hora_atualizacao": (ap.capturado_em or datetime.now()).strftime("%H:%M"),
             "qtd_candidatos": str(len(ap.candidatos)),
+            **self._composicao(ap),
         }
+
+    # --- geometria do grafico de composicao (brancos, nulos, abstencao) ---
+
+    FATIAS_APURADOS = ("validos", "brancos", "nulos")
+    FATIAS_ELEITORADO = ("validos", "brancos", "nulos", "abstencao")
+
+    def _composicao(self, ap: Apuracao) -> dict[str, str]:
+        """Barra empilhada e rosca JA CALCULADAS para validos/brancos/nulos.
+
+        Mesma ideia de '_barra': o GC recebe pixel e grau prontos, nao faz
+        conta. Aqui isso importa ainda mais, porque a rosca exige aritmetica
+        de circunferencia que nenhum gerador de caracteres faz bem.
+
+        'base' escolhe contra o que as fatias sao medidas:
+          apurados     validos + brancos + nulos (fecha 100% do que foi votado)
+          eleitorado   inclui a abstencao (fecha 100% de quem podia votar)
+
+        As duas bases nao se misturam: quem nao foi votar nao esta dentro dos
+        votos apurados, e somar as duas coisas num grafico so produz um total
+        que nao fecha.
+
+        A largura de cada fatia sai de uma soma ACUMULADA arredondada, nao de
+        cada pedaco arredondado por conta propria: assim a barra fecha exato
+        no trilho e nao sobra 1px de fundo aparecendo entre duas fatias.
+        """
+        cfg = self.opcoes.get("composicao") or self.cfg_texto.get("composicao") or {}
+        trilho = int(cfg.get("trilho_px", 0))
+        raio = float(cfg.get("rosca_raio", 0))
+        if not trilho and not raio:
+            return {}
+
+        base = str(cfg.get("base", "apurados")).lower()
+        if base == "eleitorado":
+            fatias = self.FATIAS_ELEITORADO
+            total = ap.eleitorado_apto
+            valores = {
+                "validos": ap.votos_validos,
+                "brancos": ap.votos_brancos,
+                "nulos": ap.votos_nulos,
+                "abstencao": ap.abstencao,
+            }
+        else:
+            fatias = self.FATIAS_APURADOS
+            total = ap.votos_apurados
+            valores = {
+                "validos": ap.votos_validos,
+                "brancos": ap.votos_brancos,
+                "nulos": ap.votos_nulos,
+            }
+
+        campos: dict[str, str] = {"comp_base": base, "comp_total": self._num(total)}
+        fracoes = {f: (valores[f] / total if total > 0 else 0.0) for f in fatias}
+
+        if trilho:
+            campos["comp_trilho_px"] = str(trilho)
+            acumulado = 0.0
+            borda = 0
+            for fatia in fatias:
+                acumulado += fracoes[fatia]
+                fim = round(trilho * acumulado)
+                campos[f"comp_{fatia}_px"] = str(fim - borda)
+                campos[f"comp_{fatia}_x"] = str(borda)
+                campos[f"comp_{fatia}_pct"] = f"{fracoes[fatia] * 100:.2f}"
+                borda = fim
+
+        if raio:
+            circunferencia = 2 * math.pi * raio
+            campos["rosca_raio"] = f"{raio:g}"
+            campos["rosca_circunferencia"] = f"{circunferencia:.2f}"
+            acumulado = 0.0
+            for fatia in fatias:
+                arco = circunferencia * fracoes[fatia]
+                campos[f"rosca_{fatia}_arco"] = f"{arco:.2f}"
+                # stroke-dasharray pronto: "arco resto". Um <circle> por fatia,
+                # todos com o mesmo raio, cada um com seu dash e seu offset.
+                campos[f"rosca_{fatia}_dash"] = f"{arco:.2f} {circunferencia - arco:.2f}"
+                campos[f"rosca_{fatia}_offset"] = f"{-circunferencia * acumulado:.2f}"
+                # e o mesmo em graus, para o CG que so sabe girar um objeto
+                campos[f"rosca_{fatia}_graus"] = f"{fracoes[fatia] * 360:.2f}"
+                campos[f"rosca_{fatia}_giro"] = f"{acumulado * 360:.2f}"
+                acumulado += fracoes[fatia]
+
+        return campos
 
     def campos_candidato(self, cand: Candidato, ap: Apuracao | None = None) -> dict[str, str]:
         geometria = self._barra(cand, ap)

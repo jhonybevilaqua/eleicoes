@@ -127,6 +127,87 @@ class Apuracao:
         return self.candidatos[0].votos - self.candidatos[1].votos
 
     @property
+    def diferenca_pct(self) -> float:
+        """Vantagem do 1o sobre o 2o em pontos percentuais."""
+        if len(self.candidatos) < 2:
+            return 0.0
+        return round(self.candidatos[0].percentual - self.candidatos[1].percentual, 2)
+
+    # --- composicao do voto: validos, brancos, nulos, abstencao ---
+    #
+    # O TSE manda os absolutos; o percentual de cada fatia nao vem pronto. Como
+    # o grafico de brancos e nulos e sempre percentual, a conta fica aqui: um
+    # lugar so, testado, em vez de espalhada por cada template de GC.
+
+    @property
+    def votos_apurados(self) -> int:
+        """Base do grafico de composicao: validos + brancos + nulos.
+
+        Prefere 'total_apurado' quando o TSE o publica; quando nao, soma as
+        tres fatias, que e a mesma conta pela definicao do boletim.
+        """
+        soma = self.votos_validos + self.votos_brancos + self.votos_nulos
+        return self.total_apurado or soma
+
+    def _fatia(self, valor: int, base: int) -> float:
+        return round(100.0 * valor / base, 2) if base > 0 else 0.0
+
+    @property
+    def pct_validos(self) -> float:
+        return self._fatia(self.votos_validos, self.votos_apurados)
+
+    @property
+    def pct_brancos(self) -> float:
+        return self._fatia(self.votos_brancos, self.votos_apurados)
+
+    @property
+    def pct_nulos(self) -> float:
+        return self._fatia(self.votos_nulos, self.votos_apurados)
+
+    @property
+    def pct_brancos_nulos(self) -> float:
+        """Brancos e nulos somados - a leitura que costuma virar materia."""
+        return self._fatia(self.votos_brancos + self.votos_nulos, self.votos_apurados)
+
+    @property
+    def pct_comparecimento(self) -> float:
+        return self._fatia(self.comparecimento, self.eleitorado_apto)
+
+    @property
+    def pct_abstencao(self) -> float:
+        """Percentual sobre o eleitorado apto, nao sobre os votos apurados.
+
+        Quem nao foi votar nao esta dentro dos votos apurados; misturar as duas
+        bases num grafico so produz uma soma que nao fecha 100%.
+        """
+        return self._fatia(self.abstencao, self.eleitorado_apto)
+
+    # --- ritmo da apuracao ---
+
+    @property
+    def secoes_restantes(self) -> int:
+        return max(0, self.secoes_total - self.secoes_totalizadas)
+
+    @property
+    def votos_restantes(self) -> int:
+        """Estimativa de votos que ainda faltam apurar.
+
+        Regra de tres sobre o que ja foi apurado: se X votos sairam de Y% das
+        secoes, os (100-Y)% restantes trazem aproximadamente a mesma proporcao.
+        E estimativa - secao grande e secao pequena nao valem igual - e serve
+        para responder no ar se a diferenca entre 1o e 2o ainda e reversivel,
+        nao para projetar resultado.
+        """
+        if self.pct_secoes <= 0 or self.pct_secoes >= 100:
+            return 0
+        return int(self.votos_apurados * (100.0 / self.pct_secoes - 1))
+
+    @property
+    def reversivel(self) -> bool:
+        """A diferenca entre 1o e 2o cabe no que ainda falta apurar?"""
+        return self.diferenca_lider < self.votos_restantes
+
+    @property
     def chave(self) -> str:
         """Identificador estavel do alvo (abrangencia + cargo + turno)."""
         return f"{self.abrangencia_tipo}:{self.abrangencia_codigo}:c{self.cargo_codigo}:t{self.turno}"
@@ -174,6 +255,17 @@ class Apuracao:
             "votos_nulos": self.votos_nulos,
             "total_apurado": self.total_apurado,
             "diferenca_lider": self.diferenca_lider,
+            "diferenca_pct": self.diferenca_pct,
+            "votos_apurados": self.votos_apurados,
+            "pct_validos": self.pct_validos,
+            "pct_brancos": self.pct_brancos,
+            "pct_nulos": self.pct_nulos,
+            "pct_brancos_nulos": self.pct_brancos_nulos,
+            "pct_comparecimento": self.pct_comparecimento,
+            "pct_abstencao": self.pct_abstencao,
+            "secoes_restantes": self.secoes_restantes,
+            "votos_restantes": self.votos_restantes,
+            "reversivel": self.reversivel,
             "fonte_url": self.fonte_url,
             "candidatos": [c.como_dict() for c in self.candidatos],
         }

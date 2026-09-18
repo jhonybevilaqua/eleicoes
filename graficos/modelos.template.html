@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gráficos e mapas da apuração</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --ground:#f2f5f9; --surface:#ffffff; --surface-2:#e9eef5;
+  --ink:#0f1826; --ink-2:#48586f; --ink-3:#77869c;
+  --rule:#d5dde8; --rule-2:#e6ebf2;
+  --accent:#1a63c0; --accent-soft:#e7f0fc;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,Segoe UI,sans-serif;
+  --cond:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#0b111c; --surface:#131b28; --surface-2:#1b2534;
+    --ink:#e8edf5; --ink-2:#a3b1c6; --ink-3:#75849b;
+    --rule:#293446; --rule-2:#1f2937;
+    --accent:#5fa2f0; --accent-soft:#16263d;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0b111c; --surface:#131b28; --surface-2:#1b2534;
+  --ink:#e8edf5; --ink-2:#a3b1c6; --ink-3:#75849b;
+  --rule:#293446; --rule-2:#1f2937;
+  --accent:#5fa2f0; --accent-soft:#16263d;
+}
+
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);line-height:1.55;
+  margin:0;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px 96px}
+
+header{padding:56px 0 32px;border-bottom:1px solid var(--rule)}
+.kicker{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--accent);margin:0 0 12px}
+h1{font-family:var(--cond);font-weight:700;font-size:clamp(40px,7vw,68px);line-height:.98;
+  letter-spacing:-.01em;margin:0 0 14px;text-wrap:balance;text-transform:uppercase}
+.lede{font-size:17px;color:var(--ink-2);max-width:62ch;margin:0}
+.controls{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
+.sw{display:inline-flex;align-items:center;gap:9px;background:var(--surface);border:1px solid var(--rule);
+  border-radius:999px;padding:8px 15px;font-size:13px;font-weight:500;cursor:pointer;color:var(--ink)}
+.sw:hover{border-color:var(--accent)}
+.sw input{accent-color:var(--accent);width:15px;height:15px;margin:0;cursor:pointer}
+.sw:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.aviso{margin-top:22px;padding:12px 16px;border-left:3px solid var(--accent);background:var(--accent-soft);
+  font-size:13.5px;color:var(--ink-2);border-radius:0 4px 4px 0}
+
+.modelo{padding:52px 0;border-bottom:1px solid var(--rule-2)}
+.mhead{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+.codigo{font-family:var(--mono);font-size:13px;font-weight:500;color:var(--surface);
+  background:var(--ink);padding:3px 8px;border-radius:3px;letter-spacing:.04em}
+.mtitulo{font-family:var(--cond);font-weight:600;text-transform:uppercase;font-size:30px;
+  letter-spacing:.005em;margin:0}
+.museo{font-size:15px;color:var(--ink-2);margin:0 0 22px;max-width:64ch}
+
+/* palco 16:9, mesma mecanica das tarjas: --u e 1px de um projeto 1920 */
+.palco{position:relative;container-type:inline-size;aspect-ratio:16/9;width:100%;
+  background:#0b1220;border-radius:5px;overflow:hidden;border:1px solid var(--rule);
+  --u:0.0520833cqw;color:#fff;font-family:var(--cond)}
+.palco.sobre::after{content:"IMAGEM DA REPORTAGEM";position:absolute;top:5.5%;left:4%;
+  font-family:var(--mono);font-size:clamp(8px,1.05cqw,13px);letter-spacing:.16em;color:#ffffff33}
+.palco.sobre{background:linear-gradient(160deg,#4a5568 0%,#2d3748 45%,#1a202c 100%)}
+
+.guia{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .18s}
+body.guias .guia{opacity:1}
+.guia i{position:absolute;display:block;border:1px dashed}
+.guia .acao{inset:3.5%;border-color:#ffd54f99}
+.guia .titulo{inset:5%;border-color:#ff8a6599}
+.guia b{position:absolute;font-family:var(--mono);font-size:clamp(7px,.85cqw,11px);
+  letter-spacing:.1em;font-weight:400}
+.guia .lba{top:3.5%;left:3.9%;transform:translateY(-115%);color:#ffd54f}
+.guia .lbt{top:5%;left:5.4%;transform:translateY(-115%);color:#ff8a65}
+
+/* ---------- tabela de campos ---------- */
+.campos{width:100%;border-collapse:collapse;margin-top:22px;font-size:13.5px}
+.campos th{text-align:left;font-family:var(--mono);font-size:11px;text-transform:uppercase;
+  letter-spacing:.1em;color:var(--ink-3);font-weight:500;padding:0 14px 8px 0;
+  border-bottom:1px solid var(--rule)}
+.campos td{padding:9px 14px 9px 0;border-bottom:1px solid var(--rule-2);vertical-align:top}
+.campos code{font-family:var(--mono);font-size:12.5px;background:var(--surface-2);
+  padding:2px 6px;border-radius:3px;color:var(--ink);white-space:nowrap}
+.campos td:last-child{color:var(--ink-2)}
+
+section.final-nota{padding:52px 0 0}
+h2{font-family:var(--cond);text-transform:uppercase;font-size:34px;margin:0 0 18px;font-weight:600}
+h4{font-family:var(--cond);text-transform:uppercase;font-size:21px;letter-spacing:.02em;
+  margin:30px 0 8px;font-weight:600}
+section.final-nota p,section.final-nota li{color:var(--ink-2);font-size:15px;max-width:68ch}
+section.final-nota code{font-family:var(--mono);font-size:13px;background:var(--surface-2);
+  padding:2px 6px;border-radius:3px;color:var(--ink)}
+section.final-nota strong{color:var(--ink)}
+
+/* ---------- elementos de tela ---------- */
+.titulo-tela{position:absolute;left:5.7%;top:7%;font-weight:700;letter-spacing:.01em;
+  text-transform:uppercase;line-height:1}
+.sub-tela{position:absolute;left:5.7%;top:14.5%;color:#9fb0c9;font-weight:500}
+.selo{position:absolute;right:5.7%;top:6.4%;background:#c0392b;font-weight:600;
+  display:flex;align-items:center;letter-spacing:.02em}
+.credito{position:absolute;left:5.7%;bottom:3.6%;color:#7d8aa0}
+
+.mapa{position:absolute;left:4.5%;top:17.5%;height:72%}
+.mapa .uf{stroke:#0b1220;stroke-width:1.2;stroke-linejoin:round}
+.rot{position:absolute;font-weight:700;text-align:center;transform:translate(-50%,-50%);
+  line-height:1.05;pointer-events:none}
+.rot em{display:block;font-style:normal;font-weight:600;opacity:.92}
+
+.painel{position:absolute;right:5.7%;top:19%;width:37%}
+.painel h3{margin:0 0 18px;font-weight:600;color:#9fb0c9;letter-spacing:.12em;
+  text-transform:uppercase}
+.linha{display:flex;align-items:center;gap:0;margin-bottom:2.4%}
+.sw-cor{flex:none;border-radius:2px}
+.linha b{font-weight:600;margin-left:4%}
+.linha span{margin-left:auto;font-variant-numeric:tabular-nums}
+.linha i{font-style:normal;color:#9fb0c9;margin-left:6%}
+
+.barra-emp{display:flex;width:100%;overflow:hidden;border-radius:2px}
+.barra-emp i{display:block;height:100%}
+
+.legenda{display:flex;gap:6%;margin-top:3%;color:#c7d2e2}
+.legenda span{display:flex;align-items:center;gap:8px}
+.legenda u{text-decoration:none;display:block;flex:none}
+
+table.medidas{width:100%;border-collapse:collapse;margin-top:18px;font-size:13.5px}
+table.medidas th{text-align:left;font-family:var(--mono);font-size:11px;text-transform:uppercase;
+  letter-spacing:.1em;color:var(--ink-3);font-weight:500;padding:0 14px 8px 0;
+  border-bottom:1px solid var(--rule)}
+table.medidas td{padding:8px 14px 8px 0;border-bottom:1px solid var(--rule-2)}
+table.medidas code{font-family:var(--mono);font-size:12.5px}
+
+@media print{
+  body{background:#fff}
+  .controls,.sw{display:none}
+  .modelo{break-inside:avoid}
+}
+</style>
+
+<!-- Geometria das 27 UFs, uma unica vez. Cada palco a reaproveita com <use>,
+     trocando so a cor - que e exatamente como a cena do GC deve funcionar. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+{{PATHS}}
+</defs></svg>
+
+<div class="wrap">
+<header>
+  <p class="kicker">TV Evangelizar · Cobertura Eleições 2026</p>
+  <h1>Gráficos e mapas da apuração</h1>
+  <p class="lede">Os quadros que o boletim do TSE sustenta além do placar: o mapa do Brasil pintado
+    pelo partido de quem lidera, o mesmo mapa contando urnas totalizadas, a composição do voto
+    (brancos, nulos e abstenção) e a curva de apuração com previsão de fechamento. Cada elemento
+    está amarrado ao campo que a automação entrega — o GC não faz conta nenhuma.</p>
+  <div class="controls">
+    <label class="sw"><input type="checkbox" id="tGuias"> Mostrar áreas segura e de título</label>
+  </div>
+  <p class="aviso"><strong>Nomes, siglas, cores e resultados são fictícios.</strong> Servem para
+    dimensionar o layout — nenhum candidato, partido ou resultado real está representado aqui.</p>
+</header>
+</div>
+
+<div class="wrap">
+{{MODELOS}}
+</div>
+
+<div class="wrap">
+<section class="final-nota">
+  <h2>Como montar</h2>
+
+  <h4>Projeto e escala</h4>
+  <p>Todas as medidas são para um projeto de <strong>1920 × 1080</strong>. O SVG que a automação
+    grava já sai nesse tamanho, então ele entra na cena 1:1, sem redimensionar. Em outra resolução,
+    multiplique proporcionalmente.</p>
+
+  <h4>Duas formas de pôr o mapa no ar — escolha uma</h4>
+  <p><strong>Pelo SVG pronto.</strong> A automação grava <code>mapa-presidente.svg</code> já pintado a
+    cada boletim. O GC aponta para o arquivo e recarrega. É o caminho mais curto: nenhuma montagem,
+    nenhum vínculo, e o mapa nasce correto no primeiro ciclo.</p>
+  <p><strong>Pelo JSON, com a cena montada na mão.</strong> O arquivo
+    <code>mapa-presidente.json</code> traz, por UF, cor, percentual, líder e votos. A arte desenha os
+    27 estados como objetos nomeados (<code>uf-sp</code>, <code>uf-pr</code>…) e vincula a cor de cada
+    um a <code>estados.SP.cor</code>. Dá mais trabalho e devolve controle total de animação.</p>
+  <p>Comece pelo SVG. Migrar para o JSON depois não perde nada do que foi feito — os dois saem do
+    mesmo boletim, no mesmo ciclo.</p>
+
+  <h4>Cores de partido: decida antes, não no dia</h4>
+  <p>Configure <code>texto.cores_partido</code> com a sigla em caixa alta. A mesma cor vale para a
+    barra do placar, a tarja e o mapa — é por ela que o telespectador se orienta entre um bloco e
+    outro, e trocar no meio da noite desorienta mais do que informa.</p>
+  <p>Duas checagens que evitam retrabalho: cores vizinhas no mapa precisam ser distinguíveis por
+    quem não separa vermelho de verde (1 em cada 12 homens); e o mapa impresso em preto e branco
+    não pode virar um cinza só. Se a arte ainda não fechou as cores, o mapa usa uma paleta de
+    reserva — serve para ensaiar, não para o ar.</p>
+
+  <h4>Os percentuais têm bases diferentes. Não misture.</h4>
+  <ul>
+    <li><code>apuracao_pct</code> — <strong>urnas totalizadas</strong> sobre o total de seções.</li>
+    <li><code>percentual</code> do candidato — sobre os <strong>votos válidos</strong>.</li>
+    <li><code>pct_brancos</code>, <code>pct_nulos</code> — sobre os <strong>votos apurados</strong>
+      (válidos + brancos + nulos). Fecham 100% com <code>pct_validos</code>.</li>
+    <li><code>pct_abstencao</code> — sobre o <strong>eleitorado apto</strong>. Não entra na mesma
+      rosca dos outros três: quem não foi votar não está dentro dos votos apurados, e somar as duas
+      bases produz um gráfico que não fecha.</li>
+  </ul>
+
+  <h4>Estado sem boletim fica cinza, nunca vazio</h4>
+  <p>Praça que ainda não publicou sai em <code>cor_sem_dado</code>, com a sigla legível. Buraco no
+    mapa parece erro de arte; cinza informa que o dado não chegou. O mesmo vale para o
+    <code>visivel</code> das listas: bloco sem dado some, não mostra campo em branco.</p>
+
+  <h4>Rótulo de estado pequeno vai para a margem</h4>
+  <p>DF, SE, AL, PB, RN, PE, ES e RJ não comportam texto dentro do desenho. Recebem rótulo na
+    coluna à direita, com linha de chamada. Essa lista está fixada na automação — se a arte mudar a
+    escala do mapa, confira se algum outro estado passou a precisar do mesmo tratamento.</p>
+
+  <h4>A previsão de fechamento não é previsão de resultado</h4>
+  <p>A curva projeta <strong>ritmo</strong>: a que horas as urnas terminam de ser totalizadas, no
+    passo dos últimos boletins. Serve para escala de equipe, intervalo comercial e liberação de
+    praça. Não diz nada sobre quem vence, e não deve ir ao ar como se dissesse.</p>
+
+  <h4>Selo de parcial</h4>
+  <p>Enquanto <code>selo</code> vier preenchido, mostre-o. Ele só fica vazio quando o boletim é
+    oficial — é a trava visual que impede um simulado do TSE de ir ao ar com cara de resultado.</p>
+
+  <h4>Crédito da malha</h4>
+  <p>O desenho dos estados vem de <code>@svg-maps/brazil</code>, de Victor Cazanave, sob licença
+    Creative Commons Attribution 4.0. O crédito precisa acompanhar qualquer exibição pública —
+    a automação já o grava dentro do SVG, no rodapé. Se a arte redesenhar o mapa por cima, mantenha
+    a linha de crédito.</p>
+</section>
+</div>
+
+<script>
+document.getElementById("tGuias").addEventListener("change", e => {
+  document.body.classList.toggle("guias", e.target.checked);
+});
+</script>
+</html>
