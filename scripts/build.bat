@@ -21,10 +21,17 @@ python -m venv .venv-build || exit /b 1
   --hidden-import gctse.exporters.viz_tab ^
   --hidden-import gctse.exporters.mapa ^
   --hidden-import gctse.exporters.rodizio ^
-  --hidden-import gctse.telao ^
-  --hidden-import gctse.mesa ^
-  --hidden-import tkinter ^
   gctse_launcher.py || exit /b 1
+
+REM O telao e um programa separado: executavel proprio, config propria.
+.venv-build\Scripts\python.exe -m PyInstaller ^
+  --name telao --onedir --console --noconfirm --clean ^
+  --paths src ^
+  --hidden-import gctse.exporters.mapa ^
+  --hidden-import telao.telas ^
+  --hidden-import telao.mesa ^
+  --hidden-import tkinter ^
+  telao_launcher.py || exit /b 1
 
 mkdir dist\gctse\config 2>nul
 mkdir dist\gctse\docs 2>nul
@@ -35,5 +42,12 @@ copy empacotamento\*.bat dist\gctse\ >nul
 copy empacotamento\LEIA-ME.txt dist\gctse\ >nul
 if not exist dist\gctse\config\config.yaml copy dist\gctse\config\config.recomendado.yaml dist\gctse\config\config.yaml >nul
 
+REM O telao vai junto, numa subpasta propria - a pessoa copia uma coisa so.
+mkdir dist\gctse\TELAO 2>nul
+xcopy /E /I /Y /Q dist\telao dist\gctse\TELAO >nul
+copy config\telao.yaml dist\gctse\TELAO\ >nul
+copy empacotamento\TELAO-*.bat dist\gctse\TELAO\ >nul
+
 echo.
 echo Pronto: dist\gctse\  - copie a pasta inteira para o PC de operacao.
+echo         dist\gctse\TELAO\  - o telao, com executavel e config proprios.

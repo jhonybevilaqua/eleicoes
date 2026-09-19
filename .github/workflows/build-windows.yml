@@ -55,10 +55,18 @@ jobs:
           --hidden-import gctse.exporters.viz_tab
           --hidden-import gctse.exporters.mapa
           --hidden-import gctse.exporters.rodizio
-          --hidden-import gctse.telao
-          --hidden-import gctse.mesa
-          --hidden-import tkinter
           gctse_launcher.py
+
+      - name: Compilar o executavel do telao
+        run: >
+          python -m PyInstaller
+          --name telao --onedir --console --noconfirm --clean
+          --paths src
+          --hidden-import gctse.exporters.mapa
+          --hidden-import telao.telas
+          --hidden-import telao.mesa
+          --hidden-import tkinter
+          telao_launcher.py
 
       - name: Montar a pasta de distribuicao
         shell: pwsh
@@ -70,6 +78,12 @@ jobs:
           Copy-Item docs\*.md "$alvo\docs\"
           Copy-Item empacotamento\*.bat "$alvo\"
           Copy-Item empacotamento\LEIA-ME.txt "$alvo\"
+          # O telao vai junto, em subpasta propria: executavel e config dele,
+          # separados do gctse. A pessoa copia uma coisa so.
+          New-Item -ItemType Directory -Force -Path "$alvo\TELAO" | Out-Null
+          Copy-Item dist\telao\* "$alvo\TELAO\" -Recurse -Force
+          Copy-Item config\telao.yaml "$alvo\TELAO\"
+          Copy-Item empacotamento\TELAO-*.bat "$alvo\TELAO\"
 
       - name: Preencher a pasta TARJAS com dados de exemplo
         shell: pwsh
@@ -81,6 +95,18 @@ jobs:
           .\gctse.exe exemplo --destinos-reais --progresso 63
           if (-not (Test-Path "TARJAS\tarja-presidente.json")) { throw "TARJAS nao foi preenchida" }
           Get-ChildItem TARJAS | Select-Object Length, Name | Format-Table -AutoSize
+
+      - name: Conferir o telao
+        shell: pwsh
+        working-directory: dist\gctse\TELAO
+        run: |
+          .\telao.exe --version
+          .\telao.exe -c telao.yaml validar
+          # prova que as seis telas saem desenhadas, sem tocar o TSE
+          .\telao.exe -c telao.yaml exemplo --pasta telas --progresso 63
+          $svgs = Get-ChildItem telas\*.svg
+          if ($svgs.Count -lt 6) { throw "faltaram telas: $($svgs.Count)" }
+          Get-ChildItem telas | Select-Object Length, Name | Format-Table -AutoSize
 
       - name: Conferir o pacote
         shell: pwsh

@@ -1,0 +1,111 @@
+# ---------------------------------------------------------------------------
+# TELAO - telas de apuracao em 1920x1080 para um PC de exibicao.
+#
+# Este arquivo e SO do telao. O gctse, que alimenta as tarjas do gerador de
+# caracteres, tem a config dele e nao le esta. Os dois rodam separados: dar
+# problema num nao derruba o outro.
+#
+# O que fazer, na ordem:
+#   1. telao descobrir        pega os codigos do pleito no TSE
+#   2. preencha tse.pleito e tse.eleicao abaixo
+#   3. telao validar          confere tudo antes do ar
+#   4. telao ensaio           treina com dado ficticio, sem tocar o TSE
+#   5. telao rodar            no ar
+#
+# Para escolher a tela que vai ao ar:  telao mesa   (ou TELAO-MESA.bat)
+# Para exibir no outro PC:             TELAO-TELA.bat
+# ---------------------------------------------------------------------------
+
+log:
+  nivel: INFO
+  arquivo: logs/telao.log
+
+tse:
+  base_url: https://resultados.tse.jus.br/oficial
+  ciclo: ele2026
+  pleito: "000"     # <- 'telao descobrir' quando o TSE publicar
+  eleicao: "000"    # <- idem
+  turno: 1
+
+# O telao sempre quer a mesma coisa: o resultado nacional e o dos estados para
+# UM cargo. Voce diz o cargo; as 28 pracas saem sozinhas.
+apuracao:
+  cargo: 1          # 1 Presidente | 3 Governador | 5 Senador
+  turno: 1
+  estados: todos    # 'todos' (as 27) ou uma lista: [pr, sc, rs, sp]
+
+coleta:
+  fonte: tse                 # tse | simulador
+  intervalo_segundos: 20     # o TSE totaliza em ciclos de ~30-60s
+  paralelismo: 8             # sao 28 arquivos por ciclo
+  timeout_segundos: 8
+  tentativas: 3
+  cache_condicional: true    # ETag: a maioria das respostas volta 304, sem corpo
+  falhas_para_alerta: 3
+  # Serie temporal do nacional, usada pela previsao de fechamento.
+  historico: true
+
+# As mesmas travas do gctse, pelos mesmos motivos. Nao desligue em producao.
+seguranca:
+  # O TSE publica SIMULADOS nos mesmos caminhos antes do pleito. Sem esta
+  # trava, um simulado vira tela cheia com cara de resultado real.
+  bloquear_nao_oficial: true
+  # A CDN pode servir copia antiga de um no diferente. Sem esta, o numero no
+  # telao anda para tras no ar.
+  bloquear_regressao: true
+
+saida:
+  destino: telao             # a pasta que o PC de exibicao vai abrir
+  intervalo_tela_segundos: 8 # de quanto em quanto a tela rele o desenho
+
+aparencia:
+  fonte: "Barlow Condensed, Arial Narrow, Helvetica, sans-serif"
+  cor_fundo: "#0b1220"
+  cor_escala: "#2f97e8"      # cor cheia no mapa de urnas totalizadas
+  selo_nao_oficial: "PARCIAL — NÃO OFICIAL"
+  credito_malha: true        # o credito da malha e exigido pela licenca
+
+  # Cor por partido. E o que pinta cada estado no mapa de lideranca - a
+  # pergunta principal deste sistema.
+  #
+  # AJUSTAR COM A ARTE antes do D-7. Duas regras que evitam retrabalho:
+  #  1. a mesma sigla tem a mesma cor em toda a programacao, do placar ao mapa;
+  #  2. partidos vizinhos no mapa precisam ser distinguiveis no ar - inclusive
+  #     por quem nao separa vermelho de verde, que e 1 em cada 12 homens.
+  #     Imprima o mapa em preto e branco: se dois estados vizinhos viram o
+  #     mesmo cinza, o telespectador tambem perde.
+  #
+  # Sem cor definida, o partido recebe uma da paleta de reserva - serve para
+  # ensaiar, nao e decisao de arte.
+  cores_partido: {}          # ex.: { PVL: "#2f97e8", PDR: "#c0392b" }
+  cor_padrao: "#7d93b3"
+  paleta_reserva: true
+
+# As telas, na ordem em que aparecem na mesa e nas teclas 1..6 da exibicao.
+# Apague o que nao for usar: menos tela e menos coisa para escolher errado
+# no meio do bloco.
+telas:
+  - id: lideranca
+    tipo: lideranca
+    titulo: "LIDERANÇA POR ESTADO"
+
+  - id: estados
+    tipo: estados
+    titulo: "COMO CADA ESTADO VOTOU"
+
+  - id: como-votou
+    tipo: como-votou
+    titulo: "COMO O BRASIL VOTOU"
+
+  - id: apuracao-nacional
+    tipo: apuracao-nacional
+    titulo: "APURAÇÃO NACIONAL"
+
+  - id: apuracao-estados
+    tipo: apuracao-estados
+    titulo: "APURAÇÃO POR ESTADO"
+
+  - id: placar
+    tipo: placar
+    titulo: "PRESIDENTE — BRASIL"
+    limite_candidatos: 6

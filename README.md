@@ -57,8 +57,6 @@ gctse descobrir               # lista os pleitos publicados pelo TSE (pega os c�
 gctse inspecionar --abrangencia br --cargo 1   # mostra as chaves reais do arquivo
 gctse exemplo                 # gera arquivos de exemplo + mapa (monte a cena hoje)
 gctse celulas                 # mapa de vínculos para amarrar a cena (ClassX)
-gctse mesa                    # escolhe o quadro do telão que vai ao ar
-gctse no-ar <id>              # o mesmo, sem abrir janela
 gctse ensaio --duracao 600    # simula uma apuração completa em 10 min
 gctse uma-vez                 # um único ciclo (bom para agendador)
 gctse rodar                   # operação contínua
@@ -139,23 +137,25 @@ célula para deslocar; em CSV, a geometria garantida faz a célula continuar
 válida. Campos numéricos vêm em versão crua (`votos_num`) para o `Sort` com
 "As number". `gctse celulas` imprime o mapa de onde cada campo está.
 
-## Telão: gráficos de tela cheia num segundo PC
+## Telão — o outro sistema deste repositório
 
-Um PC de exibição mostrando gráficos alimentados pelo TSE, com a saída de vídeo
-entrando no switcher como uma fonte qualquer. **O GC não participa** — não há
-cena para montar nem vínculo para conferir, e a operação do gerador de
-caracteres fica livre para as tarjas.
+Um programa **separado**, com executável e configuração próprios, que desenha
+telas inteiras de 1920 × 1080 e as entrega para um PC de exibição. O gctse
+alimenta as tarjas do GC; o telão faz as telas cheias. Os dois rodam
+independentes — dar problema num não derruba o outro.
 
-```bat
-INICIAR.bat    no PC que coleta, já grava o telão junto com as tarjas
-MESA.bat       janela para escolher o quadro que vai ao ar
-TELAO.bat      no PC de exibição, tela cheia em modo quiosque
+```bash
+telao descobrir     # códigos do pleito no TSE
+telao validar       # confere antes do ar
+telao ensaio        # treina com dado fictício
+telao rodar         # no ar
+telao mesa          # janela para escolher a tela que vai ao ar
 ```
 
-Quadros disponíveis: placar, mapa do Brasil, composição do voto (brancos,
-nulos, abstenção), contador de urnas e curva de apuração com previsão de
-fechamento. A escolha vale em cerca de 1 segundo, e fechar a mesa não tira
-nada do ar. Receita completa em [`docs/TELAO.md`](docs/TELAO.md).
+Seis telas: liderança por estado (mapa por cor de partido), como cada estado
+votou, como o Brasil votou (brancos/nulos/abstenção), apuração nacional,
+apuração por estado e o placar. Receita completa em
+[`docs/TELAO.md`](docs/TELAO.md).
 
 ## Mapas e gráficos
 
@@ -169,9 +169,8 @@ python scripts/gerar_modelos_graficos.py   # regera a arte de referência
 ```
 
 - **Tela num segundo PC** — o exporter grava também um HTML que mostra o mapa
-  em tela cheia e se atualiza sozinho. A saída de vídeo desse PC entra no
-  switcher como uma fonte qualquer, sem nada para montar no GC
-  (`empacotamento\TELA-MAPA.bat`).
+  em tela cheia e se atualiza sozinho, para quem quer só o mapa numa tela
+  dedicada. Para o conjunto de telas com mesa de seleção, veja o **telão**.
 - **Mapa por partido** — cada UF na cor do partido de quem lidera ali.
 - **Mapa por urnas** — cada UF pela fração de seções totalizadas; enche ao vivo.
 - **Brancos, nulos e abstenção** — percentuais prontos, mais `stroke-dasharray`
@@ -224,7 +223,7 @@ mínimo de seções totalizadas.
 - [`docs/GC-INTEGRACAO.md`](docs/GC-INTEGRACAO.md) — receita por marca de GC
 - [`docs/TARJAS.md`](docs/TARJAS.md) — os seis modelos de tarja, o HTML e o PDF
 - [`docs/GRAFICOS.md`](docs/GRAFICOS.md) — mapa do Brasil, brancos e nulos, curva de apuração
-- [`docs/TELAO.md`](docs/TELAO.md) — gráficos de tela cheia no PC de exibição, e a mesa
+- [`docs/TELAO.md`](docs/TELAO.md) — o telão: sistema de exibição em tela cheia
 - [`docs/CASTALIA.md`](docs/CASTALIA.md) — fazer o gráfico acompanhar o percentual no Castalia
 - [`docs/TESTE-SIMULADO.md`](docs/TESTE-SIMULADO.md) — testar com o simulado do TSE
 - [`docs/OPERACAO.md`](docs/OPERACAO.md) — runbook do dia da eleição e contingência

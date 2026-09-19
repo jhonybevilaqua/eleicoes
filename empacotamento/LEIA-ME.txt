@@ -32,23 +32,28 @@ O QUE FAZER, NA ORDEM
         INICIAR.bat   no ar. Le so boletim oficial.
                       Reinicia sozinho se cair.
 
- 5. TELAO - graficos de tela cheia num segundo PC (opcional)
+ 5. TELAO - telas cheias num segundo PC (programa separado, opcional)
 
-    Se voce quiser mapa do Brasil, placar grande, brancos e nulos ou a
-    curva da apuracao NO AR sem montar nada no GC:
+    Na subpasta TELAO\ ha OUTRO programa, com executavel e config
+    proprios. Ele desenha telas inteiras - mapa do Brasil por cor de
+    partido, como cada estado votou, como o Brasil votou, apuracao
+    nacional e por estado - e nao encosta no GC.
 
-        MESA.bat      aqui, nesta maquina. Uma janela com um botao por
-                      quadro: voce clica e o quadro entra no ar.
+    Os dois rodam ao mesmo tempo, sem se atrapalhar.
 
-        TELAO.bat     no PC de EXIBICAO, que so precisa enxergar esta
-                      pasta pela rede. Abre em tela cheia; a saida de
-                      video dele entra no switcher como uma fonte.
+        TELAO\TELAO-COLETA.bat    le o TSE e desenha as telas
+        TELAO\TELAO-MESA.bat      voce clica na tela que vai ao ar
+        TELAO\TELAO-ENSAIO.bat    treino com dado ficticio
 
-            TELAO.bat "\\NOME-DESTE-PC\gctse\dados\saida\telao\index.html"
+    No PC de EXIBICAO, que so precisa enxergar esta pasta pela rede:
 
-    Fechar a mesa NAO tira nada do ar. O quadro escolhido continua.
-    Na propria tela: 1..9 escolhe, setas avancam, R liga o rodizio,
-    M devolve o comando para a mesa.
+        TELAO-TELA.bat "\\NOME-DESTE-PC\gctse\TELAO\telao\index.html"
+
+    A saida de video daquele PC entra no switcher como uma fonte.
+    Fechar a mesa NAO tira nada do ar.
+
+    Antes do ar, preencha TELAO\telao.yaml com os codigos do pleito
+    (TELAO\telao.exe descobrir) e as cores dos partidos.
 
  6. Para acompanhar, abra TARJAS\painel.html no navegador.
     Ele mostra as pracas, o percentual e quem esta na frente,

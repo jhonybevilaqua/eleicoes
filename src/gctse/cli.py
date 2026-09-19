@@ -9,8 +9,6 @@
   gctse amostrar       grava o JSON atual do TSE em dados/amostras
   gctse celulas        mostra qual celula guarda qual campo (ClassX LiveBoard)
   gctse exemplo        gera arquivos de exemplo + mapa, para montar a cena hoje
-  gctse mesa           janela para escolher o quadro do telao que vai ao ar
-  gctse no-ar          escolhe o quadro pela linha de comando (sem janela)
 """
 
 from __future__ import annotations
@@ -218,53 +216,6 @@ def cmd_celulas(args, cfg=None) -> int:
     return 0
 
 
-def _pasta_telao(cfg, args) -> Path:
-    """Pasta do telao: a da linha de comando, senao a da config."""
-    if getattr(args, "pasta", None):
-        return Path(args.pasta)
-    return Path((cfg.telao or {}).get("destino", "dados/saida/telao"))
-
-
-def cmd_mesa(args) -> int:
-    """Janela com um botao por quadro, para escolher o que vai ao ar."""
-    from .mesa import abrir
-
-    cfg = _cfg(args)
-    _iniciar_log(cfg, args)
-    return abrir(_pasta_telao(cfg, args))
-
-
-def cmd_no_ar(args) -> int:
-    """Mesma escolha da mesa, sem janela - para atalho, .bat ou agendador."""
-    from .mesa import escrever_no_ar, ler_no_ar, ler_quadros
-
-    cfg = _cfg(args)
-    _iniciar_log(cfg, args)
-    pasta = _pasta_telao(cfg, args)
-    quadros = ler_quadros(pasta)
-
-    if args.listar or not args.quadro:
-        if not quadros:
-            print(f"Nenhum quadro publicado em {pasta}.")
-            print("O telao grava 'quadros.json' depois do primeiro ciclo.")
-            return 1
-        atual = ler_no_ar(pasta)
-        print(f"Quadros em {pasta}:\n")
-        for indice, quadro in enumerate(quadros, start=1):
-            marca = "  <- no ar" if quadro["id"] == atual else ""
-            print(f"  {indice}. {quadro['id']:<20} {quadro.get('titulo', '')}{marca}")
-        print("\nUse: gctse no-ar <id>")
-        return 0
-
-    conhecidos = {q["id"] for q in quadros}
-    if quadros and args.quadro not in conhecidos:
-        print(f"Quadro '{args.quadro}' nao existe. Conhecidos: {', '.join(sorted(conhecidos))}")
-        return 1
-    escrever_no_ar(pasta, args.quadro)
-    print(f"No ar: {args.quadro}")
-    return 0
-
-
 def cmd_exemplo(args) -> int:
     """Gera, com dados ficticios, os arquivos exatamente como sairao no ar.
 
@@ -439,16 +390,6 @@ def construir_parser() -> argparse.ArgumentParser:
     p_ensaio.add_argument("--duracao", type=int, default=900, help="segundos ate 100%% apurado (padrao: 900)")
     p_ensaio.add_argument("--progresso", type=float, help="trava a apuracao neste percentual")
     p_ensaio.set_defaults(func=cmd_ensaio)
-
-    p_mesa = sub.add_parser("mesa", help="janela para escolher o quadro do telao")
-    p_mesa.add_argument("--pasta", help="pasta do telao (padrao: a da config)")
-    p_mesa.set_defaults(func=cmd_mesa)
-
-    p_no_ar = sub.add_parser("no-ar", help="escolhe o quadro do telao sem abrir janela")
-    p_no_ar.add_argument("quadro", nargs="?", help="id do quadro (vazio lista os disponiveis)")
-    p_no_ar.add_argument("--listar", action="store_true", help="so lista, nao troca")
-    p_no_ar.add_argument("--pasta", help="pasta do telao (padrao: a da config)")
-    p_no_ar.set_defaults(func=cmd_no_ar)
 
     p_exemplo = sub.add_parser("exemplo", help="gera arquivos de exemplo + mapa para montar a cena")
     p_exemplo.add_argument("--pasta", default="exemplos", help="pasta de destino (padrao: exemplos)")

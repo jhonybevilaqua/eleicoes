@@ -5,13 +5,14 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "gctse"
 version = "1.0.0"
-description = "Automacao de apuracao eleitoral do TSE para sistemas de GC de emissoras"
+description = "Apuracao eleitoral do TSE: tarjas para o GC (gctse) e telas cheias para o telao"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = ["requests>=2.31", "PyYAML>=6.0"]
 
 [project.scripts]
 gctse = "gctse.cli:main"
+telao = "telao.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
