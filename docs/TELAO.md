@@ -26,6 +26,9 @@ PC que coleta                          PC de exibição
 O PC de exibição **não precisa de nada instalado**. Só precisa enxergar a pasta
 compartilhada.
 
+Há também um **monitor vertical de cena** (1080 × 1920), que sai do mesmo ciclo
+e roda sozinho — veja a seção própria mais abaixo.
+
 ## As telas
 
 | id | O que mostra |
@@ -34,7 +37,7 @@ compartilhada.
 | `estados` | **Como cada estado votou** — o mesmo mapa, com as 27 UFs listadas ao lado: partido vencedor e percentual |
 | `como-votou` | **Como o Brasil votou** — válidos, brancos e nulos numa rosca; abstenção fora dela |
 | `apuracao-nacional` | **Apuração nacional** — o contador de urnas do país, em número grande |
-| `apuracao-estados` | **Apuração por estado** — o mapa pintado pelo percentual de urnas totalizadas, com as praças mais atrasadas |
+| `apuracao-estados` | **Apuração por estado** — o mapa pintado pelo percentual de urnas totalizadas, com o total apurado e as urnas apuradas praça a praça |
 | `placar` | os candidatos, com barra, percentual e votos |
 
 Apague da config o que não for usar: menos tela é menos coisa para escolher
@@ -106,6 +109,84 @@ com a hora da última troca e o número de falhas — some do ar quando desligad
 **Fechar a mesa não tira nada do ar.** A seleção é um arquivo; se a mesa
 fechar, a última tela escolhida continua. Não há servidor, não há porta aberta,
 não há conexão para cair no meio da transmissão.
+
+## Monitor vertical da cena (1080 × 1920)
+
+Um monitor em pé, em cena, atrás do apresentador, é um problema diferente do
+telão do switcher: ele fica em quadro o tempo todo e **não tem ninguém
+operando**. Então ele roda sozinho, como apresentação de slides, trocando de
+informação a cada 10 segundos.
+
+```yaml
+vertical:
+  ativo: true
+  destino: telao-vertical
+  rodizio_segundos: 10
+  telas: [urnas, brancos-nulos, comparecimento, placar, mapa, estados]
+```
+
+```bat
+TELAO-VERTICAL.bat     no PC ligado ao monitor
+```
+
+Sai no mesmo ciclo do telão — uma coleta só alimenta os dois. Não há mesa: não
+há o que escolher.
+
+### As telas do giro
+
+| id | O que mostra |
+|---|---|
+| `urnas` | **urnas apuradas no Brasil** — o número grande, a barra, o percentual e o total de votos apurados |
+| `brancos-nulos` | **brancos e nulos** em rosca, com os absolutos de cada fatia |
+| `comparecimento` | quem foi votar, quem se absteve e quantos foram e não escolheram ninguém |
+| `placar` | os candidatos, em lista vertical |
+| `mapa` | o mapa do Brasil por cor de partido, com a legenda embaixo |
+| `estados` | as 27 UFs em coluna: quem lidera em cada uma |
+
+Apague da lista o que não quiser em cena. A ordem da lista é a ordem do giro.
+
+### Por que estas, e por que assim
+
+**Um assunto por tela.** A tela horizontal tem espaço para um mapa e um painel
+ao lado; esta tem um assunto só, em corpo grande. Quem olha de relance, no meio
+de uma entrevista, lê um número — não uma tabela.
+
+**Comparecimento entra cedo.** É o único número que existe **antes** de sair
+resultado. Com ele na roda, o monitor tem conteúdo desde a hora em que as urnas
+fecham, em vez de mostrar "aguardando boletim" enquanto o resto ainda está
+vazio.
+
+**Vertical favorece lista.** 1920 pixels de altura cabem as 27 UFs em coluna
+única, sem apertar — na horizontal isso exigiria duas colunas e letra menor.
+O mapa também ganha: o contorno do Brasil é quase quadrado, então cabe inteiro
+na largura e ainda sobra altura para a legenda.
+
+**O número encolhe sozinho.** O eleitorado apto do Brasil tem onze caracteres.
+No corpo cheio ele vazaria pela margem — sem erro nenhum, o texto simplesmente
+sai da tela e isso só aparece no ar. Cada número grande é dimensionado para a
+largura disponível antes de ser desenhado.
+
+### No estúdio
+
+O monitor roda sozinho, mas o teclado existe para conferência:
+
+| tecla | |
+|---|---|
+| `ESPAÇO` | pausa e retoma o giro — útil quando o apresentador está falando de um dado específico |
+| setas | avança ou volta na hora |
+| `D` | mostra o rodapé de conferência |
+
+A barra fina no rodapé mostra quanto falta para a próxima troca, para quem está
+no estúdio não ser pego trocando de tela no meio de uma fala.
+
+### Antes de ligar
+
+**O monitor precisa estar em retrato no Windows** (Configurações → Sistema →
+Vídeo → Orientação: Retrato). Sem isso o Windows entrega 1920 × 1080 ao
+navegador e a tela sai com tarjas pretas dos lados.
+
+O `.bat` abre a janela em `--window-position=1920,0`, supondo o monitor
+vertical à direita de um Full HD. Ajuste o X para o seu arranjo.
 
 ## Cores de partido
 

@@ -55,8 +55,8 @@ exporters:
 ```
 
 `modo: partido` responde *quem está na frente onde*. `modo: apuracao` responde
-*quanto já apurou onde* — é o mapa que enche ao vivo, e o painel lateral lista
-as praças mais atrasadas com quantas urnas ainda faltam.
+*quanto já apurou onde* — é o mapa que enche ao vivo, e o painel lateral traz o
+total apurado e as urnas já apuradas praça a praça.
 
 ### Ligar as 27 praças
 

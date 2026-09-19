@@ -309,3 +309,104 @@ def _resposta(fase="O", hora="20:41:00", pct="63,00"):
             "cand": [{"n": "10", "nm": "A", "cc": "PART-A", "vap": "30.000.000", "pvap": "47,80"}],
         },
     )
+
+
+# --- monitor vertical 1080x1920 ---
+
+
+def _cfg_vertical(tmp_path, **vertical) -> Config:
+    base = {"ativo": True, "destino": str(tmp_path / "v"), "rodizio_segundos": 10}
+    base.update(vertical)
+    return _cfg(tmp_path, vertical=base)
+
+
+@pytest.mark.parametrize(
+    "tipo", ["urnas", "brancos-nulos", "comparecimento", "placar", "mapa", "estados"]
+)
+def test_cada_tela_vertical_sai_em_1080x1920(tmp_path, tipo):
+    from telao.vertical import desenhar as desenhar_v
+
+    raiz = ET.fromstring(desenhar_v(_cfg_vertical(tmp_path), tipo, _dados(nacional=_ap())))
+    assert raiz.get("viewBox") == "0 0 1080 1920"
+
+
+def test_tela_vertical_sem_dado_avisa(tmp_path):
+    from telao.vertical import TIPOS as TIPOS_V, desenhar as desenhar_v
+
+    vazio = Dados(nacional=None, estados={}, serie=[], total_secoes=(0, 0))
+    for tipo in TIPOS_V:
+        assert "AGUARDANDO BOLETIM" in desenhar_v(_cfg_vertical(tmp_path), tipo, vazio)
+
+
+def test_numero_comprido_encolhe_para_nao_vazar_a_margem(tmp_path):
+    """O eleitorado do Brasil tem 11 caracteres e vaza no corpo cheio.
+
+    Vazar nao gera erro nenhum: o texto simplesmente sai da tela, e so
+    aparece no ar.
+    """
+    from telao.vertical import LARGURA, MARGEM, corpo_que_cabe
+
+    util = LARGURA - 2 * MARGEM
+    assert corpo_que_cabe("297.360", 200) == 200                    # curto: corpo cheio
+    comprido = corpo_que_cabe("156.454.011", 200)
+    assert comprido < 200
+    assert len("156.454.011") * comprido * 0.62 <= util + 0.01      # cabe na margem
+
+
+def test_titulo_comprido_tambem_encolhe(tmp_path):
+    from telao.vertical import MolduraV
+
+    partes = MolduraV(_cfg_vertical(tmp_path)).cabecalho("COMO CADA ESTADO VOTOU")
+    tamanho = float(partes[1].split('font-size="')[1].split('"')[0])
+    assert tamanho < 64
+
+    curto = MolduraV(_cfg_vertical(tmp_path)).cabecalho("URNAS APURADAS")
+    assert float(curto[1].split('font-size="')[1].split('"')[0]) == 64
+
+
+def test_publicador_vertical_grava_o_giro_todo(tmp_path):
+    from telao.vertical import PublicadorVertical
+
+    cfg = _cfg_vertical(tmp_path)
+    publicador = PublicadorVertical(cfg)
+    publicador.publicar(_dados(nacional=_ap()))
+
+    pasta = tmp_path / "v"
+    for tipo in publicador.tipos:
+        raiz = ET.fromstring((pasta / f"{tipo}.svg").read_text(encoding="utf-8"))
+        assert raiz.get("viewBox") == "0 0 1080 1920"
+    assert (pasta / "index.html").exists()
+    assert (pasta / "telas.js").read_text(encoding="utf-8").startswith("telaoVertical({")
+
+
+def test_vertical_desligado_nao_escreve_nada(tmp_path):
+    from telao.vertical import PublicadorVertical
+
+    cfg = _cfg_vertical(tmp_path, ativo=False)
+    assert PublicadorVertical(cfg).publicar(_dados(nacional=_ap())) == []
+    assert not (tmp_path / "v").exists()
+
+
+def test_tela_vertical_desconhecida_cai_fora_sem_derrubar_as_outras(tmp_path):
+    from telao.vertical import telas_configuradas
+
+    cfg = _cfg_vertical(tmp_path, telas=["urnas", "piramide", "placar"])
+    assert telas_configuradas(cfg) == ["urnas", "placar"]
+    assert any("piramide" in p for p in cfg.validar())
+
+
+def test_pagina_do_monitor_gira_sozinha_sem_mesa(tmp_path):
+    """O monitor de cena nao tem ninguem operando: ele gira, e so."""
+    from telao.vertical import PublicadorVertical
+
+    pagina = PublicadorVertical(_cfg_vertical(tmp_path, rodizio_segundos=10)).pagina()
+    assert "var RODIZIO = 10;" in pagina
+    assert pagina.count("<img") == 2          # dissolvencia, nao flash branco
+    assert "location.reload" not in pagina
+    assert "new XMLHttpRequest" not in pagina
+    assert "telaoNoAr" not in pagina          # nao ha selecao para obedecer
+
+
+def test_rodizio_curto_demais_e_recusado(tmp_path):
+    problemas = _cfg_vertical(tmp_path, rodizio_segundos=1).validar()
+    assert any("rodizio_segundos" in p for p in problemas)

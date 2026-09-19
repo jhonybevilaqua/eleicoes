@@ -81,6 +81,33 @@ aparencia:
   cor_padrao: "#7d93b3"
   paleta_reserva: true
 
+# ---------------------------------------------------------------------------
+# MONITOR VERTICAL da cena - 1080x1920, roda sozinho.
+#
+# Outro problema, outra secao: o telao do switcher tem alguem escolhendo na
+# mesa; o monitor de cena fica em quadro o tempo todo, atras do apresentador,
+# sem ninguem operando. Entao ele gira como apresentacao de slides.
+#
+# Cada tela tem UM assunto, em corpo grande - quem olha de relance, no meio de
+# uma entrevista, le um numero, nao uma tabela.
+#
+# Abrir no monitor: TELAO-VERTICAL.bat
+# ---------------------------------------------------------------------------
+vertical:
+  ativo: true
+  destino: telao-vertical
+  rodizio_segundos: 10
+  limite_candidatos: 5
+
+  # A ordem do giro. Apague o que nao quiser em cena.
+  #   urnas           urnas apuradas no Brasil
+  #   brancos-nulos   brancos e nulos, em rosca
+  #   comparecimento  quem foi votar e quem nao foi
+  #   placar          os candidatos, em lista
+  #   mapa            o mapa por cor de partido, com legenda
+  #   estados         as 27 UFs em coluna: quem lidera em cada uma
+  telas: [urnas, brancos-nulos, comparecimento, placar, mapa, estados]
+
 # As telas, na ordem em que aparecem na mesa e nas teclas 1..6 da exibicao.
 # Apague o que nao for usar: menos tela e menos coisa para escolher errado
 # no meio do bloco.

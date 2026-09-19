@@ -154,7 +154,11 @@ telao mesa          # janela para escolher a tela que vai ao ar
 
 Seis telas: liderança por estado (mapa por cor de partido), como cada estado
 votou, como o Brasil votou (brancos/nulos/abstenção), apuração nacional,
-apuração por estado e o placar. Receita completa em
+apuração por estado e o placar.
+
+E um **monitor vertical de cena** (1080 × 1920) que sai do mesmo ciclo e roda
+sozinho, trocando de informação a cada 10 segundos: urnas apuradas, brancos e
+nulos, comparecimento, placar, mapa e as 27 UFs em coluna. Receita completa em
 [`docs/TELAO.md`](docs/TELAO.md).
 
 ## Mapas e gráficos
@@ -172,7 +176,8 @@ python scripts/gerar_modelos_graficos.py   # regera a arte de referência
   em tela cheia e se atualiza sozinho, para quem quer só o mapa numa tela
   dedicada. Para o conjunto de telas com mesa de seleção, veja o **telão**.
 - **Mapa por partido** — cada UF na cor do partido de quem lidera ali.
-- **Mapa por urnas** — cada UF pela fração de seções totalizadas; enche ao vivo.
+- **Mapa por urnas** — cada UF pela fração de seções totalizadas; enche ao vivo,
+  com o total apurado ao lado.
 - **Brancos, nulos e abstenção** — percentuais prontos, mais `stroke-dasharray`
   da rosca e as larguras da barra empilhada em pixels.
 - **Curva e previsão de fechamento** — a que horas as urnas terminam, no ritmo

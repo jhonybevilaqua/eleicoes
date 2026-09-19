@@ -29,6 +29,7 @@ from .coleta import Coletor, rodar
 from .config import ErroConfig, carregar, caminho_padrao
 from .exibicao import Publicador, escrever_selecao, ler_selecao, ler_telas
 from .telas import Dados, resumo
+from .vertical import PublicadorVertical
 
 log = logging.getLogger("telao")
 
@@ -77,6 +78,12 @@ def cmd_validar(args) -> int:
     print(f"  telas ({len(cfg.telas)}):")
     for indice, tela in enumerate(cfg.telas, start=1):
         print(f"    {indice}. {tela.id:<20} {tela.tipo:<18} {tela.titulo}")
+    if cfg.vertical.get("ativo"):
+        from .vertical import telas_configuradas
+
+        tipos = telas_configuradas(cfg)
+        print(f"\n  monitor vertical 1080x1920 -> {cfg.vertical.get('destino', 'telao-vertical')}")
+        print(f"    rodizio de {cfg.vertical.get('rodizio_segundos', 10)}s: {', '.join(tipos)}")
     if str(cfg.coleta.get("fonte", "tse")).lower() == "tse":
         print(f"\n  exemplo de URL: {Endpoints(cfg.tse).resultado('br', cfg.cargo)}")
     return 0
@@ -100,9 +107,12 @@ def cmd_descobrir(args) -> int:
     return 0
 
 
-def _publicar(cfg, coletor: Coletor, publicador: Publicador) -> None:
+def _publicar(cfg, coletor: Coletor, publicador: Publicador,
+              vertical: PublicadorVertical | None = None) -> None:
     dados = Dados.do_coletor(coletor)
     escritos = publicador.publicar(dados)
+    if vertical is not None:
+        escritos += vertical.publicar(dados)
     numeros = resumo(dados)
     log.info(
         "telas: %d arquivo(s) | %d estado(s) com boletim | %.2f%% apurado",
@@ -119,15 +129,18 @@ def _executar(cfg, args, uma_vez: bool) -> int:
         return 1
 
     publicador = Publicador(cfg)
+    vertical = PublicadorVertical(cfg)
     if uma_vez:
         coletor = Coletor(cfg)
         try:
             coletor.ciclo()
-            _publicar(cfg, coletor, publicador)
+            _publicar(cfg, coletor, publicador, vertical)
         finally:
             coletor.fechar()
         print(f"\nTelas gravadas em {cfg.destino}")
         print("Abra index.html no PC de exibicao (TELAO-TELA.bat).")
+        if vertical.ativo:
+            print(f"Monitor vertical em {vertical.destino} (TELAO-VERTICAL.bat).")
         return 0
 
     parar = threading.Event()
@@ -142,7 +155,7 @@ def _executar(cfg, args, uma_vez: bool) -> int:
         except (ValueError, OSError):  # fora da thread principal / Windows
             pass
 
-    rodar(cfg, lambda coletor: _publicar(cfg, coletor, publicador), parar)
+    rodar(cfg, lambda coletor: _publicar(cfg, coletor, publicador, vertical), parar)
     return 0
 
 

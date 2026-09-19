@@ -628,52 +628,63 @@ class ExporterMapa(Exporter):
 
     def _painel_escala(self, dados: dict) -> list[str]:
         partes = [
-            f'<text x="{PAINEL_X}" y="220" font-size="26" font-weight="600" fill="#9fb0c9" '
-            f'letter-spacing="2">URNAS TOTALIZADAS</text>'
+            f'<text x="{PAINEL_X}" y="196" font-size="26" font-weight="600" fill="#9fb0c9" '
+            f'letter-spacing="2">TOTAL APURADO</text>',
+            # o numero que interessa, em corpo de leitura, antes da escala
+            f'<text x="{PAINEL_X}" y="268" font-size="72" font-weight="700" fill="{COR_TEXTO}">'
+            f'{_int_br(dados["secoes_totalizadas"])}</text>',
+            f'<text x="{PAINEL_X}" y="312" font-size="26" fill="#9fb0c9">'
+            f'de {_int_br(dados["secoes_total"])} urnas  ·  {_pct_br(dados["apuracao_pct"])}%</text>',
         ]
         largura = LARGURA - PAINEL_X - 120
         for passo in range(11):
             fracao = passo / 10
             partes.append(
-                f'<rect x="{PAINEL_X + largura * fracao:.1f}" y="250" width="{largura / 10:.1f}" '
-                f'height="34" fill="{_mistura(self.cor_sem_dado, self.cor_escala, fracao)}"/>'
+                f'<rect x="{PAINEL_X + largura * fracao:.1f}" y="334" width="{largura / 10:.1f}" '
+                f'height="26" fill="{_mistura(self.cor_sem_dado, self.cor_escala, fracao)}"/>'
             )
         partes.append(
-            f'<text x="{PAINEL_X}" y="312" font-size="24" fill="#9fb0c9">0%</text>'
-            f'<text x="{PAINEL_X + largura:.0f}" y="312" font-size="24" fill="#9fb0c9" '
-            f'text-anchor="end">100%</text>'
+            f'<text x="{PAINEL_X}" y="384" font-size="22" fill="#9fb0c9">0%</text>'
+            f'<text x="{PAINEL_X + largura:.0f}" y="384" font-size="22" fill="#9fb0c9" '
+            f'text-anchor="end">100% das urnas do estado</text>'
         )
 
-        # A lista mostra quem esta ATRASADO, nao quem ja fechou: o mapa acima ja
-        # diz quem esta adiantado, e a pergunta que sobra - no ar e na
-        # coordenacao - e onde ainda falta urna para apurar.
-        atrasados = sorted(
-            (e for e in dados["estados"].values() if e["visivel"] and e["apuracao_pct"] < 100),
-            key=lambda e: e["apuracao_pct"],
-        )[:11]
-        partes.append(
-            f'<text x="{PAINEL_X}" y="386" font-size="26" font-weight="600" fill="#9fb0c9" '
-            f'letter-spacing="2">URNAS QUE FALTAM</text>'
+        # A lista mostra o TOTAL APURADO por praca, nao o que falta. As duas
+        # respondem a mesma apuracao, mas so uma e noticia: "ja apuramos X" e
+        # o numero que o apresentador le em voz alta; "faltam Y" e conta de
+        # bastidor, que interessa a coordenacao e nao ao telespectador.
+        com_dado = sorted(
+            (e for e in dados["estados"].values() if e["visivel"]),
+            key=lambda e: -e["apuracao_pct"],
         )
-        if not atrasados:
+        partes.append(
+            f'<text x="{PAINEL_X}" y="446" font-size="26" font-weight="600" fill="#9fb0c9" '
+            f'letter-spacing="2">URNAS APURADAS POR ESTADO</text>'
+        )
+        if not com_dado:
             partes.append(
-                f'<text x="{PAINEL_X}" y="440" font-size="30" fill="#7d8aa0">'
-                f"{'todas as pracas totalizadas' if dados['pracas_com_dado'] else 'aguardando boletim'}</text>"
+                f'<text x="{PAINEL_X}" y="500" font-size="30" fill="#7d8aa0">'
+                f"aguardando boletim</text>"
             )
             return partes
 
-        y = 440.0
-        for estado in atrasados:
-            faltam = _int_br(max(0, estado["secoes_total"] - estado["secoes_totalizadas"]))
+        y = 500.0
+        for estado in com_dado[:11]:
+            apuradas = _int_br(estado["secoes_totalizadas"])
             partes.append(
                 f'<text x="{PAINEL_X}" y="{y:.0f}" font-size="30" fill="{COR_TEXTO}">'
                 f'{estado["sigla"]}</text>'
                 f'<text x="{PAINEL_X + 80}" y="{y:.0f}" font-size="26" fill="#9fb0c9">'
                 f"{_pct_br(estado['apuracao_pct'])}%</text>"
                 f'<text x="{LARGURA - 120}" y="{y:.0f}" font-size="30" fill="{COR_TEXTO}" '
-                f'text-anchor="end">{faltam}</text>'
+                f'text-anchor="end">{apuradas}</text>'
             )
             y += 44
+        if len(com_dado) > 11:
+            partes.append(
+                f'<text x="{PAINEL_X}" y="{y + 8:.0f}" font-size="24" fill="#7d8aa0">'
+                f"e mais {len(com_dado) - 11} praca(s)</text>"
+            )
         return partes
 
     def _bloco_composicao(self, dados: dict, y: float) -> list[str]:

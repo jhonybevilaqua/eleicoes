@@ -52,6 +52,15 @@ O QUE FAZER, NA ORDEM
     A saida de video daquele PC entra no switcher como uma fonte.
     Fechar a mesa NAO tira nada do ar.
 
+    Se voce tem um MONITOR VERTICAL em cena (1080x1920), ha uma tela
+    propria para ele, que roda sozinha trocando de informacao a cada
+    10 segundos - urnas apuradas, brancos e nulos, comparecimento,
+    placar, mapa e os 27 estados:
+
+        TELAO\TELAO-VERTICAL.bat
+
+    Ponha o monitor em RETRATO nas configuracoes do Windows antes.
+
     Antes do ar, preencha TELAO\telao.yaml com os codigos do pleito
     (TELAO\telao.exe descobrir) e as cores dos partidos.
 

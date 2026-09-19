@@ -9,7 +9,7 @@ Seis telas:
   como-votou         validos, brancos, nulos e abstencao - a composicao do voto
   apuracao-nacional  o contador de urnas do pais, em numero grande
   apuracao-estados   o mapa pintado pelo percentual de urnas totalizadas, com
-                     as pracas mais atrasadas e quantas urnas faltam
+                     o total apurado e as urnas apuradas praca a praca
   placar             os candidatos, com barra, percentual e votos
 
 Todas sao desenhadas do zero a cada mudanca de boletim e gravadas inteiras -

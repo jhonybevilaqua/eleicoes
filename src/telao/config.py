@@ -85,6 +85,15 @@ class Config:
         return self.bruto.get("aparencia", {}) or {}
 
     @property
+    def vertical(self) -> dict[str, Any]:
+        """Monitor vertical de cena (1080x1920), que roda sozinho.
+
+        Secao separada das 'telas' porque e outro problema: o telao do
+        switcher tem alguem escolhendo, o monitor de cena nao tem ninguem.
+        """
+        return self.bruto.get("vertical", {}) or {}
+
+    @property
     def apuracao(self) -> dict[str, Any]:
         return self.bruto.get("apuracao", {}) or {}
 
@@ -169,6 +178,20 @@ class Config:
                 )
         if self.intervalo < 5:
             problemas.append("coleta.intervalo_segundos abaixo de 5s: risco de bloqueio pelo TSE")
+
+        if self.vertical.get("ativo"):
+            from .vertical import TIPOS as TIPOS_V
+
+            pedidas = self.vertical.get("telas") or []
+            if isinstance(pedidas, str):
+                pedidas = [pedidas]
+            for item in pedidas:
+                if str(item).strip().lower() not in TIPOS_V:
+                    problemas.append(
+                        f"vertical: tela '{item}' desconhecida (validas: {', '.join(TIPOS_V)})"
+                    )
+            if int(self.vertical.get("rodizio_segundos", 10)) < 3:
+                problemas.append("vertical.rodizio_segundos abaixo de 3s: ilegivel em cena")
         return problemas
 
 
