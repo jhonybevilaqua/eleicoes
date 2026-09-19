@@ -410,3 +410,31 @@ def test_pagina_do_monitor_gira_sozinha_sem_mesa(tmp_path):
 def test_rodizio_curto_demais_e_recusado(tmp_path):
     problemas = _cfg_vertical(tmp_path, rodizio_segundos=1).validar()
     assert any("rodizio_segundos" in p for p in problemas)
+
+
+def test_lista_de_telas_vazia_desliga_o_switcher_e_deixa_so_o_monitor(tmp_path):
+    """'telas: []' e uma escolha valida - quem so quer o monitor de cena.
+
+    Antes, a lista vazia caia nas seis telas padrao e o switcher recebia
+    arquivos que ninguem pediu.
+    """
+    from telao.vertical import PublicadorVertical
+
+    cfg = _cfg(
+        tmp_path,
+        telas=[],
+        vertical={"ativo": True, "destino": str(tmp_path / "v"), "rodizio_segundos": 10},
+    )
+    assert cfg.telas == []
+    assert cfg.validar() == []                      # e configuracao valida
+
+    assert Publicador(cfg).publicar(_dados(nacional=_ap())) == []
+    assert not (tmp_path / "index.html").exists()
+
+    assert PublicadorVertical(cfg).publicar(_dados(nacional=_ap()))
+    assert (tmp_path / "v" / "urnas.svg").exists()
+
+
+def test_sem_tela_nenhuma_e_sem_monitor_a_config_e_recusada(tmp_path):
+    problemas = _cfg(tmp_path, telas=[]).validar()
+    assert any("nao produziria nada" in p for p in problemas)

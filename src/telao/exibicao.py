@@ -77,6 +77,9 @@ class Publicador:
         self._impressoes: dict[str, str] = {}
 
     def publicar(self, dados: Dados) -> list[Path]:
+        if not self.telas:
+            return []          # modo so-monitor: nada para o switcher
+
         escritos: list[Path] = []
         for tela in self.telas:
             try:

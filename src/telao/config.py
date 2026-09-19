@@ -135,9 +135,18 @@ class Config:
 
     @property
     def telas(self) -> list[Tela]:
+        # Lista vazia EXPLICITA e uma escolha valida: quem so quer o monitor
+        # de cena escreve 'telas: []' e nao gera nada para o switcher. 'or'
+        # trataria [] como ausente e devolveria as seis padrao - que foi
+        # exatamente o que aconteceu na primeira tentativa de rodar so o
+        # vertical.
+        pedidas = self.bruto.get("telas")
+        if pedidas is None:
+            pedidas = TELAS_PADRAO
+
         telas: list[Tela] = []
         vistos: set[str] = set()
-        for item in self.bruto.get("telas") or TELAS_PADRAO:
+        for item in pedidas:
             if not isinstance(item, dict):
                 continue
             tipo = str(item.get("tipo", "")).strip().lower()
@@ -168,8 +177,11 @@ class Config:
             )
         if not self.estados:
             problemas.append("apuracao.estados nao resolveu nenhuma UF valida")
-        if not self.telas:
-            problemas.append("nenhuma tela reconhecida em 'telas'")
+        if not self.telas and not self.vertical.get("ativo"):
+            problemas.append(
+                "nenhuma tela reconhecida em 'telas' e o monitor vertical esta desligado: "
+                "o telao nao produziria nada"
+            )
         for item in self.bruto.get("telas") or []:
             if isinstance(item, dict) and str(item.get("tipo", "")).lower() not in TIPOS:
                 problemas.append(
