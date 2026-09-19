@@ -30,7 +30,6 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from xml.sax.saxutils import escape as _escapar
 
 from ..malha_br import (
     CENTRO,
@@ -43,6 +42,17 @@ from ..malha_br import (
 )
 from ..modelos import Apuracao
 from ..util.arquivos import escrever_texto
+from ..util.svg import (
+    CINZA_SEM_DADO,
+    COR_FUNDO,
+    COR_TEXTO,
+    contraste as _contraste,
+    cor_de_reserva,
+    escapar as _escapar,
+    int_br as _int_br,
+    mistura as _mistura,
+    pct_br as _pct_br,
+)
 from .base import Exporter
 
 # Canvas do SVG: o mesmo 1920x1080 do projeto de video, para a arte entrar 1:1.
@@ -58,18 +68,6 @@ MAPA_ESCALA = 1.22
 CHAMADA_X = MAPA_X + VIEWBOX_LARGURA * MAPA_ESCALA + 26
 PAINEL_X = 1210.0
 
-# Paleta de reserva para partido sem cor definida em 'texto.cores_partido'.
-# Existe para o mapa nao sair de uma cor so antes de a arte fechar as cores -
-# nao para substituir a decisao da arte. Oito matizes distinguiveis entre si,
-# inclusive para quem nao separa vermelho de verde.
-PALETA_RESERVA = [
-    "#2f97e8", "#c0392b", "#27ae60", "#e8974a",
-    "#8e44ad", "#16a085", "#d4c04a", "#7f8fa6",
-]
-
-CINZA_SEM_DADO = "#6b7688"
-COR_FUNDO = "#0b1220"
-COR_TEXTO = "#ffffff"
 COR_TRACO = "#0b1220"
 
 
@@ -95,49 +93,9 @@ def _sigla(praca: str, ap: Apuracao | None) -> str:
     return ""
 
 
-def _int_br(valor: int) -> str:
-    """12345678 -> '12.345.678'."""
-    return f"{int(valor):,}".replace(",", ".")
 
 
-def _pct_br(valor: float, casas: int = 2) -> str:
-    """63.4 -> '63,40'. Formata SO o numero: aplicar replace na linha inteira
-    do SVG trocaria tambem o separador decimal das coordenadas."""
-    return f"{float(valor):.{casas}f}".replace(".", ",")
 
-
-def _luminancia(cor: str) -> float:
-    """0 (preto) a 1 (branco), para decidir se o texto por cima vai claro."""
-    texto = str(cor or "").strip().lstrip("#")
-    if len(texto) == 3:
-        texto = "".join(c * 2 for c in texto)
-    if len(texto) != 6:
-        return 0.0
-    try:
-        r, g, b = (int(texto[i:i + 2], 16) / 255 for i in (0, 2, 4))
-    except ValueError:
-        return 0.0
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b
-
-
-def _contraste(fundo: str) -> str:
-    return "#10192b" if _luminancia(fundo) > 0.6 else "#ffffff"
-
-
-def _mistura(cor_a: str, cor_b: str, fracao: float) -> str:
-    """Interpola duas cores hex - usado na escala do modo 'apuracao'."""
-    def partes(cor: str) -> tuple[int, int, int]:
-        texto = str(cor).strip().lstrip("#")
-        if len(texto) == 3:
-            texto = "".join(c * 2 for c in texto)
-        return tuple(int(texto[i:i + 2], 16) for i in (0, 2, 4))  # type: ignore[return-value]
-
-    try:
-        a, b = partes(cor_a), partes(cor_b)
-    except ValueError:
-        return cor_b
-    fracao = max(0.0, min(1.0, fracao))
-    return "#" + "".join(f"{round(x + (y - x) * fracao):02x}" for x, y in zip(a, b))
 
 
 class ExporterMapa(Exporter):
@@ -227,8 +185,7 @@ class ExporterMapa(Exporter):
                 }
             )
             reserva = {
-                partido: PALETA_RESERVA[indice % len(PALETA_RESERVA)]
-                for indice, partido in enumerate(sem_cor)
+                partido: cor_de_reserva(indice) for indice, partido in enumerate(sem_cor)
             }
             for estado in estados.values():
                 lider = estado.get("lider")

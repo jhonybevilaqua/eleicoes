@@ -57,6 +57,8 @@ gctse descobrir               # lista os pleitos publicados pelo TSE (pega os c�
 gctse inspecionar --abrangencia br --cargo 1   # mostra as chaves reais do arquivo
 gctse exemplo                 # gera arquivos de exemplo + mapa (monte a cena hoje)
 gctse celulas                 # mapa de vínculos para amarrar a cena (ClassX)
+gctse mesa                    # escolhe o quadro do telão que vai ao ar
+gctse no-ar <id>              # o mesmo, sem abrir janela
 gctse ensaio --duracao 600    # simula uma apuração completa em 10 min
 gctse uma-vez                 # um único ciclo (bom para agendador)
 gctse rodar                   # operação contínua
@@ -137,6 +139,24 @@ célula para deslocar; em CSV, a geometria garantida faz a célula continuar
 válida. Campos numéricos vêm em versão crua (`votos_num`) para o `Sort` com
 "As number". `gctse celulas` imprime o mapa de onde cada campo está.
 
+## Telão: gráficos de tela cheia num segundo PC
+
+Um PC de exibição mostrando gráficos alimentados pelo TSE, com a saída de vídeo
+entrando no switcher como uma fonte qualquer. **O GC não participa** — não há
+cena para montar nem vínculo para conferir, e a operação do gerador de
+caracteres fica livre para as tarjas.
+
+```bat
+INICIAR.bat    no PC que coleta, já grava o telão junto com as tarjas
+MESA.bat       janela para escolher o quadro que vai ao ar
+TELAO.bat      no PC de exibição, tela cheia em modo quiosque
+```
+
+Quadros disponíveis: placar, mapa do Brasil, composição do voto (brancos,
+nulos, abstenção), contador de urnas e curva de apuração com previsão de
+fechamento. A escolha vale em cerca de 1 segundo, e fechar a mesa não tira
+nada do ar. Receita completa em [`docs/TELAO.md`](docs/TELAO.md).
+
 ## Mapas e gráficos
 
 Além do placar, o mesmo boletim sustenta o mapa do Brasil, a composição do voto
@@ -204,6 +224,7 @@ mínimo de seções totalizadas.
 - [`docs/GC-INTEGRACAO.md`](docs/GC-INTEGRACAO.md) — receita por marca de GC
 - [`docs/TARJAS.md`](docs/TARJAS.md) — os seis modelos de tarja, o HTML e o PDF
 - [`docs/GRAFICOS.md`](docs/GRAFICOS.md) — mapa do Brasil, brancos e nulos, curva de apuração
+- [`docs/TELAO.md`](docs/TELAO.md) — gráficos de tela cheia no PC de exibição, e a mesa
 - [`docs/CASTALIA.md`](docs/CASTALIA.md) — fazer o gráfico acompanhar o percentual no Castalia
 - [`docs/TESTE-SIMULADO.md`](docs/TESTE-SIMULADO.md) — testar com o simulado do TSE
 - [`docs/OPERACAO.md`](docs/OPERACAO.md) — runbook do dia da eleição e contingência

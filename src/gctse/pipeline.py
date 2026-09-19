@@ -26,6 +26,7 @@ from .fontes import criar_fonte
 from .historico import Historico, Ponto, projecao, viradas
 from .modelos import Apuracao
 from .painel import renderizar as renderizar_painel
+from .telao import Telao
 from .tse.cliente import ClienteTSE
 from .tse.endpoints import Endpoints
 from .tse.parser import analisar
@@ -63,6 +64,10 @@ class Pipeline:
         }
         self.alvos: list[Alvo] = cfg.alvos
         self.grupos = cfg.grupos
+        self.telao = Telao(cfg.telao, cfg.texto)
+        # SVG de cada grupo de mapa, para o telao nao redesenhar o que o
+        # exporter acabou de desenhar. So e refeito quando o grupo muda.
+        self._mapas_svg: dict[str, str] = {}
 
         # ultima apuracao boa de cada alvo, para montar os rodizios no fim do
         # ciclo. Mantida mesmo quando o boletim nao mudou, senao a praca sumiria
@@ -111,6 +116,7 @@ class Pipeline:
         self.estado.salvar()
         self._escrever_saude(resultados)
         self._escrever_graficos()
+        self._publicar_telao()
         self._escrever_painel(resultados, rodizios)
         return resultados
 
@@ -262,12 +268,19 @@ class Pipeline:
 
             # dedupe proprio: sem isso o arquivo do rodizio seria reescrito a
             # cada ciclo mesmo quando nenhuma das pracas mudou
+            montado = exporter.montar(itens)
             impressao = hashlib.sha1(
-                json.dumps(exporter.montar(itens), ensure_ascii=False, sort_keys=True).encode("utf-8")
+                json.dumps(montado, ensure_ascii=False, sort_keys=True).encode("utf-8")
             ).hexdigest()
             chave = f"grupo:{nome}"
             situacao[nome] = (len(itens), sum(1 for _, _, ap in itens if ap))
-            if not self.estado.mudou(chave, impressao) and not bool(self.cfg.saida.get("reescrever_sempre", False)):
+            mudou = self.estado.mudou(chave, impressao)
+            if mudou and hasattr(exporter, "desenhar"):
+                # o mesmo desenho que vai para o arquivo alimenta o telao:
+                # redesenhar la seria refazer a conta e abrir espaco para as
+                # duas versoes discordarem
+                self._mapas_svg[nome] = exporter.desenhar(montado)
+            if not mudou and not bool(self.cfg.saida.get("reescrever_sempre", False)):
                 continue
             try:
                 escritos = exporter.exportar_lista(itens, arquivo)
@@ -343,6 +356,18 @@ class Pipeline:
             escrever_texto(Path(caminho), json.dumps(corpo, ensure_ascii=False, indent=2), nova_linha="\n")
         except OSError as exc:
             log.error("nao foi possivel escrever o arquivo de graficos: %s", exc)
+
+    def _publicar_telao(self) -> None:
+        """Quadros de tela cheia para o PC de exibicao."""
+        if not self.telao.ativo:
+            return
+        try:
+            escritos = self.telao.publicar(self._ultima, self._mapas_svg, self._serie)
+        except OSError as exc:
+            log.error("nao foi possivel escrever o telao: %s", exc)
+            return
+        if escritos:
+            log.debug("telao: %d arquivo(s) atualizado(s)", len(escritos))
 
     # --- supervisao ---
 

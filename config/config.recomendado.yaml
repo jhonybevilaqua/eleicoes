@@ -192,6 +192,67 @@ padroes_alvo:
   exporters: [liveboard_rank, web_json]
 
 # ---------------------------------------------------------------------------
+# Telao: quadros de tela cheia para um PC de exibicao.
+#
+# O GC nao participa. Cada quadro sai daqui como um SVG 1920x1080 ja desenhado,
+# reescrito a cada boletim. O PC de exibicao mostra o quadro escolhido em tela
+# cheia e a saida de video dele entra no switcher como uma fonte qualquer -
+# sem cena para montar, sem vinculo para conferir no D-1, sem concorrer com o
+# operador do GC, que no dia estara ocupado com as tarjas.
+#
+# Quem escolhe o quadro:
+#   gctse mesa              janela com um botao por quadro (MESA.bat)
+#   gctse no-ar <id>        o mesmo, pela linha de comando
+#   teclado na propria tela 1-9 escolhe, setas avancam, R liga o rodizio
+#
+# Abrir a tela no PC de exibicao: TELAO.bat
+# ---------------------------------------------------------------------------
+telao:
+  ativo: true
+  destino: dados/saida/telao
+  intervalo_segundos: 8      # de quanto em quanto a tela rele os arquivos
+
+  quadros:
+    - id: presidente
+      tipo: placar
+      alvo: presidente-br
+      titulo: "PRESIDENTE - BRASIL"
+      limite_candidatos: 6
+
+    - id: mapa-partido
+      tipo: mapa
+      mapa: mapa-presidente
+      titulo: "MAPA - LIDERANCA POR ESTADO"
+
+    - id: urnas
+      tipo: mapa
+      mapa: urnas-presidente
+      titulo: "MAPA - URNAS TOTALIZADAS"
+
+    - id: composicao
+      tipo: composicao
+      alvo: presidente-br
+      titulo: "COMO O BRASIL VOTOU"
+
+    - id: contador
+      tipo: contador
+      alvo: presidente-br
+      titulo: "APURACAO - BRASIL"
+
+    # Quadro de GESTAO, nao de ar: a que horas as urnas terminam no ritmo
+    # atual. Serve para escala de equipe e intervalo comercial.
+    - id: ritmo
+      tipo: curva
+      alvo: presidente-br
+      titulo: "RITMO DA APURACAO"
+
+    - id: governador
+      tipo: placar
+      alvo: governador-pr
+      titulo: "GOVERNADOR - PARANA"
+      limite_candidatos: 6
+
+# ---------------------------------------------------------------------------
 # Mapa do Brasil: as 27 unidades da federacao alimentando um arquivo so.
 #
 # Mesma forma do rodizio (um exporter, uma lista de alvos), porque o problema e

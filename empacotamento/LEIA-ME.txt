@@ -32,11 +32,29 @@ O QUE FAZER, NA ORDEM
         INICIAR.bat   no ar. Le so boletim oficial.
                       Reinicia sozinho se cair.
 
- 5. Para acompanhar, abra TARJAS\painel.html no navegador.
+ 5. TELAO - graficos de tela cheia num segundo PC (opcional)
+
+    Se voce quiser mapa do Brasil, placar grande, brancos e nulos ou a
+    curva da apuracao NO AR sem montar nada no GC:
+
+        MESA.bat      aqui, nesta maquina. Uma janela com um botao por
+                      quadro: voce clica e o quadro entra no ar.
+
+        TELAO.bat     no PC de EXIBICAO, que so precisa enxergar esta
+                      pasta pela rede. Abre em tela cheia; a saida de
+                      video dele entra no switcher como uma fonte.
+
+            TELAO.bat "\\NOME-DESTE-PC\gctse\dados\saida\telao\index.html"
+
+    Fechar a mesa NAO tira nada do ar. O quadro escolhido continua.
+    Na propria tela: 1..9 escolhe, setas avancam, R liga o rodizio,
+    M devolve o comando para a mesa.
+
+ 6. Para acompanhar, abra TARJAS\painel.html no navegador.
     Ele mostra as pracas, o percentual e quem esta na frente,
     e se atualiza sozinho.
 
- 6. Opcional: INICIAR-COM-O-WINDOWS.bat faz o sistema subir sozinho,
+ 7. Opcional: INICIAR-COM-O-WINDOWS.bat faz o sistema subir sozinho,
     minimizado, quando alguem logar na maquina.
 
 ---------------------------------------------------------------------------

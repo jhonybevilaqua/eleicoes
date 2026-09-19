@@ -19,6 +19,11 @@ python -m venv .venv-build || exit /b 1
   --hidden-import gctse.exporters.classx ^
   --hidden-import gctse.exporters.http_push ^
   --hidden-import gctse.exporters.viz_tab ^
+  --hidden-import gctse.exporters.mapa ^
+  --hidden-import gctse.exporters.rodizio ^
+  --hidden-import gctse.telao ^
+  --hidden-import gctse.mesa ^
+  --hidden-import tkinter ^
   gctse_launcher.py || exit /b 1
 
 mkdir dist\gctse\config 2>nul

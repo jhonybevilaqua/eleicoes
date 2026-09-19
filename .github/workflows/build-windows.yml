@@ -13,7 +13,7 @@ name: Executavel Windows
 on:
   workflow_dispatch:        # botao "Run workflow" na aba Actions
   push:
-    branches: [claude/gc-tse-api-automation-v3nvef]
+    branches: [claude/gc-tse-api-automation-v3nvef, "claude/**"]
     tags: ["v*"]
 
 permissions:
@@ -53,6 +53,11 @@ jobs:
           --hidden-import gctse.exporters.classx
           --hidden-import gctse.exporters.http_push
           --hidden-import gctse.exporters.viz_tab
+          --hidden-import gctse.exporters.mapa
+          --hidden-import gctse.exporters.rodizio
+          --hidden-import gctse.telao
+          --hidden-import gctse.mesa
+          --hidden-import tkinter
           gctse_launcher.py
 
       - name: Montar a pasta de distribuicao

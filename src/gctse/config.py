@@ -114,6 +114,11 @@ class Config:
         return self.bruto.get("mapas", {}) or {}
 
     @property
+    def telao(self) -> dict[str, Any]:
+        """Quadros de tela cheia para o PC de exibicao (ver docs/TELAO.md)."""
+        return self.bruto.get("telao", {}) or {}
+
+    @property
     def grupos(self) -> dict[str, dict[str, Any]]:
         """Rodizios e mapas juntos: tudo que o pipeline publica em lote."""
         return {**self.rodizios, **self.mapas}
@@ -182,6 +187,9 @@ class Config:
                     problemas.append(f"alvo '{alvo.nome}' referencia exporter inexistente '{nome}'")
             if alvo.cargo not in range(1, 14):
                 problemas.append(f"alvo '{alvo.nome}' com cargo fora da tabela do TSE: {alvo.cargo}")
+        from .telao import problemas as problemas_telao
+
+        problemas += problemas_telao(self.telao, nomes_alvo, set(self.mapas))
         if self.intervalo < 5:
             problemas.append("coleta.intervalo_segundos abaixo de 5s: risco de bloqueio pelo TSE")
         return problemas
