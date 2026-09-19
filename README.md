@@ -148,6 +148,10 @@ gctse exemplo                              # gera também os dois SVGs de mapa
 python scripts/gerar_modelos_graficos.py   # regera a arte de referência
 ```
 
+- **Tela num segundo PC** — o exporter grava também um HTML que mostra o mapa
+  em tela cheia e se atualiza sozinho. A saída de vídeo desse PC entra no
+  switcher como uma fonte qualquer, sem nada para montar no GC
+  (`empacotamento\TELA-MAPA.bat`).
 - **Mapa por partido** — cada UF na cor do partido de quem lidera ali.
 - **Mapa por urnas** — cada UF pela fração de seções totalizadas; enche ao vivo.
 - **Brancos, nulos e abstenção** — percentuais prontos, mais `stroke-dasharray`

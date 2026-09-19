@@ -162,6 +162,10 @@ class ExporterMapa(Exporter):
             for f in (self.opcoes.get("formatos") or ["svg", "json"])
             if str(f).strip()
         ]
+        # Tela de exibicao: quanto tempo entre uma releitura e outra do SVG.
+        # Nao precisa ser igual ao intervalo de coleta - o arquivo so muda
+        # quando o boletim muda, e reler um arquivo local nao custa nada.
+        self.tela_intervalo = int(self.opcoes.get("tela_intervalo_segundos", 10))
 
     # Um mapa nao se desenha com uma praca so.
     def exportar(self, ap: Apuracao, nome_alvo: str) -> list[Path]:
@@ -377,7 +381,107 @@ class ExporterMapa(Exporter):
                     nova_linha=self.nova_linha,
                 )
             )
+        if "tela" in self.formatos:
+            escritos.append(
+                escrever_texto(
+                    self.destino / f"{nome}.html",
+                    self.tela(nome),
+                    encoding="utf-8",
+                    nova_linha="\n",
+                )
+            )
         return escritos
+
+    # --- tela de exibicao ---
+
+    def tela(self, nome: str) -> str:
+        """Pagina que mostra o mapa em tela cheia e se atualiza sozinha.
+
+        Feita para o PC de exibicao: abre em tela cheia, sem cursor, sem barra
+        de navegacao, e a saida de video desse PC entra no switcher como uma
+        fonte qualquer. Nao ha vinculo para montar no GC - o desenho ja vem
+        pronto.
+
+        Tres decisoes que so aparecem quando isso esta no ar:
+
+        1. DUAS CAMADAS, nao um 'reload'. Recarregar a pagina inteira pisca
+           branco por um quadro, e um quadro branco no ar e um erro visivel.
+           Aqui a imagem nova carrega escondida e so aparece quando esta
+           inteira - a troca e uma dissolvencia, nunca um flash.
+        2. FALHA MANTEM O QUADRO. Se a leitura falhar (arquivo sendo trocado,
+           pasta de rede oscilando), a camada nova simplesmente nao assume: o
+           ultimo mapa bom continua no ar. Tela preta por causa de um soluco de
+           rede seria pior do que um mapa 20 segundos atrasado.
+        3. <img>, nao 'fetch'. O navegador bloqueia fetch em file:// por
+           seguranca, e este arquivo costuma ser aberto de uma pasta
+           compartilhada do PC de operacao. <img> le sem esse bloqueio.
+
+        A hora do boletim ja esta desenhada dentro do mapa, entao a tela nao
+        precisa - e nao deve - escrever nada por cima. Abra com '?debug=1' para
+        ver o estado da atualizacao durante os testes; sem isso, nada aparece.
+        """
+        return f"""<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<title>{_escapar(self.titulo or nome)}</title>
+<style>
+  html,body{{margin:0;height:100%;background:{self.cor_fundo};overflow:hidden;cursor:none}}
+  #palco{{position:fixed;inset:0}}
+  #palco img{{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;
+    opacity:0;transition:opacity .28s linear}}
+  #palco img.ativo{{opacity:1}}
+  #estado{{position:fixed;left:8px;bottom:6px;font:12px ui-monospace,Menlo,monospace;
+    color:#7d8aa0;display:none}}
+  body.debug #estado{{display:block}}
+</style>
+<div id="palco"><img id="camadaA" alt=""><img id="camadaB" alt=""></div>
+<div id="estado"></div>
+<script>
+(function () {{
+  var ARQUIVO = {json.dumps(nome + ".svg")};
+  var INTERVALO = {max(2, self.tela_intervalo)} * 1000;
+
+  var camadas = [document.getElementById("camadaA"), document.getElementById("camadaB")];
+  var atual = 0, trocas = 0, falhas = 0;
+  var estado = document.getElementById("estado");
+  if (location.search.indexOf("debug") >= 0) document.body.classList.add("debug");
+
+  function anotar(texto) {{
+    estado.textContent = texto + "  |  trocas: " + trocas + "  falhas: " + falhas;
+  }}
+
+  function atualizar() {{
+    var proxima = camadas[1 - atual];
+    proxima.onload = function () {{
+      proxima.classList.add("ativo");
+      camadas[atual].classList.remove("ativo");
+      atual = 1 - atual;
+      trocas++;
+      anotar(new Date().toLocaleTimeString("pt-BR"));
+    }};
+    proxima.onerror = function () {{
+      // mantem o que ja esta no ar: melhor um mapa atrasado do que tela preta
+      falhas++;
+      anotar("falha as " + new Date().toLocaleTimeString("pt-BR"));
+    }};
+    // a consulta no fim evita que o navegador sirva a copia em cache
+    proxima.src = ARQUIVO + "?t=" + Date.now();
+  }}
+
+  // clique em qualquer lugar entra em tela cheia, para quem abrir com dois
+  // cliques em vez do atalho em modo quiosque
+  document.addEventListener("click", function () {{
+    if (!document.fullscreenElement && document.documentElement.requestFullscreen) {{
+      document.documentElement.requestFullscreen();
+    }}
+  }});
+
+  atualizar();
+  setInterval(atualizar, INTERVALO);
+}})();
+</script>
+</html>
+"""
 
     # --- desenho ---
 

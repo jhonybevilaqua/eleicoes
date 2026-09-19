@@ -93,6 +93,82 @@ maioria das respostas volta `304` sem corpo, então o tráfego é pequeno — ma
 número de conexões não é. Se o ciclo começar a estourar o intervalo, suba
 `coleta.paralelismo` de 4 para 8 antes de mexer em qualquer outra coisa.
 
+### Exibir num segundo PC (o caminho mais curto)
+
+Há dois jeitos de pôr o mapa no ar, e eles custam coisas muito diferentes:
+
+| | Montar no GC | **Tela num segundo PC** |
+|---|---|---|
+| O que a arte faz | desenha 27 objetos e amarra a cor de cada um a um campo | nada |
+| Exige do GC | cor de objeto vinda de dado, vezes 27 | nada |
+| Como entra no switcher | camada do GC | entrada de vídeo, como uma fonte qualquer |
+| Risco no D-1 | vínculo errado em 1 dos 27 estados passa despercebido | não existe vínculo para errar |
+
+Se o mapa não precisa compor **por cima** da cena do GC, a segunda opção é a
+certa. O desenho já chega pronto; não há conta nem cor para o gerador de
+caracteres resolver.
+
+**Como funciona.** Com `tela` na lista de formatos, o exporter grava, ao lado do
+SVG, um `mapa-presidente.html`. Essa página mostra o mapa em tela cheia, sem
+cursor e sem barra de navegação, e relê o SVG sozinha de 10 em 10 segundos. A
+saída de vídeo desse PC entra no switcher como uma fonte comum.
+
+```yaml
+exporters:
+  mapa_partido:
+    tipo: mapa
+    formatos: [svg, json, tela]
+    tela_intervalo_segundos: 10
+```
+
+No PC de exibição:
+
+```bat
+TELA-MAPA.bat
+TELA-MAPA.bat "\\PC-OPERACAO\gctse\dados\saida\mapa\mapa-presidente.html"
+```
+
+O segundo formato é o caso normal: o PC de exibição **não precisa do gctse
+instalado**, só precisa enxergar a pasta compartilhada do PC que coleta. O
+`.bat` abre Chrome (ou Edge) em modo quiosque, com perfil próprio — assim uma
+aba que alguém abrir no navegador de uso comum não derruba o que está no ar.
+
+**Três decisões que só aparecem quando isso está no ar:**
+
+1. **Duas camadas, não um `reload`.** Recarregar a página inteira pisca branco
+   por um quadro, e um quadro branco no ar é um erro visível. A imagem nova
+   carrega escondida e só aparece quando está inteira — a troca é uma
+   dissolvência.
+2. **Falha mantém o quadro.** Se a leitura falhar — arquivo sendo trocado,
+   pasta de rede oscilando —, o último mapa bom continua no ar. Tela preta por
+   causa de um soluço de rede seria pior do que um mapa vinte segundos
+   atrasado.
+3. **Nada é escrito por cima.** A hora do boletim já está desenhada dentro do
+   mapa. Para conferir se a tela está atualizando durante o teste, abra com
+   `?debug=1` — aí um rodapé discreto mostra a hora da última troca e o número
+   de falhas. Sem o parâmetro, não aparece nada.
+
+**Conferir no ensaio.** Rode `gctse ensaio --duracao 600` num PC e deixe a tela
+aberta no outro: o mapa vai encher ao longo de dez minutos. É o teste que prova
+a cadeia inteira — coleta, escrita, pasta compartilhada e exibição.
+
+**Escala do Windows.** O `.bat` já passa `--force-device-scale-factor=1`. Sem
+isso, um PC com escala em 125% renderiza o mapa menor que a tela e sobra borda.
+
+### E se o mapa precisar compor sobre a cena do GC?
+
+Aí a tela separada não serve, porque ela é uma fonte de vídeo opaca. Duas
+saídas:
+
+- **`fundo_transparente: true`** no exporter e o SVG entra como camada no GC,
+  com fundo alfa — continua sem vínculo nenhum para montar.
+- **Montar no GC pelo JSON**, com os 27 objetos nomeados (`uf-sp`, `uf-pr`…) e
+  a cor de cada um amarrada a `estados.SP.cor`. É o caminho que dá controle
+  total de animação e o que mais custa para montar e conferir. Antes de
+  escolhê-lo, confirme no Castalia se **cor de preenchimento aceita valor vindo
+  de campo de dado** — se não aceitar, esse caminho não existe, e a resposta
+  volta a ser a tela separada.
+
 ### Cores de partido
 
 ```yaml

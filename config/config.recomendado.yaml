@@ -155,7 +155,11 @@ exporters:
     destino: dados/saida/mapa
     titulo: "PRESIDENTE - LIDERANCA POR ESTADO"
     rotulo: sigla_pct       # sigla | sigla_pct | sigla_lider
-    formatos: [svg, json]
+    # 'tela' grava tambem um .html que mostra o mapa em tela cheia e se
+    # atualiza sozinho: e o caminho para exibir num segundo PC, sem montar
+    # nada no GC. Abra com empacotamento\TELA-MAPA.bat.
+    formatos: [svg, json, tela]
+    tela_intervalo_segundos: 10
     # fundo_transparente: true   # ligue para compor o mapa sobre a cena do GC
 
   # O mesmo mapa, pintado pelo percentual de urnas totalizadas: enche ao vivo.
@@ -165,7 +169,8 @@ exporters:
     destino: dados/saida/mapa
     titulo: "URNAS TOTALIZADAS POR ESTADO"
     cor_escala: "#2f97e8"
-    formatos: [svg, json]
+    formatos: [svg, json, tela]
+    tela_intervalo_segundos: 10
 
   # Site, segunda tela e conferencia. Nao vai para o ar.
   web_json:

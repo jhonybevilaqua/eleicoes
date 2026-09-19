@@ -126,6 +126,24 @@ está andando quando chega o boletim seguinte e nunca assenta.
 
 ---
 
+## E a cor do mapa? Provavelmente essa pergunta não precisa de resposta
+
+Barra de placar e mapa parecem o mesmo problema — "fazer o CG reagir ao dado" —
+mas não são. A barra é **um** objeto por candidato e vale montar no GC. O mapa
+são **27** objetos, cada um precisando de cor vinda de campo de dado, e a
+pergunta 1 desta página vira "o Castalia aceita cor de preenchimento vinda de
+dado?", que é bem menos comum do que aceitar largura.
+
+Antes de investigar isso, considere que o mapa já sai **desenhado e pintado**
+pela automação, num SVG 1920 × 1080. Se ele não precisa compor por cima da cena
+do GC, exiba a tela pronta num segundo PC e não monte nada — ver
+[`docs/GRAFICOS.md`](GRAFICOS.md), seção *Exibir num segundo PC*. Se precisar
+compor, use `fundo_transparente: true` e entre como camada, ainda sem vínculo.
+
+Montar os 27 estados na mão só se paga quando a cena exige animação própria por
+estado. Nesse caso a receita é a mesma de sempre: a cor pronta em
+`estados.SP.cor`, o GC só aplica.
+
 ## Como testar isso hoje
 
 Não precisa esperar a apuração:

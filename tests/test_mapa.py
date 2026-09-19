@@ -154,6 +154,26 @@ def test_exporter_de_mapa_recusa_alvo_isolado(tmp_path):
         _exporter(tmp_path).exportar(_ap("pr"), "presidente-pr")
 
 
+def test_tela_sai_junto_e_aponta_para_o_svg_do_mesmo_grupo(tmp_path):
+    exporter = _exporter(tmp_path, formatos=["svg", "tela"], tela_intervalo_segundos=7)
+    escritos = exporter.exportar_lista(_itens(), "urnas-presidente")
+    pagina = next(p for p in escritos if p.suffix == ".html")
+    corpo = pagina.read_text(encoding="utf-8")
+
+    assert '"urnas-presidente.svg"' in corpo      # o par certo, nao outro mapa
+    assert "7 * 1000" in corpo                    # intervalo configurado
+    # duas camadas: a troca e dissolvencia, nunca um reload que pisca branco
+    assert corpo.count("<img") == 2
+    assert "location.reload" not in corpo
+    # falha na leitura nao pode limpar a tela
+    assert "onerror" in corpo
+
+
+def test_sem_tela_na_lista_de_formatos_nenhum_html_e_gravado(tmp_path):
+    escritos = _exporter(tmp_path, formatos=["svg"]).exportar_lista(_itens(), "mapa")
+    assert [p.suffix for p in escritos] == [".svg"]
+
+
 def test_malha_cobre_as_27_unidades_da_federacao():
     assert len(CONTORNO) == 27
     assert "DF" in CONTORNO and "PR" in CONTORNO
