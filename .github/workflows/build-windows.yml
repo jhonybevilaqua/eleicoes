@@ -107,10 +107,11 @@ jobs:
           $svgs = Get-ChildItem telas\*.svg
           if ($svgs.Count -lt 6) { throw "faltaram telas: $($svgs.Count)" }
           Get-ChildItem telas | Select-Object Length, Name | Format-Table -AutoSize
-          # o monitor vertical sai no mesmo ciclo, na pasta que o telao.yaml diz
-          $verticais = Get-ChildItem telao-vertical\*.svg
+          # 'exemplo --pasta' leva o vertical junto, numa subpasta - assim a
+          # conferencia nao grava na pasta de producao do telao.yaml
+          $verticais = Get-ChildItem telas\vertical\*.svg
           if ($verticais.Count -lt 6) { throw "faltaram telas verticais: $($verticais.Count)" }
-          Get-ChildItem telao-vertical | Select-Object Length, Name | Format-Table -AutoSize
+          Get-ChildItem telas\vertical | Select-Object Length, Name | Format-Table -AutoSize
 
       - name: Conferir o pacote
         shell: pwsh
