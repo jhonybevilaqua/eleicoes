@@ -66,6 +66,9 @@ O QUE FAZER, NA ORDEM
     Antes do ar, preencha TELAO\telao.yaml com os codigos do pleito
     (TELAO\telao.exe descobrir) e as cores dos partidos.
 
+    O roteiro completo dos dias de teste esta em
+    docs\DIAS-DE-TESTE.md - leia antes de terca.
+
  6. Para acompanhar, abra TARJAS\painel.html no navegador.
     Ele mostra as pracas, o percentual e quem esta na frente,
     e se atualiza sozinho.

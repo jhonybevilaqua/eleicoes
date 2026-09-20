@@ -229,6 +229,7 @@ mínimo de seções totalizadas.
 - [`docs/TARJAS.md`](docs/TARJAS.md) — os seis modelos de tarja, o HTML e o PDF
 - [`docs/GRAFICOS.md`](docs/GRAFICOS.md) — mapa do Brasil, brancos e nulos, curva de apuração
 - [`docs/TELAO.md`](docs/TELAO.md) — o telão: sistema de exibição em tela cheia
+- [`docs/DIAS-DE-TESTE.md`](docs/DIAS-DE-TESTE.md) — roteiro dos dias de teste do TSE
 - [`docs/CASTALIA.md`](docs/CASTALIA.md) — fazer o gráfico acompanhar o percentual no Castalia
 - [`docs/TESTE-SIMULADO.md`](docs/TESTE-SIMULADO.md) — testar com o simulado do TSE
 - [`docs/OPERACAO.md`](docs/OPERACAO.md) — runbook do dia da eleição e contingência
