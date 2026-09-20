@@ -1,30 +1,68 @@
 # ---------------------------------------------------------------------------
-# TELAO - telas de apuracao em 1920x1080 para um PC de exibicao.
+# TELAO - telas de apuracao para o switcher (1920x1080) e para o monitor de
+# cena (1080x1920).
 #
 # Este arquivo e SO do telao. O gctse, que alimenta as tarjas do gerador de
-# caracteres, tem a config dele e nao le esta. Os dois rodam separados: dar
-# problema num nao derruba o outro.
+# caracteres, tem a config dele e nao le esta.
+#
+#   ===================================================================
+#    MODO DE OPERACAO - a unica linha que voce troca entre teste e ar
+#   ===================================================================
+#
+#   modo: simulado   nos dias de TESTE do TSE. Aceita boletim em fase 'S' e
+#                    carimba TODAS as telas com um selo que nao desliga.
+#   modo: producao   no dia da eleicao. So aceita fase 'O'. E o padrao: se
+#                    esta linha sumir ou vier errada, vale producao - esquecer
+#                    de escolher tem de cair no lado seguro.
+#
+#   Para trocar sem editar este arquivo, use os atalhos:
+#       TELAO-SIMULADO.bat      ou   telao.exe modo simulado
+#       TELAO-PRODUCAO.bat      ou   telao.exe modo producao
+#
+#   NAO confunda com 'coleta.fonte':
+#       modo: simulado  + fonte: tse         -> TSE de verdade, dado de teste
+#       fonte: simulador                     -> dado inventado, sem internet
 #
 # O que fazer, na ordem:
 #   1. telao descobrir        pega os codigos do pleito no TSE
-#   2. preencha tse.pleito e tse.eleicao abaixo
+#   2. preencha os codigos do modo que vai usar, na secao 'modos' abaixo
 #   3. telao validar          confere tudo antes do ar
-#   4. telao ensaio           treina com dado ficticio, sem tocar o TSE
-#   5. telao rodar            no ar
-#
-# Para escolher a tela que vai ao ar:  telao mesa   (ou TELAO-MESA.bat)
-# Para exibir no outro PC:             TELAO-TELA.bat
+#   4. telao ensaio           treina com dado inventado, sem tocar o TSE
+#   5. TELAO-SIMULADO.bat     nos dias de teste
+#   6. TELAO-PRODUCAO.bat     no dia da eleicao
 # ---------------------------------------------------------------------------
+
+modo: producao
+
+# Os codigos de cada modo. O simulado do TSE costuma sair em caminho e codigo
+# de pleito proprios - por isso cada modo tem os seus. Preencher os dois agora
+# significa que trocar de teste para o ar e UMA LINHA, e nao uma edicao de
+# config sob pressao no domingo a noite.
+modos:
+  simulado:
+    tse:
+      # <- PREENCHER com o que o TSE publicar para os dias de teste.
+      #    'telao descobrir' lista os pleitos disponiveis.
+      ciclo: ele2026
+      pleito: "000"
+      eleicao: "000"
+    # O selo que carimba todas as telas neste modo. Nao pode ser desligado.
+    selo: "SIMULADO — TESTE, NÃO É RESULTADO"
+
+  producao:
+    tse:
+      # <- PREENCHER com os codigos oficiais do pleito.
+      ciclo: ele2026
+      pleito: "000"
+      eleicao: "000"
 
 log:
   nivel: INFO
   arquivo: logs/telao.log
 
+# Comum aos dois modos. O que muda (ciclo, pleito, eleicao) esta em 'modos'.
 tse:
   base_url: https://resultados.tse.jus.br/oficial
-  ciclo: ele2026
-  pleito: "000"     # <- 'telao descobrir' quando o TSE publicar
-  eleicao: "000"    # <- idem
   turno: 1
 
 # O telao sempre quer a mesma coisa: o resultado nacional e o dos estados para
@@ -45,13 +83,13 @@ coleta:
   # Serie temporal do nacional, usada pela previsao de fechamento.
   historico: true
 
-# As mesmas travas do gctse, pelos mesmos motivos. Nao desligue em producao.
 seguranca:
-  # O TSE publica SIMULADOS nos mesmos caminhos antes do pleito. Sem esta
-  # trava, um simulado vira tela cheia com cara de resultado real.
-  bloquear_nao_oficial: true
-  # A CDN pode servir copia antiga de um no diferente. Sem esta, o numero no
-  # telao anda para tras no ar.
+  # A trava de fase NAO fica aqui: ela e decidida pelo modo, e producao a liga
+  # sempre - nao ha valor nesta config que faca um simulado ir ao ar como
+  # resultado.
+  #
+  # Esta continua sua: a CDN do TSE pode servir copia antiga de um no
+  # diferente, e sem ela o numero no telao anda para tras no ar.
   bloquear_regressao: true
 
 saida:

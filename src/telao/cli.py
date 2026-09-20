@@ -7,6 +7,7 @@
   telao exemplo      gera as telas uma vez, para a arte e o teste de cena
   telao mesa         janela para escolher a tela que vai ao ar
   telao no-ar        a mesma escolha, sem janela
+  telao modo         mostra ou troca entre Simulado e Producao
 """
 
 from __future__ import annotations
@@ -14,6 +15,7 @@ from __future__ import annotations
 import argparse
 import logging
 import os
+import re
 import signal
 import sys
 import threading
@@ -26,7 +28,7 @@ from gctse.util.log import configurar
 
 from . import __version__
 from .coleta import Coletor, rodar
-from .config import ErroConfig, carregar, caminho_padrao
+from .config import MODOS, ErroConfig, carregar, caminho_padrao
 from .exibicao import Publicador, escrever_selecao, ler_selecao, ler_telas
 from .telas import Dados, resumo
 from .vertical import PublicadorVertical
@@ -59,18 +61,91 @@ def _pasta(cfg, args) -> Path:
     return Path(args.pasta) if getattr(args, "pasta", None) else cfg.destino
 
 
+def _faixa_modo(cfg) -> None:
+    """Diz em que modo o sistema esta, de um jeito que nao passa batido.
+
+    Subir em Simulado achando que esta em Producao - ou o contrario - e o erro
+    mais caro possivel aqui, e ele e silencioso: os dois modos leem o TSE e
+    desenham as mesmas telas. A unica defesa barata e gritar na partida.
+    """
+    if cfg.simulado:
+        print("=" * 66)
+        print("  MODO SIMULADO - dados de TESTE do TSE (fase 'S')")
+        print("  Todas as telas saem carimbadas. NAO use no dia da eleicao.")
+        print("=" * 66)
+    else:
+        print("-" * 66)
+        print("  MODO PRODUCAO - so boletim oficial (fase 'O')")
+        print("-" * 66)
+
+
+def cmd_modo(args) -> int:
+    """Mostra o modo, ou troca gravando no proprio telao.yaml."""
+    cfg = _cfg(args)
+    _log(cfg, args)
+
+    if not args.novo:
+        print(f"Modo atual: {cfg.modo.upper()}")
+        if os.environ.get("TELAO_MODO"):
+            print(f"  (vindo da variavel TELAO_MODO={os.environ['TELAO_MODO']},")
+            print("   que tem prioridade sobre o arquivo)")
+        print(f"  pleito {cfg.tse.get('pleito', '-')} / eleicao {cfg.tse.get('eleicao', '-')}")
+        print(f"  aceita fase simulada: {'sim' if cfg.simulado else 'nao'}")
+        print("\nPara trocar:  telao modo simulado   |   telao modo producao")
+        return 0
+
+    novo = str(args.novo).strip().lower()
+    if novo not in MODOS:
+        print(f"Modo '{args.novo}' desconhecido. Use: {' ou '.join(MODOS)}")
+        return 1
+
+    if cfg.caminho.suffix.lower() not in (".yaml", ".yml"):
+        # a reescrita e linha a linha, de YAML; aplicada a um .json quebraria
+        # o arquivo de vez, e sem config nenhuma o telao nao sobe
+        print(f"'{cfg.caminho}' nao e YAML, entao nao sei reescrever a linha do modo.")
+        print(f"Edite o arquivo e ponha:  \"modo\": \"{novo}\"")
+        print(f"Ou rode com a variavel:   set TELAO_MODO={novo}")
+        return 1
+
+    texto = cfg.caminho.read_text(encoding="utf-8")
+    trocado, saida = False, []
+    for linha in texto.splitlines():
+        if not trocado and re.match(r"^\s*modo\s*:", linha):
+            saida.append(f"modo: {novo}")
+            trocado = True
+        else:
+            saida.append(linha)
+    if not trocado:
+        saida.insert(0, f"modo: {novo}")
+    cfg.caminho.write_text("\n".join(saida) + "\n", encoding="utf-8")
+
+    print(f"Modo gravado em {cfg.caminho}: {novo.upper()}")
+    if os.environ.get("TELAO_MODO"):
+        print(f"ATENCAO: a variavel TELAO_MODO={os.environ['TELAO_MODO']} continua valendo")
+        print("nesta janela e tem prioridade sobre o arquivo.")
+    return 0
+
+
 def cmd_validar(args) -> int:
     cfg = _cfg(args)
     _log(cfg, args)
-    problemas = cfg.validar()
-    if problemas:
+    _faixa_modo(cfg)
+    erros, pendencias = cfg.conferir()
+    if erros:
         print("Configuracao COM PROBLEMAS:")
-        for problema in problemas:
+        for problema in erros:
             print(f"  - {problema}")
         return 1
+    if pendencias:
+        print("Configuracao OK, mas FALTA PREENCHER antes de ir ao TSE:")
+        for pendencia in pendencias:
+            print(f"  ! {pendencia}")
+        print()
 
     print(f"Configuracao OK ({cfg.caminho})")
+    print(f"  modo........: {cfg.modo.upper()}")
     print(f"  fonte.......: {cfg.coleta.get('fonte', 'tse')}")
+    print(f"  pleito......: {cfg.tse.get('pleito', '-')} / eleicao {cfg.tse.get('eleicao', '-')}")
     print(f"  cargo.......: {cfg.cargo} (turno {cfg.turno})")
     print(f"  pracas......: br + {len(cfg.estados)} estado(s)")
     print(f"  intervalo...: {cfg.intervalo}s")
@@ -103,7 +178,11 @@ def cmd_descobrir(args) -> int:
     for eleicao in eleicoes:
         print(f"  codigo={eleicao['codigo']:<10} turno={eleicao['turno'] or '-':<3} "
               f"data={eleicao['data'] or '-':<12} {eleicao['nome']}")
-    print("\nUse o codigo em tse.pleito e tse.eleicao no telao.yaml.")
+    print(f"\nPreencha o codigo em telao.yaml, na secao:  modos: {cfg.modo}: tse:")
+    print("  pleito: \"<codigo>\"")
+    print("  eleicao: \"<codigo>\"")
+    print("\nCada modo tem os seus - preencha os dois agora e trocar de teste")
+    print("para o ar vira uma linha so, em vez de editar config no domingo.")
     return 0
 
 
@@ -121,10 +200,19 @@ def _publicar(cfg, coletor: Coletor, publicador: Publicador,
 
 
 def _executar(cfg, args, uma_vez: bool) -> int:
-    problemas = cfg.validar()
-    if problemas:
+    contra_o_tse = str(cfg.coleta.get("fonte", "tse")).lower() == "tse"
+    if contra_o_tse:
+        _faixa_modo(cfg)
+
+    erros, pendencias = cfg.conferir()
+    # Pendencia (codigo do pleito em branco) so barra quem vai falar com o
+    # TSE: com o simulador interno ela nao atrapalha nada, e e assim que o
+    # ensaio e a conferencia do pacote funcionam antes de o TSE publicar.
+    if contra_o_tse:
+        erros = erros + pendencias
+    if erros:
         print("Configuracao invalida; corrija antes de executar:")
-        for problema in problemas:
+        for problema in erros:
             print(f"  - {problema}")
         return 1
 
@@ -171,9 +259,14 @@ def cmd_exemplo(args) -> int:
     _log(cfg, args)
     cfg.bruto.setdefault("coleta", {})["fonte"] = "simulador"
     cfg.bruto["coleta"]["simulador_progresso"] = args.progresso
-    cfg.bruto.setdefault("seguranca", {})["bloquear_nao_oficial"] = False
+    # nao ha 'bloquear_nao_oficial' para desligar aqui: a trava e decidida
+    # pelo modo, e o simulador interno passa por ela de qualquer jeito
     if args.pasta:
         cfg.bruto.setdefault("saida", {})["destino"] = args.pasta
+        # o vertical vai junto: sem isto ele continuaria gravando na pasta de
+        # producao enquanto o resto do exemplo vai para a pasta de conferencia
+        if cfg.bruto.get("vertical", {}).get("ativo"):
+            cfg.bruto["vertical"]["destino"] = str(Path(args.pasta) / "vertical")
     print(f"Gerando as telas em {cfg.destino} com {args.progresso:.0f}% apurado...")
     codigo = _executar(cfg, args, uma_vez=True)
     print("ATENCAO: conteudo ficticio, fase 'S'. Nao use no ar.")
@@ -188,7 +281,6 @@ def cmd_ensaio(args) -> int:
     # o ensaio tem historico proprio: a curva do treino nao entra na serie que
     # a coordenacao vai ler no dia
     cfg.bruto["coleta"]["arquivo_historico"] = str(cfg.destino / "ensaio-historico.jsonl")
-    cfg.bruto.setdefault("seguranca", {})["bloquear_nao_oficial"] = False
     print(f"ENSAIO: dados ficticios, apuracao completa em ~{args.duracao}s. Ctrl+C encerra.")
     return _executar(cfg, args, uma_vez=False)
 
@@ -266,6 +358,10 @@ def construir_parser() -> argparse.ArgumentParser:
     p_no_ar.add_argument("--listar", action="store_true", help="so lista, nao troca")
     p_no_ar.add_argument("--pasta", help="pasta do telao (padrao: a da config)")
     p_no_ar.set_defaults(func=cmd_no_ar)
+
+    p_modo = sub.add_parser("modo", help="mostra ou troca entre Simulado e Producao")
+    p_modo.add_argument("novo", nargs="?", help="simulado | producao (vazio so mostra)")
+    p_modo.set_defaults(func=cmd_modo)
 
     return parser
 

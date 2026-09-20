@@ -438,3 +438,125 @@ def test_lista_de_telas_vazia_desliga_o_switcher_e_deixa_so_o_monitor(tmp_path):
 def test_sem_tela_nenhuma_e_sem_monitor_a_config_e_recusada(tmp_path):
     problemas = _cfg(tmp_path, telas=[]).validar()
     assert any("nao produziria nada" in p for p in problemas)
+
+
+# --- modo Simulado / Producao ---
+
+
+def _cfg_modo(tmp_path, modo=None, **extra):
+    from pathlib import Path
+
+    bruto = {
+        "tse": {"base_url": "https://exemplo", "turno": 1},
+        "modos": {
+            "simulado": {"tse": {"ciclo": "ele2026", "pleito": "777", "eleicao": "777"}},
+            "producao": {"tse": {"ciclo": "ele2026", "pleito": "619", "eleicao": "619"}},
+        },
+        "coleta": {"historico": False},
+        "apuracao": {"cargo": 1},
+        "saida": {"destino": str(tmp_path)},
+    }
+    if modo is not None:
+        bruto["modo"] = modo
+    bruto.update(extra)
+    return Config(bruto=bruto, caminho=Path("telao.yaml"))
+
+
+def test_cada_modo_traz_os_proprios_codigos_do_tse(tmp_path):
+    assert _cfg_modo(tmp_path, "simulado").tse["pleito"] == "777"
+    assert _cfg_modo(tmp_path, "producao").tse["pleito"] == "619"
+    # o que nao muda entre modos continua vindo da base
+    assert _cfg_modo(tmp_path, "simulado").tse["base_url"] == "https://exemplo"
+
+
+def test_esquecer_o_modo_cai_em_producao(tmp_path):
+    """Esquecer de escolher tem de cair no lado seguro."""
+    cfg = _cfg_modo(tmp_path, None)
+    assert cfg.modo == "producao"
+    assert cfg.seguranca["bloquear_nao_oficial"] is True
+
+
+def test_modo_desconhecido_cai_em_producao_e_e_acusado(tmp_path):
+    cfg = _cfg_modo(tmp_path, "quase-producao")
+    assert cfg.modo == "producao"
+    assert any("nao e um modo conhecido" in p for p in cfg.validar())
+
+
+def test_producao_ignora_config_que_tente_desligar_a_trava_de_fase(tmp_path):
+    """Nao ha valor de config que faca um simulado ir ao ar como resultado."""
+    cfg = _cfg_modo(tmp_path, "producao", seguranca={"bloquear_nao_oficial": False})
+    assert cfg.seguranca["bloquear_nao_oficial"] is True
+
+
+def test_simulado_aceita_fase_s_e_carimba_sem_permitir_desligar(tmp_path):
+    cfg = _cfg_modo(
+        tmp_path, "simulado",
+        seguranca={"bloquear_nao_oficial": True},      # tentativa de ligar
+        aparencia={"selo_nao_oficial": "sem selo"},    # tentativa de apagar
+    )
+    assert cfg.seguranca["bloquear_nao_oficial"] is False
+    assert "SIMULADO" in cfg.aparencia["selo_nao_oficial"]
+
+
+def test_variavel_de_ambiente_tem_prioridade_sobre_o_arquivo(tmp_path, monkeypatch):
+    """E o que permite o .bat escolher o modo sem editar config nenhuma."""
+    monkeypatch.setenv("TELAO_MODO", "simulado")
+    assert _cfg_modo(tmp_path, "producao").modo == "simulado"
+
+
+def test_codigo_de_pleito_por_preencher_impede_subir(tmp_path):
+    """'000' e marcador de 'ainda nao preenchi'. Subir assim passaria a noite
+    inteira em 'aguardando boletim' sem ninguem entender por que."""
+    cfg = _cfg_modo(tmp_path, "producao")
+    cfg.bruto["modos"]["producao"]["tse"] = {"ciclo": "ele2026", "pleito": "000", "eleicao": "000"}
+    problemas = cfg.validar()
+    assert any("pleito" in p and "000" in p for p in problemas)
+    assert any("eleicao" in p and "000" in p for p in problemas)
+
+
+def test_o_selo_do_modo_chega_ate_o_desenho_da_tela(tmp_path):
+    """De nada adianta a trava se a tela nao carimbar."""
+    cfg = _cfg_modo(tmp_path, "simulado")
+    tela = next(t for t in cfg.telas if t.tipo == "placar")
+    svg = desenhar(cfg, tela, _dados(nacional=_ap(fase="S")))
+    assert "SIMULADO" in svg
+
+
+def test_modo_simulado_carimba_ate_boletim_em_fase_oficial(tmp_path):
+    """A promessa do TELAO-SIMULADO.bat e que TUDO sai carimbado.
+
+    Nos dias de teste o TSE pode publicar fase 'O', e antes do primeiro
+    boletim nao ha fase nenhuma. Nos dois casos a tela subia limpa, com a
+    trava de fase desligada - que e exatamente o cenario que o atalho diz
+    cobrir.
+    """
+    cfg = _cfg_modo(tmp_path, "simulado")
+    tela = next(t for t in cfg.telas if t.tipo == "placar")
+
+    assert "SIMULADO" in desenhar(cfg, tela, _dados(nacional=_ap(fase="O")))
+    assert "SIMULADO" in desenhar(cfg, tela, _dados(nacional=_ap(fase="S")))
+
+    # e em producao, boletim oficial continua sem carimbo nenhum
+    producao = _cfg_modo(tmp_path, "producao")
+    tela_p = next(t for t in producao.telas if t.tipo == "placar")
+    assert "SIMULADO" not in desenhar(producao, tela_p, _dados(nacional=_ap(fase="O")))
+
+
+def test_modo_simulado_carimba_o_monitor_vertical_tambem(tmp_path):
+    from telao.vertical import desenhar as desenhar_v
+
+    cfg = _cfg_modo(tmp_path, "simulado",
+                    vertical={"ativo": True, "destino": str(tmp_path / "v")})
+    assert "SIMULADO" in desenhar_v(cfg, "urnas", _dados(nacional=_ap(fase="O")))
+
+
+def test_historico_do_teste_nao_entra_na_serie_da_eleicao(tmp_path):
+    """A curva dos dias de teste estragaria a previsao de fechamento."""
+    from telao.coleta import Coletor
+
+    simulado = Coletor(_cfg_modo(tmp_path, "simulado", coleta={"historico": True}))
+    producao = Coletor(_cfg_modo(tmp_path, "producao", coleta={"historico": True}))
+    assert simulado.historico.caminho != producao.historico.caminho
+    assert "simulado" in simulado.historico.caminho.name
+    simulado.fechar()
+    producao.fechar()

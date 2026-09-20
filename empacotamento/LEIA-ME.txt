@@ -41,9 +41,11 @@ O QUE FAZER, NA ORDEM
 
     Os dois rodam ao mesmo tempo, sem se atrapalhar.
 
-        TELAO\TELAO-COLETA.bat    le o TSE e desenha as telas
+        TELAO\TELAO-SIMULADO.bat  nos DIAS DE TESTE do TSE.
+                                  Tudo sai carimbado como simulado.
+        TELAO\TELAO-PRODUCAO.bat  no DIA DA ELEICAO. So boletim oficial.
         TELAO\TELAO-MESA.bat      voce clica na tela que vai ao ar
-        TELAO\TELAO-ENSAIO.bat    treino com dado ficticio
+        TELAO\TELAO-ENSAIO.bat    treino com dado inventado, sem internet
 
     No PC de EXIBICAO, que so precisa enxergar esta pasta pela rede:
 

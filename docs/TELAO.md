@@ -13,14 +13,16 @@ outro, e a operação do GC — que no dia estará ocupada com as tarjas — nã
 divide atenção com o telão.
 
 ```
-PC que coleta                          PC de exibição
-┌─────────────────────────┐            ┌───────────────────┐
-│ TELAO-COLETA.bat        │  pasta     │ TELAO-TELA.bat    │
-│   lê o TSE, desenha     │  comparti- │   Chrome quiosque │──► switcher
-│   as telas ────────────┼─ lhada ───►│   tela cheia      │
-│ TELAO-MESA.bat          │            └───────────────────┘
-│   você escolhe a tela   │
-└─────────────────────────┘
+PC que coleta                         PC de exibição
+┌────────────────────────┐            ┌───────────────────┐
+│ TELAO-SIMULADO.bat  ou │   pasta    │ TELAO-TELA.bat    │
+│ TELAO-PRODUCAO.bat     │ comparti-  │  Chrome quiosque  │──► switcher
+│   lê o TSE e desenha ──┼─ lhada ───►│  tela cheia       │
+│                        │            └───────────────────┘
+│ TELAO-MESA.bat         │            ┌───────────────────┐
+│   você escolhe a tela  │            │ TELAO-VERTICAL.bat│
+│                        ├───────────►│  monitor de cena  │
+└────────────────────────┘            └───────────────────┘
 ```
 
 O PC de exibição **não precisa de nada instalado**. Só precisa enxergar a pasta
@@ -80,9 +82,12 @@ telao rodar         # no ar
 **No PC que coleta:**
 
 ```bat
-TELAO-COLETA.bat     lê o TSE e redesenha as telas. Reinicia sozinho se cair.
+TELAO-SIMULADO.bat   nos dias de teste do TSE. Tudo sai carimbado.
+TELAO-PRODUCAO.bat   no dia da eleição. Só boletim oficial.
 TELAO-MESA.bat       janela com um botão por tela: você clica, ela entra no ar.
 ```
+
+Os dois primeiros reiniciam sozinhos se caírem.
 
 **No PC de exibição:**
 
@@ -109,6 +114,79 @@ com a hora da última troca e o número de falhas — some do ar quando desligad
 **Fechar a mesa não tira nada do ar.** A seleção é um arquivo; se a mesa
 fechar, a última tela escolhida continua. Não há servidor, não há porta aberta,
 não há conexão para cair no meio da transmissão.
+
+## Modo: Simulado ou Produção
+
+A única coisa que muda entre os dias de teste e o dia da eleição — e ela não
+exige recompilar nem editar configuração.
+
+| | `simulado` | `producao` |
+|---|---|---|
+| Quando | dias de teste do TSE | dia da eleição |
+| Aceita fase `S` | sim | **nunca** |
+| Selo nas telas | sempre, não desliga | só se algo não for oficial |
+| Atalho | `TELAO-SIMULADO.bat` | `TELAO-PRODUCAO.bat` |
+| Histórico | `historico-simulado.jsonl` | `historico.jsonl` |
+
+**Não confunda com `coleta.fonte`:**
+
+- `modo: simulado` + `fonte: tse` → o **TSE de verdade**, servindo dado de teste
+- `fonte: simulador` → dado **inventado**, sem internet (é o `telao ensaio`)
+
+### Como trocar
+
+```bat
+TELAO-SIMULADO.bat          o atalho já define o modo naquela janela
+TELAO-PRODUCAO.bat
+```
+
+```bash
+telao modo                  mostra o modo atual e os códigos em uso
+telao modo simulado         grava no telao.yaml
+telao modo producao
+```
+
+O atalho define `TELAO_MODO` só para aquela janela, e essa variável tem
+prioridade sobre o arquivo. É o caminho mais seguro: não deixa estado para
+alguém esquecer de trocar depois.
+
+### Os códigos de cada modo
+
+O simulado do TSE costuma sair em caminho e código de pleito próprios. Por
+isso cada modo tem os seus:
+
+```yaml
+modos:
+  simulado:
+    tse: { ciclo: ele2026, pleito: "777", eleicao: "777" }
+    selo: "SIMULADO — TESTE, NÃO É RESULTADO"
+  producao:
+    tse: { ciclo: ele2026, pleito: "619", eleicao: "619" }
+```
+
+Preencha os dois assim que o TSE publicar (`telao descobrir`). Trocar de teste
+para o ar vira uma linha, em vez de uma edição de configuração sob pressão no
+domingo à noite.
+
+### O que o modo garante, e a config não pode desfazer
+
+**Em produção, a trava de fase é sempre ligada.** Não há valor em `telao.yaml`
+que faça um simulado do TSE ir ao ar como resultado — a trava é decidida pelo
+modo, não pela configuração.
+
+**Em simulado, o selo é sempre carimbado** — inclusive quando o TSE publica
+fase `O` nos dias de teste, e inclusive antes do primeiro boletim. Se alguém
+abrir o atalho errado no dia da eleição, o carimbo aparece no ar e o erro é
+visto na hora, em vez de passar por resultado.
+
+**Esquecer de escolher cai em produção.** Modo em branco, ausente ou
+desconhecido vale `producao`: o lado seguro.
+
+**Código de pleito em `000` impede subir contra o TSE.** É o marcador de "ainda
+não preenchi". Sem essa recusa, o sistema montaria uma URL que sempre devolve
+404 e passaria a noite em "aguardando boletim" sem ninguém entender por quê.
+O `telao validar` mostra isso como pendência, não como erro — o pacote sai de
+fábrica assim, porque o código só existe perto do dia.
 
 ## Monitor vertical da cena (1080 × 1920)
 
@@ -219,7 +297,8 @@ repetidas aqui — com o mesmo critério e com teste próprio:
 
 1. **Fase.** O TSE publica simulados nos mesmos caminhos antes do pleito.
    Boletim fora da fase `O` é descartado, então um simulado não vira tela cheia
-   com cara de resultado. (`seguranca.bloquear_nao_oficial`)
+   com cara de resultado. **Quem decide é o modo**, não a configuração: em
+   produção a trava é sempre ligada.
 2. **Regressão.** A CDN pode servir cópia antiga de um nó diferente. Boletim
    com hora de geração anterior à última aceita é descartado: o número no telão
    não anda para trás. (`seguranca.bloquear_regressao`)

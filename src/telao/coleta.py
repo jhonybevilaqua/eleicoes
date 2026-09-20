@@ -60,8 +60,13 @@ class Coletor:
             )
             log.warning("FONTE = SIMULADOR (dados ficticios, fase 'S'). Nao use no ar.")
 
+        # Um arquivo por modo: a curva dos dias de teste nao pode entrar na
+        # serie que alimenta a previsao de fechamento na noite da eleicao.
+        padrao = cfg.destino / (
+            "historico.jsonl" if not cfg.simulado else "historico-simulado.jsonl"
+        )
         self.historico = Historico(
-            cfg.coleta.get("arquivo_historico", str(cfg.destino / "historico.jsonl")),
+            cfg.coleta.get("arquivo_historico", str(padrao)),
             ativo=bool(cfg.coleta.get("historico", True)),
         )
 

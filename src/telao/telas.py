@@ -73,6 +73,7 @@ class Moldura:
     """
 
     def __init__(self, cfg: Config):
+        self.cfg = cfg
         aparencia = cfg.aparencia
         self.fonte = str(
             aparencia.get("fonte", "Barlow Condensed, Arial Narrow, Helvetica, sans-serif")
@@ -124,6 +125,19 @@ class Moldura:
         return partes
 
     def selo(self, ap: Apuracao | None) -> str:
+        """Carimbo de fase.
+
+        Em MODO SIMULADO carimba sempre, independente do que o boletim diga -
+        inclusive antes do primeiro boletim e quando o TSE publica fase 'O'
+        nos dias de teste. O modo e o que decide se aquilo pode ir ao ar como
+        resultado; a fase do arquivo e so um dos sinais.
+
+        Em producao, carimba o que nao for oficial - e la a trava de fase ja
+        teria descartado o boletim antes de chegar aqui, entao isto e a
+        segunda linha de defesa, nao a primeira.
+        """
+        if self.cfg.simulado:
+            return self.selo_texto
         return "" if (ap is None or ap.oficial) else self.selo_texto
 
     def cor_partido(self, sigla: str) -> str:

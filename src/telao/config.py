@@ -26,6 +26,18 @@ _VAR_ENV = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}")
 
 CARGOS_VALIDOS = {1: "Presidente", 3: "Governador", 5: "Senador"}
 
+MODOS = ("simulado", "producao")
+
+# O que cada modo faz, alem de trocar os codigos do TSE. As duas diferencas
+# que importam:
+#
+#   SIMULADO   aceita boletim em fase 'S' - que e o que o TSE publica nos dias
+#              de teste - e carimba um selo que NAO pode ser desligado.
+#   PRODUCAO   so aceita fase 'O', e recusa subir com codigo de pleito por
+#              preencher. E o padrao quando a config nao diz nada: esquecer de
+#              escolher tem de cair no lado seguro.
+MODO_PADRAO = "producao"
+
 # As telas que o sistema sabe desenhar.
 TIPOS = ("lideranca", "estados", "como-votou", "apuracao-nacional", "apuracao-estados", "placar")
 
@@ -68,9 +80,46 @@ class Config:
     bruto: dict[str, Any]
     caminho: Path
 
+    # --- modo de operacao -------------------------------------------------
+
+    @property
+    def modo(self) -> str:
+        """'simulado' nos dias de teste do TSE, 'producao' no dia da eleicao.
+
+        Vale a variavel de ambiente TELAO_MODO antes da config, para o atalho
+        do Windows poder escolher sem editar arquivo nenhum.
+        """
+        pedido = self._modo_pedido()
+        return pedido if pedido in MODOS else MODO_PADRAO
+
+    def _modo_pedido(self) -> str:
+        """O que foi pedido, valido ou nao - a validacao precisa ver o erro."""
+        for origem in (os.environ.get("TELAO_MODO"), self.bruto.get("modo")):
+            # 'modo:' em branco no YAML vira None, nao string vazia
+            texto = str(origem).strip().lower() if origem is not None else ""
+            if texto:
+                return texto
+        return MODO_PADRAO
+
+    @property
+    def simulado(self) -> bool:
+        return self.modo == "simulado"
+
+    def _do_modo(self, secao: str) -> dict[str, Any]:
+        """Bloco 'secao' de dentro do modo atual, se existir."""
+        modos = self.bruto.get("modos") or {}
+        return ((modos.get(self.modo) or {}).get(secao) or {}) if isinstance(modos, dict) else {}
+
     @property
     def tse(self) -> dict[str, Any]:
-        return self.bruto.get("tse", {}) or {}
+        """Codigos do TSE, com o modo atual por cima.
+
+        O simulado do TSE costuma sair em caminho e codigo de pleito proprios.
+        Se ficassem no mesmo lugar dos oficiais, trocar de teste para o dia da
+        eleicao exigiria reescrever a config sob pressao - e reescrever a config
+        no dia e exatamente o que este desenho existe para evitar.
+        """
+        return {**(self.bruto.get("tse", {}) or {}), **self._do_modo("tse")}
 
     @property
     def coleta(self) -> dict[str, Any]:
@@ -78,11 +127,37 @@ class Config:
 
     @property
     def seguranca(self) -> dict[str, Any]:
-        return self.bruto.get("seguranca", {}) or {}
+        """As travas, com uma regra que a config nao pode contrariar.
+
+        Em PRODUCAO, 'bloquear_nao_oficial' e sempre verdadeiro: nao ha valor
+        de config, nem de modo, que faca um simulado do TSE ir ao ar como
+        resultado. Em SIMULADO ele e sempre falso, senao os dias de teste nao
+        mostrariam nada - e la o selo cobre o risco.
+        """
+        base = {**(self.bruto.get("seguranca", {}) or {}), **self._do_modo("seguranca")}
+        base["bloquear_nao_oficial"] = not self.simulado
+        return base
+
+    @property
+    def selo_do_modo(self) -> str:
+        """Selo que o modo impoe, acima do que a aparencia pedir."""
+        if not self.simulado:
+            return ""
+        modos = self.bruto.get("modos") or {}
+        simulado = (modos.get("simulado") or {}) if isinstance(modos, dict) else {}
+        return str(
+            self._do_modo("aparencia").get("selo")
+            or simulado.get("selo")
+            or "SIMULADO — TESTE, NÃO É RESULTADO"
+        )
 
     @property
     def aparencia(self) -> dict[str, Any]:
-        return self.bruto.get("aparencia", {}) or {}
+        aparencia = {**(self.bruto.get("aparencia", {}) or {}), **self._do_modo("aparencia")}
+        if self.simulado:
+            # o selo de simulado nao e negociavel: sobrescreve o da aparencia
+            aparencia["selo_nao_oficial"] = self.selo_do_modo
+        return aparencia
 
     @property
     def vertical(self) -> dict[str, Any]:
@@ -165,11 +240,37 @@ class Config:
         return telas
 
     def validar(self) -> list[str]:
+        """Tudo que impede o telao de funcionar: erros e pendencias juntos."""
+        erros, pendencias = self.conferir()
+        return erros + pendencias
+
+    def conferir(self) -> tuple[list[str], list[str]]:
+        """Separa o que esta ERRADO do que so esta POR PREENCHER.
+
+        A distincao existe por causa de uma situacao real: o pacote sai de
+        fabrica com o codigo do pleito em '000', porque o TSE so publica esse
+        codigo perto do dia. Isso nao e um defeito do pacote - e a proxima
+        coisa que a pessoa tem de fazer. Tratar como erro faria a conferencia
+        do pacote reprovar a si mesma.
+
+        Erro impede rodar em qualquer situacao. Pendencia impede rodar contra
+        o TSE de verdade, mas nao impede ensaiar nem conferir o pacote.
+        """
         problemas: list[str] = []
+        pendencias: list[str] = []
         if str(self.coleta.get("fonte", "tse")).lower() == "tse":
             for campo in ("base_url", "ciclo", "pleito", "eleicao"):
-                if not self.tse.get(campo):
-                    problemas.append(f"tse.{campo} nao definido")
+                valor = str(self.tse.get(campo) or "").strip()
+                if not valor:
+                    problemas.append(f"tse.{campo} nao definido (modo {self.modo})")
+                elif campo in ("pleito", "eleicao") and set(valor) <= {"0"}:
+                    # '000' e o marcador de 'ainda nao preenchi'. Subir assim
+                    # monta uma URL que sempre devolve 404, e o telao passa a
+                    # noite inteira 'aguardando boletim' sem ninguem entender.
+                    pendencias.append(
+                        f"tse.{campo} ainda esta em '{valor}' no modo {self.modo}: "
+                        f"rode 'telao descobrir' e preencha em modos.{self.modo}.tse"
+                    )
         if self.cargo not in CARGOS_VALIDOS:
             problemas.append(
                 f"apuracao.cargo {self.cargo} nao vale para o telao "
@@ -191,6 +292,18 @@ class Config:
         if self.intervalo < 5:
             problemas.append("coleta.intervalo_segundos abaixo de 5s: risco de bloqueio pelo TSE")
 
+        pedido = self._modo_pedido()
+        if pedido not in MODOS:
+            origem = (
+                f"TELAO_MODO={os.environ['TELAO_MODO']}"
+                if str(os.environ.get("TELAO_MODO") or "").strip().lower() == pedido
+                else f"modo: {self.bruto.get('modo')}"
+            )
+            problemas.append(
+                f"{origem} nao e um modo conhecido (use {' ou '.join(MODOS)}); "
+                f"valendo '{self.modo}'"
+            )
+
         if self.vertical.get("ativo"):
             from .vertical import TIPOS as TIPOS_V
 
@@ -204,7 +317,7 @@ class Config:
                     )
             if int(self.vertical.get("rodizio_segundos", 10)) < 3:
                 problemas.append("vertical.rodizio_segundos abaixo de 3s: ilegivel em cena")
-        return problemas
+        return problemas, pendencias
 
 
 def carregar(caminho: str | Path) -> Config:

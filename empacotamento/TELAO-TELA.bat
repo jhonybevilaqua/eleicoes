@@ -32,7 +32,7 @@ if not exist "%PAGINA%" (
   echo    %PAGINA%
   echo.
   echo  Ela so existe depois que a coleta roda pelo menos uma vez.
-  echo  Rode TELAO-COLETA.bat - ou TELAO-ENSAIO.bat, para testar sem o TSE.
+  echo  Rode TELAO-SIMULADO.bat, TELAO-PRODUCAO.bat ou TELAO-ENSAIO.bat.
   echo.
   echo  Se o telao esta em outro PC, passe o caminho:
   echo    TELAO-TELA.bat "\\PC-OPERACAO\gctse\TELAO\telao\index.html"

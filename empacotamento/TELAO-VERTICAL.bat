@@ -35,7 +35,7 @@ if not exist "%PAGINA%" (
   echo.
   echo  Ele so existe depois que a coleta roda pelo menos uma vez com
   echo  'vertical.ativo: true' no telao.yaml.
-  echo  Rode TELAO-COLETA.bat - ou TELAO-ENSAIO.bat, para testar sem o TSE.
+  echo  Rode TELAO-SIMULADO.bat, TELAO-PRODUCAO.bat ou TELAO-ENSAIO.bat.
   echo.
   pause
   exit /b 1
