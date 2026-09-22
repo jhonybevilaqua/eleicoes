@@ -240,7 +240,6 @@ mínimo de seções totalizadas.
 - [`docs/TELAO.md`](docs/TELAO.md) — o telão: sistema de exibição em tela cheia
 - [`docs/DIAS-DE-TESTE.md`](docs/DIAS-DE-TESTE.md) — roteiro dos dias de teste do TSE
 - [`docs/CASTALIA.md`](docs/CASTALIA.md) — fazer o gráfico acompanhar o percentual no Castalia
-- [`docs/DIAS-DE-TESTE.md`](docs/DIAS-DE-TESTE.md) — roteiro dos dias de teste do TSE
 - [`docs/OPERACAO.md`](docs/OPERACAO.md) — runbook do dia da eleição e contingência
 
 ## Testes

@@ -110,7 +110,7 @@ def cmd_modo(args) -> int:
     texto = cfg.caminho.read_text(encoding="utf-8")
     trocado, saida = False, []
     for linha in texto.splitlines():
-        if not trocado and re.match(r"^\s*modo\s*:", linha):
+        if not trocado and re.match(r"^modo\s*:", linha):
             saida.append(f"modo: {novo}")
             trocado = True
         else:

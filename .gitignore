@@ -27,9 +27,12 @@ dist/
 # o PDF das tarjas e gerado, mas vai versionado para circular sem build
 !tarjas/*.pdf
 
-# Saida de 'gctse exemplo' e da conferencia local
-exemplos/
-TARJAS/
-MAPA-CASTALIA/
-telao/
-telao-vertical/
+# Saida local do 'exemplo', do ensaio e da conferencia. Ancorados na raiz de
+# proposito: 'telao/' solto tambem esconderia src/telao/, e um modulo novo do
+# pacote ficaria fora do repositorio sem ninguem notar.
+/exemplos/
+/TARJAS/
+/TARJAS-ENSAIO/
+/MAPA-CASTALIA/
+/telao/
+/telao-vertical/

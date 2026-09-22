@@ -109,7 +109,26 @@ class Config:
 
     @property
     def coleta(self) -> dict[str, Any]:
-        return self.bruto.get("coleta", {})
+        """Coleta, com estado e historico separados por modo.
+
+        Os tres dias de teste produzem uma curva de apuracao completa. Se ela
+        entrar no mesmo arquivo da noite da eleicao, a previsao de fechamento
+        do dia 4 passa a ser calculada sobre a apuracao de terca - e a trava
+        de regressao compara o boletim de domingo com a hora de um boletim de
+        teste. Um sufixo por modo resolve os dois de uma vez.
+        """
+        coleta = {**(self.bruto.get("coleta", {}) or {}), **self._do_modo("coleta")}
+        if self.simulado:
+            for chave, padrao in (
+                ("arquivo_estado", "dados/estado/estado.json"),
+                ("arquivo_historico", "dados/estado/historico.jsonl"),
+                ("arquivo_graficos", ""),
+            ):
+                caminho = str(coleta.get(chave) or padrao)
+                if caminho:
+                    alvo = Path(caminho)
+                    coleta[chave] = str(alvo.with_name(f"{alvo.stem}-simulado{alvo.suffix}"))
+        return coleta
 
     @property
     def saida(self) -> dict[str, Any]:

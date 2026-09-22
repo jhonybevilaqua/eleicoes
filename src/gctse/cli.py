@@ -80,7 +80,23 @@ def _faixa_modo(cfg) -> None:
     mais caro possivel aqui, e ele e silencioso: os dois modos leem o TSE e
     escrevem as mesmas tarjas, nos mesmos caminhos. A unica defesa barata e
     gritar na partida.
+
+    Quando a fonte nao e o TSE, o modo nao e a noticia - a fonte e. Anunciar
+    'MODO PRODUCAO' enquanto o ensaio escreve chapa ficticia nas tarjas seria
+    a faixa dizendo o contrario do que esta acontecendo.
     """
+    fonte = str(cfg.coleta.get("fonte", "tse")).lower()
+    if fonte != "tse":
+        print("!" * 66)
+        rotulo = {
+            "simulador": "SIMULADOR - dados INVENTADOS, nao consulta o TSE",
+            "em-branco": "ESTRUTURA EM BRANCO - sem dado nenhum",
+            "arquivo": "AMOSTRAS GRAVADAS - reproducao de um dia anterior",
+        }.get(fonte, f"FONTE '{fonte}' - nao e o TSE")
+        print(f"  {rotulo}")
+        print("  Nao use esta saida no ar.")
+        print("!" * 66)
+        return
     if cfg.simulado:
         print("=" * 66)
         print("  MODO SIMULADO - dados de TESTE do TSE")
@@ -123,7 +139,7 @@ def cmd_modo(args) -> int:
     texto = cfg.caminho.read_text(encoding="utf-8")
     trocado, saida = False, []
     for linha in texto.splitlines():
-        if not trocado and re.match(r"^\s*modo\s*:", linha):
+        if not trocado and re.match(r"^modo\s*:", linha):
             saida.append(f"modo: {novo}")
             trocado = True
         else:
@@ -183,7 +199,11 @@ def cmd_descobrir(args) -> int:
     for eleicao in eleicoes:
         print(f"  codigo={eleicao['codigo']:<10} turno={eleicao['turno'] or '-':<3} "
               f"data={eleicao['data'] or '-':<12} {eleicao['nome']}")
-    print("\nUse o codigo do pleito em tse.pleito e tse.eleicao no config.yaml.")
+    print(f"\nPreencha o codigo em config.yaml, na secao:  modos: {cfg.modo}: tse:")
+    print("  pleito: \"<codigo>\"")
+    print("  eleicao: \"<codigo>\"")
+    print("\nCada modo tem os seus - preencha os dois agora e trocar de teste")
+    print("para o ar vira uma linha so, em vez de editar config no domingo.")
     return 0
 
 
@@ -417,18 +437,34 @@ def cmd_uma_vez(args) -> int:
 
 
 def cmd_ensaio(args) -> int:
+    """Apuracao ficticia completa, para treinar a equipe sem tocar o TSE.
+
+    Grava numa pasta PROPRIA, nao na do ar. O motivo e o que acontece quando
+    o ensaio termina: os ultimos arquivos ficam em disco, com chapa
+    inventada, ate a proxima coleta reescreve-los. Na pasta do ar, isso e uma
+    cena montada apontando para um nome que nao existe, esperando alguem
+    subir por engano. Numa pasta separada, e so um ensaio guardado.
+
+    Para ver o ensaio no GC, aponte uma cena de TESTE para TARJAS-ENSAIO.
+    """
     cfg = _cfg(args)
     _iniciar_log(cfg, args)
-    # ensaio nunca toca o TSE e nao herda o bloqueio de fase simulada
-    cfg.bruto.setdefault("coleta", {})["fonte"] = "simulador"
-    # Ensaio tem historico proprio: a curva do ensaio nao entra na serie que o
+    coleta = cfg.bruto.setdefault("coleta", {})
+    coleta["fonte"] = "simulador"
+    # Historico proprio: a curva do treino nao entra na serie que o
     # coordenador vai ler no dia.
-    cfg.bruto["coleta"]["arquivo_historico"] = "dados/estado/ensaio-historico.jsonl"
-    cfg.bruto["coleta"]["arquivo_graficos"] = "dados/estado/ensaio-graficos.json"
-    cfg.bruto["coleta"]["simulador_duracao_segundos"] = args.duracao
+    coleta["arquivo_estado"] = "dados/estado/ensaio-estado.json"
+    coleta["arquivo_historico"] = "dados/estado/ensaio-historico.jsonl"
+    coleta["arquivo_graficos"] = "dados/estado/ensaio-graficos.json"
+    coleta["arquivo_painel"] = str(Path(args.pasta) / "painel.html")
+    coleta["simulador_duracao_segundos"] = args.duracao
     if args.progresso is not None:
-        cfg.bruto["coleta"]["simulador_progresso"] = args.progresso
+        coleta["simulador_progresso"] = args.progresso
+    cfg.bruto.setdefault("saida", {})["destino"] = args.pasta
+    for opcoes in cfg.exporters.values():
+        opcoes["destino"] = args.pasta
     print(f"ENSAIO: dados simulados, apuracao completa em ~{args.duracao}s. Ctrl+C encerra.")
+    print(f"Saida em {args.pasta} - a pasta do ar (TARJAS) nao e tocada.")
     return _executar(cfg, args, uma_vez=False)
 
 
@@ -471,6 +507,8 @@ def construir_parser() -> argparse.ArgumentParser:
     p_ensaio = sub.add_parser("ensaio", help="loop continuo com dados simulados")
     p_ensaio.add_argument("--duracao", type=int, default=900, help="segundos ate 100%% apurado (padrao: 900)")
     p_ensaio.add_argument("--progresso", type=float, help="trava a apuracao neste percentual")
+    p_ensaio.add_argument("--pasta", default="TARJAS-ENSAIO",
+                          help="pasta de saida do ensaio (padrao: TARJAS-ENSAIO)")
     p_ensaio.set_defaults(func=cmd_ensaio)
 
     p_exemplo = sub.add_parser("exemplo", help="gera arquivos de exemplo + mapa para montar a cena")

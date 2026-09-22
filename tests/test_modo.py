@@ -144,3 +144,38 @@ def test_em_branco_nao_se_declara_oficial():
 def test_em_branco_respeita_o_numero_de_vagas():
     ap = analisar(boletim_em_branco("pr", 5, vagas=2), abrangencia="pr", cargo=5)
     assert len(ap.candidatos) == 2
+
+
+# --- o que a revisao pegou ------------------------------------------------
+
+def test_simulado_separa_estado_e_historico():
+    """A curva dos tres dias de teste nao pode entrar na serie do dia 4."""
+    base = {"coleta": {"arquivo_estado": "dados/estado.json",
+                       "arquivo_historico": "dados/estado/historico.jsonl"}}
+    producao = _cfg(modo="producao", **base).coleta
+    simulado = _cfg(modo="simulado", **base).coleta
+    assert producao["arquivo_historico"] == "dados/estado/historico.jsonl"
+    assert simulado["arquivo_historico"] == "dados/estado/historico-simulado.jsonl"
+    assert simulado["arquivo_estado"] != producao["arquivo_estado"]
+
+
+def test_exporter_nao_consegue_apagar_o_selo_do_modo():
+    """Um bloco 'texto:' de tarja nao negocia com o selo de simulado.
+
+    'config.operacao.yaml' ja traz um exporter com bloco proprio (o rodizio,
+    que encurta o limite de nome). Herdar dali um selo vazio poria a tarja
+    limpa no ar num dia de teste.
+    """
+    from gctse.exporters import criar
+
+    cfg = _cfg(modo="simulado")
+    exporter = criar(
+        "r",
+        {"tipo": "json", "formato": "gc", "destino": ".",
+         "texto": {"selo_nao_oficial": "", "selo_sempre": False, "limites": {"nome": 14}}},
+        cfg.texto,
+        {},
+    )
+    assert exporter.cfg_texto["selo_sempre"] is True
+    assert "SIMULADO" in exporter.cfg_texto["selo_nao_oficial"]
+    assert exporter.cfg_texto["limites"]["nome"] == 14   # o resto do bloco vale

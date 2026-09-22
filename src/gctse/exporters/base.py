@@ -30,6 +30,13 @@ class Exporter(ABC):
         proprio = dict((self.opcoes.get("texto") or {}))
         limites = {**(base_texto.get("limites") or {}), **(proprio.pop("limites", None) or {})}
         self.cfg_texto = {**base_texto, **proprio, "limites": limites}
+        if base_texto.get("selo_sempre"):
+            # O selo do modo simulado esta acima do exporter. Um bloco 'texto:'
+            # de tarja poderia zera-lo sem querer - ajustando limite de nome,
+            # por exemplo, e herdando um selo vazio -, e a tarja sairia limpa
+            # num dia de teste. Nada aqui negocia isso.
+            self.cfg_texto["selo_sempre"] = True
+            self.cfg_texto["selo_nao_oficial"] = base_texto["selo_nao_oficial"]
         self.cfg_saida = cfg_saida or {}
         self.destino = Path(self.opcoes.get("destino", self.cfg_saida.get("destino", "dados/saida")))
         self.encoding = str(self.opcoes.get("encoding", self.cfg_saida.get("encoding", "utf-8")))
