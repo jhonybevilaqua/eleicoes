@@ -112,22 +112,27 @@ def renderizar(
 
     # A faixa responde "o que eu estou vendo?" antes de qualquer numero.
     #
-    # O modo vem primeiro porque e o caso mais traicoeiro: nos dias de teste a
-    # fonte E o TSE, os numeros sao plausiveis e o painel ficaria identico ao
+    # A FONTE vem antes do modo, como na faixa de partida do programa: quando
+    # o dado nao veio do TSE, isso e o que importa, e anunciar 'dados de TESTE
+    # do TSE' para numeros que o simulador local inventou seria trocar um
+    # aviso certo por um errado.
+    #
+    # Com fonte 'tse', o modo e que decide - e e o caso mais traicoeiro: nos
+    # dias de teste os numeros sao plausiveis e o painel ficaria identico ao
     # da noite da eleicao. Quem passa na frente do monitor nao teria como
     # saber que aquilo e ensaio.
-    if modo == "simulado":
-        faixa = (
-            '<div class="faixa ensaio">MODO SIMULADO — dados de TESTE do TSE, '
-            'não é resultado</div>'
-        )
-    elif fonte == "em-branco":
+    if fonte == "em-branco":
         faixa = (
             '<div class="faixa ensaio">ESTRUTURA EM BRANCO — '
             'sem dado nenhum, aguardando o TSE</div>'
         )
     elif fonte != "tse":
         faixa = '<div class="faixa ensaio">FONTE DE ENSAIO — dados fictícios, não use no ar</div>'
+    elif modo == "simulado":
+        faixa = (
+            '<div class="faixa ensaio">MODO SIMULADO — dados de TESTE do TSE, '
+            'não é resultado</div>'
+        )
     else:
         faixa = ""
 

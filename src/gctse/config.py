@@ -65,6 +65,18 @@ class Config:
     bruto: dict[str, Any]
     caminho: Path
 
+    # Desvios impostos pelo comando em execucao - 'exemplo' e 'ensaio'
+    # mandando estado, historico e saida para fora da pasta do ar.
+    #
+    # Camada separada porque a ordem importa: o que o comando decide tem de
+    # ficar ACIMA do bloco 'modos.<modo>.coleta', senao um desvio de config
+    # por modo mandaria o ensaio gravar de volta nos arquivos de producao -
+    # exatamente o que o desvio existe para impedir.
+    forcado: dict[str, dict[str, Any]] = field(default_factory=dict)
+
+    def forcar(self, secao: str, **valores: Any) -> None:
+        self.forcado.setdefault(secao, {}).update(valores)
+
     # --- modo de operacao ---
 
     @property
@@ -128,6 +140,12 @@ class Config:
                 if caminho:
                     alvo = Path(caminho)
                     coleta[chave] = str(alvo.with_name(f"{alvo.stem}-simulado{alvo.suffix}"))
+        # Por ultimo, e de proposito: o desvio do comando ganha do arquivo e do
+        # modo. Os caminhos que ele traz ja sao descartaveis e nomeados; nao
+        # devem receber sufixo nenhum por cima.
+        coleta.update(self.forcado.get("coleta", {}))
+        for chave in self.forcado.get("coleta_remover", ()):
+            coleta.pop(chave, None)
         return coleta
 
     @property

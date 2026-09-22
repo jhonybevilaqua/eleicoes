@@ -210,3 +210,42 @@ def test_selo_sem_texto_configurado_nao_estoura():
     exporter = criar("j", {"tipo": "json", "formato": "gc", "destino": "."},
                      {"selo_sempre": True}, {})
     assert exporter.cfg_texto["selo_nao_oficial"] == "SIMULADO"
+
+
+def test_bloco_do_modo_nao_derruba_o_desvio_do_comando():
+    """'modos.simulado.coleta' nao pode trazer o ensaio de volta ao ar.
+
+    A camada 'forcado' existe exatamente para isso: quem escreveu um desvio
+    de coleta por modo na config nao imaginava que ele venceria o desvio que
+    o proprio comando acabou de impor.
+    """
+    cfg = _cfg(
+        modo="simulado",
+        coleta={"arquivo_historico": "dados/estado/historico.jsonl"},
+        modos={"simulado": {"coleta": {"arquivo_historico": "dados/estado/producao.jsonl"}}},
+    )
+    assert cfg.coleta["arquivo_historico"] == "dados/estado/producao-simulado.jsonl"
+    cfg.forcar("coleta", arquivo_historico="ENSAIO/descartavel.jsonl")
+    assert cfg.coleta["arquivo_historico"] == "ENSAIO/descartavel.jsonl"
+
+
+def test_comando_pode_remover_o_arquivo_de_saude():
+    """Um ensaio nao sobrescreve o que diz se a coleta de verdade esta viva."""
+    cfg = _cfg(coleta={"arquivo_saude": "dados/saude.json"})
+    assert "arquivo_saude" in cfg.coleta
+    cfg.forcado["coleta_remover"] = ("arquivo_saude",)
+    assert "arquivo_saude" not in cfg.coleta
+
+
+def test_painel_poe_a_fonte_na_frente_do_modo():
+    """Ensaio em modo simulado e ensaio, nao 'dados de teste do TSE'."""
+    from gctse.painel import renderizar
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as pasta:
+        alvo = Path(pasta) / "painel.html"
+        renderizar(caminho=alvo, fonte="simulador", modo="simulado", ciclos=1,
+                   intervalo=20, resultados={}, apuracoes={}, rodizios={})
+        corpo = alvo.read_text(encoding="utf-8")
+        assert "FONTE DE ENSAIO" in corpo
+        assert "MODO SIMULADO —" not in corpo

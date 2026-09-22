@@ -345,21 +345,30 @@ def cmd_exemplo(args) -> int:
     pasta = Path(args.pasta)
     temporarios = pasta if not reais else Path(tempfile.gettempdir())
 
-    coleta = cfg.bruto.setdefault("coleta", {})
-    coleta["fonte"] = "em-branco" if em_branco else "simulador"
-    coleta["simulador_progresso"] = args.progresso
-    coleta.pop("arquivo_saude", None)
-    # Estado e historico vao para arquivo descartavel SEMPRE, inclusive com
-    # --destinos-reais: mesmo o exemplo gravando nos caminhos de producao, um
-    # ponto que nao veio do TSE nao pode entrar na serie que alimenta a curva
-    # e a previsao de fechamento da noite.
-    coleta["arquivo_estado"] = str(temporarios / ".exemplo-estado.json")
-    coleta["arquivo_historico"] = str(temporarios / ".exemplo-historico.jsonl")
+    # Tudo que o exemplo desvia entra pela camada 'forcado', que fica acima do
+    # arquivo E do bloco do modo: um 'modos.simulado.coleta' na config nao
+    # pode trazer o exemplo de volta para os arquivos de producao.
+    #
+    # Estado, historico e graficos vao para descartavel SEMPRE, inclusive com
+    # --destinos-reais: mesmo o exemplo gravando nos caminhos definitivos das
+    # tarjas, um ponto que nao veio do TSE nao pode entrar na serie que
+    # alimenta a curva e a previsao de fechamento da noite.
+    cfg.forcar(
+        "coleta",
+        fonte="em-branco" if em_branco else "simulador",
+        simulador_progresso=args.progresso,
+        arquivo_estado=str(temporarios / ".exemplo-estado.json"),
+        arquivo_historico=str(temporarios / ".exemplo-historico.jsonl"),
+        arquivo_graficos=str(pasta / "graficos.json"),
+    )
     if not reais:
-        coleta["arquivo_graficos"] = str(pasta / "graficos.json")
-        # o painel tambem: sem esta linha o exemplo reescreve o painel da
-        # pasta do ar, que e onde o coordenador olha durante a apuracao
-        coleta["arquivo_painel"] = str(pasta / "painel.html")
+        # So no modo pasta-separada. Com --destinos-reais o painel FAZ parte
+        # do que se quer nos caminhos definitivos: e a pagina que o LEIA-ME
+        # manda abrir, e ela nasce junto com as tarjas, em branco.
+        cfg.forcar("coleta", arquivo_painel=str(pasta / "painel.html"))
+    # saude e monitoramento da emissora: o exemplo nao responde por ele
+    cfg.forcado["coleta_remover"] = ("arquivo_saude",)
+    if not reais:
         cfg.bruto.setdefault("saida", {})["destino"] = str(pasta)
         for nome, opcoes in cfg.exporters.items():
             opcoes["destino"] = str(pasta / nome)
@@ -458,17 +467,23 @@ def cmd_ensaio(args) -> int:
     """
     cfg = _cfg(args)
     _iniciar_log(cfg, args)
-    coleta = cfg.bruto.setdefault("coleta", {})
-    coleta["fonte"] = "simulador"
-    # Historico proprio: a curva do treino nao entra na serie que o
-    # coordenador vai ler no dia.
-    coleta["arquivo_estado"] = "dados/estado/ensaio-estado.json"
-    coleta["arquivo_historico"] = "dados/estado/ensaio-historico.jsonl"
-    coleta["arquivo_graficos"] = "dados/estado/ensaio-graficos.json"
-    coleta["arquivo_painel"] = str(Path(args.pasta) / "painel.html")
-    coleta["simulador_duracao_segundos"] = args.duracao
+    # Pela camada 'forcado', acima do arquivo e do bloco do modo - ver
+    # 'cmd_exemplo'. Historico proprio: a curva do treino nao entra na serie
+    # que o coordenador vai ler no dia.
+    cfg.forcar(
+        "coleta",
+        fonte="simulador",
+        arquivo_estado="dados/estado/ensaio-estado.json",
+        arquivo_historico="dados/estado/ensaio-historico.jsonl",
+        arquivo_graficos="dados/estado/ensaio-graficos.json",
+        arquivo_painel=str(Path(args.pasta) / "painel.html"),
+        simulador_duracao_segundos=args.duracao,
+    )
+    # o arquivo de saude e do monitoramento da emissora: um ensaio nao pode
+    # sobrescrever o que diz se a coleta de verdade esta viva
+    cfg.forcado["coleta_remover"] = ("arquivo_saude",)
     if args.progresso is not None:
-        coleta["simulador_progresso"] = args.progresso
+        cfg.forcar("coleta", simulador_progresso=args.progresso)
     cfg.bruto.setdefault("saida", {})["destino"] = args.pasta
     for opcoes in cfg.exporters.values():
         opcoes["destino"] = args.pasta
