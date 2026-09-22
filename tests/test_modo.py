@@ -154,8 +154,10 @@ def test_simulado_separa_estado_e_historico():
                        "arquivo_historico": "dados/estado/historico.jsonl"}}
     producao = _cfg(modo="producao", **base).coleta
     simulado = _cfg(modo="simulado", **base).coleta
-    assert producao["arquivo_historico"] == "dados/estado/historico.jsonl"
-    assert simulado["arquivo_historico"] == "dados/estado/historico-simulado.jsonl"
+    # Comparado como Path: no Windows a separacao vem com barra invertida, e
+    # o que importa aqui e o caminho, nao como ele foi escrito.
+    assert Path(producao["arquivo_historico"]) == Path("dados/estado/historico.jsonl")
+    assert Path(simulado["arquivo_historico"]) == Path("dados/estado/historico-simulado.jsonl")
     assert simulado["arquivo_estado"] != producao["arquivo_estado"]
 
 
@@ -224,7 +226,7 @@ def test_bloco_do_modo_nao_derruba_o_desvio_do_comando():
         coleta={"arquivo_historico": "dados/estado/historico.jsonl"},
         modos={"simulado": {"coleta": {"arquivo_historico": "dados/estado/producao.jsonl"}}},
     )
-    assert cfg.coleta["arquivo_historico"] == "dados/estado/producao-simulado.jsonl"
+    assert Path(cfg.coleta["arquivo_historico"]) == Path("dados/estado/producao-simulado.jsonl")
     cfg.forcar("coleta", arquivo_historico="ENSAIO/descartavel.jsonl")
     assert cfg.coleta["arquivo_historico"] == "ENSAIO/descartavel.jsonl"
 
