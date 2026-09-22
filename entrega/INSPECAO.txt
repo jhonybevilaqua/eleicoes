@@ -1,5 +1,70 @@
 ===========================================================================
- LAUDO DE INSPECAO - gctse 4.0
+ LAUDO DE INSPECAO - gctse 4.1
+ 22/09/2026, depois do CONFERIR rodado na maquina do GC as 14:39
+===========================================================================
+
+ O CONFERIR.txt da maquina do GC trouxe a estrutura REAL do simulado de
+ 2026. Ela foi reproduzida aqui - federacoes, coligacoes, suplentes,
+ nomes de teste com aspas escapadas, o campo dvt - e o sistema foi rodado
+ contra ela. Dois achados mudaram codigo.
+
+ ACHADO 1 - o ciclo nao pode sair do campo "c" do ele-c.json.
+
+   O ele-c.json do ambiente OFICIAL, em 22/09/2026, trazia c = "ele2024",
+   e ao mesmo tempo listava pleitos ate 17/05/2026. Ou seja: "c" e o
+   ciclo corrente do ambiente, nao o da eleicao que se procura.
+
+   A descoberta automatica da 4.0 copiava esse "c". Na noite da apuracao
+   ela montaria .../ele2024/... e tomaria 404 nas 55 pracas, depois de
+   ter anunciado no log que tinha achado o pleito certo - o pior tipo de
+   falha, a que parece sucesso.
+
+   Agora o ciclo sai da DATA do pleito: 04/10/2026 -> ele2026. Conferido
+   contra os dois casos reais: o municipal de 06/10/2024 da ele2024 (que
+   e o que o oficial publica) e o simulado de 26/04/2026 da ele2026 (que
+   e o caminho que responde 200).
+
+ ACHADO 2 - candidato com voto ANULADO aparece normalmente no boletim.
+
+   Nos dados reais de 22/09/2026, o 2o colocado a presidente estava com
+   dvt = "Anulado", e um dos tres primeiros a governador no Acre com
+   "Anulado sub judice" - todos com voto e percentual normais.
+
+   O TSE publica assim e nos repassamos assim; esconder seria editar o
+   resultado. Mas a situacao agora vai em cand1_situacao / cand2_situacao
+   (no FIM da tarja, sem deslocar nada), e quando um dos DOIS PRIMEIROS
+   nao esta "Valido" sai um AVISO na janela da coleta com o nome e a
+   situacao. A decisao de mostrar e do Jornalismo; a de avisar e nossa.
+
+ O QUE O CONFERIR CONFIRMOU, SEM PRECISAR MUDAR NADA
+
+   padrao_url ......... -u.json e o molde certo; os -r.json dao 404
+   codigos ............ 17801 / 21270 Presidente / 21272 Gov+Sen
+   sigla do partido ... vem de par.sg ("P 9990"), e nao do candidato
+   suplentes .......... o bloco vs (tp s1/s2, e o vice tp v) NAO entra
+                        como candidato - conferido no senador, que tem
+                        dois candidatos no mesmo partido
+   strings de teste ... nome de federacao com aspas escapadas e 54
+                        caracteres, coligacao com ç, º e !@#$*(+) - lidos
+                        e cortados no limite sem quebrar o JSON
+   fase ............... vem minuscula ("s"), e tratada
+
+ VERIFICADO NA 4.1, contra a arvore fiel ao simulado real
+
+   Ciclo derivado da data, com c="ele2024" no arquivo E no config       OK
+   Descoberta automatica cargo a cargo, ignorando suplementares         OK
+   Sigla, percentual e ordenacao batendo com o boletim cru              OK
+   Suplentes fora da lista de candidatos                                OK
+   Aviso de voto nao valido entre os dois primeiros                     OK
+   Ordem travada: 23/23/29 colunas, 19 primeiras intactas               OK
+   Validador: 36 conferencias, 0 divergencia                            OK
+   Guarda de fase: oficial recusa fase s, publica tarja vazia           OK
+   5 casos degenerados, inclusive HTML de erro e JSON cortado           OK
+   Corrida de producao: 5 ciclos, 61 req/min, 0 erro, 0 .tmp            OK
+   Painel: previa, aprovar, congelar                                    OK
+
+===========================================================================
+ LAUDO ANTERIOR - gctse 4.0
  22/09/2026, na janela de simulado do TSE
 ===========================================================================
 

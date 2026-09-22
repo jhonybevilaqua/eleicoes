@@ -31,7 +31,7 @@ param(
 # Versao impressa na partida e no painel. Sem carimbo, "qual versao esta
 # rodando ai?" so se responde abrindo arquivo e comparando a olho - e no
 # meio de um teste com janela de horario ninguem faz isso.
-$Versao = "4.0 - 22/09/2026"
+$Versao = "4.1 - 22/09/2026"
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
@@ -271,10 +271,12 @@ $OrdemBase = @(
     "cand2_visivel", "cand2_nome", "cand2_partido", "cand2_percentual",
     "cand2_barra_px", "cand2_cor", "cand2_eleito"
 )
-$OrdemMajoritaria = $OrdemBase + @("cand1_eleito_rotulo", "cand2_eleito_rotulo")
+$OrdemMajoritaria = $OrdemBase + @("cand1_eleito_rotulo", "cand2_eleito_rotulo",
+                                   "cand1_situacao", "cand2_situacao")
 $OrdemPresidente  = $OrdemBase + @(
     "cand1_foto", "cand1_foto_existe", "cand1_foto_fixa", "cand1_eleito_rotulo",
-    "cand2_foto", "cand2_foto_existe", "cand2_foto_fixa", "cand2_eleito_rotulo"
+    "cand2_foto", "cand2_foto_existe", "cand2_foto_fixa", "cand2_eleito_rotulo",
+    "cand1_situacao", "cand2_situacao"
 )
 
 function Ordem-Do-Modelo {
@@ -550,6 +552,12 @@ function Montar-Candidato {
     if ("$(Obter-Campo $C @('st'))" -match "^Eleito") { $eleito = "1" }
     $partido = $Sigla
     if (-not $partido) { $partido = "$(Obter-Campo $C @('cc','sgp') '')" }
+    # dvt = destinacao dos votos. Nos dados reais do simulado aparecem
+    # "Valido", "Anulado" e "Anulado sub judice" - e um candidato ANULADO
+    # pode estar entre os dois primeiros, com voto e percentual normais.
+    # O TSE publica assim e nos repassamos assim; mas quem esta no ar
+    # precisa poder saber, entao a situacao vai junto.
+    $situacao = Decodificar-Entidades "$(Obter-Campo $C @('dvt') '')"
     return [pscustomobject]@{
         Numero     = "$(Obter-Campo $C @('n') '')"
         Nome       = "$(Obter-Campo $C @('nmu','nm','nmurna') '')"
@@ -557,6 +565,7 @@ function Montar-Candidato {
         Votos      = $votos
         Percentual = $perc
         Eleito     = $eleito
+        Situacao   = "$situacao"
     }
 }
 
@@ -783,6 +792,7 @@ function Montar-Tarja {
             $saida[$p + "cor"] = ""
             $saida[$p + "eleito"] = "0"
             $extras[$p + "eleito_rotulo"] = ""
+            $extras[$p + "situacao"] = ""
         } else {
             $largura = 0
             if ($trilho -gt 0) {
@@ -808,6 +818,7 @@ function Montar-Tarja {
                 $saida[$p + "cor"] = ""
                 $saida[$p + "eleito"] = "0"
                 $extras[$p + "eleito_rotulo"] = ""
+                $extras[$p + "situacao"] = ""
                 continue
             }
             $saida[$p + "visivel"] = "1"
@@ -843,6 +854,9 @@ function Montar-Tarja {
             $seloEleito = ""
             if ($c.Eleito -eq "1") { $seloEleito = $RotuloEleito }
             $extras[$p + "eleito_rotulo"] = $seloEleito
+            $situacao = ""
+            if (Tem-Propriedade $c "Situacao") { $situacao = "$($c.Situacao)" }
+            $extras[$p + "situacao"] = $situacao
         }
     }
     foreach ($chave in $extras.Keys) { $saida[$chave] = $extras[$chave] }
@@ -1143,10 +1157,39 @@ function Buscar-Praca {
         $script:RegressaoVista.Remove($chave)
     }
     if ($null -ne $b) {
+        Avisar-Candidato-Nao-Valido $chave $b
         Marcar-Alerta $Uf $Cargo $b
         $script:CacheBoletins[$chave] = $b
     }
     return $b
+}
+
+$script:SituacaoAvisada = @{}
+
+function Avisar-Candidato-Nao-Valido {
+    # Nos dados reais do TSE um candidato com os votos ANULADOS aparece no
+    # boletim com voto e percentual normais, e pode estar entre os dois
+    # primeiros. Quem le no ar precisa saber disso ANTES de ler o nome em
+    # voz alta. Avisa uma vez por praca e so volta a avisar se mudar.
+    param([string] $Chave, $Boletim)
+    $situacoes = @()
+    $limite = [math]::Min(2, $Boletim.Candidatos.Count)
+    for ($i = 0; $i -lt $limite; $i++) {
+        $c = $Boletim.Candidatos[$i]
+        $sit = ""
+        if (Tem-Propriedade $c "Situacao") { $sit = "$($c.Situacao)" }
+        if ($sit -and $sit -notmatch '^V[aá]lido') {
+            $situacoes += "$($i + 1)o $($c.Nome): $sit"
+        }
+    }
+    $resumo = ($situacoes -join " | ")
+    $visto = ""
+    if ($script:SituacaoAvisada.ContainsKey($Chave)) { $visto = $script:SituacaoAvisada[$Chave] }
+    if ($resumo -eq $visto) { return }
+    $script:SituacaoAvisada[$Chave] = $resumo
+    if ($resumo) {
+        Escrever-Log "${Chave}: o TSE marcou voto nao valido entre os dois primeiros - $resumo" "AVISO"
+    }
 }
 
 function Tarjas-Congeladas {
@@ -1384,8 +1427,19 @@ function Descobrir-Codigos {
             $geral = ($cargos -contains "1") -or ($cargos -contains "3") -or ($cargos -contains "5")
             if (-not $geral) { continue }
             if ($null -eq $achado) {
+                # O CICLO vem da DATA do pleito, e nao do campo "c" do
+                # arquivo. Motivo concreto: em 22/09/2026 o ele-c.json do
+                # ambiente oficial ainda trazia c="ele2024" enquanto ja
+                # listava pleitos de 2026 - "c" e o ciclo corrente do
+                # ambiente, nao o da eleicao que se procura. Confiar nele
+                # montaria .../ele2024/... na noite da apuracao e daria 404
+                # nas 55 pracas. A data nao mente: 06/10/2024 -> ele2024,
+                # 04/10/2026 -> ele2026, que e o que o TSE de fato publica.
+                $ciclo = "$(Obter-Campo $bruto @('c') '')"
+                $dataPleito = "$(Obter-Campo $pleito @('dt') '')"
+                if ($dataPleito -match '(\d{4})\s*$') { $ciclo = "ele$($Matches[1])" }
                 $achado = @{
-                    ciclo   = "$(Obter-Campo $bruto @('c') '')"
+                    ciclo   = $ciclo
                     pleito  = "$(Obter-Campo $pleito @('cd') '')"
                     eleicao = "$(Obter-Campo $eleicao @('cd') '')"
                     cargos  = @{}

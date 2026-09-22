@@ -1,13 +1,13 @@
 ===========================================================================
  CAMPOS DE CADA ARQUIVO - referencia para vincular no Castalia
- gctse 4.0
+ gctse 4.1
 ===========================================================================
 
  REGRA: as 19 PRIMEIRAS posicoes sao iguais nas tres tarjas e NUNCA
  mudam de lugar. Campo novo entra sempre depois da 19.
 
 ---------------------------------------------------------------------------
- TARJA-GOVERNADOR.JSON e TARJA-SENADOR.JSON   (21 campos)
+ TARJA-GOVERNADOR.JSON e TARJA-SENADOR.JSON   (23 campos)
  Uma praca por vez, a que o painel mandou.
 ---------------------------------------------------------------------------
     1. cargo                  PRESIDENTE / GOVERNADOR / SENADOR
@@ -31,9 +31,11 @@
    19. cand2_eleito           1 ou 0  -> VISIBILIDADE de um selo grafico
    20. cand1_eleito_rotulo    ELEITO ou vazio  -> objeto de TEXTO
    21. cand2_eleito_rotulo    ELEITO ou vazio  -> objeto de TEXTO
+   22. cand1_situacao         Valido / Anulado / Anulado sub judice
+   23. cand2_situacao         idem, para o 2o colocado
 
 ---------------------------------------------------------------------------
- TARJA-PRESIDENTE.JSON   (27 campos)
+ TARJA-PRESIDENTE.JSON   (29 campos)
  Sempre BRASIL. As 19 primeiras iguais as de cima; depois, foto e selo.
 ---------------------------------------------------------------------------
     1. cargo                  PRESIDENTE / GOVERNADOR / SENADOR
@@ -63,6 +65,8 @@
    25. cand2_foto_existe      1 se a foto existe, 0 se caiu na silhueta
    26. cand2_foto_fixa        caminho que nunca muda (plano B, ver LEIA-ME-FOTOS)
    27. cand2_eleito_rotulo    ELEITO ou vazio  -> objeto de TEXTO
+   28. cand1_situacao         Valido / Anulado / Anulado sub judice
+   29. cand2_situacao         idem, para o 2o colocado
 
 ---------------------------------------------------------------------------
  LISTA-GOVERNADOR.JSON, LISTA-SENADOR.JSON, TARJA-RODIZIO.JSON
@@ -113,6 +117,7 @@
    Estado / praca            abrangencia
    N de urnas                apuracao_pct
    Selo parcial              selo
+   Situacao do voto          cand1_situacao       (ver abaixo)
 
    Idem para o 2o colocado, trocando cand1_ por cand2_.
 
@@ -164,6 +169,33 @@
     depois e a tarja foi ao ar com o nome do estado onde ia o nome do
     candidato. E por isso que a ordem hoje e travada em lista, e nao
     apenas por convencao.
+
+===========================================================================
+ SITUACAO DO VOTO - o campo que o TSE manda e quase ninguem olha
+===========================================================================
+
+ O TSE publica, em cada candidato, a destinacao dos votos:
+
+    Valido                  voto conta normalmente
+    Anulado                 candidatura indeferida, votos anulados
+    Anulado sub judice      decisao ainda em recurso
+
+ O candidato ANULADO continua no boletim, com voto e percentual normais,
+ e PODE aparecer em 1o ou 2o lugar. Nos dados reais do simulado de
+ 22/09/2026 isso acontecia: o 2o colocado a presidente estava "Anulado" e
+ um dos tres primeiros a governador no Acre estava "Anulado sub judice".
+
+ O sistema NAO esconde esse candidato - o TSE publica, nos repassamos.
+ Mas duas coisas acontecem:
+
+  1. a situacao vai nos campos cand1_situacao / cand2_situacao, para
+     quem quiser mostrar na tarja ou usar como visibilidade de um aviso;
+
+  2. quando um dos DOIS PRIMEIROS nao esta "Valido", sai um AVISO na
+     janela da coleta, com o nome e a situacao. Quem esta no ar fica
+     sabendo antes de ler o nome em voz alta.
+
+ A decisao de mostrar ou nao e do Jornalismo, nao do sistema.
 
 ===========================================================================
  AS DUAS PORCENTAGENS - nao confundir
