@@ -359,7 +359,13 @@ def cmd_exemplo(args) -> int:
         simulador_progresso=args.progresso,
         arquivo_estado=str(temporarios / ".exemplo-estado.json"),
         arquivo_historico=str(temporarios / ".exemplo-historico.jsonl"),
-        arquivo_graficos=str(pasta / "graficos.json"),
+        # graficos tambem e descartavel: e o arquivo que publica a curva e a
+        # projecao de fechamento, e um ponto que nao veio do TSE nao entra la.
+        # Com --destinos-reais vai para o temporario, senao criaria uma pasta
+        # 'exemplos/' solta dentro do pacote entregue.
+        arquivo_graficos=str(temporarios / (
+            ".exemplo-graficos.json" if reais else "graficos.json"
+        )),
     )
     if not reais:
         # So no modo pasta-separada. Com --destinos-reais o painel FAZ parte
@@ -396,6 +402,8 @@ def cmd_exemplo(args) -> int:
     # cru deixaria o arquivo temporario para tras na pasta entregue.
     for chave in ("arquivo_estado", "arquivo_historico"):
         Path(cfg.coleta[chave]).unlink(missing_ok=True)
+    if reais:
+        Path(cfg.coleta["arquivo_graficos"]).unlink(missing_ok=True)
 
     # O mapa de celulas e o unico subproduto que vale a pena guardar junto do
     # pacote: diz qual campo do JSON alimenta qual item da cena. Com

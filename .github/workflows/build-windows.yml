@@ -159,6 +159,14 @@ jobs:
             Select-String -Pattern "CANDIDATO ENSAIO|GOVERNO ENSAIO|SENADO ENSAIO" -List
           if ($suspeitos) { throw "dado ficticio no pacote: $($suspeitos.Path -join ', ')" }
           Write-Host "Pacote sem dado inventado: OK"
+          # E nada de pasta sobrando: quem extrai tem de encontrar so o que foi
+          # explicado no LEIA-ME. Pasta de nome estranho na raiz vira pergunta
+          # no dia do teste, que e quando ninguem tem tempo de responder.
+          $previstas = @("docs","logs","MAPA-CASTALIA","TARJAS","TELAO","_internal")
+          $sobrando = Get-ChildItem -Directory |
+            Where-Object { $previstas -notcontains $_.Name }
+          if ($sobrando) { throw "pasta inesperada no pacote: $($sobrando.Name -join ', ')" }
+          Write-Host "Raiz do pacote sem pasta sobrando: OK"
 
       - name: Publicar o zip como artefato
         uses: actions/upload-artifact@v4
