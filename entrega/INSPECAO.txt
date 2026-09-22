@@ -1,5 +1,73 @@
 ===========================================================================
- LAUDO DE INSPECAO - gctse 4.2
+ LAUDO DE INSPECAO - gctse 4.3
+ 22/09/2026, com o CONFERIR das 15:16 (maquina AVELL)
+===========================================================================
+
+ DUAS MAQUINAS, DOIS RELATORIOS
+
+   Foram dois CONFERIR no mesmo dia, de maquinas diferentes:
+
+                        GC (DESKTOP-38DJ8E4)   AVELL
+                        14:39                  15:16
+     Windows            10 (19045)             11 (26200)
+     PowerShell         5.1.19041              5.1.26100
+     simulado           200 em 1007 ms         200 em 157 ms
+     oficial            200 em 173 ms          200 em 191 ms
+     molde              -u.json                -u.json
+     codigos            17801/21270/21272      iguais
+
+   As duas alcancam o TSE e leem o mesmo molde. A AVELL responde bem mais
+   rapido no simulado, mas isso e rede do momento, nao conclusao.
+
+ A APURACAO DO SIMULADO ESTA ANDANDO
+
+   No mesmo boletim de referencia (PI), as urnas passaram de 34,02% as
+   14:33 para 65,03% as 15:03. Quem viu "nenhum numero novo em 8 ciclos"
+   pela manha estava vendo o TSE parado entre injecoes, e nao o sistema
+   morto - foi o que o alerta do painel disse na hora.
+
+ O QUE A CAPTURA NOVA EXERCITOU
+
+   1. A ORDEM DOS CANDIDATOS DENTRO DO PARTIDO MUDOU entre as duas
+      capturas. No senador do Acre, as 14:32 vinha 672 antes de 671; as
+      15:02, 671 antes de 672. O arquivo do TSE nao garante ordem. Como a
+      ordenacao aqui e por VOTO e nao pela ordem do arquivo, a tarja saiu
+      certa nas duas: 9351 (31941 votos) em 1o, 9339 (30993) em 2o.
+
+   2. O CANDIDATO "ANULADO SUB JUDICE" SUBIU PARA 2o LUGAR. As 14:32 ele
+      era o 3o do governador no Acre com 10,39%; as 15:02 esta em 2o com
+      10,84%, na frente de um candidato valido. Exatamente o caso que o
+      aviso da 4.1 existe para pegar - e pegou.
+
+   3. Confirmado de novo que NENHUM candidato a governador no Acre chega
+      perto de 34%: o 1o tem 11,36%. O 34,03% que apareceu na tarja no
+      ar era o numero das URNAS no lugar do percentual do candidato.
+
+ DEFEITO CORRIGIDO NA 4.3 - aviso que virou ruido
+
+   O aviso de voto nao valido, criado na 4.1, saia uma vez por praca. Na
+   varredura das 27, sairam 28 avisos identicos de uma vez, empurrando
+   para fora da tela o resumo do ciclo - que e a linha que o operador
+   precisa ver. Aviso que vira ruido deixa de ser aviso.
+
+   Agora so avisa sobre o que esta NO AR: o presidente mais a praca
+   selecionada para governador e para senador. Conferido: com o Acre no
+   ar saem 2 avisos; trocando para o Parana, saem 2 avisos e o segundo
+   passa a ser pr-3. O campo cand1_situacao / cand2_situacao continua
+   preenchido em TODAS as pracas, inclusive nas listas.
+
+ VERIFICADO NA 4.3
+
+   Ordenacao por voto com a ordem do arquivo invertida             OK
+   Anulado sub judice em 2o lugar, avisado e no campo              OK
+   Avisos limitados ao que esta no ar (2, e nao 28)                OK
+   Troca de praca move o aviso junto                               OK
+   Validador: 36 conferencias, 0 divergencia                       OK
+   Ordem travada 23/23/29, 19 primeiras intactas                   OK
+   Noite da apuracao com c="ele2024": derivou ele2026              OK
+
+===========================================================================
+ LAUDO ANTERIOR - gctse 4.2
  22/09/2026, depois de "cliquei no estado e a tarja nao mudou"
 ===========================================================================
 

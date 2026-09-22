@@ -31,7 +31,7 @@ param(
 # Versao impressa na partida e no painel. Sem carimbo, "qual versao esta
 # rodando ai?" so se responde abrindo arquivo e comparando a olho - e no
 # meio de um teste com janela de horario ninguem faz isso.
-$Versao = "4.2 - 22/09/2026"
+$Versao = "4.3 - 22/09/2026"
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
@@ -1157,7 +1157,7 @@ function Buscar-Praca {
         $script:RegressaoVista.Remove($chave)
     }
     if ($null -ne $b) {
-        Avisar-Candidato-Nao-Valido $chave $b
+        Avisar-Candidato-Nao-Valido $chave $b $Uf $Cargo
         Marcar-Alerta $Uf $Cargo $b
         $script:CacheBoletins[$chave] = $b
     }
@@ -1166,12 +1166,36 @@ function Buscar-Praca {
 
 $script:SituacaoAvisada = @{}
 
+function Esta-No-Ar {
+    # A praca que o GC esta exibindo agora: as tarjas fixas (presidente) mais
+    # o que o operador selecionou para governador e senador.
+    param([string] $Uf, [int] $Cargo)
+    if (Tem-Propriedade $cfg "tarjas") {
+        foreach ($t in $cfg.tarjas) {
+            if ("$($t.abrangencia)" -eq $Uf -and [int] $t.cargo -eq $Cargo) { return $true }
+        }
+    }
+    if (Tem-Propriedade $cfg "selecao") {
+        foreach ($saida in $cfg.selecao.saidas) {
+            if ([int] $saida.cargo -ne $Cargo) { continue }
+            $praca = Ler-Selecao $saida.cargo
+            if ($null -ne $praca -and $praca.uf -eq $Uf) { return $true }
+        }
+    }
+    return $false
+}
+
 function Avisar-Candidato-Nao-Valido {
     # Nos dados reais do TSE um candidato com os votos ANULADOS aparece no
     # boletim com voto e percentual normais, e pode estar entre os dois
     # primeiros. Quem le no ar precisa saber disso ANTES de ler o nome em
     # voz alta. Avisa uma vez por praca e so volta a avisar se mudar.
-    param([string] $Chave, $Boletim)
+    param([string] $Chave, $Boletim, [string] $Uf, [int] $Cargo)
+    # So avisa sobre o que esta NO AR. Na varredura das 27 pracas o aviso
+    # saia 27 vezes de uma vez e empurrava para fora da tela o resumo do
+    # ciclo - que e a linha que o operador precisa ver. Aviso que vira
+    # ruido deixa de ser aviso.
+    if (-not (Esta-No-Ar $Uf $Cargo)) { return }
     $situacoes = @()
     $limite = [math]::Min(2, $Boletim.Candidatos.Count)
     for ($i = 0; $i -lt $limite; $i++) {
