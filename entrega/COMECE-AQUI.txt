@@ -51,6 +51,20 @@
     E por ali que voce escolhe o estado no ar, ve o sino aceso quando
     chega dado novo do TSE, e ve o aviso vermelho se a coleta parar.
 
+    ATENCAO AO MODO DO CLIQUE. Logo abaixo de "Escolher a praca" esta
+    escrito o que o proximo clique num estado faz:
+
+      2 CLIQUES (padrao)  clicar monta a PREVIA; a tarja so muda depois
+                          do botao verde COLOCAR NO AR. Enquanto houver
+                          previa pendente, aparece uma faixa amarela no
+                          alto da tela dizendo que aquilo NAO esta no ar.
+
+      1 CLIQUE            clicar coloca direto no ar, sem confirmacao.
+
+    O link ao lado da frase troca de um para o outro na hora, sem mexer
+    em arquivo nenhum. Escolha antes de entrar no ar e avise a equipe:
+    e a diferenca entre "cliquei e nao mudou" e "cliquei e foi ao ar".
+
  6. Com o TESTE rodando, duplo clique em VALIDAR-SIMULADO.bat
 
     Ele pega o boletim CRU do TSE e compara, numero por numero, com o

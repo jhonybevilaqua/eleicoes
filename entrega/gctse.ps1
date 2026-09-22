@@ -31,7 +31,7 @@ param(
 # Versao impressa na partida e no painel. Sem carimbo, "qual versao esta
 # rodando ai?" so se responde abrindo arquivo e comparando a olho - e no
 # meio de um teste com janela de horario ninguem faz isso.
-$Versao = "4.1 - 22/09/2026"
+$Versao = "4.2 - 22/09/2026"
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0

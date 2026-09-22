@@ -1,5 +1,69 @@
 ===========================================================================
- LAUDO DE INSPECAO - gctse 4.1
+ LAUDO DE INSPECAO - gctse 4.2
+ 22/09/2026, depois de "cliquei no estado e a tarja nao mudou"
+===========================================================================
+
+ O QUE ACONTECEU
+
+ O clique no estado estava CERTO e a tarja NAO mudava. As duas coisas ao
+ mesmo tempo, porque o painel estava com confirmar_antes ligado: clicar
+ monta a previa, e a tarja so troca no botao COLOCAR NO AR. Foi pedido
+ assim, e protege o ar.
+
+ So que numa janela de teste isso custou tempo: quem nao sabe que sao
+ dois cliques fica olhando uma tarja parada achando que o sistema
+ quebrou. Comportamento correto que parece defeito e defeito.
+
+ Reproduzido aqui, com coleta e painel rodando: clique em SP escreveu
+ PREVIA.txt=sp, SELECAO.txt continuou ac, tarja continuou ACRE. Depois do
+ COLOCAR NO AR, SELECAO.txt=sp e a tarja virou SAO PAULO em ~6s.
+
+ O QUE MUDOU
+
+ 1. O modo do clique e escolhido no painel, nao no config.json.
+
+    Abaixo de "Escolher a praca" esta escrito, em texto, o que o proximo
+    clique faz - e ao lado, um link que troca na hora entre os dois
+    modos. Sem abrir arquivo, sem reiniciar nada.
+
+ 2. Previa pendente vira faixa amarela no alto da tela.
+
+    "SAO PAULO esta so na PREVIA - ainda NAO esta no ar. Clique em
+    COLOCAR NO AR para trocar a tarja."
+
+ 3. COLOCAR NO AR e DESCARTAR agora limpam a previa.
+
+    Antes ela ficava na tela depois de aprovada, e a faixa so sumiria no
+    ciclo seguinte.
+
+ 4. Pagina velha no navegador nao fura mais a regra.
+
+    Trocar para 1 clique com a pagina antiga aberta deixava os botoes
+    ainda apontando para a rota de previa. Agora a rota obedece ao modo
+    vigente, e nao ao link que veio. Testado: clique em /previa com o
+    modo direto foi direto ao ar.
+
+ 5. DEFEITO: o painel carimbava a propria versao.
+
+    PAINEL.ps1 tinha $Versao = "3.6" enquanto a coleta ja estava na 4.1.
+    O rodape passou semanas mostrando um numero que nao existia mais.
+    Dois lugares para a mesma verdade sempre acabam assim. Agora o painel
+    le o VERSAO.txt, que e o mesmo arquivo do resto do sistema.
+
+ VERIFICADO NA 4.2, com coleta e painel rodando juntos
+
+   2 cliques: clique monta previa, tarja NAO muda                      OK
+   2 cliques: faixa amarela aparece com o nome da praca                OK
+   COLOCAR NO AR: tarja troca em ~6s e a previa e limpa                OK
+   DESCARTAR: previa some, nada vai ao ar                              OK
+   1 clique: tarja troca sem confirmacao                               OK
+   Troca de modo limpa previa pendente                                 OK
+   Pagina velha batendo em /previa no modo direto vai ao ar            OK
+   Rodape do painel mostrando a versao de verdade                      OK
+   5 ciclos de coleta em paralelo, 0 erro                              OK
+
+===========================================================================
+ LAUDO ANTERIOR - gctse 4.1
  22/09/2026, depois do CONFERIR rodado na maquina do GC as 14:39
 ===========================================================================
 

@@ -30,7 +30,17 @@ if (-not (Test-Path $Config)) {
     exit 1
 }
 $cfg = Get-Content $Config -Raw -Encoding UTF8 | ConvertFrom-Json
-$Versao = "3.6 - 16/09/2026"
+# A versao NAO e carimbada aqui. Ja foi, e ficou parada na 3.6 enquanto a
+# coleta andava ate a 4.1 - o rodape do painel passou semanas dizendo um
+# numero que nao existia mais. Dois lugares para a mesma verdade sempre
+# acabam assim. Agora sai do VERSAO.txt, que e o mesmo que o gctse grava.
+$Versao = "(versao nao encontrada)"
+if (Test-Path "VERSAO.txt") {
+    try {
+        $linha = (Get-Content "VERSAO.txt" -Raw -ErrorAction Stop).Trim()
+        if ($linha) { $Versao = ($linha -replace '^gctse versao\s*', '') }
+    } catch { }
+}
 $PastaSaida = $cfg.pasta_saida
 $ArquivoSelecao = $cfg.selecao.arquivo_selecao
 $ArquivoSelecaoSenador = $null
@@ -118,9 +128,27 @@ function Tem-Propriedade {
     return $false
 }
 
-$ConfirmarAntes = $true
+$ConfirmarPadrao = $true
 if (Tem-Propriedade $cfg.selecao "confirmar_antes") {
-    $ConfirmarAntes = [bool] $cfg.selecao.confirmar_antes
+    $ConfirmarPadrao = [bool] $cfg.selecao.confirmar_antes
+}
+
+function Ler-Modo-Clique {
+    # Dois cliques (previa -> COLOCAR NO AR) ou um clique (vai direto).
+    #
+    # Existe porque a duvida "cliquei no estado e a tarja nao mudou" custou
+    # uma janela de teste. Os dois cliques protegem o ar, mas quem nao
+    # percebeu que sao dois fica olhando uma tarja parada achando que o
+    # sistema quebrou. Agora a escolha e do operador, no proprio painel, e
+    # o estado atual esta escrito na tela - nao escondido no config.json.
+    if (Test-Path "MODO-CLIQUE.txt") {
+        try {
+            $m = (Get-Content "MODO-CLIQUE.txt" -Raw).Trim().ToLower()
+            if ($m -eq "direto") { return $false }
+            if ($m -eq "previa") { return $true }
+        } catch { }
+    }
+    return $ConfirmarPadrao
 }
 
 
@@ -131,6 +159,7 @@ function Html-Seguro {
 }
 
 function Montar-Pagina {
+    $ConfirmarAntes = Ler-Modo-Clique
     $modo = Ler-Modo
     $ufGov = Ler-Selecao 3
     $ufSen = Ler-Selecao 5
@@ -147,6 +176,18 @@ function Montar-Pagina {
         $cls = "aba"
         if ($modo -eq $m[0]) { $cls = "aba on" }
         $abas += "<a class='$cls' href='/modo?m=$($m[0])'>$($m[1])</a>"
+    }
+
+    # Escrito na tela, em vez de implicito: o operador tem que saber o que o
+    # proximo clique num estado vai fazer, ANTES de clicar.
+    if ($ConfirmarAntes) {
+        $explicaClique = "<span class='comoclique dois'>Clicar num estado monta a <b>prévia</b>. " +
+                         "A tarja só muda depois do <b>COLOCAR NO AR</b>.</span>" +
+                         "<a class='trocaclique' href='/modoclique?m=direto'>passar para 1 clique</a>"
+    } else {
+        $explicaClique = "<span class='comoclique um'>Clicar num estado coloca <b>direto no ar</b>. " +
+                         "Não há confirmação.</span>" +
+                         "<a class='trocaclique' href='/modoclique?m=previa'>passar para 2 cliques</a>"
     }
 
     $prevGov = Ler-Previa 3
@@ -298,6 +339,26 @@ function Montar-Pagina {
                           "Os numeros no ar estao parados de proposito. A coleta continua rodando " +
                           "por tras - ao descongelar, entra o numero mais novo.</span></div>"
         $rotuloCongelar = "DESCONGELAR"
+    }
+
+    # --- previa escolhida e ainda NAO no ar
+    # A pergunta que custou uma janela de teste foi "cliquei e a tarja nao
+    # mudou". A resposta tem que estar no alto da tela, nao no meio dela.
+    $previaAviso = ""
+    if ($ConfirmarAntes) {
+        $pendentes = @()
+        if ($prevGov -and $prevGov -ne $ufGov) { $pendentes += "GOVERNADOR" }
+        if ($prevSen -and $prevSen -ne $ufSen) { $pendentes += "SENADOR" }
+        if ($pendentes.Count -gt 0) {
+            $nomePend = ($prevGov + $prevSen).ToUpper()
+            foreach ($p in $cfg.selecao.pracas) {
+                if ($p.uf -eq $prevGov -or $p.uf -eq $prevSen) { $nomePend = $p.nome }
+            }
+            $previaAviso = "<div class='pendente'><span>" +
+                           "<b>$(Html-Seguro $nomePend)</b> está só na PRÉVIA — ainda NÃO está no ar " +
+                           "($($pendentes -join " e ")). Clique em <b>COLOCAR NO AR</b> para trocar a tarja." +
+                           "</span></div>"
+        }
     }
 
     $paradoAviso = ""
@@ -490,6 +551,15 @@ h2::after{content:"";flex:1;height:1px;background:var(--fio)}
 .parado b{color:#5f0d0d}
 .parado::before{content:"";flex:none;width:19px;height:19px;border-radius:50%;
   background:#c22a2a;box-shadow:0 0 0 4px rgba(194,42,42,.18);animation:pulsa 1.4s ease-in-out infinite}
+.pendente{margin:0 0 16px;padding:14px 18px;border-radius:10px;background:#fff5d9;
+  border:2px solid #e8b931;color:#5c4405;font-size:15px;line-height:1.5}
+.pendente b{color:#3d2d02}
+.comolinha{margin:-6px 0 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.comoclique{font-size:14px;color:#5a6672}
+.comoclique.um{color:#8a4b12;font-weight:600}
+.trocaclique{font-size:13px;color:#3f6ea8;text-decoration:none;border:1px solid #c3d4e6;
+  border-radius:7px;padding:5px 11px;background:#f6fafd}
+.trocaclique:hover{background:#eaf2fa}
 .card.previa{border-color:#9fc0e4;background:#fbfdff}
 .card.previa h3{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
 .jaNoAr{font-size:11px;font-weight:700;letter-spacing:.06em;color:#0d7a55;
@@ -549,9 +619,11 @@ footer b{color:var(--tinta2s)}
 <main id="vivo">
 $paradoAviso
 $congeladoAviso
+$previaAviso
 $placar
 $divergencia
 <h2>Escolher a praça <span class="abas">$abas</span></h2>
+<p class="comolinha">$explicaClique</p>
 <div class="estados">$botoes</div>
 $blocoPrevia
 <h2>O que está nos arquivos agora</h2>
@@ -657,6 +729,23 @@ while ($ouvinte.IsListening) {
 
         $utf8 = New-Object System.Text.UTF8Encoding($false)
 
+        if ($caminho -eq "/modoclique") {
+            $m = $ctx.Request.QueryString["m"]
+            if ($m -in @("previa", "direto")) {
+                [IO.File]::WriteAllText((Join-Path $Raiz "MODO-CLIQUE.txt"), $m, $utf8)
+                # Trocar para 1 clique com uma previa pendente deixaria na
+                # tela um bloco de previa que nenhum botao mais aprova.
+                if ($m -eq "direto") {
+                    foreach ($arq in @("PREVIA.txt", "PREVIA-SENADOR.txt")) {
+                        Remove-Item (Join-Path $Raiz $arq) -Force -ErrorAction SilentlyContinue
+                    }
+                }
+                Write-Host ("{0} modo do clique: {1}" -f (Get-Date -Format "HH:mm:ss"),
+                            $(if ($m -eq "direto") { "1 CLIQUE, direto ao ar" } else { "2 CLIQUES, com previa" }))
+            }
+            $resposta.StatusCode = 303; $resposta.RedirectLocation = "/"; $resposta.Close(); continue
+        }
+
         if ($caminho -eq "/modo") {
             $m = $ctx.Request.QueryString["m"]
             if ($m -in @("ambos", "gov", "sen")) {
@@ -671,6 +760,19 @@ while ($ouvinte.IsListening) {
             $uf = $ctx.Request.QueryString["uf"]
             $valida = $false
             foreach ($p in $cfg.selecao.pracas) { if ($p.uf -eq $uf) { $valida = $true } }
+            # A pagina no navegador pode ser de antes da troca de modo. Quem
+            # manda e o modo de agora, e nao o link que veio.
+            if ($valida -and -not (Ler-Modo-Clique)) {
+                $modo = Ler-Modo
+                if ($modo -eq "ambos" -or $modo -eq "gov") {
+                    [IO.File]::WriteAllText((Join-Path $Raiz $ArquivoSelecao), $uf, $utf8)
+                }
+                if (($modo -eq "ambos" -or $modo -eq "sen") -and $ArquivoSelecaoSenador) {
+                    [IO.File]::WriteAllText((Join-Path $Raiz $ArquivoSelecaoSenador), $uf, $utf8)
+                }
+                Write-Host ("{0} praca NO AR ({1}): {2}" -f (Get-Date -Format "HH:mm:ss"), $modo, $uf.ToUpper())
+                $resposta.StatusCode = 303; $resposta.RedirectLocation = "/"; $resposta.Close(); continue
+            }
             if ($valida) {
                 $modo = Ler-Modo
                 if ($modo -eq "ambos" -or $modo -eq "gov") {
@@ -700,6 +802,9 @@ while ($ouvinte.IsListening) {
                                     $par[1], $uf.ToUpper())
                     }
                 } catch { }
+            }
+            foreach ($arq in @("PREVIA.txt", "PREVIA-SENADOR.txt")) {
+                Remove-Item (Join-Path $Raiz $arq) -Force -ErrorAction SilentlyContinue
             }
             $resposta.StatusCode = 303; $resposta.RedirectLocation = "/"; $resposta.Close(); continue
         }
