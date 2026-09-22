@@ -31,7 +31,7 @@ param(
 # Versao impressa na partida e no painel. Sem carimbo, "qual versao esta
 # rodando ai?" so se responde abrindo arquivo e comparando a olho - e no
 # meio de um teste com janela de horario ninguem faz isso.
-$Versao = "4.3 - 22/09/2026"
+$Versao = "4.5 - 22/09/2026"
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
@@ -61,7 +61,7 @@ function Escrever-Log {
     }
     try {
         if (-not (Test-Path "logs")) { New-Item -ItemType Directory -Path "logs" | Out-Null }
-        Add-Content -Path ("logs\gctse-{0}.log" -f (Get-Date -Format "yyyy-MM-dd")) -Value $linha
+        Add-Content -Path (Join-Path "logs" ("gctse-{0}.log" -f (Get-Date -Format "yyyy-MM-dd"))) -Value $linha
     } catch { }
 }
 
@@ -380,6 +380,7 @@ $script:Requisicoes = New-Object System.Collections.ArrayList
 $script:MudancasTotal = 0
 $script:BoletinsOk = 0
 $script:UltimaSelecao = $null
+$script:UltimaCongelado = $false
 $script:DesdeUltimaOlhada = 0
 $script:UltimaMudanca = $null
 $script:TotalRequisicoes = 0
@@ -392,7 +393,14 @@ function Atender-Troca-De-Praca {
     # requisicao nenhuma, entao pode ser chamada de dentro do ciclo.
     if (-not (Tem-Propriedade $cfg "selecao")) { return $false }
     $agora = (($cfg.selecao.saidas | ForEach-Object { (Ler-Selecao $_.cargo).uf }) -join ",")
-    if ($agora -eq $script:UltimaSelecao) { return $false }
+    # Descongelar tambem e uma troca. Sem isto, sair do congelamento so
+    # entrava no ar no ciclo seguinte - ate 20 segundos com o numero velho
+    # na tela depois de alguem ter mandado liberar. Ao vivo, 20 segundos e
+    # muito tempo.
+    $congelado = Tarjas-Congeladas
+    $descongelou = ($script:UltimaCongelado -eq $true) -and (-not $congelado)
+    $script:UltimaCongelado = $congelado
+    if ($agora -eq $script:UltimaSelecao -and -not $descongelou) { return $false }
     $script:UltimaSelecao = $agora
     $null = Publicar-Selecionada $script:CacheBoletins
     foreach ($saida in $cfg.selecao.saidas) {
@@ -400,7 +408,8 @@ function Atender-Troca-De-Praca {
         if ($null -ne $praca) { Limpar-Alerta $praca.uf $saida.cargo }
     }
     Escrever-Alertas
-    Escrever-Log "selecao trocada: $agora" "OK"
+    if ($descongelou) { Escrever-Log "descongelado: $agora entra no ar agora" "OK" }
+    else { Escrever-Log "selecao trocada: $agora" "OK" }
     return $true
 }
 
@@ -928,7 +937,7 @@ function Montar-Lista {
 # -------------------------------------------------------------------- painel
 
 function Escrever-Painel {
-    param($Linhas, [int] $Intervalo, [string] $Modo)
+    param($Linhas, [int] $SegundosCiclo, [string] $Modo)
     $corpo = ""
     foreach ($l in $Linhas) {
         $classe = "ok"
@@ -945,7 +954,7 @@ function Escrever-Painel {
     }
     $html = @"
 <!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
-<meta http-equiv="refresh" content="$Intervalo"><title>Painel de apuracao</title><style>
+<meta http-equiv="refresh" content="$SegundosCiclo"><title>Painel de apuracao</title><style>
 body{margin:0;background:#0d1420;color:#e6ecf6;font:14px/1.5 "Segoe UI",sans-serif}
 .topo{padding:18px 26px;border-bottom:1px solid #243247;display:flex;gap:18px;align-items:baseline}
 h1{margin:0;font-size:19px}.m{color:#93a3bb;font-size:13px;margin-left:auto}
@@ -982,6 +991,15 @@ $script:VistosNesteCiclo = @{}
 $script:Alertas = @{}          # "uf-cargo" -> @{ desde; pct }
 $script:Impressao = @{}        # "uf-cargo" -> impressao do ultimo boletim visto
 $script:RegressaoVista = @{}   # "uf-cargo" -> quantas vezes o numero menor insistiu
+$script:SelecaoRuimAvisada = ""  # ultimo valor invalido de SELECAO ja reclamado
+# Quem esta gravando: maquina + processo. Serve para perceber duas coletas
+# apontadas para a mesma pasta, que e o jeito errado de fazer redundancia.
+# So o NOME DA MAQUINA, sem o numero do processo: o INICIAR.bat reinicia
+# sozinho quando cai, e o processo novo tem PID novo. Comparando PID, cada
+# reinicio gritaria "outra coleta" sem ter nenhuma - e aviso que mente
+# algumas vezes deixa de ser lido na vez que importa.
+$script:Dono = "$([Environment]::MachineName)"
+if (-not $script:Dono) { $script:Dono = "maquina-sem-nome" }
 $script:Ciclo = 0
 
 function Ler-Selecao {
@@ -1010,7 +1028,14 @@ function Ler-Selecao {
     # qualquer no ar sem ninguem pedir. Melhor voltar ao padrao configurado
     # e dizer em voz alta que o arquivo de selecao esta com lixo.
     if ($uf -ne $cfg.selecao.padrao) {
-        Escrever-Log "selecao '$uf' nao existe na lista de pracas: usando o padrao '$($cfg.selecao.padrao)'" "AVISO"
+        # Uma vez por valor ruim, e nao uma vez por chamada: esta funcao e
+        # consultada dezenas de vezes por ciclo (uma por praca, por cargo),
+        # e o mesmo aviso repetido 41 vezes empurra o resumo do ciclo para
+        # fora da tela. Aviso que soterra a tela deixa de ser aviso.
+        if ($script:SelecaoRuimAvisada -ne $uf) {
+            $script:SelecaoRuimAvisada = $uf
+            Escrever-Log "selecao '$uf' nao existe na lista de pracas: usando o padrao '$($cfg.selecao.padrao)'" "AVISO"
+        }
         foreach ($p in $cfg.selecao.pracas) { if ($p.uf -eq $cfg.selecao.padrao) { return $p } }
     }
     return $cfg.selecao.pracas[0]
@@ -1048,6 +1073,11 @@ function Marcar-Alerta {
     $script:UltimaMudanca = Get-Date
     $script:Alertas[$chave] = @{
         desde = (Get-Date -Format "HH:mm:ss")
+        # O instante de verdade, e nao so a hora. Guardar "HH:mm:ss" e
+        # reconstruir depois com ParseExact monta a data de HOJE: um alerta
+        # aceso as 23:58 vira, a 00:05, um alerta do FUTURO, a diferenca da
+        # negativa e ele nunca expira. A apuracao passa da meia-noite.
+        quando = (Get-Date)
         pct   = (Formatar-Percentual $Boletim.PctUrnas)
     }
 }
@@ -1068,8 +1098,11 @@ function Expirar-Alertas {
     $agora = Get-Date
     foreach ($chave in @($script:Alertas.Keys)) {
         try {
-            $desde = [datetime]::ParseExact($script:Alertas[$chave].desde, "HH:mm:ss", $null)
-            if (($agora - $desde).TotalSeconds -gt $segundos) { $script:Alertas.Remove($chave) }
+            $alerta = $script:Alertas[$chave]
+            $quando = $null
+            if ($alerta.ContainsKey("quando")) { $quando = $alerta.quando }
+            if ($null -eq $quando) { continue }
+            if (($agora - $quando).TotalSeconds -gt $segundos) { $script:Alertas.Remove($chave) }
         } catch { }
     }
 }
@@ -1139,12 +1172,17 @@ function Buscar-Praca {
         $regrediu = ($b.PctUrnas -lt $velho.PctUrnas - 0.001) -or
                     ($votosNovos -lt $votosVelhos -and $velho.Candidatos.Count -gt 0)
         if ($regrediu) {
-            $impressao = Obter-Impressao-Boletim $b
+            # NAO chamar de $impressao: no PowerShell seria a MESMA variavel
+            # que $Impressao, a tabela de escopo script. Hoje esta funcao nao
+            # le essa tabela, entao nao quebra - mas a proxima edicao que
+            # ler vai receber uma string no lugar de um hashtable, em
+            # silencio. Ja aconteceu duas vezes neste arquivo.
+            $marcaBoletim = Obter-Impressao-Boletim $b
             if ($script:RegressaoVista.ContainsKey($chave) -and
-                $script:RegressaoVista[$chave].impressao -eq $impressao) {
+                $script:RegressaoVista[$chave].impressao -eq $marcaBoletim) {
                 $script:RegressaoVista[$chave].vezes = $script:RegressaoVista[$chave].vezes + 1
             } else {
-                $script:RegressaoVista[$chave] = @{ impressao = $impressao; vezes = 1 }
+                $script:RegressaoVista[$chave] = @{ impressao = $marcaBoletim; vezes = 1 }
             }
             $vezes = $script:RegressaoVista[$chave].vezes
             if ($vezes -lt 3) {
@@ -1437,7 +1475,7 @@ function Descobrir-Codigos {
         return $null
     }
 
-    $achado = $null
+    $encontrado = $null
     foreach ($pleito in $bruto.pl) {
         if (-not (Tem-Propriedade $pleito "e")) { continue }
         foreach ($eleicao in $pleito.e) {
@@ -1450,7 +1488,7 @@ function Descobrir-Codigos {
             }
             $geral = ($cargos -contains "1") -or ($cargos -contains "3") -or ($cargos -contains "5")
             if (-not $geral) { continue }
-            if ($null -eq $achado) {
+            if ($null -eq $encontrado) {
                 # O CICLO vem da DATA do pleito, e nao do campo "c" do
                 # arquivo. Motivo concreto: em 22/09/2026 o ele-c.json do
                 # ambiente oficial ainda trazia c="ele2024" enquanto ja
@@ -1459,10 +1497,10 @@ function Descobrir-Codigos {
                 # montaria .../ele2024/... na noite da apuracao e daria 404
                 # nas 55 pracas. A data nao mente: 06/10/2024 -> ele2024,
                 # 04/10/2026 -> ele2026, que e o que o TSE de fato publica.
-                $ciclo = "$(Obter-Campo $bruto @('c') '')"
+                $cicloDerivado = "$(Obter-Campo $bruto @('c') '')"
                 $dataPleito = "$(Obter-Campo $pleito @('dt') '')"
-                if ($dataPleito -match '(\d{4})\s*$') { $ciclo = "ele$($Matches[1])" }
-                $achado = @{
+                if ($dataPleito -match '(\d{4})\s*$') { $cicloDerivado = "ele$($Matches[1])" }
+                $encontrado = @{
                     ciclo   = $ciclo
                     pleito  = "$(Obter-Campo $pleito @('cd') '')"
                     eleicao = "$(Obter-Campo $eleicao @('cd') '')"
@@ -1471,13 +1509,13 @@ function Descobrir-Codigos {
                 }
             }
             foreach ($num in @("1", "3", "5")) {
-                if ($cargos -contains $num) { $achado.cargos[$num] = "$(Obter-Campo $eleicao @('cd') '')" }
+                if ($cargos -contains $num) { $encontrado.cargos[$num] = "$(Obter-Campo $eleicao @('cd') '')" }
             }
-            $achado.nomes += "$(Obter-Campo $eleicao @('cd') '') = " +
+            $encontrado.nomes += "$(Obter-Campo $eleicao @('cd') '') = " +
                              (Decodificar-Entidades "$(Obter-Campo $eleicao @('nm') '')")
         }
     }
-    return $achado
+    return $encontrado
 }
 
 function Garantir-Codigos {
@@ -1499,20 +1537,20 @@ function Garantir-Codigos {
     if (-not $semCodigo) { return $true }
 
     Escrever-Log "codigos ausentes no config.json - perguntando ao TSE" "AVISO"
-    $achado = Descobrir-Codigos $cfg.tse.base_url
-    if ($null -eq $achado) { return $false }
+    $encontrado = Descobrir-Codigos $cfg.tse.base_url
+    if ($null -eq $encontrado) { return $false }
 
-    if ($achado.ciclo) { $cfg.tse.ciclo = $achado.ciclo }
-    $cfg.tse.pleito = $achado.pleito
-    $cfg.tse.eleicao = $achado.eleicao
+    if ($encontrado.ciclo) { $cfg.tse.ciclo = $encontrado.ciclo }
+    $cfg.tse.pleito = $encontrado.pleito
+    $cfg.tse.eleicao = $encontrado.eleicao
     $mapa = @{}
-    foreach ($num in $achado.cargos.Keys) { $mapa[$num] = $achado.cargos[$num] }
+    foreach ($num in $encontrado.cargos.Keys) { $mapa[$num] = $encontrado.cargos[$num] }
     $cfg.tse.eleicao_por_cargo = [pscustomobject] $mapa
-    Escrever-Log "o TSE respondeu: ciclo $($cfg.tse.ciclo), pleito $($achado.pleito)" "OK"
-    foreach ($nome in $achado.nomes) { Escrever-Log "  eleicao $nome" }
+    Escrever-Log "o TSE respondeu: ciclo $($cfg.tse.ciclo), pleito $($encontrado.pleito)" "OK"
+    foreach ($nome in $encontrado.nomes) { Escrever-Log "  eleicao $nome" }
     foreach ($num in @("1", "3", "5")) {
-        if ($achado.cargos.ContainsKey($num)) {
-            Escrever-Log "  cargo $num -> eleicao $($achado.cargos[$num])"
+        if ($encontrado.cargos.ContainsKey($num)) {
+            Escrever-Log "  cargo $num -> eleicao $($encontrado.cargos[$num])"
         }
     }
     # NAO grava no config.json de proposito. Codigo descoberto e gravado
@@ -2571,15 +2609,15 @@ do {
             # por que. Pergunta ao TSE UMA vez; se o codigo mudou, segue a
             # noite com o certo em vez de esperar alguem perceber.
             $antes = "$($cfg.tse.pleito)/$($cfg.tse.eleicao)"
-            $achado = Descobrir-Codigos $cfg.tse.base_url
-            if ($null -ne $achado -and "$($achado.pleito)/$($achado.eleicao)" -ne $antes) {
-                if ($achado.ciclo) { $cfg.tse.ciclo = $achado.ciclo }
-                $cfg.tse.pleito = $achado.pleito
-                $cfg.tse.eleicao = $achado.eleicao
+            $encontrado = Descobrir-Codigos $cfg.tse.base_url
+            if ($null -ne $encontrado -and "$($encontrado.pleito)/$($encontrado.eleicao)" -ne $antes) {
+                if ($encontrado.ciclo) { $cfg.tse.ciclo = $encontrado.ciclo }
+                $cfg.tse.pleito = $encontrado.pleito
+                $cfg.tse.eleicao = $encontrado.eleicao
                 $mapa = @{}
-                foreach ($num in $achado.cargos.Keys) { $mapa[$num] = $achado.cargos[$num] }
+                foreach ($num in $encontrado.cargos.Keys) { $mapa[$num] = $encontrado.cargos[$num] }
                 $cfg.tse.eleicao_por_cargo = [pscustomobject] $mapa
-                Escrever-Log "o codigo do config estava velho: $antes virou $($achado.pleito)/$($achado.eleicao)" "OK"
+                Escrever-Log "o codigo do config estava velho: $antes virou $($encontrado.pleito)/$($encontrado.eleicao)" "OK"
                 Escrever-Log "seguindo com o codigo que o TSE publica agora. Caminho: $(Montar-Url 'br' 1)" "OK"
             } else {
                 Write-Host ""
@@ -2597,8 +2635,28 @@ do {
         # a coleta continua viva: so e gravado quando o ciclo fecha inteiro.
         # Ciclo que estoura nao bate - e o painel acusa em poucos segundos,
         # antes que os numeros congelados do GC virem erro no ar.
+        # Duas maquinas gravando na MESMA pasta de rede e o acidente mais
+        # provavel de quem monta redundancia: as duas reescrevem a mesma
+        # tarja, com selecoes possivelmente diferentes, e o que vai ao ar
+        # passa a ser quem gravou por ultimo. Nao da para impedir daqui -
+        # mas da para gritar, que e melhor do que descobrir no ar.
+        $arqBatida = Join-Path $PastaSaida "coleta.json"
+        if (Test-Path $arqBatida) {
+            try {
+                $anterior = Get-Content $arqBatida -Raw -Encoding UTF8 | ConvertFrom-Json
+                $donoAnterior = ""
+                if (Tem-Propriedade $anterior "dono") { $donoAnterior = "$($anterior.dono)" }
+                if ($donoAnterior -and $donoAnterior -ne $script:Dono) {
+                    Escrever-Log ("OUTRA COLETA esta gravando nesta mesma pasta: '$donoAnterior'. " +
+                                  "As duas vao brigar pela mesma tarja e o ar fica com quem gravar " +
+                                  "por ultimo. Feche uma, ou aponte cada maquina para a sua pasta.") "ERRO"
+                }
+            } catch { }
+        }
+
         $batida = [ordered]@{
             atualizado_em = (Get-Date -Format "dd/MM/yyyy HH:mm:ss")
+            dono = $script:Dono
             ciclo = $script:Ciclo
             modo = $Modo
             intervalo_segundos = [int] $cfg.intervalo_segundos

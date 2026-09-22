@@ -395,16 +395,12 @@ function Montar-Pagina {
                 $frase = "<b>nenhum numero novo</b> em $ciclos ciclos - a coleta esta viva, " +
                          "mas o TSE nao mudou nada ainda"
             }
-            if ($modoBat -eq "ENSAIO") {
-                # No ensaio nao existe TSE: dizer "numeros do TSE" aqui
-                # daria a impressao errada de que o teste ja passou.
-                $classe = "placar ensaio"
-                $frase = "MODO ENSAIO - dados inventados, sem internet. " +
-                         "<b>$qtd</b> numeros novos em $ciclos ciclos$desde"
-                if ($qtd -eq 0 -and $ciclos -gt 3) {
-                    $frase = "MODO ENSAIO - dados inventados, sem internet. " +
-                             "<b>nenhum numero novo</b> em $ciclos ciclos"
-                }
+            if ($modoBat -eq "TESTE") {
+                # Simulado do TSE: o dado e real na forma e ficticio no
+                # conteudo. Dizer so "numeros do TSE" aqui daria a impressao
+                # de que isto ja e a apuracao.
+                $classe = "placar teste"
+                $frase = "SIMULADO do TSE (fase S, nao e resultado). " + $frase
             }
             $placar = "<div class='$classe'><span>$frase</span></div>"
         } catch { }
@@ -594,9 +590,9 @@ u.p{color:#1d5aa8}
 .placar.quieto{background:#f6f7f9;border-color:#dfe3e8;color:#5c6670}
 .placar.quieto b{color:#39424b}
 .placar.quieto::before{background:#9aa4ae;animation:none}
-.placar.ensaio{background:#fdf6e6;border-color:#e8d5a3;color:#7a5a12}
-.placar.ensaio b{color:#5a4109}
-.placar.ensaio::before{background:#c79a20}
+.placar.teste{background:#fdf6e6;border-color:#e8d5a3;color:#7a5a12}
+.placar.teste b{color:#5a4109}
+.placar.teste::before{background:#c79a20}
 .alerta{background:#fff4ec;border:1px solid #f3c9a8;color:#8f4a12;padding:13px 17px;
   border-radius:10px;margin-bottom:20px;font-size:14px;display:flex;gap:10px;align-items:baseline}
 .alerta b{color:#5f2f06}

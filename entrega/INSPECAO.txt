@@ -1,5 +1,137 @@
 ===========================================================================
- LAUDO DE INSPECAO - gctse 4.3
+ LAUDO DE INSPECAO - gctse 4.5
+ 22/09/2026 - revisao completa, na vespera do teste valendo
+===========================================================================
+
+ Revisao linha a linha das duas partes que rodam no ar, mais 34
+ verificacoes automaticas. Cinco defeitos encontrados e corrigidos.
+
+ DEFEITO 1 - alerta que nunca apagava depois da meia-noite
+
+   O alerta guardava so "HH:mm:ss" e reconstruia a data na hora de
+   expirar, o que monta sempre a data de HOJE. Um alerta aceso as 23:58
+   virava, a 00:05, um alerta do FUTURO: a diferenca dava negativa e ele
+   ficava aceso para sempre, com o sino mentindo "chegou numero novo".
+
+   A apuracao passa da meia-noite. Agora guarda o instante, nao a hora.
+
+ DEFEITO 2 - aviso de selecao invalida saindo 41 vezes
+
+   Consequencia do proprio aviso de voto anulado da 4.3: a funcao que
+   descobre o que esta no ar consulta a selecao uma vez por praca, por
+   cargo. Com um SELECAO.txt com lixo, o mesmo aviso saia 41 vezes num
+   ciclo e empurrava o resumo para fora da tela. Agora sai uma vez por
+   valor ruim.
+
+ DEFEITO 3 - descongelar demorava um ciclo inteiro
+
+   Sair do congelamento so entrava no ar no ciclo seguinte: ate 20
+   segundos com o numero velho na tela depois de alguem ter mandado
+   liberar. Agora descongelar conta como troca e entra em ~1 segundo.
+
+ DEFEITO 4 - quatro colisoes de maiuscula/minuscula em variaveis
+
+   No PowerShell $achado e $Achado sao a MESMA variavel. Este arquivo ja
+   quebrou duas vezes por isso ($teste/$Teste e $rotuloEleito/
+   $RotuloEleito). Uma varredura encontrou mais quatro pares latentes -
+   nenhum quebrava hoje, todos quebrariam na proxima edicao que lesse a
+   variavel de cima dentro da funcao. Renomeados. A varredura agora faz
+   parte da bateria e acusa zero.
+
+ DEFEITO 5 - caminho de log com barra invertida literal
+
+   "logs\gctse-data.log" montado com barra crua. Funciona no Windows,
+   mas e a unica linha do programa que assumia o separador. Trocada por
+   Join-Path.
+
+ NOVO - aviso de duas coletas na mesma pasta
+
+   Duas maquinas gravando na MESMA pasta de rede e o acidente mais
+   provavel de quem monta redundancia: as duas reescrevem a mesma tarja,
+   com selecoes possivelmente diferentes, e vai ao ar quem gravou por
+   ultimo. Nao da para impedir daqui, mas da para gritar. A batida do
+   coracao passou a carregar o nome da maquina, e quem encontra outro
+   nome reclama em ERRO.
+
+   Compara so o NOME DA MAQUINA, sem o numero do processo: o INICIAR.bat
+   reinicia sozinho quando cai, e comparar processo faria cada reinicio
+   gritar sem ter nenhuma outra coleta. Aviso que mente algumas vezes
+   deixa de ser lido na vez que importa.
+
+ AS 34 VERIFICACOES
+
+   ARQUIVOS
+     sintaxe dos dois .ps1                                          OK
+     BOM UTF-8 nos dois (sem ele os acentos corrompem)              OK
+     todos os .bat com quebra de linha do Windows                   OK
+     config.json valido                                             OK
+     zero colisao de maiuscula/minuscula em variavel                OK
+
+   AMANHA - TESTE.bat com o simulado
+     le o ambiente de simulado, sem erro                            OK
+     selo PARCIAL - NAO OFICIAL na tarja                            OK
+     validador: 36 conferencias, 0 divergencia                      OK
+
+   DOMINGO - INICIAR.bat oficial
+     descobre pleito e eleicao sozinho, com o config em "000"       OK
+     ciclo derivado da DATA (c="ele2024" no arquivo nao engana)     OK
+     mapa por cargo: 1->federal, 3 e 5->estadual                    OK
+     selo vazio (oficial)                                           OK
+     validador: 36 conferencias, 0 divergencia                      OK
+
+   GUARDAS
+     oficial RECUSA fase S e publica tarja vazia com o nome certo   OK
+     selecao com lixo avisa 1 vez e cai no padrao                   OK
+     10 casos de dado estragado mantem as 23 colunas                OK
+       (sem candidato, nome nulo, validos zero, entidades HTML,
+        sem bloco s, sem pvap, eleito por st, pagina HTML de erro
+        no lugar do JSON, JSON cortado no meio)
+     anti-regressao: segura 80%, aceita 35% na 3a confirmacao       OK
+     gravacao impedida: 4 tentativas, perde o arquivo e nao o ciclo OK
+     reinicio na mesma maquina nao avisa coleta dupla               OK
+     outra maquina na mesma pasta: grita                            OK
+
+   PAINEL
+     responde e mostra a versao de verdade no rodape                OK
+     2 cliques: o 1o NAO vai ao ar                                  OK
+     faixa amarela de previa pendente                               OK
+     COLOCAR NO AR troca a tarja e limpa a previa                   OK
+     1 clique vai direto ao ar                                      OK
+     congelado segura a troca                                       OK
+     descongelar entra na hora                                      OK
+     zero falha de requisicao                                       OK
+
+   TARJAS
+     ordem travada: 3 tarjas conferem                               OK
+     colunas 23 / 23 / 29                                           OK
+     19 primeiras identicas nos tres modelos                        OK
+
+   CORRIDA
+     6 ciclos com config de producao, 0 erro                        OK
+     61 requisicoes por minuto (limite do TSE: 80)                  OK
+     0 arquivos .tmp sobrando                                       OK
+     80 KB na pasta TARJAS, log de 32 KB                            OK
+
+ O QUE ESTE LAUDO NAO PROVA - leia antes de confiar
+
+   NADA aqui foi rodado contra o TSE de verdade. O ambiente onde este
+   sistema e desenvolvido nao tem saida para resultados.tse.jus.br.
+
+   O que foi usado e uma arvore reproduzida a partir dos dois CONFERIR
+   de 22/09 - estrutura real, com federacoes, coligacoes, suplentes,
+   nomes de teste com aspas escapadas e o campo dvt. Isso prova que o
+   sistema le o formato certo e se comporta como descrito. NAO prova
+   latencia, volume, nem o TSE sob carga numa noite de apuracao.
+
+   Quem fecha essa lacuna e o VALIDAR-SIMULADO.bat rodando com dado real
+   na janela de teste. Enquanto ele nao rodar, "esta tudo certo" e uma
+   afirmacao sobre o codigo, nao sobre a cadeia inteira.
+
+   Continua sem existir: segundo turno (zero linhas), e procedimento
+   escrito de troca entre as duas maquinas.
+
+===========================================================================
+ LAUDO ANTERIOR - gctse 4.3
  22/09/2026, com o CONFERIR das 15:16 (maquina AVELL)
 ===========================================================================
 
