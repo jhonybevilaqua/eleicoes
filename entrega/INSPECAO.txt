@@ -1,5 +1,109 @@
 ===========================================================================
- LAUDO DE INSPECAO - gctse 2.1
+ LAUDO DE INSPECAO - gctse 4.0
+ 22/09/2026, na janela de simulado do TSE
+===========================================================================
+
+ O QUE MUDOU NA 4.0, E POR QUE
+
+ 1. Sai o modo de ensaio (dados inventados).
+
+    Ele servia para treinar sem internet. Agora, com a cena montada e o
+    dia da eleicao proximo, ele so oferece um jeito de por candidato
+    inventado no ar por engano. Um duplo clique errado na noite da
+    apuracao custa caro demais para um recurso que ja cumpriu o papel.
+    Sobraram dois modos: TESTE.bat (simulado do TSE) e INICIAR.bat
+    (oficial). Nenhum dos dois inventa dado.
+
+ 2. Os codigos do pleito deixam de ser trabalho manual.
+
+    Ate a 3.7 os codigos da eleicao oficial estavam "000" no config.json,
+    e alguem teria que abrir o arquivo no domingo a noite e digitar o
+    numero certo, com o telejornal no ar. Agora, faltando o codigo, o
+    programa le o ele-c.json do proprio TSE e resolve sozinho - sabendo
+    separar a eleicao geral das suplementares de prefeito, que aparecem
+    na mesma lista com data de 2026. O criterio e o CARGO (Presidente,
+    Governador, Senador), nao a data.
+
+    Nao grava o que descobriu no config.json, de proposito: codigo
+    descoberto e gravado vira codigo errado gravado no dia em que o TSE
+    corrige o dele.
+
+ 3. Codigo do config que envelheceu passa a se consertar sozinho.
+
+    O TSE troca o codigo do simulado entre as janelas de teste. Quem
+    partisse com o codigo velho tomava 404 nas 55 pracas e ficava com a
+    tela vazia sem nada explicando. Agora, primeiro ciclo sem NENHUM
+    boletim dispara uma pergunta ao TSE; se o codigo mudou, a coleta
+    segue com o novo. Custa um ciclo (20s), e nao a noite.
+
+ 4. DEFEITO CORRIGIDO: o validador aprovava sem ter conferido.
+
+    O -Validar rodava ANTES da resolucao dos codigos. Com os codigos em
+    "000" ele montava URL invalida, nao lia boletim nenhum e terminava
+    imprimindo "NENHUMA DIVERGENCIA". Alguem rodaria o VALIDAR-OFICIAL
+    no domingo, leria o verde e iria para o ar confiando numa conta que
+    nunca foi feita.
+
+    Agora o validador resolve os codigos como a coleta, conta quantas
+    tarjas realmente conferiu, diz "NENHUMA DIVERGENCIA em 3 de 3
+    tarjas", lista as que nao conseguiu ler, e quando nao conferiu nada
+    diz exatamente isso em vez de aprovar.
+
+ 5. DEFEITO CORRIGIDO: gravacao presa derrubava a coleta inteira.
+
+    O LiveBoard le o arquivo a cada 2 ou 3 segundos. No Windows, um
+    leitor que abra sem compartilhar escrita faz a promocao do .tmp
+    falhar. A excecao subia e matava o ciclo - as outras tarjas, as
+    listas e os alertas junto. Agora tenta quatro vezes, e se ainda
+    assim nao der, perde ESSA gravacao: a impressao nao e guardada,
+    entao o proximo ciclo reescreve sozinho.
+
+ 6. Falha de clique no painel deixa de ser silenciosa.
+
+    O painel engolia erro de requisicao para nao cair. Mas se o clique
+    de COLOCAR NO AR falhasse, a pagina voltava normal e o operador
+    acreditava que tinha trocado. Agora a falha aparece em vermelho na
+    janela do painel.
+
+ 7. As tarjas de exemplo da pasta TARJAS estavam com 19 colunas (3.4).
+
+    Quem montasse a cena por elas nao teria o selo de ELEITO nem os
+    campos de foto na arvore do DataSource. Foram regravadas vazias, com
+    as 21 e 27 colunas da ordem travada.
+
+ O QUE FOI VERIFICADO NA 4.0
+
+   Arvore do TSE reproduzida (55 boletins, formato 2026, ele-c.json
+   com suplementar de prefeito no meio para confundir):
+
+   Descoberta automatica a partir de "000", cargo por cargo         OK
+   Config com codigo VELHO: se recupera no 2o ciclo                 OK
+   Guarda de fase: oficial RECUSA fase S, publica tarja vazia       OK
+   Guarda de fase: TESTE aceita fase S, com selo NAO OFICIAL        OK
+   Ordem travada: 21/21/27 colunas, 19 primeiras identicas          OK
+   Validador: 36 conferencias, 0 divergencia                        OK
+   Validador sem conseguir ler: diz que NAO conferiu nada           OK
+   10 casos de dado degenerado, inclusive pagina HTML de erro
+     e JSON cortado no meio                                         OK
+   Anti-regressao: segura 80%, aceita 35% na 3a confirmacao         OK
+   Gravacao impedida: 4 tentativas, perde o arquivo e nao o ciclo   OK
+   Painel: previa, aprovar, congelar, descongelar                   OK
+   Selecao com lixo cai no padrao, nao num estado qualquer          OK
+   Corrida com config de producao: 5 ciclos, 61 req/min,
+     zero erro, zero .tmp sobrando                                  OK
+
+ O QUE ESTE LAUDO NAO PROVA
+
+   Nada aqui foi rodado contra o TSE de verdade. O ambiente onde este
+   sistema e desenvolvido nao tem saida para resultados.tse.jus.br.
+   Tudo acima prova que o sistema le o formato e se comporta como
+   descrito; nao prova latencia, volume, nem o TSE sob carga.
+
+   Quem fecha essa lacuna e o VALIDAR-SIMULADO.bat rodando na janela de
+   teste, com dado real.
+
+===========================================================================
+ LAUDO ANTERIOR - gctse 2.1
  15/09/2026, na vespera do simulado do TSE
 ===========================================================================
 

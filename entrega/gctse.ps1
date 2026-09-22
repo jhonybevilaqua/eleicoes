@@ -7,13 +7,11 @@
     Escrito para Windows PowerShell 5.1 (o que ja vem no Windows), sem
     recursos de versoes mais novas.
 
-        .\gctse.ps1 -Preencher    enche TARJAS com exemplos, para montar a cena
         .\gctse.ps1 -Descobrir    mostra os codigos do pleito
         .\gctse.ps1 -Conferir     testa a conexao e grava CONFERIR.txt
         .\gctse.ps1 -Validar      confere numero por numero contra o TSE
         .\gctse.ps1 -Fotos        lista os nomes de arquivo de foto aceitos
         .\gctse.ps1 -Campos       mostra as colunas dos arquivos, numeradas
-        .\gctse.ps1 -Ensaio       dados ficticios, nao consulta o TSE
         .\gctse.ps1 -Teste        aceita o simulado do TSE (fase S)
         .\gctse.ps1               no ar: so boletim oficial
 #>
@@ -25,18 +23,15 @@ param(
     [switch] $Validar,
     [switch] $Fotos,
     [switch] $Campos,
-    [switch] $Preencher,
-    [switch] $Ensaio,
     [switch] $Teste,
     [switch] $UmaVez,
-    [int]    $DuracaoEnsaio = 600,
     [string] $Config = "config.json"
 )
 
 # Versao impressa na partida e no painel. Sem carimbo, "qual versao esta
 # rodando ai?" so se responde abrindo arquivo e comparando a olho - e no
 # meio de um teste com janela de horario ninguem faz isso.
-$Versao = "3.7 - 16/09/2026"
+$Versao = "4.0 - 22/09/2026"
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
@@ -147,7 +142,32 @@ function Escrever-Arquivo {
     $temporario = "$Caminho.tmp"
     $utf8 = New-Object System.Text.UTF8Encoding($false)   # sem BOM
     [IO.File]::WriteAllText($temporario, $Conteudo, $utf8)
-    Move-Item -Path $temporario -Destination $Caminho -Force
+    # O LiveBoard le este arquivo a cada 2 ou 3 segundos. No Windows, um
+    # leitor que abra sem compartilhar escrita faz o Move-Item falhar - e
+    # sem esta protecao a excecao subia e derrubava a COLETA INTEIRA por
+    # causa de uma colisao de milissegundos. Tenta de novo algumas vezes;
+    # se ainda assim nao der, perde-se esta gravacao e nao a noite: o
+    # proximo ciclo reescreve, porque a impressao so e guardada em caso
+    # de sucesso.
+    $tentativas = 0
+    while ($true) {
+        $tentativas++
+        try {
+            Move-Item -Path $temporario -Destination $Caminho -Force -ErrorAction Stop
+            return $true
+        } catch {
+            if ($tentativas -ge 4) {
+                Escrever-Log "nao consegui gravar $Caminho : $($_.Exception.Message)" "AVISO"
+                try { Remove-Item -Path $temporario -Force -ErrorAction SilentlyContinue } catch { }
+                # Falso, e nao excecao: perder ESTA gravacao nao pode levar
+                # junto o resto do ciclo (as outras tarjas, as listas, os
+                # alertas). Quem chama nao guarda a impressao, entao o
+                # proximo ciclo tenta de novo sozinho.
+                return $false
+            }
+            Start-Sleep -Milliseconds (60 * $tentativas)
+        }
+    }
 }
 
 function Tem-Propriedade {
@@ -596,46 +616,6 @@ function Normalizar-Boletim {
     }
 }
 
-# ------------------------------------------------------------------ simulador
-
-$ScriptInicio = Get-Date
-function Gerar-Simulado {
-    param([string] $Abrangencia, [int] $Cargo, [string] $Praca)
-    if ($DuracaoEnsaio -le 0) {
-        $pct = 63.0    # retrato de meia apuracao, para montar a cena
-    } else {
-        $decorrido = ((Get-Date) - $ScriptInicio).TotalSeconds / $DuracaoEnsaio
-        $pct = [math]::Round(100.0 * [math]::Min(1.0, $decorrido), 2)
-    }
-
-    $semente = ($Abrangencia + $Cargo).GetHashCode()
-    $rnd = New-Object System.Random($semente)
-    $nomes = @("CANDIDATO ENSAIO A", "CANDIDATO ENSAIO B", "CANDIDATO ENSAIO C", "CANDIDATO ENSAIO D")
-    $siglas = @("PVL", "PDR", "PSU", "PNA")
-
-    $forcas = @(); for ($i = 0; $i -lt $nomes.Count; $i++) { $forcas += $rnd.NextDouble() * 0.5 + 0.5 }
-    $soma = ($forcas | Measure-Object -Sum).Sum
-    $validos = [int] (4000000 * $pct / 100.0)
-
-    $cands = @()
-    for ($i = 0; $i -lt $nomes.Count; $i++) {
-        $votos = [int] ($validos * $forcas[$i] / $soma)
-        $perc = 0.0
-        if ($validos -gt 0) { $perc = [math]::Round(100.0 * $votos / $validos, 2) }
-        $cands += [pscustomobject]@{
-            Numero = "$((($i + 1) * 11))"; Nome = $nomes[$i]; Partido = $siglas[$i]
-            Votos = $votos; Percentual = $perc
-            Eleito = $(if ($pct -ge 100 -and $i -eq 0) { "1" } else { "0" })
-        }
-    }
-    $cands = @($cands | Sort-Object -Property @{Expression = "Votos"; Descending = $true})
-
-    return [pscustomobject]@{
-        Fase = "S"; Oficial = $false; Praca = $Praca; PctUrnas = $pct
-        Geracao = (Get-Date -Format "dd/MM/yyyy HH:mm:ss"); Candidatos = $cands
-    }
-}
-
 # --------------------------------------------------------------- montar tarja
 
 $ExtensoesFoto = @(".png", ".jpg", ".jpeg", ".webp", ".bmp")
@@ -976,7 +956,7 @@ $faixa
 $corpo
 </tbody></table></main></body></html>
 "@
-    Escrever-Arquivo (Join-Path $PastaSaida "painel.html") $html
+    $null = Escrever-Arquivo (Join-Path $PastaSaida "painel.html") $html
 }
 
 # ------------------------------------------------------------------- selecao
@@ -1105,7 +1085,7 @@ function Escrever-Alertas {
         presidente = $pres
         estados = $estados
     }
-    Escrever-Arquivo (Join-Path $PastaSaida $cfg.alertas.arquivo) ($corpo | ConvertTo-Json -Depth 6)
+    $null = Escrever-Arquivo (Join-Path $PastaSaida $cfg.alertas.arquivo) ($corpo | ConvertTo-Json -Depth 6)
 }
 
 function Buscar-Praca {
@@ -1120,16 +1100,12 @@ function Buscar-Praca {
     $script:VistosNesteCiclo[$chave] = $true
 
     $b = $null
-    if ($Ensaio) {
-        $b = Gerar-Simulado $Uf $Cargo $Nome
-    } else {
-        $bruto = Obter-Boletim (Montar-Url $Uf $Cargo)
-        if ($bruto -eq "SEM-MUDANCA") {
-            if ($script:CacheBoletins.ContainsKey($chave)) { return $script:CacheBoletins[$chave] }
-            return $null
-        }
-        if ($null -ne $bruto) { $b = Normalizar-Boletim $bruto $Nome }
+    $bruto = Obter-Boletim (Montar-Url $Uf $Cargo)
+    if ($bruto -eq "SEM-MUDANCA") {
+        if ($script:CacheBoletins.ContainsKey($chave)) { return $script:CacheBoletins[$chave] }
+        return $null
     }
+    if ($null -ne $bruto) { $b = Normalizar-Boletim $bruto $Nome }
     if ($null -ne $b -and (-not $b.Oficial) -and $Modo -eq "AR") { return $null }
 
     # ANTI-REGRESSAO. O TSE serve de CDN com varios pontos de presenca, e um
@@ -1216,9 +1192,10 @@ function Publicar-Selecionada {
         $json = ($(Montar-Tarja $b $saida) | ConvertTo-Json -Depth 5)
         $hash = Obter-Hash $json
         if ($Impressoes[$saida.arquivo] -ne $hash) {
-            Escrever-Arquivo (Join-Path $PastaSaida "$($saida.arquivo).json") $json
-            $Impressoes[$saida.arquivo] = $hash
-            $publicados += $saida.arquivo
+            if (Escrever-Arquivo (Join-Path $PastaSaida "$($saida.arquivo).json") $json) {
+                $Impressoes[$saida.arquivo] = $hash
+                $publicados += $saida.arquivo
+            }
         }
     }
     return $publicados
@@ -1252,10 +1229,11 @@ function Executar-Ciclo {
                 $situacao = "congelada"
             } elseif ($Impressoes[$tarja.arquivo] -eq $hash) {
                 $situacao = "sem mudanca"
-            } else {
-                Escrever-Arquivo (Join-Path $PastaSaida "$($tarja.arquivo).json") $json
+            } elseif (Escrever-Arquivo (Join-Path $PastaSaida "$($tarja.arquivo).json") $json) {
                 $Impressoes[$tarja.arquivo] = $hash
                 $situacao = "publicado"
+            } else {
+                $situacao = "gravacao falhou"
             }
             $p1 = ""; $q1 = ""; $p2 = ""; $q2 = ""
             if ($b.Candidatos.Count -ge 1) {
@@ -1330,8 +1308,9 @@ function Executar-Ciclo {
             $json = ($lista | ConvertTo-Json -Depth 6)
             $hash = Obter-Hash $json
             if ($Impressoes[$listaCfg.arquivo] -ne $hash) {
-                Escrever-Arquivo (Join-Path $PastaSaida "$($listaCfg.arquivo).json") $json
-                $Impressoes[$listaCfg.arquivo] = $hash
+                if (Escrever-Arquivo (Join-Path $PastaSaida "$($listaCfg.arquivo).json") $json) {
+                    $Impressoes[$listaCfg.arquivo] = $hash
+                }
             }
             $linhas += [pscustomobject]@{
                 Tarja = $listaCfg.arquivo; Praca = "$($lista.com_dado) de $($lista.total) pracas"
@@ -1359,9 +1338,133 @@ function Executar-Ciclo {
     return $linhas
 }
 
+# ------------------------------------------------- descoberta dos codigos
+
+function Descobrir-Codigos {
+    # No dia da eleicao os codigos de pleito e de eleicao sao os do TSE, e
+    # ate a vespera ninguem sabe quais sao. A alternativa era alguem abrir o
+    # config.json no domingo a noite e digitar numero na mao, com o telejornal
+    # comecando. Isto le o ele-c.json do proprio TSE e resolve sozinho.
+    #
+    # Data de 2026 NAO identifica a eleicao geral: a lista do TSE vem cheia
+    # de eleicao suplementar de prefeito com data de 2026. O que identifica
+    # sao os CARGOS - Presidente (1), Governador (3), Senador (5). Presidente
+    # fica numa eleicao e Governador/Senador em outra, por isso o mapa por
+    # cargo e nao um codigo so.
+    param([string] $Base)
+    $url = "$($Base.TrimEnd('/'))/comum/config/ele-c.json"
+    $bruto = $null
+    try {
+        $cabecalhos = @{}
+        if ((Tem-Propriedade $cfg.tse "user_agent") -and $cfg.tse.user_agent) {
+            $cabecalhos["User-Agent"] = $cfg.tse.user_agent
+        }
+        $resp = Invoke-WebRequest -Uri $url -Headers $cabecalhos -TimeoutSec 20 -UseBasicParsing
+        $bruto = (Ler-Texto-Resposta $resp) | ConvertFrom-Json
+    } catch {
+        Escrever-Log "nao consegui ler $url : $($_.Exception.Message)" "AVISO"
+        return $null
+    }
+    if (-not (Tem-Propriedade $bruto "pl")) {
+        Escrever-Log "o ele-c.json do TSE nao trouxe a lista de pleitos (campo pl)." "AVISO"
+        return $null
+    }
+
+    $achado = $null
+    foreach ($pleito in $bruto.pl) {
+        if (-not (Tem-Propriedade $pleito "e")) { continue }
+        foreach ($eleicao in $pleito.e) {
+            $cargos = @()
+            if (Tem-Propriedade $eleicao "abr") {
+                foreach ($a in $eleicao.abr) {
+                    if (-not (Tem-Propriedade $a "cp")) { continue }
+                    foreach ($cargo in $a.cp) { $cargos += "$(Obter-Campo $cargo @('cd') '')" }
+                }
+            }
+            $geral = ($cargos -contains "1") -or ($cargos -contains "3") -or ($cargos -contains "5")
+            if (-not $geral) { continue }
+            if ($null -eq $achado) {
+                $achado = @{
+                    ciclo   = "$(Obter-Campo $bruto @('c') '')"
+                    pleito  = "$(Obter-Campo $pleito @('cd') '')"
+                    eleicao = "$(Obter-Campo $eleicao @('cd') '')"
+                    cargos  = @{}
+                    nomes   = @()
+                }
+            }
+            foreach ($num in @("1", "3", "5")) {
+                if ($cargos -contains $num) { $achado.cargos[$num] = "$(Obter-Campo $eleicao @('cd') '')" }
+            }
+            $achado.nomes += "$(Obter-Campo $eleicao @('cd') '') = " +
+                             (Decodificar-Entidades "$(Obter-Campo $eleicao @('nm') '')")
+        }
+    }
+    return $achado
+}
+
+function Garantir-Codigos {
+    # Resolve os codigos do pleito para QUALQUER modo, nao so para a coleta.
+    # Antes isto vivia solto no bloco de execucao, e o -Validar rodava antes
+    # dele: montava URL com "000", nao lia boletim nenhum e mesmo assim
+    # terminava dizendo "NENHUMA DIVERGENCIA". Validador que aprova sem ter
+    # conferido e pior do que nao ter validador.
+    $pleitoUso = "$($cfg.tse.pleito)"
+    $eleicaoUso = "$($cfg.tse.eleicao)"
+    $temMapa = $false
+    if (Tem-Propriedade $cfg.tse "eleicao_por_cargo") {
+        foreach ($prop in $cfg.tse.eleicao_por_cargo.PSObject.Properties) {
+            if ($prop.Value) { $temMapa = $true }
+        }
+    }
+    $semCodigo = (-not $pleitoUso) -or ($pleitoUso -eq "000") -or
+                 ((-not $temMapa) -and ((-not $eleicaoUso) -or ($eleicaoUso -eq "000")))
+    if (-not $semCodigo) { return $true }
+
+    Escrever-Log "codigos ausentes no config.json - perguntando ao TSE" "AVISO"
+    $achado = Descobrir-Codigos $cfg.tse.base_url
+    if ($null -eq $achado) { return $false }
+
+    if ($achado.ciclo) { $cfg.tse.ciclo = $achado.ciclo }
+    $cfg.tse.pleito = $achado.pleito
+    $cfg.tse.eleicao = $achado.eleicao
+    $mapa = @{}
+    foreach ($num in $achado.cargos.Keys) { $mapa[$num] = $achado.cargos[$num] }
+    $cfg.tse.eleicao_por_cargo = [pscustomobject] $mapa
+    Escrever-Log "o TSE respondeu: ciclo $($cfg.tse.ciclo), pleito $($achado.pleito)" "OK"
+    foreach ($nome in $achado.nomes) { Escrever-Log "  eleicao $nome" }
+    foreach ($num in @("1", "3", "5")) {
+        if ($achado.cargos.ContainsKey($num)) {
+            Escrever-Log "  cargo $num -> eleicao $($achado.cargos[$num])"
+        }
+    }
+    # NAO grava no config.json de proposito. Codigo descoberto e gravado
+    # vira codigo errado gravado no dia em que o TSE corrige o dele - e
+    # ninguem ia descobrir isso no ar. Uma requisicao por partida e barato
+    # demais para correr esse risco.
+    Escrever-Log "descoberto agora, nao gravado no config.json - confira no CONFERIR.bat se duvidar"
+    return $true
+}
+
+function Parar-Sem-Codigos {
+    Write-Host ""
+    if ($Teste) {
+        Escrever-Log "Sem os codigos do SIMULADO, e o TSE nao respondeu." "ERRO"
+        Write-Host "  Preencha 'pleito_simulado' e 'eleicao_simulado' no config.json."
+    } else {
+        Escrever-Log "Sem os codigos da eleicao, e o TSE nao respondeu." "ERRO"
+        Write-Host "  Preencha 'pleito' e 'eleicao' no config.json."
+    }
+    Write-Host ""
+    Write-Host "  Rode CONFERIR.bat: ele diz se o problema e a rede desta"
+    Write-Host "  maquina ou se o TSE ainda nao publicou a eleicao geral."
+    Write-Host ""
+    exit 1
+}
+
 # ------------------------------------------------------------------ fotos
 
 if ($Fotos) {
+    if (-not (Garantir-Codigos)) { Parar-Sem-Codigos }
     # Le a lista de candidatos a presidente direto do TSE e escreve, para
     # cada um, os nomes de arquivo que o sistema aceita. Assim ninguem precisa
     # adivinhar como escrever o nome, nem eu preciso chutar quem sao os
@@ -1574,7 +1677,7 @@ if ($Campos) {
     Write-Host ""
     Write-Host $texto
     Write-Host ""
-    Escrever-Arquivo "CAMPOS-AGORA.txt" $texto
+    $null = Escrever-Arquivo "CAMPOS-AGORA.txt" $texto
     Escrever-Log "gravei CAMPOS-AGORA.txt - pode mandar esse arquivo junto se a duvida continuar" "OK"
     exit 0
 }
@@ -1582,6 +1685,9 @@ if ($Campos) {
 # ---------------------------------------------------------------- validar
 
 if ($Validar) {
+    # Sem isto o validador montava URL com "000", nao lia boletim nenhum e
+    # ainda assim aprovava no fim. Ver o comentario em Garantir-Codigos.
+    if (-not (Garantir-Codigos)) { Parar-Sem-Codigos }
     # Conferencia numero a numero: pega o boletim CRU do TSE e compara com o
     # que o sistema poe na tarja. Responde "o que esta na tela e o que o TSE
     # mandou?" por escrito, com o dado dos dois lados na mesma linha, em vez
@@ -1631,6 +1737,8 @@ if ($Validar) {
         }
     }
 
+    $script:Conferidos = 0
+    $script:NaoLidos = @()
     foreach ($alvo in $alvos) {
         Diz ""
         Diz "-----------------------------------------------------------"
@@ -1640,8 +1748,10 @@ if ($Validar) {
         $bruto = Obter-Boletim $url
         if ($bruto -eq "SEM-MUDANCA" -or $null -eq $bruto) {
             Diz "   NAO FOI POSSIVEL LER ESTE BOLETIM AGORA."
+            $script:NaoLidos += $alvo.rotulo
             continue
         }
+        $script:Conferidos = $script:Conferidos + 1
         $nomePraca = $alvo.praca
         if (-not $nomePraca) { $nomePraca = "BRASIL" }
         $b = Normalizar-Boletim $bruto $nomePraca
@@ -1705,10 +1815,26 @@ if ($Validar) {
 
     Diz ""
     Diz "==========================================================="
-    if ($script:Falhas -eq 0) {
-        Diz " NENHUMA DIVERGENCIA. O que esta na tarja e o que o TSE mandou."
+    if ($script:Conferidos -eq 0) {
+        # Sem isto o validador dizia "NENHUMA DIVERGENCIA" tendo conferido
+        # ZERO boletins - e quem lesse ia para o ar confiando numa conta que
+        # nunca foi feita. Nao conferir e um resultado, e tem que aparecer
+        # como resultado.
+        Diz " NADA FOI CONFERIDO. Nenhum boletim voltou do TSE agora, entao"
+        Diz " esta conferencia NAO diz se a tarja esta certa ou errada."
+        Diz ""
+        Diz " Rode CONFERIR.bat: ele diz se o problema e a rede desta maquina,"
+        Diz " o codigo do pleito ou o TSE ainda nao ter publicado o boletim."
+    } elseif ($script:Falhas -eq 0) {
+        Diz " NENHUMA DIVERGENCIA em $($script:Conferidos) de $($alvos.Count) tarjas conferidas."
+        Diz " O que esta nelas e o que o TSE mandou."
     } else {
         Diz " $($script:Falhas) DIVERGENCIA(S) ACIMA. Envie este arquivo para analise."
+    }
+    if ($script:NaoLidos.Count -gt 0 -and $script:Conferidos -gt 0) {
+        Diz ""
+        Diz " NAO conferidas, porque o boletim nao voltou do TSE agora:"
+        foreach ($r in $script:NaoLidos) { Diz "   - $r" }
     }
     Diz " Observacao: se a coleta estiver rodando, um boletim novo pode ter"
     Diz " chegado entre a leitura desta conferencia e a gravacao da tarja."
@@ -2288,58 +2414,13 @@ if ($Descobrir) {
 
 # ------------------------------------------------------------------ execucao
 
-if ($Preencher) { $Ensaio = $true; $UmaVez = $true; $DuracaoEnsaio = 0 }
-
 $Modo = "AR"
-if ($Ensaio) { $Modo = "ENSAIO" } elseif ($Teste) { $Modo = "TESTE" }
+if ($Teste) { $Modo = "TESTE" }
 
 # Sem os codigos do pleito nao ha o que buscar: cada ciclo montaria 55 URLs
 # invalidas, tomaria 55 respostas 404 e ainda assim gastaria o limite de
 # requisicoes por minuto do TSE. Melhor parar na porta e dizer o porque.
-if ($Modo -ne "ENSAIO") {
-    $pleitoUso = "$($cfg.tse.pleito)"
-    $eleicaoUso = "$($cfg.tse.eleicao)"
-    if ($Teste) {
-        if ((Tem-Propriedade $cfg.tse "pleito_simulado") -and $cfg.tse.pleito_simulado) {
-            $pleitoUso = "$($cfg.tse.pleito_simulado)"
-        }
-        if ((Tem-Propriedade $cfg.tse "eleicao_simulado") -and $cfg.tse.eleicao_simulado) {
-            $eleicaoUso = "$($cfg.tse.eleicao_simulado)"
-        }
-    }
-    # O mapa por cargo tambem serve: se ele tem os codigos, ha o que buscar.
-    $temMapa = $false
-    $chaveMapa = "eleicao_por_cargo"
-    if ($Teste -and (Tem-Propriedade $cfg.tse "eleicao_por_cargo_simulado")) {
-        $chaveMapa = "eleicao_por_cargo_simulado"
-    }
-    if (Tem-Propriedade $cfg.tse $chaveMapa) {
-        foreach ($prop in $cfg.tse.$chaveMapa.PSObject.Properties) {
-            if ($prop.Value) { $temMapa = $true }
-        }
-    }
-    $faltando = (-not $pleitoUso) -or ($pleitoUso -eq "000") -or
-                ((-not $temMapa) -and ((-not $eleicaoUso) -or ($eleicaoUso -eq "000")))
-    if ($faltando) {
-        Write-Host ""
-        if ($Teste) {
-            Escrever-Log "Sem os codigos do SIMULADO no config.json." "ERRO"
-            Write-Host "  Preencha 'pleito_simulado' e 'eleicao_simulado' no config.json."
-        } else {
-            Escrever-Log "Sem os codigos da eleicao no config.json." "ERRO"
-            Write-Host "  Preencha 'pleito' e 'eleicao' no config.json."
-        }
-        Write-Host ""
-        Write-Host "  Para descobrir os codigos: rode CONFERIR.bat."
-        Write-Host ""
-        Write-Host "  Se o CONFERIR disser que nao existe eleicao geral publicada,"
-        Write-Host "  nao ha nada a fazer ainda: o TSE publica os codigos da eleicao"
-        Write-Host "  geral perto da data. Ate la, use ENSAIO.bat para treinar a"
-        Write-Host "  equipe e montar as cenas - ele nao depende do TSE."
-        Write-Host ""
-        exit 1
-    }
-}
+if (-not (Garantir-Codigos)) { Parar-Sem-Codigos }
 
 $limiteReq = 80
 if (Tem-Propriedade $cfg "limite_requisicoes_por_minuto") { $limiteReq = [int] $cfg.limite_requisicoes_por_minuto }
@@ -2358,8 +2439,8 @@ $porMinuto = [math]::Round(
 
 Escrever-Log "gctse versao $Versao" "OK"
 Escrever-Log "modo $Modo | saida em $PastaSaida | intervalo ${intervalo}s" "OK"
-if ($Modo -ne "ENSAIO") { Escrever-Log "caminho: $(Montar-Url 'br' 1)" }
-if (-not $Ensaio) {
+Escrever-Log "caminho: $(Montar-Url 'br' 1)"
+if ($true) {
     Escrever-Log "$noAr req por ciclo comum, $naVarredura na varredura (1 a cada $ciclosVar)"
     Escrever-Log "media de $porMinuto requisicoes por minuto (limite $limiteReq)"
     # Projecao acima do limite significa que o limitador vai estrangular a
@@ -2402,11 +2483,30 @@ do {
         # Primeiro ciclo sem nenhum boletim e quase sempre caminho errado, e
         # nao ausencia de dado. Sem este aviso o operador fica olhando tarja
         # vazia sem nada na tela explicando o que houve.
-        if ($script:Ciclo -eq 1 -and $Modo -ne "ENSAIO") {
-            if ($script:BoletinsOk -eq 0) {
-                Escrever-Log "NENHUM boletim voltou do TSE neste primeiro ciclo." "ERRO"
+        if ($script:Ciclo -eq 1 -and $script:BoletinsOk -eq 0) {
+            Escrever-Log "NENHUM boletim voltou do TSE neste primeiro ciclo." "ERRO"
+
+            # Codigo do config que envelheceu e a causa mais provavel aqui, e
+            # e a unica que da para consertar sozinho: o TSE troca o codigo do
+            # simulado entre as janelas de teste, e quem partiu com o codigo
+            # velho toma 404 em todas as 55 pracas sem nada na tela dizendo
+            # por que. Pergunta ao TSE UMA vez; se o codigo mudou, segue a
+            # noite com o certo em vez de esperar alguem perceber.
+            $antes = "$($cfg.tse.pleito)/$($cfg.tse.eleicao)"
+            $achado = Descobrir-Codigos $cfg.tse.base_url
+            if ($null -ne $achado -and "$($achado.pleito)/$($achado.eleicao)" -ne $antes) {
+                if ($achado.ciclo) { $cfg.tse.ciclo = $achado.ciclo }
+                $cfg.tse.pleito = $achado.pleito
+                $cfg.tse.eleicao = $achado.eleicao
+                $mapa = @{}
+                foreach ($num in $achado.cargos.Keys) { $mapa[$num] = $achado.cargos[$num] }
+                $cfg.tse.eleicao_por_cargo = [pscustomobject] $mapa
+                Escrever-Log "o codigo do config estava velho: $antes virou $($achado.pleito)/$($achado.eleicao)" "OK"
+                Escrever-Log "seguindo com o codigo que o TSE publica agora. Caminho: $(Montar-Url 'br' 1)" "OK"
+            } else {
                 Write-Host ""
-                Write-Host "  Isso quase nunca e falta de dado - e endereco errado."
+                Write-Host "  O codigo do pleito confere com o que o TSE publica,"
+                Write-Host "  entao o problema esta em outro lugar - rede, mais provavel."
                 Write-Host "  Rode CONFERIR.bat: ele testa os caminhos e diz qual funciona."
                 Write-Host ""
                 Write-Host "  Buscando em:"
@@ -2430,7 +2530,7 @@ do {
             ultima_mudanca = $(if ($script:UltimaMudanca) { $script:UltimaMudanca.ToString("HH:mm:ss") } else { "" })
             segundos_sem_mudanca = $(if ($script:UltimaMudanca) { [int] ((Get-Date) - $script:UltimaMudanca).TotalSeconds } else { -1 })
         }
-        Escrever-Arquivo (Join-Path $PastaSaida "coleta.json") ($batida | ConvertTo-Json -Depth 4)
+        $null = Escrever-Arquivo (Join-Path $PastaSaida "coleta.json") ($batida | ConvertTo-Json -Depth 4)
     } catch {
         Escrever-Log "erro no ciclo: $($_.Exception.Message)" "ERRO"
     }

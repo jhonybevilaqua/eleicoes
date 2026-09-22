@@ -765,7 +765,12 @@ while ($ouvinte.IsListening) {
         $resposta.OutputStream.Write($bytes, 0, $bytes.Length)
         $resposta.Close()
     } catch {
-        # uma requisicao malformada nao pode derrubar o painel
+        # Uma requisicao malformada nao pode derrubar o painel. Mas engolir
+        # em silencio e pior: se o clique de COLOCAR NO AR falhar (arquivo
+        # preso, disco cheio), o operador ve a pagina voltar normalmente e
+        # acredita que trocou. Por isso a falha aparece na janela do painel.
+        Write-Host ("{0} FALHA ao atender {1}: {2}" -f (Get-Date -Format "HH:mm:ss"),
+                    $caminho, $_.Exception.Message) -ForegroundColor Red
         try { $resposta.Close() } catch { }
     }
 }

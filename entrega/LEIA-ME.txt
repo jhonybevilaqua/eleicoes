@@ -23,16 +23,28 @@ O QUE FAZER, NA ORDEM
     MESMOS arquivos sao reescritos com o dado real. Voce nunca troca o
     caminho e nunca refaz vinculo.
 
- 4. Abra config.json no Bloco de Notas e preencha os codigos do TSE.
-    Para descobrir quais sao:
+ 4. Os codigos do TSE voce NAO precisa preencher.
 
-      DESCOBRIR.bat            codigos do ambiente OFICIAL
-      DESCOBRIR-SIMULADO.bat   codigos do ambiente de SIMULADO (o do teste)
+    Os do simulado ja vem no config.json. Os da eleicao oficial ainda nao
+    existem: o TSE so publica perto da data, e por isso saem daqui como
+    "000".
 
-    Do oficial, copie para "pleito" e "eleicao".
-    Do simulado, copie para "pleito_simulado" e "eleicao_simulado".
-    Se os dois ambientes usarem o mesmo codigo, deixe os campos _simulado
-    vazios: o teste cai no mesmo codigo do oficial.
+    Na partida, se os codigos estiverem faltando, o programa pergunta ao
+    proprio TSE e resolve sozinho - inclusive sabendo separar a eleicao
+    geral das suplementares de prefeito, que aparecem na mesma lista com
+    data de 2026. O que ele achou fica escrito na janela:
+
+       o TSE respondeu: ciclo ele2026, pleito 17801
+         cargo 1 -> eleicao 21270
+         cargo 3 -> eleicao 21272
+         cargo 5 -> eleicao 21272
+
+    Ele NAO grava isso no config.json, de proposito: codigo descoberto e
+    gravado vira codigo errado gravado no dia em que o TSE corrige o dele.
+    Uma pergunta por partida e barata.
+
+    Se preferir fixar na mao, preencha "pleito" e "eleicao" no config.json
+    e o programa usa os seus, sem perguntar nada.
 
  4b. ESTAMOS RECEBENDO DADO? Duplo clique em CONFERIR.bat
  4c. TARJA EMBARALHADA NO AR? Duplo clique em CONFERIR-COLUNAS.bat
@@ -46,9 +58,6 @@ O QUE FAZER, NA ORDEM
     Pode rodar a qualquer momento, inclusive durante a apuracao.
 
  5. Use os botoes:
-
-      ENSAIO.bat   dados inventados, apuracao completa em 10 min.
-                   Nao usa internet. Para treinar com a equipe.
 
       TESTE.bat    le o SIMULADO do TSE (fase S). E o do dia do teste.
 
@@ -111,9 +120,10 @@ NO LIVEBOARD: LIGUE O AUTO UPDATE
  Pode ler tranquilo: a gravacao e atomica (grava .tmp e renomeia), entao o
  LiveBoard nunca pega o arquivo pela metade, por mais frequente que leia.
 
- CONFIRME NO ENSAIO: alguns sistemas so atualizam no preview, nao com a
- tarja NO AR. Suba a tarja, rode um .bat de outro estado e veja se ela
- muda com ela no ar. Se so mudar no preview, troque o estado ANTES de subir.
+ CONFIRME COM A TARJA NO AR: alguns sistemas so atualizam no preview, e
+ nao com a tarja NO AR. Suba a tarja, troque de estado pelo painel e veja
+ se ela acompanha com ela no ar. Se so mudar no preview, troque o estado
+ ANTES de subir.
 
 NOMES DOS OBJETOS (Castalia -> LiveBoard)
 

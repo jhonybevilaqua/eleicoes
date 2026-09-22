@@ -17,5 +17,7 @@
   "cand2_percentual": "",
   "cand2_barra_px": 0,
   "cand2_cor": "",
-  "cand2_eleito": "0"
+  "cand2_eleito": "0",
+  "cand1_eleito_rotulo": "",
+  "cand2_eleito_rotulo": ""
 }

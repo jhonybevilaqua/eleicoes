@@ -29,9 +29,16 @@
     ha nada a ajustar. Se disser que nenhum molde funcionou, envie o
     CONFERIR.txt para analise.
 
-    Os codigos do OFICIAL ("pleito" e "eleicao") continuam zerados: o TSE
-    so publica os da eleicao geral perto de outubro. Ate la o INICIAR.bat
-    recusa a partida e explica o motivo.
+    Os codigos do OFICIAL ("pleito" e "eleicao") continuam zerados, de
+    proposito: o TSE so publica os da eleicao geral perto da data, e chutar
+    codigo e pior do que nao ter nenhum.
+
+    Voce NAO vai precisar digitar isso no domingo. Na partida, faltando os
+    codigos, o INICIAR.bat pergunta ao proprio TSE e resolve sozinho - e
+    sabe distinguir a eleicao geral das suplementares de prefeito que vem
+    na mesma lista com data de 2026. O que ele achou aparece na janela,
+    cargo por cargo. Se nao conseguir falar com o TSE, ele para na porta e
+    manda rodar o CONFERIR.bat, em vez de sair pedindo 55 URLs invalidas.
 
  4. Duplo clique em TESTE.bat   e deixe a janela ABERTA.
 
@@ -53,6 +60,11 @@
     Sai a conferencia lado a lado e o veredito no fim. Grava tudo em
     VALIDACAO.txt. Na noite da apuracao, o equivalente e o
     VALIDAR-OFICIAL.bat.
+
+    LEIA O VEREDITO ATE O FIM. Ele diz QUANTAS tarjas conseguiu conferir
+    ("NENHUMA DIVERGENCIA em 3 de 3 tarjas conferidas") e lista as que
+    nao conseguiu ler. Se nenhum boletim voltar do TSE naquele instante,
+    ele diz "NADA FOI CONFERIDO" - e isso NAO e aprovacao.
 
 ===========================================================================
  NA NOITE DA APURACAO

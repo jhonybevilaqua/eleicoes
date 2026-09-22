@@ -17,5 +17,13 @@
   "cand2_percentual": "",
   "cand2_barra_px": 0,
   "cand2_cor": "",
-  "cand2_eleito": "0"
+  "cand2_eleito": "0",
+  "cand1_foto": "",
+  "cand1_foto_existe": "0",
+  "cand1_foto_fixa": "",
+  "cand1_eleito_rotulo": "",
+  "cand2_foto": "",
+  "cand2_foto_existe": "0",
+  "cand2_foto_fixa": "",
+  "cand2_eleito_rotulo": ""
 }
