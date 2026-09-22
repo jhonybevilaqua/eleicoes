@@ -43,6 +43,8 @@ def _config(tmp_path, **sobrepor):
         "exporters": {"j": {"tipo": "json", "formato": "gc", "destino": str(tmp_path / "saida")}},
         "alvos": [{"nome": "presidente-br", "abrangencia": "br", "cargo": 1, "exporters": ["j"]}],
     }
+    # 'raiz' mexe no nivel de cima (modo, modos); o resto sao secoes
+    bruto.update(sobrepor.pop("raiz", {}))
     for secao, valores in sobrepor.items():
         bruto.setdefault(secao, {}).update(valores)
     return Config(bruto=bruto, caminho=tmp_path / "config.yaml")
@@ -81,12 +83,43 @@ def test_bloqueia_fase_nao_oficial(tmp_path):
     pipeline.fechar()
 
 
-def test_permite_fase_simulada_quando_configurado(tmp_path):
+def test_config_nao_derruba_a_trava_de_fase(tmp_path):
+    """Quem decide e o modo, nao o arquivo.
+
+    Antes esta linha na config liberava fase 'S'. Nao libera mais: em producao
+    nao existe valor em arquivo que faca um simulado do TSE ir ao ar como
+    resultado - nem editado a mao no meio da noite.
+    """
     pipeline = _pipeline(
         tmp_path, Resposta(url="x", dados={**BOLETIM, "f": "S"}, status=200),
         seguranca={"bloquear_nao_oficial": False},
     )
+    assert pipeline.rodar_uma_vez()["presidente-br"].startswith("bloqueado")
+    pipeline.fechar()
+
+
+def test_modo_simulado_aceita_fase_simulada(tmp_path):
+    pipeline = _pipeline(
+        tmp_path, Resposta(url="x", dados={**BOLETIM, "f": "S"}, status=200),
+        raiz={"modo": "simulado"},
+    )
     assert pipeline.rodar_uma_vez()["presidente-br"].startswith("publicado")
+    pipeline.fechar()
+
+
+def test_modo_simulado_carimba_ate_boletim_oficial(tmp_path):
+    """O selo nos dias de teste e do DIA, nao do campo que veio no arquivo.
+
+    Este foi o buraco real: boletim de teste publicado em fase 'O' saia com a
+    tarja limpa, com cara de resultado, no meio de um ensaio.
+    """
+    pipeline = _pipeline(
+        tmp_path, Resposta(url="x", dados=BOLETIM, status=200),
+        raiz={"modo": "simulado"},
+    )
+    assert pipeline.rodar_uma_vez()["presidente-br"].startswith("publicado")
+    corpo = json.loads((tmp_path / "saida" / "presidente-br.json").read_text(encoding="utf-8"))
+    assert corpo["resumo"]["selo"] == "SIMULADO - TESTE, NAO E RESULTADO"
     pipeline.fechar()
 
 

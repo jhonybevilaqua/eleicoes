@@ -5,16 +5,36 @@
 #  Os arquivos saem sempre na pasta TARJAS. O Castalia aponta para la uma vez
 #  e nunca mais precisa mudar.
 #
-#  SO TEM UMA COISA PARA PREENCHER: os dois codigos abaixo, em 'tse'.
+#  SO TEM UMA COISA PARA PREENCHER: os codigos de pleito, em 'modos'.
 #  Rode  gctse.exe descobrir  que ele mostra quais sao.
 # ===========================================================================
+
+# Quem manda aqui e o atalho: GC-SIMULADO.bat e GC-PRODUCAO.bat definem a
+# variavel GCTSE_MODO so na janela que abrem, e ela tem prioridade sobre esta
+# linha. Deixar em 'producao' e o lado seguro: quem esquecer de escolher nao
+# poe um simulado no ar.
+modo: producao
 
 tse:
   base_url: https://resultados.tse.jus.br/oficial
   ciclo: ele2026
-  pleito: "000"     # <<< PREENCHER  (gctse.exe descobrir)
-  eleicao: "000"    # <<< PREENCHER  (gctse.exe descobrir)
   turno: 1
+
+modos:
+  # Dias de teste do TSE. Aceita boletim em fase 'S' e carimba TODA tarja -
+  # o selo nao desliga, nem em boletim que venha marcado como oficial.
+  simulado:
+    selo: "SIMULADO - TESTE, NAO E RESULTADO"
+    tse:
+      pleito: "000"     # <<< PREENCHER com o codigo do TESTE
+      eleicao: "000"    # <<< PREENCHER com o codigo do TESTE
+
+  # Dia 4. So boletim oficial (fase 'O'); nenhum valor deste arquivo
+  # derruba essa trava.
+  producao:
+    tse:
+      pleito: "000"     # <<< PREENCHER com o codigo OFICIAL
+      eleicao: "000"    # <<< PREENCHER com o codigo OFICIAL
 
 # --- daqui para baixo, so mexa se precisar --------------------------------
 
@@ -31,7 +51,9 @@ coleta:
   arquivo_painel: TARJAS/painel.html
 
 seguranca:
-  bloquear_nao_oficial: true    # o TESTE.bat desliga isto so durante o teste
+  # 'bloquear_nao_oficial' nao aparece aqui de proposito: quem decide e o
+  # MODO, nao este arquivo. Em producao e sempre ligado, em simulado sempre
+  # desligado - e nao ha linha que alguem possa editar para mudar isso.
   bloquear_regressao: true
 
 texto:

@@ -291,6 +291,14 @@ class ExporterMapa(Exporter):
     def _chapa(self, ap: Apuracao, indice: int) -> dict | None:
         if len(ap.candidatos) <= indice:
             return None
+        if ap.votos_validos <= 0:
+            # Boletim publicado com zero voto apurado - o que acontece de
+            # verdade nos primeiros minutos da noite, e o tempo todo com a
+            # estrutura em branco. Sem voto nao ha quem lidere: devolver o
+            # primeiro da lista pintaria o estado com a cor de um partido que
+            # nao ganhou nada ali. Sem lider, o mapa pinta de cinza, que e a
+            # verdade.
+            return None
         cand = ap.candidatos[indice]
         campos = self.campos_candidato(cand, ap)
         cores = self.cfg_texto.get("cores_partido") or {}

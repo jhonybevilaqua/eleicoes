@@ -37,48 +37,60 @@ que mais atrasa esse tipo de operação.
 Assim que o TSE publicar a configuração do teste:
 
 ```bat
-cd C:\gctse\TELAO
-telao.exe descobrir
+cd C:\gctse
+gctse.exe descobrir
 ```
 
 Ele lista os pleitos disponíveis. Anote o código do **teste** e, se já
 estiver publicado, o do **pleito oficial**.
 
-Abra `telao.yaml` no Bloco de Notas e preencha os dois:
+São **dois arquivos** para preencher, com a mesma estrutura: `config.yaml`
+(o GC) e `TELAO\telao.yaml` (as telas). Abra cada um no Bloco de Notas e
+preencha os dois modos:
 
 ```yaml
 modos:
   simulado:
     tse:
-      ciclo: ele2026
       pleito: "<código do teste>"
       eleicao: "<código do teste>"
   producao:
     tse:
-      ciclo: ele2026
       pleito: "<código oficial>"
       eleicao: "<código oficial>"
 ```
 
-Preencha **os dois agora**. É o que faz a virada de quinta para domingo ser uma
-troca de atalho, e não uma edição de configuração sob pressão.
+O `ciclo: ele2026` fica na seção `tse` de cima, fora dos modos — é o mesmo
+para os dois.
+
+Preencha **os dois agora**, nos **dois arquivos**. É o que faz a virada de
+quinta para domingo ser uma troca de atalho, e não uma edição de configuração
+sob pressão.
 
 ```bat
-telao.exe validar
+gctse.exe validar
+TELAO\telao.exe -c TELAO\telao.yaml validar
 ```
 
-Tem de dizer `Configuracao OK` sem pendência. Se reclamar que o código está em
-`000`, é porque ainda falta preencher aquele modo.
+Os dois têm de dizer `Configuracao OK` sem pendência. Se reclamar que o código
+está em `000`, é porque ainda falta preencher aquele modo.
 
 ## Nos três dias de teste
 
+Dois atalhos, um em cada janela:
+
 ```bat
-TELAO-SIMULADO.bat
+GC-SIMULADO.bat            (na pasta C:\gctse)
+TELAO\TELAO-SIMULADO.bat   (as telas cheias)
 ```
 
-**Todas as telas saem carimbadas** com `SIMULADO — TESTE, NÃO É RESULTADO`, e
-o carimbo não desliga. É proposital: se esse atalho for aberto por engano no
-dia 4, o carimbo aparece no ar e o erro é visto na hora.
+**Tudo sai carimbado** com o selo de simulado — as tarjas do GC e as telas do
+telão —, e o carimbo não desliga. É proposital: se um desses atalhos for
+aberto por engano no dia 4, o carimbo aparece no ar e o erro é visto na hora.
+
+O carimbo é decidido pelo **dia**, não pelo campo que vem no arquivo do TSE:
+mesmo que o TSE publique o boletim de teste marcado como oficial, ele sai
+carimbado.
 
 ### O que conferir, em ordem de importância
 
@@ -87,7 +99,7 @@ dia 4, o carimbo aparece no ar e o erro é visto na hora.
 | 1 | **Os nomes dos candidatos aparecem** | Se vierem vazios, o TSE mudou uma abreviação — é o risco número um, e a correção é uma linha em `mapeamento`. Me chame. |
 | 2 | **Os números batem com o site do TSE** | Abra o site do TSE ao lado e confira urnas apuradas e percentual do 1º colocado. Têm de ser idênticos. |
 | 3 | **Os 27 estados pintam** | Nenhum pode ficar cinza depois que o TSE publicar todos. Cinza = aquela praça não chegou. |
-| 4 | **O carimbo está em todas as telas** | Inclusive no monitor vertical, inclusive nas telas de mapa. |
+| 4 | **O carimbo está em tudo** | Nas tarjas do GC, no monitor vertical e nas telas de mapa. |
 | 5 | **A mesa responde em ~1 segundo** | Clique numa tela e cronometre. |
 | 6 | **O rodízio vertical gira** | 10 s por tela, seis telas, volta ao começo. |
 | 7 | **As cores de partido** | Estado vizinho com cor parecida? É agora que se resolve com a arte, não no dia 4. |
@@ -110,12 +122,13 @@ oficial pode só aparecer depois dos testes.
 o que pinta o mapa — sem elas, o sistema usa uma paleta de reserva que serve
 para ensaiar, não para o ar.
 
-**3. Troque o atalho.** No dia 4, `TELAO-PRODUCAO.bat` em vez de
-`TELAO-SIMULADO.bat`. Só isso. Não precisa recompilar nem editar configuração.
+**3. Troque os atalhos.** No dia 4, `GC-PRODUCAO.bat` e `TELAO-PRODUCAO.bat`
+em vez dos dois `-SIMULADO`. Só isso. Não precisa recompilar nem editar
+configuração.
 
 **4. Apague o histórico de teste**, se quiser a curva limpa:
-`telao-vertical\historico-simulado.jsonl` e o `historico-simulado.jsonl` da
-pasta do telão. O de produção é outro arquivo e não foi tocado.
+`historico-simulado.jsonl` na pasta do telão. O de produção é outro arquivo e
+não foi tocado.
 
 ## O que o sistema não deixa você errar
 
@@ -125,5 +138,10 @@ pasta do telão. O de produção é outro arquivo e não foi tocado.
   configuração. A trava é decidida pelo modo, não por um valor de arquivo.
 - **Código de pleito em `000` impede subir** contra o TSE, em vez de passar a
   noite em "aguardando boletim" com uma URL que sempre devolve 404.
-- **Praça sem boletim fica cinza com a sigla legível**, nunca buraco no mapa.
+- **Praça sem boletim fica cinza com a sigla legível**, nunca buraco no mapa —
+  e praça com boletim mas zero voto apurado também fica cinza, em vez de
+  pintar a cor de quem por acaso está no topo de uma lista zerada.
+- **O pacote não traz nenhum dado inventado.** As tarjas e as telas nascem em
+  branco: campos zerados, travessão no lugar dos nomes. Se uma delas for ao ar
+  por engano, o que aparece é um placar vazio, não um resultado falso.
 - **Falha de leitura mantém a última tela boa no ar**, nunca tela preta.

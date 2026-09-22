@@ -254,11 +254,19 @@ def cmd_rodar(args) -> int:
 
 
 def cmd_exemplo(args) -> int:
-    """Um ciclo so, com dados ficticios: telas prontas para a arte conferir."""
+    """Um ciclo so, sem tocar o TSE: telas prontas para a arte conferir.
+
+    Com --em-branco as telas saem com a estrutura completa e nenhum dado: e o
+    que o pacote entregue leva, para o PC de exibicao ja ter pagina e desenho
+    antes do primeiro boletim, sem um unico nome inventado no disco.
+    """
     cfg = _cfg(args)
     _log(cfg, args)
-    cfg.bruto.setdefault("coleta", {})["fonte"] = "simulador"
+    em_branco = bool(getattr(args, "em_branco", False))
+    cfg.bruto.setdefault("coleta", {})["fonte"] = "em-branco" if em_branco else "simulador"
     cfg.bruto["coleta"]["simulador_progresso"] = args.progresso
+    # o historico nunca recebe ponto que nao veio do TSE
+    cfg.bruto["coleta"]["historico"] = False
     # nao ha 'bloquear_nao_oficial' para desligar aqui: a trava e decidida
     # pelo modo, e o simulador interno passa por ela de qualquer jeito
     if args.pasta:
@@ -267,9 +275,15 @@ def cmd_exemplo(args) -> int:
         # producao enquanto o resto do exemplo vai para a pasta de conferencia
         if cfg.bruto.get("vertical", {}).get("ativo"):
             cfg.bruto["vertical"]["destino"] = str(Path(args.pasta) / "vertical")
-    print(f"Gerando as telas em {cfg.destino} com {args.progresso:.0f}% apurado...")
+    if em_branco:
+        print(f"Gerando as telas EM BRANCO em {cfg.destino}...")
+    else:
+        print(f"Gerando as telas em {cfg.destino} com {args.progresso:.0f}% apurado...")
     codigo = _executar(cfg, args, uma_vez=True)
-    print("ATENCAO: conteudo ficticio, fase 'S'. Nao use no ar.")
+    if em_branco:
+        print("Conteudo: NENHUM. Zeros e travessoes ate o TSE publicar.")
+    else:
+        print("ATENCAO: conteudo ficticio, fase 'S'. Nao use no ar.")
     return codigo
 
 
@@ -347,6 +361,8 @@ def construir_parser() -> argparse.ArgumentParser:
     p_exemplo.add_argument("--progresso", type=float, default=63.0,
                            help="percentual apurado (padrao: 63)")
     p_exemplo.add_argument("--pasta", help="pasta de destino (padrao: a da config)")
+    p_exemplo.add_argument("--em-branco", action="store_true",
+                           help="estrutura completa, sem nome nem numero inventado")
     p_exemplo.set_defaults(func=cmd_exemplo)
 
     p_mesa = sub.add_parser("mesa", help="janela para escolher a tela que vai ao ar")

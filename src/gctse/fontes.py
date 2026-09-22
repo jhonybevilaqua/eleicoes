@@ -12,7 +12,7 @@ import logging
 from pathlib import Path
 from typing import Any, Protocol
 
-from .simulador import Simulador
+from .simulador import Simulador, boletim_em_branco
 from .tse.cliente import ClienteTSE, Resposta
 from .tse.endpoints import Endpoints
 
@@ -54,6 +54,24 @@ class FonteSimulada:
         return None
 
 
+class FonteEmBranco:
+    """Cria os arquivos nos caminhos definitivos, sem conteudo nenhum.
+
+    E o que o pacote leva de fabrica: a cena do GC pode ser amarrada hoje,
+    campo por campo, e nao ha um unico nome inventado no disco de quem recebe.
+    """
+
+    def __init__(self, vagas: int = 5):
+        self.vagas = vagas
+
+    def obter(self, abrangencia: str, cargo: int, turno: int) -> Resposta:
+        dados = boletim_em_branco(abrangencia, cargo, self.vagas)
+        return Resposta(url=f"em-branco://{abrangencia}/c{cargo}", dados=dados, status=200)
+
+    def fechar(self) -> None:
+        return None
+
+
 class FonteArquivo:
     """Reproducao: le amostras gravadas em disco.
 
@@ -87,6 +105,9 @@ class FonteArquivo:
 
 def criar_fonte(cfg, cliente: ClienteTSE, endpoints: Endpoints) -> Fonte:
     tipo = str(cfg.coleta.get("fonte", "tse")).lower()
+    if tipo == "em-branco":
+        log.warning("FONTE = EM BRANCO (estrutura sem dado). So para montar a cena.")
+        return FonteEmBranco(int(cfg.coleta.get("vagas_em_branco", 5)))
     if tipo == "simulador":
         duracao = int(cfg.coleta.get("simulador_duracao_segundos", 900))
         travado = cfg.coleta.get("simulador_progresso")

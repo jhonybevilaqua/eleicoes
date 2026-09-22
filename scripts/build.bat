@@ -40,7 +40,7 @@ copy docs\*.md dist\gctse\docs\ >nul
 copy README.md dist\gctse\ >nul
 copy empacotamento\*.bat dist\gctse\ >nul
 copy empacotamento\LEIA-ME.txt dist\gctse\ >nul
-if not exist dist\gctse\config\config.yaml copy dist\gctse\config\config.recomendado.yaml dist\gctse\config\config.yaml >nul
+if not exist dist\gctse\config\config.yaml copy dist\gctse\config\config.operacao.yaml dist\gctse\config\config.yaml >nul
 
 REM O telao vai junto, numa subpasta propria - a pessoa copia uma coisa so.
 mkdir dist\gctse\TELAO 2>nul

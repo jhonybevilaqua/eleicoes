@@ -28,7 +28,7 @@ from datetime import datetime
 
 from gctse.historico import Historico, Ponto
 from gctse.modelos import Apuracao
-from gctse.simulador import Simulador
+from gctse.simulador import Simulador, boletim_em_branco
 from gctse.tse.cliente import ClienteTSE, Resposta
 from gctse.tse.endpoints import Endpoints
 from gctse.tse.parser import analisar
@@ -51,14 +51,23 @@ class Coletor:
             usar_cache=bool(cfg.coleta.get("cache_condicional", True)),
             user_agent=cfg.coleta.get("user_agent"),
         )
-        self.simulador: Simulador | None = None
-        if str(cfg.coleta.get("fonte", "tse")).lower() == "simulador":
+        # Fonte local: qualquer coisa que produza boletim sem tocar o TSE.
+        # Guardada num campo so porque quem le este codigo precisa de uma
+        # pergunta unica - "isto veio do TSE?" - e nao de duas.
+        fonte = str(cfg.coleta.get("fonte", "tse")).lower()
+        self.local = None
+        if fonte == "simulador":
             travado = cfg.coleta.get("simulador_progresso")
-            self.simulador = Simulador(
+            simulador = Simulador(
                 duracao_segundos=int(cfg.coleta.get("simulador_duracao_segundos", 900)),
                 progresso_fixo=float(travado) if travado is not None else None,
             )
+            self.local = lambda praca: simulador.gerar(praca, cfg.cargo, cfg.turno)
             log.warning("FONTE = SIMULADOR (dados ficticios, fase 'S'). Nao use no ar.")
+        elif fonte == "em-branco":
+            vagas = int(cfg.coleta.get("vagas_em_branco", 5))
+            self.local = lambda praca: boletim_em_branco(praca, cfg.cargo, vagas)
+            log.warning("FONTE = EM BRANCO (estrutura sem dado). So para montar a cena.")
 
         # Um arquivo por modo: a curva dos dias de teste nao pode entrar na
         # serie que alimenta a previsao de fechamento na noite da eleicao.
@@ -102,9 +111,8 @@ class Coletor:
         return resultados
 
     def _obter(self, praca: str) -> Resposta:
-        if self.simulador is not None:
-            dados = self.simulador.gerar(praca, self.cfg.cargo, self.cfg.turno)
-            return Resposta(url=f"simulador://{praca}", dados=dados, status=200)
+        if self.local is not None:
+            return Resposta(url=f"local://{praca}", dados=self.local(praca), status=200)
         return self.cliente.buscar_json(self.endpoints.resultado(praca, self.cfg.cargo))
 
     def _buscar(self, praca: str) -> str:
@@ -134,7 +142,7 @@ class Coletor:
 
         # Trava 1: nada fora da fase oficial vai para a tela.
         if not ap.oficial and bool(self.cfg.seguranca.get("bloquear_nao_oficial", True)):
-            if self.simulador is None:
+            if self.local is None:
                 log.warning("praca '%s': fase '%s' (nao oficial) descartada", praca, ap.fase)
                 return f"bloqueado(fase={ap.fase or '?'})"
 

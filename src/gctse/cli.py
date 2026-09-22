@@ -1,5 +1,6 @@
 """Interface de linha de comando.
 
+  gctse modo           mostra ou troca entre simulado e producao
   gctse validar        confere a configuracao antes do ar
   gctse descobrir      lista os pleitos publicados pelo TSE (codigos p/ config)
   gctse inspecionar    baixa um arquivo do TSE e mostra as chaves reais
@@ -9,6 +10,7 @@
   gctse amostrar       grava o JSON atual do TSE em dados/amostras
   gctse celulas        mostra qual celula guarda qual campo (ClassX LiveBoard)
   gctse exemplo        gera arquivos de exemplo + mapa, para montar a cena hoje
+                       (--em-branco: estrutura sem nenhum dado inventado)
 """
 
 from __future__ import annotations
@@ -17,11 +19,13 @@ import argparse
 import csv
 import json
 import os
+import re
 import sys
+import tempfile
 from pathlib import Path
 
 from . import __version__
-from .config import ErroConfig, carregar
+from .config import MODOS, ErroConfig, carregar
 from .exporters import criar
 from .exporters.classx import ExporterClassX
 from .modelos import CARGOS, Apuracao
@@ -69,17 +73,91 @@ def _iniciar_log(cfg, args) -> None:
     )
 
 
+def _faixa_modo(cfg) -> None:
+    """Diz em que modo o sistema esta, de um jeito que nao passa batido.
+
+    Subir em Simulado achando que esta em Producao - ou o contrario - e o erro
+    mais caro possivel aqui, e ele e silencioso: os dois modos leem o TSE e
+    escrevem as mesmas tarjas, nos mesmos caminhos. A unica defesa barata e
+    gritar na partida.
+    """
+    if cfg.simulado:
+        print("=" * 66)
+        print("  MODO SIMULADO - dados de TESTE do TSE")
+        print("  Todas as tarjas saem carimbadas. NAO use no dia da eleicao.")
+        print("=" * 66)
+    else:
+        print("-" * 66)
+        print("  MODO PRODUCAO - so boletim oficial (fase 'O')")
+        print("-" * 66)
+
+
+def cmd_modo(args) -> int:
+    """Mostra o modo, ou troca gravando no proprio config.yaml."""
+    cfg = _cfg(args)
+    _iniciar_log(cfg, args)
+
+    if not args.novo:
+        print(f"Modo atual: {cfg.modo.upper()}")
+        if os.environ.get("GCTSE_MODO"):
+            print(f"  (vindo da variavel GCTSE_MODO={os.environ['GCTSE_MODO']},")
+            print("   que tem prioridade sobre o arquivo)")
+        print(f"  pleito {cfg.tse.get('pleito', '-')} / eleicao {cfg.tse.get('eleicao', '-')}")
+        print(f"  aceita fase simulada: {'sim' if cfg.simulado else 'nao'}")
+        print("\nPara trocar:  gctse modo simulado   |   gctse modo producao")
+        return 0
+
+    novo = str(args.novo).strip().lower()
+    if novo not in MODOS:
+        print(f"Modo '{args.novo}' desconhecido. Use: {' ou '.join(MODOS)}")
+        return 1
+
+    if cfg.caminho.suffix.lower() not in (".yaml", ".yml"):
+        # a reescrita e linha a linha, de YAML; aplicada a um .json quebraria
+        # o arquivo de vez, e sem config nenhuma o gctse nao sobe
+        print(f"'{cfg.caminho}' nao e YAML, entao nao sei reescrever a linha do modo.")
+        print(f"Edite o arquivo e ponha:  \"modo\": \"{novo}\"")
+        print(f"Ou rode com a variavel:   set GCTSE_MODO={novo}")
+        return 1
+
+    texto = cfg.caminho.read_text(encoding="utf-8")
+    trocado, saida = False, []
+    for linha in texto.splitlines():
+        if not trocado and re.match(r"^\s*modo\s*:", linha):
+            saida.append(f"modo: {novo}")
+            trocado = True
+        else:
+            saida.append(linha)
+    if not trocado:
+        saida.insert(0, f"modo: {novo}")
+    cfg.caminho.write_text("\n".join(saida) + "\n", encoding="utf-8")
+
+    print(f"Modo gravado em {cfg.caminho}: {novo.upper()}")
+    if os.environ.get("GCTSE_MODO"):
+        print(f"ATENCAO: a variavel GCTSE_MODO={os.environ['GCTSE_MODO']} continua valendo")
+        print("nesta janela e tem prioridade sobre o arquivo.")
+    return 0
+
+
 def cmd_validar(args) -> int:
     cfg = _cfg(args)
     _iniciar_log(cfg, args)
-    problemas = cfg.validar()
-    if problemas:
+    _faixa_modo(cfg)
+    erros, pendencias = cfg.conferir()
+    if erros:
         print("Configuracao COM PROBLEMAS:")
-        for problema in problemas:
+        for problema in erros:
             print(f"  - {problema}")
         return 1
+    if pendencias:
+        print("Configuracao OK, mas FALTA PREENCHER antes de ir ao TSE:")
+        for pendencia in pendencias:
+            print(f"  ! {pendencia}")
+        print()
 
     print(f"Configuracao OK ({cfg.caminho})")
+    print(f"  modo.........: {cfg.modo.upper()}")
+    print(f"  pleito.......: {cfg.tse.get('pleito', '-')} / eleicao {cfg.tse.get('eleicao', '-')}")
     print(f"  fonte........: {cfg.coleta.get('fonte', 'tse')}")
     print(f"  intervalo....: {cfg.intervalo}s")
     print(f"  exporters....: {', '.join(cfg.exporters)}")
@@ -217,37 +295,42 @@ def cmd_celulas(args, cfg=None) -> int:
 
 
 def cmd_exemplo(args) -> int:
-    """Gera, com dados ficticios, os arquivos exatamente como sairao no ar.
+    """Gera os arquivos exatamente como sairao no ar, para amarrar a cena hoje.
 
-    Serve para o time montar e amarrar a cena do GC agora, meses antes de o
-    TSE publicar qualquer coisa: os nomes de campo, a estrutura e os caminhos
-    sao os mesmos do dia da eleicao - so o conteudo e inventado.
+    Os nomes de campo, a estrutura e os caminhos sao os do dia da eleicao. So
+    o conteudo e que nao vem do TSE, e ha duas formas dele:
 
-    Com --destinos-reais grava nas pastas que a config ja usa, em vez de numa
-    pasta separada. E o modo recomendado para montar a cena: o GC passa a
-    apontar, desde o primeiro dia, para o MESMO caminho que recebera o dado
-    real - nao existe o passo de "trocar o caminho antes do ar", que e onde
-    esse tipo de montagem costuma falhar.
+      --em-branco   estrutura completa, tudo zerado e com travessao no lugar
+                    dos nomes. E o que o pacote entregue leva: da para vincular
+                    campo por campo sem um unico nome inventado em disco.
+      (sem a flag)  chapa ficticia com placar cheio, util para ver a cena
+                    montada, com barra e foto, antes de existir dado real.
+
+    Com --destinos-reais grava nas pastas que a config ja usa. E o modo
+    recomendado: o GC aponta, desde o primeiro dia, para o MESMO caminho que
+    recebera o dado do TSE - nao existe o passo de "trocar o caminho antes do
+    ar", que e onde esse tipo de montagem costuma falhar.
     """
     cfg = _cfg(args)
     _iniciar_log(cfg, args)
 
     reais = bool(getattr(args, "destinos_reais", False))
+    em_branco = bool(getattr(args, "em_branco", False))
     pasta = Path(args.pasta)
+    temporarios = pasta if not reais else Path(tempfile.gettempdir())
+
     coleta = cfg.bruto.setdefault("coleta", {})
-    coleta["fonte"] = "simulador"
+    coleta["fonte"] = "em-branco" if em_branco else "simulador"
     coleta["simulador_progresso"] = args.progresso
-    coleta["arquivo_estado"] = str(pasta / ".estado.json") if not reais else coleta.get(
-        "arquivo_estado", "dados/estado/estado.json"
-    )
     coleta.pop("arquivo_saude", None)
+    # Estado e historico vao para arquivo descartavel SEMPRE, inclusive com
+    # --destinos-reais: mesmo o exemplo gravando nos caminhos de producao, um
+    # ponto que nao veio do TSE nao pode entrar na serie que alimenta a curva
+    # e a previsao de fechamento da noite.
+    coleta["arquivo_estado"] = str(temporarios / ".exemplo-estado.json")
+    coleta["arquivo_historico"] = str(temporarios / ".exemplo-historico.jsonl")
     if not reais:
-        # O exemplo nao pode escrever no historico de verdade: um ponto
-        # ficticio no meio da serie estragaria a curva e a previsao do dia.
-        coleta["arquivo_historico"] = str(pasta / ".historico.jsonl")
         coleta["arquivo_graficos"] = str(pasta / "graficos.json")
-    cfg.bruto.setdefault("seguranca", {})["bloquear_nao_oficial"] = False
-    if not reais:
         cfg.bruto.setdefault("saida", {})["destino"] = str(pasta)
         for nome, opcoes in cfg.exporters.items():
             opcoes["destino"] = str(pasta / nome)
@@ -258,7 +341,10 @@ def cmd_exemplo(args) -> int:
             print(f"  - {problema}")
         return 1
 
-    print(f"Gerando exemplos em {pasta} com {args.progresso:.0f}% apurado...\n")
+    if em_branco:
+        print(f"Gerando a estrutura EM BRANCO em {pasta}...\n")
+    else:
+        print(f"Gerando exemplos em {pasta} com {args.progresso:.0f}% apurado...\n")
     pipeline = Pipeline(cfg)
     try:
         resultados = pipeline.rodar_uma_vez()
@@ -267,12 +353,17 @@ def cmd_exemplo(args) -> int:
     for nome, situacao in sorted(resultados.items()):
         print(f"  {nome}: {situacao}")
 
-    if not reais:
-        for temporario in (pasta / ".estado.json", pasta / ".historico.jsonl"):
-            if temporario.exists():
-                temporario.unlink()
+    for temporario in (
+        Path(coleta["arquivo_estado"]),
+        Path(coleta["arquivo_historico"]),
+    ):
+        temporario.unlink(missing_ok=True)
 
-    args.pasta = str(pasta / "mapa")
+    # O mapa de celulas e o unico subproduto que vale a pena guardar junto do
+    # pacote: diz qual campo do JSON alimenta qual item da cena. Com
+    # --destinos-reais ele vai para uma pasta de nome obvio, ao lado das
+    # tarjas, em vez de uma 'exemplos/' que ninguem sabe de onde saiu.
+    args.pasta = str(Path("MAPA-CASTALIA") if reais else pasta / "mapa")
     print()
     cmd_celulas(args, cfg)
 
@@ -284,20 +375,15 @@ def cmd_exemplo(args) -> int:
     else:
         print(f"\nArquivos de exemplo em {pasta}. Aponte o DataSource do GC para eles")
         print("e monte a cena agora; no dia, os mesmos caminhos recebem o dado real.")
-    print("ATENCAO: conteudo ficticio, fase 'S'. Nao use no ar.")
+    if em_branco:
+        print("Conteudo: NENHUM. Zeros e travessoes ate o TSE publicar.")
+    else:
+        print("ATENCAO: conteudo ficticio, fase 'S'. Nao use no ar.")
     return 0
 
 
 def _executar(cfg, args, uma_vez: bool) -> int:
-    if getattr(args, "permitir_nao_oficial", False):
-        # Trava por invocacao, nao por arquivo: no teste com o simulado do TSE
-        # e preciso aceitar fase 'S', e uma flag de linha de comando nao pode
-        # ser esquecida ligada - o proximo 'rodar' ja volta protegido.
-        cfg.bruto.setdefault("seguranca", {})["bloquear_nao_oficial"] = False
-        print("!" * 66)
-        print("  ATENCAO: aceitando boletim NAO OFICIAL (fase 'S').")
-        print("  Use so em teste. Nao coloque esta saida no ar.")
-        print("!" * 66)
+    _faixa_modo(cfg)
     problemas = cfg.validar()
     if problemas:
         print("Configuracao invalida; corrija antes de executar:")
@@ -342,7 +428,6 @@ def cmd_ensaio(args) -> int:
     cfg.bruto["coleta"]["simulador_duracao_segundos"] = args.duracao
     if args.progresso is not None:
         cfg.bruto["coleta"]["simulador_progresso"] = args.progresso
-    cfg.bruto.setdefault("seguranca", {})["bloquear_nao_oficial"] = False
     print(f"ENSAIO: dados simulados, apuracao completa em ~{args.duracao}s. Ctrl+C encerra.")
     return _executar(cfg, args, uma_vez=False)
 
@@ -376,15 +461,12 @@ def construir_parser() -> argparse.ArgumentParser:
     p_celulas.add_argument("--pasta", help="grava o mapa em CSV nesta pasta")
     p_celulas.set_defaults(func=cmd_celulas)
 
-    p_uma = sub.add_parser("uma-vez", help="executa um unico ciclo")
-    p_uma.set_defaults(func=cmd_uma_vez)
-    p_rodar = sub.add_parser("rodar", help="loop continuo de operacao")
-    p_rodar.set_defaults(func=cmd_rodar)
-    for sub_parser in (p_uma, p_rodar):
-        sub_parser.add_argument(
-            "--permitir-nao-oficial", action="store_true",
-            help="aceita boletim em fase 'S' (simulado do TSE). SO PARA TESTE.",
-        )
+    p_modo = sub.add_parser("modo", help="mostra ou troca entre simulado e producao")
+    p_modo.add_argument("novo", nargs="?", choices=MODOS, help="deixe vazio para so consultar")
+    p_modo.set_defaults(func=cmd_modo)
+
+    sub.add_parser("uma-vez", help="executa um unico ciclo").set_defaults(func=cmd_uma_vez)
+    sub.add_parser("rodar", help="loop continuo de operacao").set_defaults(func=cmd_rodar)
 
     p_ensaio = sub.add_parser("ensaio", help="loop continuo com dados simulados")
     p_ensaio.add_argument("--duracao", type=int, default=900, help="segundos ate 100%% apurado (padrao: 900)")
@@ -396,6 +478,8 @@ def construir_parser() -> argparse.ArgumentParser:
     p_exemplo.add_argument("--progresso", type=float, default=63.0, help="percentual apurado (padrao: 63)")
     p_exemplo.add_argument("--destinos-reais", action="store_true",
                            help="grava nas pastas da config, nao numa pasta separada")
+    p_exemplo.add_argument("--em-branco", action="store_true",
+                           help="estrutura completa, sem nome nem numero inventado")
     p_exemplo.set_defaults(func=cmd_exemplo)
 
     return parser

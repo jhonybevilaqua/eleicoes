@@ -16,6 +16,18 @@ except ImportError:  # pragma: no cover - YAML e opcional se usar JSON
 
 _VAR_ENV = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}")
 
+MODOS = ("simulado", "producao")
+
+# O modo decide as duas coisas que nao podem depender de alguem lembrar:
+#
+#   SIMULADO   aceita boletim em fase 'S' - que e o que o TSE publica nos dias
+#              de teste - e carimba o selo em TODA tarja, inclusive nas que
+#              vierem em fase 'O'. O selo nao desliga.
+#   PRODUCAO   so aceita fase 'O'. Nenhum valor de config derruba essa trava.
+#
+# Nao ter escolhido vale 'producao': o esquecimento cai no lado seguro.
+MODO_PADRAO = "producao"
+
 
 class ErroConfig(Exception):
     """Configuracao ausente, malformada ou incoerente."""
@@ -53,10 +65,47 @@ class Config:
     bruto: dict[str, Any]
     caminho: Path
 
+    # --- modo de operacao ---
+
+    @property
+    def modo(self) -> str:
+        """'simulado' nos dias de teste do TSE, 'producao' no dia da eleicao.
+
+        Vale a variavel de ambiente GCTSE_MODO antes da config, para o atalho
+        do Windows escolher sem ninguem editar arquivo - e sem deixar estado
+        para trocar de volta depois.
+        """
+        pedido = self._modo_pedido()
+        return pedido if pedido in MODOS else MODO_PADRAO
+
+    def _modo_pedido(self) -> str:
+        """O que foi pedido, valido ou nao - a validacao precisa ver o erro."""
+        for origem in (os.environ.get("GCTSE_MODO"), self.bruto.get("modo")):
+            # 'modo:' em branco no YAML vira None, nao string vazia
+            texto = str(origem).strip().lower() if origem is not None else ""
+            if texto:
+                return texto
+        return MODO_PADRAO
+
+    @property
+    def simulado(self) -> bool:
+        return self.modo == "simulado"
+
+    def _do_modo(self, secao: str) -> dict[str, Any]:
+        """Bloco 'secao' de dentro do modo atual, se existir."""
+        modos = self.bruto.get("modos") or {}
+        return ((modos.get(self.modo) or {}).get(secao) or {}) if isinstance(modos, dict) else {}
+
     # --- secoes ---
     @property
     def tse(self) -> dict[str, Any]:
-        return self.bruto.get("tse", {})
+        """Codigos do TSE, com o modo atual por cima.
+
+        O simulado do TSE sai em pleito proprio. Guardar os dois preenchidos
+        faz a virada de quinta para domingo ser troca de atalho, em vez de
+        edicao de configuracao sob pressao.
+        """
+        return {**(self.bruto.get("tse", {}) or {}), **self._do_modo("tse")}
 
     @property
     def coleta(self) -> dict[str, Any]:
@@ -68,11 +117,44 @@ class Config:
 
     @property
     def texto(self) -> dict[str, Any]:
-        return self.bruto.get("texto", {})
+        """Aparencia do texto, com o selo do modo por cima.
+
+        Em simulado o selo e carimbado SEMPRE, inclusive em boletim que venha
+        marcado como oficial. Sem isso, um dia de teste em que o TSE publique
+        fase 'O' sairia com a tarja limpa - cara de resultado, no meio de um
+        ensaio.
+        """
+        texto = {**(self.bruto.get("texto", {}) or {}), **self._do_modo("texto")}
+        if self.simulado:
+            texto["selo_nao_oficial"] = self.selo_do_modo
+            texto["selo_sempre"] = True
+        return texto
+
+    @property
+    def selo_do_modo(self) -> str:
+        """Selo que o modo impoe, acima do que o 'texto' pedir."""
+        if not self.simulado:
+            return ""
+        modos = self.bruto.get("modos") or {}
+        simulado = (modos.get("simulado") or {}) if isinstance(modos, dict) else {}
+        return str(
+            self._do_modo("texto").get("selo")
+            or simulado.get("selo")
+            or "SIMULADO - TESTE, NAO E RESULTADO"
+        )
 
     @property
     def seguranca(self) -> dict[str, Any]:
-        return self.bruto.get("seguranca", {})
+        """As travas, com a regra que a config nao pode contrariar.
+
+        Em PRODUCAO 'bloquear_nao_oficial' e sempre verdadeiro: nao existe
+        valor em arquivo que faca um simulado do TSE ir ao ar como resultado.
+        Em SIMULADO e sempre falso, senao os dias de teste nao mostrariam nada
+        - e la quem cobre o risco e o selo, que tambem nao desliga.
+        """
+        base = {**(self.bruto.get("seguranca", {}) or {}), **self._do_modo("seguranca")}
+        base["bloquear_nao_oficial"] = not self.simulado
+        return base
 
     @property
     def alertas(self) -> dict[str, Any]:
@@ -152,12 +234,50 @@ class Config:
         return alvos
 
     def validar(self) -> list[str]:
-        """Retorna a lista de problemas encontrados (vazia = config ok)."""
+        """Tudo que impede rodar: erros e pendencias juntos."""
+        erros, pendencias = self.conferir()
+        return erros + pendencias
+
+    def conferir(self) -> tuple[list[str], list[str]]:
+        """Separa o que esta ERRADO do que so esta POR PREENCHER.
+
+        O pacote sai de fabrica com o codigo do pleito em '000', porque o TSE
+        so publica esse codigo perto do dia. Nao e defeito - e a proxima coisa
+        a fazer. Tratar como erro faria a conferencia do pacote reprovar a si
+        mesma no build.
+
+        Erro impede rodar em qualquer situacao. Pendencia impede rodar contra
+        o TSE de verdade, mas nao impede ensaiar nem conferir o pacote.
+        """
         problemas: list[str] = []
+        pendencias: list[str] = []
         tse = self.tse
+        contra_o_tse = str(self.coleta.get("fonte", "tse")).lower() == "tse"
         for campo in ("base_url", "ciclo", "pleito", "eleicao"):
-            if not tse.get(campo):
-                problemas.append(f"tse.{campo} nao definido")
+            valor = str(tse.get(campo) or "").strip()
+            if not valor:
+                problemas.append(f"tse.{campo} nao definido (modo {self.modo})")
+            elif contra_o_tse and campo in ("pleito", "eleicao") and set(valor) <= {"0"}:
+                # '000' e o marcador de 'ainda nao preenchi'. Subir assim monta
+                # uma URL que sempre devolve 404, e a operacao passa a noite
+                # em 'aguardando boletim' sem ninguem entender por que.
+                pendencias.append(
+                    f"tse.{campo} ainda esta em '{valor}' no modo {self.modo}: "
+                    f"rode 'gctse descobrir' e preencha em modos.{self.modo}.tse"
+                )
+
+        pedido = self._modo_pedido()
+        if pedido not in MODOS:
+            origem = (
+                f"GCTSE_MODO={os.environ['GCTSE_MODO']}"
+                if str(os.environ.get("GCTSE_MODO") or "").strip().lower() == pedido
+                else f"modo: {self.bruto.get('modo')}"
+            )
+            problemas.append(
+                f"{origem} nao e um modo conhecido (use {' ou '.join(MODOS)}); "
+                f"valendo '{self.modo}'"
+            )
+
         if not self.bruto.get("alvos"):
             problemas.append("nenhum alvo configurado em 'alvos'")
         if not self.exporters:
@@ -184,7 +304,7 @@ class Config:
                 problemas.append(f"alvo '{alvo.nome}' com cargo fora da tabela do TSE: {alvo.cargo}")
         if self.intervalo < 5:
             problemas.append("coleta.intervalo_segundos abaixo de 5s: risco de bloqueio pelo TSE")
-        return problemas
+        return problemas, pendencias
 
 
 def carregar(caminho: str | Path) -> Config:

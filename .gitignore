@@ -26,3 +26,10 @@ dist/
 
 # o PDF das tarjas e gerado, mas vai versionado para circular sem build
 !tarjas/*.pdf
+
+# Saida de 'gctse exemplo' e da conferencia local
+exemplos/
+TARJAS/
+MAPA-CASTALIA/
+telao/
+telao-vertical/

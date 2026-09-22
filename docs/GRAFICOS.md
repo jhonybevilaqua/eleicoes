@@ -82,7 +82,7 @@ Duas escolhas que valem explicação:
 - **`limite_candidatos: 2`** — o mapa usa 1º e 2º colocado e nada mais. Cortar
   no parser economiza memória e tamanho de JSON vinte e sete vezes.
 
-O `config.recomendado.yaml` já traz esse bloco pronto. Se não for usar o mapa,
+O `config.example.yaml` documenta esse bloco inteiro. Se não for usar o mapa,
 apague a seção `mapas` e os alvos `mapa-*`: são 27 requisições por ciclo que
 deixam de existir.
 

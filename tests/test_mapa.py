@@ -177,3 +177,26 @@ def test_sem_tela_na_lista_de_formatos_nenhum_html_e_gravado(tmp_path):
 def test_malha_cobre_as_27_unidades_da_federacao():
     assert len(CONTORNO) == 27
     assert "DF" in CONTORNO and "PR" in CONTORNO
+
+
+def test_estado_com_zero_voto_apurado_fica_cinza(tmp_path):
+    """Boletim publicado e ninguem com voto ainda: nao ha lider.
+
+    Acontece de verdade nos primeiros minutos da noite. Pintar o primeiro da
+    lista daria a cor de um partido que nao ganhou nada naquela praca - uma
+    lideranca inventada pelo desenho, no ar, antes de existir um unico voto.
+    """
+    zerado = {
+        **_boletim("ac"),
+        "s": {"st": "0", "s": "1.000", "pst": "0,00"},
+        "vv": "0", "vb": "0", "vn": "0", "tvn": "0",
+        "cand": [
+            {"n": "11", "nm": "Alfa", "cc": "PVL", "vap": "0", "pvap": "0,00"},
+            {"n": "22", "nm": "Beta", "cc": "PDR", "vap": "0", "pvap": "0,00"},
+        ],
+    }
+    itens = _itens()
+    itens[0] = (1, "AC", analisar(zerado, abrangencia="ac", cargo=1))
+    estados = _exporter(tmp_path).montar(itens)["estados"]
+    assert estados["AC"]["lider"] is None
+    assert estados["AC"]["cor"] == "#6b7688"

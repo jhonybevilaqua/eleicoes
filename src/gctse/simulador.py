@@ -142,3 +142,65 @@ class Simulador:
             "tvn": _fmt_int(comparecimento),
             "cand": candidatos,
         }
+
+
+# Marcador de campo sem dado. Travessao, nao vazio: campo vazio no GC some e
+# a cena parece quebrada; travessao mostra que o espaco existe e ainda nao
+# chegou numero nenhum.
+SEM_DADO = "—"
+
+
+def boletim_em_branco(abrangencia: str, cargo: int, vagas: int = 5) -> dict[str, Any]:
+    """Boletim com a ESTRUTURA do TSE e nenhum conteudo.
+
+    Existe por um pedido direto: o pacote entregue nao pode levar nome de
+    candidato inventado. Mas os arquivos precisam existir nos caminhos
+    definitivos antes do dia, senao o GC so poderia ser amarrado depois que o
+    dado real comecar a chegar - e amarrar cena com o ar aberto e o jeito mais
+    caro de fazer isso.
+
+    Entao os arquivos nascem com todos os campos presentes, zerados e com
+    travessao no lugar dos nomes. Da para vincular tudo agora, e se algo assim
+    for ao ar por engano ninguem le um resultado falso: le um placar vazio,
+    que e visivelmente um sistema sem dado.
+
+    A fase vai em branco de proposito. Nao e 'O' (seria mentira) nem 'S'
+    (tambem seria: nao houve simulacao nenhuma) - e indefinida, que e o que
+    realmente e, e o bastante para o selo aparecer.
+    """
+    return {
+        "ele": "",
+        "cdpleito": "",
+        "tpabr": "BR" if abrangencia == "br" else ("UF" if len(abrangencia) == 2 else "MU"),
+        "cdabr": abrangencia.upper(),
+        "nmabr": "BRASIL" if abrangencia == "br" else abrangencia.upper(),
+        "carg": str(cargo),
+        "f": "",
+        "dg": "",
+        "hg": "",
+        "s": {"st": "0", "s": "0", "pst": "0,00"},
+        "ea": "0",
+        "c": "0",
+        "a": "0",
+        "vv": "0",
+        "vnom": "0",
+        "vb": "0",
+        "vn": "0",
+        "tvn": "0",
+        "cand": [
+            {
+                "seq": str(indice),
+                "sqcand": "",
+                "n": "",
+                "nm": SEM_DADO,
+                "nmt": SEM_DADO,
+                "cc": SEM_DADO,
+                "nv": "",
+                "e": "n",
+                "st": "",
+                "vap": "0",
+                "pvap": "0,00",
+            }
+            for indice in range(1, max(1, vagas) + 1)
+        ],
+    }

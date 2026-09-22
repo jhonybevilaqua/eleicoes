@@ -12,8 +12,8 @@ e deve ser feito com antecedência.
       (`scripts\rodar.bat` ou systemd).
 - [ ] Validar a cadeia contra dado real com `config/config.validacao-2022.yaml`
       (ver `docs/TSE-API.md`). Isso derruba a maior parte do risco técnico.
-- [ ] `gctse exemplo` e montar/amarrar as cenas do LiveBoard contra
-      `exemplos/`, usando o mapa em `exemplos/mapa/`.
+- [ ] `gctse exemplo --destinos-reais --em-branco` e montar/amarrar as cenas do
+      LiveBoard contra a pasta `TARJAS`, usando o mapa em `MAPA-CASTALIA/`.
 - [ ] Aferir `texto.limites.nome` contra o lower third real — meça no ar, não
       no olho.
 - [ ] Definir as praças e os cargos que vão ao ar, e quantas posições cada cena
@@ -38,9 +38,10 @@ e deve ser feito com antecedência.
       `fixa` (candidato preso à posição). Cena com foto por posição exige `fixa`.
 - [ ] Se usar o `Sort` do DataSource, apontar para `votos_num` (não para
       `votos`) e marcar "As number".
-- [ ] `gctse exemplo` — gerar os arquivos de exemplo e amarrar a cena contra
-      eles, com o mapa em `exemplos/mapa/`, não por tentativa e erro. Isso pode
-      ser feito meses antes: a estrutura é a mesma do dia.
+- [ ] `gctse exemplo --destinos-reais --em-branco` — criar os arquivos nos
+      caminhos definitivos e amarrar a cena contra eles, com o mapa em
+      `MAPA-CASTALIA/`, não por tentativa e erro. Isso pode ser feito meses
+      antes: a estrutura é a mesma do dia, e não há nome inventado em disco.
 - [ ] `gctse exemplo --progresso 100` — conferir a cena de fechamento (eleito,
       100% totalizado) antes de precisar dela no ar.
 

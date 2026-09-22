@@ -96,7 +96,6 @@ def renderizar(
     projecoes: dict[str, dict] | None = None,
 ) -> Path:
     agora = datetime.now()
-    ensaio = fonte != "tse"
 
     projecoes = projecoes or {}
     linhas = "".join(
@@ -110,10 +109,18 @@ def renderizar(
             '<h2>Grupos (rodízio e mapa)</h2><table class="rod"><tbody>' + corpo + "</tbody></table>"
         )
 
-    faixa = (
-        '<div class="faixa ensaio">FONTE DE ENSAIO — dados fictícios, não use no ar</div>'
-        if ensaio else ""
-    )
+    # A faixa diz QUAL fonte nao e o TSE, porque as duas alternativas pedem
+    # reacoes opostas: ensaio no ar e erro grave e para agora; estrutura em
+    # branco e o estado normal do pacote recem-instalado.
+    if fonte == "em-branco":
+        faixa = (
+            '<div class="faixa ensaio">ESTRUTURA EM BRANCO — '
+            'sem dado nenhum, aguardando o TSE</div>'
+        )
+    elif fonte != "tse":
+        faixa = '<div class="faixa ensaio">FONTE DE ENSAIO — dados fictícios, não use no ar</div>'
+    else:
+        faixa = ""
 
     documento = f"""<!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8">

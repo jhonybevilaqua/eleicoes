@@ -43,7 +43,6 @@ modos:
     tse:
       # <- PREENCHER com o que o TSE publicar para os dias de teste.
       #    'telao descobrir' lista os pleitos disponiveis.
-      ciclo: ele2026
       pleito: "000"
       eleicao: "000"
     # O selo que carimba todas as telas neste modo. Nao pode ser desligado.
@@ -52,7 +51,6 @@ modos:
   producao:
     tse:
       # <- PREENCHER com os codigos oficiais do pleito.
-      ciclo: ele2026
       pleito: "000"
       eleicao: "000"
 
@@ -60,9 +58,10 @@ log:
   nivel: INFO
   arquivo: logs/telao.log
 
-# Comum aos dois modos. O que muda (ciclo, pleito, eleicao) esta em 'modos'.
+# Comum aos dois modos. O que muda entre eles (pleito, eleicao) esta em 'modos'.
 tse:
   base_url: https://resultados.tse.jus.br/oficial
+  ciclo: ele2026
   turno: 1
 
 # O telao sempre quer a mesma coisa: o resultado nacional e o dos estados para

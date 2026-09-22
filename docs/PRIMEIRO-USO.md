@@ -130,7 +130,7 @@ scripts\instalar.bat
 ```
 
 Isso cria o ambiente, instala as dependências e copia
-`config\config.recomendado.yaml` para `config\config.yaml` — o arquivo que
+`config\config.operacao.yaml` para `config\config.yaml` — o arquivo que
 você vai editar.
 
 Em Linux:
@@ -138,7 +138,7 @@ Em Linux:
 ```
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt -e .
-cp config/config.recomendado.yaml config/config.yaml
+cp config/config.operacao.yaml config/config.yaml
 ```
 
 ---
@@ -380,7 +380,7 @@ O passo a passo completo do dia, com contingência, está em
 | Antivírus bloqueou o .exe | peça liberação à TI, ou compile internamente com `scripts\build.bat` |
 | O .exe abre e fecha na hora | rode pelos `.bat`, que pausam ao final e mostram a mensagem |
 | `gctse.exe` não acha a config | a pasta `_internal` e a pasta `config` precisam estar junto do .exe |
-| `arquivo de configuracao nao encontrado` | copie `config\config.recomendado.yaml` para `config\config.yaml` |
+| `arquivo de configuracao nao encontrado` | copie `config\config.operacao.yaml` para `config\config.yaml` |
 | `falha(404)` antes da eleição | normal — o TSE ainda não publicou os arquivos |
 | Erro de conexão | liberação de rede para `resultados.tse.jus.br:443` |
 | Acento errado no ar | troque `encoding` do exporter para `cp1252` |

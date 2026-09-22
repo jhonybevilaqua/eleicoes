@@ -7,8 +7,10 @@ O QUE FAZER, NA ORDEM
  1. Copie esta pasta inteira para a maquina do GC. Ex.: C:\gctse
     Nao instala nada. Para desinstalar, apague a pasta.
 
- 2. Abra a pasta TARJAS. Os arquivos ja estao la, com dados de exemplo.
-    Aponte o Castalia para eles e monte as cenas:
+ 2. Abra a pasta TARJAS. Os arquivos ja estao la, EM BRANCO: todos os
+    campos existem, zerados, com travessao no lugar dos nomes. Nao ha
+    um unico dado inventado neste pacote - o que aparecer na tela veio
+    do TSE. Aponte o Castalia para eles e monte as cenas:
 
         TARJAS\tarja-presidente.json    presidente, com foto
         TARJAS\tarja-governador.json    governador
@@ -18,19 +20,29 @@ O QUE FAZER, NA ORDEM
     ESTE E O CAMINHO DEFINITIVO. No teste e na noite da apuracao os mesmos
     arquivos sao reescritos com o dado real. Voce nunca troca o caminho.
 
- 3. Abra config.yaml no Bloco de Notas e preencha os dois codigos do TSE.
+ 3. Abra config.yaml no Bloco de Notas e preencha os codigos do TSE,
+    na secao 'modos'. Sao DOIS pares: um do teste, outro do oficial.
     Para saber quais sao, rode na pasta:  gctse.exe descobrir
+
+    Preencha os dois agora. E o que faz a virada de quinta para domingo
+    ser troca de atalho, e nao edicao de config sob pressao.
 
  4. Use os botoes:
 
-        ENSAIO.bat    dados inventados, apuracao completa em 10 min.
-                      Nao usa internet. Para treinar com a equipe.
+        ENSAIO.bat        dados inventados, apuracao completa em 10 min.
+                          Nao usa internet. Para treinar com a equipe.
 
-        TESTE.bat     le os boletins de SIMULADO do TSE (fase S).
-                      E o que voce roda no dia do teste.
+        GC-SIMULADO.bat   os DIAS DE TESTE do TSE. Grava nas MESMAS
+                          tarjas, entao a cena nao muda de caminho -
+                          mas TODA tarja sai carimbada, e o carimbo
+                          nao desliga.
 
-        INICIAR.bat   no ar. Le so boletim oficial.
-                      Reinicia sozinho se cair.
+        GC-PRODUCAO.bat   o DIA 4. So boletim oficial. Reinicia sozinho
+                          se cair.
+
+    O modo vem do atalho que voce abre, nao de arquivo: nao existe
+    estado para alguem esquecer de trocar depois. E quem nao escolher
+    cai em producao, que e o lado seguro.
 
  5. TELAO - telas cheias num segundo PC (programa separado, opcional)
 

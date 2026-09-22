@@ -85,16 +85,25 @@ jobs:
           Copy-Item config\telao.yaml "$alvo\TELAO\"
           Copy-Item empacotamento\TELAO-*.bat "$alvo\TELAO\"
 
-      - name: Preencher a pasta TARJAS com dados de exemplo
+      - name: Criar a pasta TARJAS em branco
         shell: pwsh
         working-directory: dist\gctse
         run: |
           # O Castalia ja pode ser amarrado ao extrair o pacote: os arquivos
-          # nascem nos caminhos DEFINITIVOS, com dados ficticios. No teste e
-          # no ar, estes mesmos arquivos sao reescritos - nunca troca caminho.
-          .\gctse.exe exemplo --destinos-reais --progresso 63
-          if (-not (Test-Path "TARJAS\tarja-presidente.json")) { throw "TARJAS nao foi preenchida" }
+          # nascem nos caminhos DEFINITIVOS. No teste e no ar, estes mesmos
+          # arquivos sao reescritos - nunca troca caminho.
+          #
+          # EM BRANCO, nao com dado de exemplo: o pacote entregue nao leva um
+          # unico nome de candidato inventado. Se um desses arquivos for ao ar
+          # por engano, o que aparece e um placar vazio - um sistema sem dado,
+          # nao um resultado falso.
+          .\gctse.exe exemplo --destinos-reais --em-branco
+          if (-not (Test-Path "TARJAS\tarja-presidente.json")) { throw "TARJAS nao foi criada" }
           Get-ChildItem TARJAS | Select-Object Length, Name | Format-Table -AutoSize
+          # nenhum nome de ensaio pode ter sobrado nos arquivos entregues
+          $sujeira = Get-ChildItem TARJAS -Filter *.json |
+            Select-String -Pattern "ENSAIO|PART-" -List
+          if ($sujeira) { throw "dado ficticio no pacote: $($sujeira.Path -join ', ')" }
 
       - name: Conferir o telao
         shell: pwsh
@@ -102,16 +111,32 @@ jobs:
         run: |
           .\telao.exe --version
           .\telao.exe -c telao.yaml validar
-          # prova que as seis telas saem desenhadas, sem tocar o TSE
-          .\telao.exe -c telao.yaml exemplo --pasta telas --progresso 63
-          $svgs = Get-ChildItem telas\*.svg
+          # Prova que as seis telas saem desenhadas, sem tocar o TSE. Vai para
+          # FORA do pacote, em pasta temporaria: a conferencia usa chapa
+          # ficticia, e nada ficticio pode viajar no zip.
+          $prova = Join-Path $env:RUNNER_TEMP "prova-telao"
+          .\telao.exe -c telao.yaml exemplo --pasta $prova --progresso 63
+          $svgs = Get-ChildItem "$prova\*.svg"
           if ($svgs.Count -lt 6) { throw "faltaram telas: $($svgs.Count)" }
-          Get-ChildItem telas | Select-Object Length, Name | Format-Table -AutoSize
-          # 'exemplo --pasta' leva o vertical junto, numa subpasta - assim a
-          # conferencia nao grava na pasta de producao do telao.yaml
-          $verticais = Get-ChildItem telas\vertical\*.svg
+          Get-ChildItem $prova | Select-Object Length, Name | Format-Table -AutoSize
+          $verticais = Get-ChildItem "$prova\vertical\*.svg"
           if ($verticais.Count -lt 6) { throw "faltaram telas verticais: $($verticais.Count)" }
-          Get-ChildItem telas\vertical | Select-Object Length, Name | Format-Table -AutoSize
+          Get-ChildItem "$prova\vertical" | Select-Object Length, Name | Format-Table -AutoSize
+
+      - name: Semear o telao em branco
+        shell: pwsh
+        working-directory: dist\gctse\TELAO
+        run: |
+          # O que VIAJA no pacote: pagina e telas desenhadas, sem dado nenhum.
+          # Assim o PC de exibicao pode ser montado e apontado hoje - abre,
+          # mostra o desenho vazio e espera o boletim - em vez de dar "arquivo
+          # nao encontrado" ate a coleta rodar pela primeira vez.
+          .\telao.exe -c telao.yaml exemplo --em-branco
+          $svgs = Get-ChildItem telao\*.svg
+          if ($svgs.Count -lt 6) { throw "telao nao foi semeado: $($svgs.Count)" }
+          if (-not (Test-Path "telao\index.html")) { throw "faltou a pagina de exibicao" }
+          Get-ChildItem telao | Select-Object Length, Name | Format-Table -AutoSize
+          Get-ChildItem telao-vertical | Select-Object Length, Name | Format-Table -AutoSize
 
       - name: Conferir o pacote
         shell: pwsh
@@ -119,12 +144,21 @@ jobs:
         run: |
           .\gctse.exe --version
           .\gctse.exe validar          # acha config.yaml na raiz sozinho
+          .\gctse.exe modo             # mostra em que modo o pacote sai de fabrica
           Write-Host "=== Raiz do pacote (o que a pessoa ve ao extrair) ==="
           Get-ChildItem | Where-Object { $_.Name -ne "_internal" } |
             Select-Object Mode, Length, Name | Format-Table -AutoSize
-          foreach ($f in @("INICIAR.bat","TESTE.bat","ENSAIO.bat","LEIA-ME.txt","config.yaml")) {
+          foreach ($f in @("GC-SIMULADO.bat","GC-PRODUCAO.bat","ENSAIO.bat",
+                           "LEIA-ME.txt","config.yaml","TELAO\telao.exe")) {
             if (-not (Test-Path $f)) { throw "faltou $f no pacote" }
           }
+          # Varredura final: nenhum arquivo entregue pode carregar chapa de
+          # ensaio. E a garantia que o pacote so mostra o que vier do TSE.
+          $suspeitos = Get-ChildItem -Recurse -File -Include *.json,*.csv,*.xml,*.svg |
+            Where-Object { $_.FullName -notmatch "_internal" } |
+            Select-String -Pattern "CANDIDATO ENSAIO|GOVERNO ENSAIO|SENADO ENSAIO" -List
+          if ($suspeitos) { throw "dado ficticio no pacote: $($suspeitos.Path -join ', ')" }
+          Write-Host "Pacote sem dado inventado: OK"
 
       - name: Publicar o zip como artefato
         uses: actions/upload-artifact@v4

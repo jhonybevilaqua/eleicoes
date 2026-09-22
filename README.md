@@ -44,7 +44,7 @@ nada.
 
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt -e .
-cp config/config.recomendado.yaml config/config.yaml
+cp config/config.operacao.yaml config/config.yaml
 ```
 
 Requisito: Python 3.9 ou superior.
@@ -52,10 +52,11 @@ Requisito: Python 3.9 ou superior.
 ## Primeiros passos
 
 ```bash
+gctse modo                    # em que modo está: simulado ou produção
 gctse validar                 # confere a configuração e mostra as URLs montadas
 gctse descobrir               # lista os pleitos publicados pelo TSE (pega os códigos)
 gctse inspecionar --abrangencia br --cargo 1   # mostra as chaves reais do arquivo
-gctse exemplo                 # gera arquivos de exemplo + mapa (monte a cena hoje)
+gctse exemplo --em-branco     # cria a estrutura sem dado nenhum (monte a cena hoje)
 gctse celulas                 # mapa de vínculos para amarrar a cena (ClassX)
 gctse ensaio --duracao 600    # simula uma apuração completa em 10 min
 gctse uma-vez                 # um único ciclo (bom para agendador)
@@ -66,24 +67,32 @@ No Windows, sem ativar a venv: `.venv\Scripts\python.exe -m gctse rodar`.
 
 ## Montar a cena do GC antes do pleito
 
-Os dados reais de 2026 só existem no dia, mas a cena não precisa esperar. A
-pasta [`exemplos/`](exemplos/) traz os arquivos com a **estrutura exata** do que
-vai ao ar — mesmos nomes de campo, mesmos caminhos — mais o mapa de qual
-caminho guarda qual campo. Aponte o DataSource do LiveBoard para eles e amarre
-a cena hoje; no dia, os mesmos caminhos recebem o dado real.
+Os dados reais de 2026 só existem no dia, mas a cena não precisa esperar.
 
 ```bash
-gctse exemplo                      # regera em exemplos/, com 63% apurado
-gctse exemplo --progresso 100      # como a cena fica no fechamento
+gctse exemplo --destinos-reais --em-branco   # estrutura completa, zero conteúdo
+gctse exemplo --progresso 63                 # chapa fictícia, para VER a cena montada
+gctse exemplo --progresso 100                # como a cena fica no fechamento
 ```
+
+`--em-branco` é o que o pacote entregue leva: todos os campos existem, zerados,
+com travessão no lugar dos nomes. Dá para amarrar o LiveBoard campo por campo
+sem um único nome inventado em disco — e se um desses arquivos for ao ar por
+engano, o que aparece é um placar vazio, não um resultado falso.
+
+Sem a flag, a chapa fictícia serve para **ver** a cena montada, com barra e
+foto. Use nos ensaios, não no PC que vai ao ar.
+
+O mapa de vínculos (qual campo do JSON alimenta qual item da cena) sai em
+`MAPA-CASTALIA/`.
 
 ## Configuração
 
 Dois modelos para partir:
 
-- **`config/config.recomendado.yaml`** — escolha fechada, pronta para rodar:
-  JSON no LiveBoard, um exporter `fixa` para cena com foto por posição e um
-  `colocacao` para o ranking, campos enxutos. Copie este se estiver começando.
+- **`config/config.operacao.yaml`** — a que vai no pacote: as três tarjas, o
+  rodízio dos 10 estados e os dois modos (simulado e produção). Copie esta se
+  estiver começando.
 - **`config/config.example.yaml`** — todas as opções documentadas, para
   consulta.
 - **`config/config.validacao-2022.yaml`** — aponta para o pleito de 2022, que
@@ -231,7 +240,7 @@ mínimo de seções totalizadas.
 - [`docs/TELAO.md`](docs/TELAO.md) — o telão: sistema de exibição em tela cheia
 - [`docs/DIAS-DE-TESTE.md`](docs/DIAS-DE-TESTE.md) — roteiro dos dias de teste do TSE
 - [`docs/CASTALIA.md`](docs/CASTALIA.md) — fazer o gráfico acompanhar o percentual no Castalia
-- [`docs/TESTE-SIMULADO.md`](docs/TESTE-SIMULADO.md) — testar com o simulado do TSE
+- [`docs/DIAS-DE-TESTE.md`](docs/DIAS-DE-TESTE.md) — roteiro dos dias de teste do TSE
 - [`docs/OPERACAO.md`](docs/OPERACAO.md) — runbook do dia da eleição e contingência
 
 ## Testes

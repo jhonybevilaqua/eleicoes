@@ -63,6 +63,18 @@ class Exporter(ABC):
             )
         return str(valor)
 
+    def _selo(self, ap: Apuracao) -> str:
+        """O carimbo de 'isto nao e resultado'.
+
+        Normalmente sai so em boletim fora da fase oficial. Em modo simulado,
+        'selo_sempre' o mantem aceso mesmo em boletim marcado como oficial:
+        num dia de teste, o que define se aquilo e resultado e o dia, nao o
+        campo que veio no arquivo.
+        """
+        if ap.oficial and not bool(self.cfg_texto.get("selo_sempre", False)):
+            return ""
+        return str(self.cfg_texto.get("selo_nao_oficial", "SIMULADO"))
+
     # --- contexto exposto aos templates do GC ---
 
     def campos_resumo(self, ap: Apuracao) -> dict[str, str]:
@@ -79,7 +91,7 @@ class Exporter(ABC):
             "fase_nome": ap.fase_nome,
             "oficial": "1" if ap.oficial else "0",
             "totalizada": "1" if ap.totalizada else "0",
-            "selo": "" if ap.oficial else str(self.cfg_texto.get("selo_nao_oficial", "SIMULADO")),
+            "selo": self._selo(ap),
             "apuracao_pct": self._pct(ap.pct_secoes),
             "apuracao_pct_num": f"{ap.pct_secoes:.2f}",
             "secoes_totalizadas": self._num(ap.secoes_totalizadas),
