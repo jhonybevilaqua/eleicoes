@@ -48,10 +48,17 @@ coleta:
   cache_condicional: true
   arquivo_estado: dados/validacao-2022/estado.json
 
+# Diagnostico, nao ar: roda em modo SIMULADO de proposito.
+#
+# Dado de 2022 vem em fase oficial, mas se vier outra coisa queremos VER, nao
+# descartar em silencio - e em simulado a trava de fase fica desligada. De
+# quebra, tudo que sair daqui vem carimbado, que e o certo para um pleito de
+# quatro anos atras: se um desses arquivos aparecer numa cena, o carimbo diz
+# na hora que aquilo nao e a apuracao de agora.
+modo: simulado
+
 seguranca:
-  # Dado de 2022 vem em fase oficial; se vier outra coisa, queremos ver e
-  # nao descartar em silencio - esta e uma config de diagnostico, nao de ar.
-  bloquear_nao_oficial: false
+  # 'bloquear_nao_oficial' nao aparece aqui: quem decide e o modo.
   bloquear_regressao: false
 
 texto:

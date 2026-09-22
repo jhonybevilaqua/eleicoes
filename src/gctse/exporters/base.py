@@ -36,7 +36,9 @@ class Exporter(ABC):
             # por exemplo, e herdando um selo vazio -, e a tarja sairia limpa
             # num dia de teste. Nada aqui negocia isso.
             self.cfg_texto["selo_sempre"] = True
-            self.cfg_texto["selo_nao_oficial"] = base_texto["selo_nao_oficial"]
+            self.cfg_texto["selo_nao_oficial"] = base_texto.get(
+                "selo_nao_oficial", "SIMULADO"
+            )
         self.cfg_saida = cfg_saida or {}
         self.destino = Path(self.opcoes.get("destino", self.cfg_saida.get("destino", "dados/saida")))
         self.encoding = str(self.opcoes.get("encoding", self.cfg_saida.get("encoding", "utf-8")))

@@ -179,3 +179,34 @@ def test_exporter_nao_consegue_apagar_o_selo_do_modo():
     assert exporter.cfg_texto["selo_sempre"] is True
     assert "SIMULADO" in exporter.cfg_texto["selo_nao_oficial"]
     assert exporter.cfg_texto["limites"]["nome"] == 14   # o resto do bloco vale
+
+
+def test_painel_avisa_o_modo_simulado_mesmo_lendo_o_tse():
+    """Nos dias de teste a fonte E o TSE e os numeros sao plausiveis.
+
+    Sem a faixa, o painel do coordenador fica identico ao da noite da eleicao
+    e quem passa na frente do monitor nao tem como saber que e ensaio.
+    """
+    from gctse.painel import renderizar
+
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as pasta:
+        alvo = Path(pasta) / "painel.html"
+        for modo, esperado in (("simulado", True), ("producao", False)):
+            renderizar(
+                caminho=alvo, fonte="tse", modo=modo, ciclos=1, intervalo=20,
+                resultados={}, apuracoes={}, rodizios={},
+            )
+            corpo = alvo.read_text(encoding="utf-8")
+            assert ("MODO SIMULADO" in corpo) is esperado
+            assert f"modo <b>{modo.upper()}" in corpo
+
+
+def test_selo_sem_texto_configurado_nao_estoura():
+    """Config com 'selo_sempre' e sem texto de selo nao pode derrubar a subida."""
+    from gctse.exporters import criar
+
+    exporter = criar("j", {"tipo": "json", "formato": "gc", "destino": "."},
+                     {"selo_sempre": True}, {})
+    assert exporter.cfg_texto["selo_nao_oficial"] == "SIMULADO"

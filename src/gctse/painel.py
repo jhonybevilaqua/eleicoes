@@ -88,6 +88,7 @@ def renderizar(
     *,
     caminho: str | Path,
     fonte: str,
+    modo: str = "producao",
     ciclos: int,
     intervalo: int,
     resultados: dict[str, str],
@@ -109,10 +110,18 @@ def renderizar(
             '<h2>Grupos (rodízio e mapa)</h2><table class="rod"><tbody>' + corpo + "</tbody></table>"
         )
 
-    # A faixa diz QUAL fonte nao e o TSE, porque as duas alternativas pedem
-    # reacoes opostas: ensaio no ar e erro grave e para agora; estrutura em
-    # branco e o estado normal do pacote recem-instalado.
-    if fonte == "em-branco":
+    # A faixa responde "o que eu estou vendo?" antes de qualquer numero.
+    #
+    # O modo vem primeiro porque e o caso mais traicoeiro: nos dias de teste a
+    # fonte E o TSE, os numeros sao plausiveis e o painel ficaria identico ao
+    # da noite da eleicao. Quem passa na frente do monitor nao teria como
+    # saber que aquilo e ensaio.
+    if modo == "simulado":
+        faixa = (
+            '<div class="faixa ensaio">MODO SIMULADO — dados de TESTE do TSE, '
+            'não é resultado</div>'
+        )
+    elif fonte == "em-branco":
         faixa = (
             '<div class="faixa ensaio">ESTRUTURA EM BRANCO — '
             'sem dado nenhum, aguardando o TSE</div>'
@@ -169,6 +178,7 @@ footer{{color:var(--tx2);font-size:12px;margin-top:26px;padding-top:14px;
 <div class="topo">
   <h1>Painel de apuração</h1>
   <div class="meta">
+    <span>modo <b>{html.escape(modo.upper())}</b></span>
     <span>fonte <b>{html.escape(fonte)}</b></span>
     <span>ciclo <b>{ciclos}</b></span>
     <span>atualizado <b>{agora.strftime('%H:%M:%S')}</b></span>

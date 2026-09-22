@@ -115,9 +115,15 @@ def cmd_modo(args) -> int:
 
     if not args.novo:
         print(f"Modo atual: {cfg.modo.upper()}")
-        if os.environ.get("GCTSE_MODO"):
-            print(f"  (vindo da variavel GCTSE_MODO={os.environ['GCTSE_MODO']},")
+        variavel = str(os.environ.get("GCTSE_MODO") or "").strip()
+        if variavel.lower() == cfg.modo:
+            print(f"  (vindo da variavel GCTSE_MODO={variavel},")
             print("   que tem prioridade sobre o arquivo)")
+        elif variavel:
+            # Variavel escrita errado nao vale, e dizer que vale seria pior do
+            # que nao dizer nada: a pessoa iria embora achando que escolheu.
+            print(f"  ATENCAO: GCTSE_MODO={variavel} nao e um modo conhecido")
+            print(f"  e foi ignorada. Valendo o do arquivo: {cfg.modo.upper()}.")
         print(f"  pleito {cfg.tse.get('pleito', '-')} / eleicao {cfg.tse.get('eleicao', '-')}")
         print(f"  aceita fase simulada: {'sim' if cfg.simulado else 'nao'}")
         print("\nPara trocar:  gctse modo simulado   |   gctse modo producao")
@@ -351,6 +357,9 @@ def cmd_exemplo(args) -> int:
     coleta["arquivo_historico"] = str(temporarios / ".exemplo-historico.jsonl")
     if not reais:
         coleta["arquivo_graficos"] = str(pasta / "graficos.json")
+        # o painel tambem: sem esta linha o exemplo reescreve o painel da
+        # pasta do ar, que e onde o coordenador olha durante a apuracao
+        coleta["arquivo_painel"] = str(pasta / "painel.html")
         cfg.bruto.setdefault("saida", {})["destino"] = str(pasta)
         for nome, opcoes in cfg.exporters.items():
             opcoes["destino"] = str(pasta / nome)
@@ -373,11 +382,11 @@ def cmd_exemplo(args) -> int:
     for nome, situacao in sorted(resultados.items()):
         print(f"  {nome}: {situacao}")
 
-    for temporario in (
-        Path(coleta["arquivo_estado"]),
-        Path(coleta["arquivo_historico"]),
-    ):
-        temporario.unlink(missing_ok=True)
+    # Pelos caminhos EFETIVOS, nao pelos que foram escritos acima: em modo
+    # simulado a config acrescenta '-simulado' ao nome, e apagar o caminho
+    # cru deixaria o arquivo temporario para tras na pasta entregue.
+    for chave in ("arquivo_estado", "arquivo_historico"):
+        Path(cfg.coleta[chave]).unlink(missing_ok=True)
 
     # O mapa de celulas e o unico subproduto que vale a pena guardar junto do
     # pacote: diz qual campo do JSON alimenta qual item da cena. Com

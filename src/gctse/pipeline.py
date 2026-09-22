@@ -372,6 +372,7 @@ class Pipeline:
             renderizar_painel(
                 caminho=caminho,
                 fonte=str(self.cfg.coleta.get("fonte", "tse")),
+                modo=self.cfg.modo,
                 ciclos=self.ciclos,
                 intervalo=self.cfg.intervalo,
                 resultados=resultados,
@@ -390,6 +391,7 @@ class Pipeline:
         corpo = {
             "atualizado_em": datetime.now().isoformat(timespec="seconds"),
             "ciclos": self.ciclos,
+            "modo": self.cfg.modo,
             "fonte": self.cfg.coleta.get("fonte", "tse"),
             "alvos": resultados,
             "falhas": self._falhas,

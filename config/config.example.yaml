@@ -50,9 +50,14 @@ coleta:
 
 # --- Guardas de seguranca no ar ---------------------------------------------
 seguranca:
-  # Descarta boletim que nao esteja em fase Oficial ('O'). E o que impede um
-  # simulado do TSE de ir ao ar como resultado real. Mantenha true.
-  bloquear_nao_oficial: true
+  # ATENCAO: 'bloquear_nao_oficial' NAO se configura aqui. Quem decide e o
+  # modo, e de proposito: em producao a trava e sempre ligada, em simulado
+  # sempre desligada, e nao existe linha de arquivo que mude isso. Era o
+  # caminho por onde um simulado do TSE podia ir ao ar como resultado -
+  # bastava alguem desligar a trava num teste e esquecer de religar.
+  #
+  #   modo: producao   ou  GC-PRODUCAO.bat   -> so fase 'O'
+  #   modo: simulado   ou  GC-SIMULADO.bat   -> aceita fase 'S', tudo carimbado
   # Descarta boletim mais antigo que o ultimo publicado (copia velha de CDN).
   bloquear_regressao: true
   # So publica a partir deste percentual de secoes totalizadas (0 = sempre).
