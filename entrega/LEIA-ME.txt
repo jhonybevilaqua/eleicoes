@@ -46,6 +46,8 @@ O QUE FAZER, NA ORDEM
     Se preferir fixar na mao, preencha "pleito" e "eleicao" no config.json
     e o programa usa os seus, sem perguntar nada.
 
+ 4a. ESTA TUDO FUNCIONANDO? Duplo clique em DIAGNOSTICO.bat
+     (valida tudo e da um veredito escrito - veja o COMECE-AQUI.txt)
  4b. ESTAMOS RECEBENDO DADO? Duplo clique em CONFERIR.bat
  4c. TARJA EMBARALHADA NO AR? Duplo clique em CONFERIR-COLUNAS.bat
 

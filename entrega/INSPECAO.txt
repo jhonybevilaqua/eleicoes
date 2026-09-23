@@ -1,5 +1,75 @@
 ===========================================================================
- LAUDO DE INSPECAO - gctse 5.3
+ LAUDO DE INSPECAO - gctse 5.6
+ 23/09/2026 - "ainda nao consigo receber os dados"
+===========================================================================
+
+ DEFEITO: A TARJA NO AR ESPERAVA OS OUTROS 26 ESTADOS
+
+   A praca no ar era BAIXADA no inicio do ciclo e so GRAVADA no fim, depois
+   da varredura das 27. O dado chegava no primeiro segundo e ficava
+   esperando o Acre, Alagoas, Amapa... ate Tocantins.
+
+   Medido com o CDN do TSE lento (1 segundo por estado fora do ar):
+
+        antes .... tarja no ar gravada em 61,8 s
+        agora .... tarja no ar gravada em  2,1 s
+                   (o ciclo inteiro continua levando 61 s)
+
+   Na noite da apuracao o CDN vai estar sob carga. O que esta no ar nao
+   pode depender do que nao esta.
+
+ NOVO: DIAGNOSTICO.bat - uma ferramenta, um arquivo, um veredito
+
+   Antes eram quatro ferramentas e quatro arquivos, e a pergunta "esta
+   funcionando?" dependia de alguem juntar os quatro na cabeca com a
+   janela do simulado fechando. Agora e um so, com veredito escrito.
+
+   Roda os mesmos modos que ja existiam (VALIDAR, CAMPOS, o ciclo) como
+   processo filho - o que valida ali e EXATAMENTE o mesmo codigo, e nao
+   uma segunda copia que pudesse divergir.
+
+   Testado em cinco cenarios:
+     A. coleta parada, tudo certo ........ roda um ciclo, tudo OK
+     B. oficial fora do ar ............... [!!] no oficial, resto OK
+     C. TESTE.bat rodando ao lado ........ nao atrapalha: 0 erro na coleta
+     D. simulado fora do ar .............. FALHA em receber, tarjas VAZIAS
+     E. INICIAR.bat aberto por engano .... "MODO ERRADO: feche o INICIAR,
+                                            abra o TESTE"
+
+   O cenario E merece nota. O oficial ainda nao tem boletim de 2026, entao
+   o INICIAR.bat aberto no lugar do TESTE.bat deixa as tarjas VAZIAS - e o
+   sintoma e exatamente "nao estou recebendo dados", com tudo funcionando.
+
+   Dois defeitos do proprio diagnostico foram pegos nos testes:
+
+     - ele contava 4 tarjas na ordem quando eram 3: o -match do PowerShell
+       ignora maiusculas, e a frase de rodape "se a ordem CONFERE aqui"
+       contava como resultado. Contagem de veredito agora e exata.
+
+     - ele tratava "tarja diverge do TSE" como "nao recebe dados". Sao
+       problemas opostos - um e rede, o outro e gravacao - e confundir os
+       dois manda procurar o defeito no lugar errado. Separados.
+
+ O ARRANQUE FALA
+
+   A linha de resumo so sai quando o ciclo fecha, e uma varredura leva uns
+   dez segundos. Dez segundos de tela muda logo depois da partida parecem
+   defeito. O primeiro ciclo agora diz quantas pracas vai ler e marca o
+   progresso; do segundo em diante cala.
+
+ VERIFICADO NA 5.6
+
+   Tarja no ar com CDN lento: 61,8 s -> 2,1 s                        OK
+   Diagnostico nos cinco cenarios                                    OK
+   Congelado segura mesmo com a gravacao antecipada                  OK
+   Descongelar entra na hora                                         OK
+   Anti-regressao: segura 80%, aceita 35% na 3a                      OK
+   Validador simulado e oficial: 36 / 0                              OK
+   Ordem travada 24/24/30, modelos vazios identicos                  OK
+   Painel: previa, aprovar, 1 clique, congelar                       OK
+
+===========================================================================
+ LAUDO ANTERIOR - gctse 5.3
  23/09/2026 - o FAQ do TSE, lido
 ===========================================================================
 

@@ -79,6 +79,25 @@
     em arquivo nenhum. Escolha antes de entrar no ar e avise a equipe:
     e a diferenca entre "cliquei e nao mudou" e "cliquei e foi ao ar".
 
+ 5b. PARA VALIDAR TUDO DE UMA VEZ: DIAGNOSTICO.bat
+
+    E a ferramenta principal de validacao. Com o TESTE.bat aberto ou nao,
+    ela confere em um ou dois minutos:
+
+      1. se a maquina alcanca o simulado E o oficial
+      2. se a coleta esta rodando - e no MODO CERTO (pega o INICIAR.bat
+         aberto por engano no lugar do TESTE.bat)
+      3. se as tarjas estao sendo gravadas COM DADO, e em que pasta
+      4. se cada campo da tarja bate com o TSE
+      5. se as colunas estao na ordem que a cena espera
+      6. O QUE A SUA TARJA TEM QUE MOSTRAR NA TELA AGORA - nome, partido,
+         percentual e urnas, para comparar com o LiveBoard
+
+    E termina num VEREDITO escrito, item por item. Grava tudo em UM
+    arquivo so: DIAGNOSTICO.txt. Em caso de duvida, e esse que se envia.
+
+    Na noite da apuracao, o equivalente e o DIAGNOSTICO-OFICIAL.bat.
+
  6. Com o TESTE rodando, duplo clique em VALIDAR-SIMULADO.bat
 
     Ele pega o boletim CRU do TSE e compara, numero por numero, com o

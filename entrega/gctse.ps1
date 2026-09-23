@@ -13,6 +13,7 @@
         .\gctse.ps1 -Fotos        lista os nomes de arquivo de foto aceitos
         .\gctse.ps1 -Campos       mostra as colunas dos arquivos, numeradas
         .\gctse.ps1 -Modelos      regrava as tarjas VAZIAS, para montar a cena
+        .\gctse.ps1 -Diagnostico  valida TUDO de uma vez e grava DIAGNOSTICO.txt
         .\gctse.ps1 -Teste        aceita o simulado do TSE (fase S)
         .\gctse.ps1               no ar: so boletim oficial
 #>
@@ -25,6 +26,7 @@ param(
     [switch] $Fotos,
     [switch] $Campos,
     [switch] $Modelos,
+    [switch] $Diagnostico,
     [switch] $Teste,
     [switch] $UmaVez,
     [string] $Config = "config.json"
@@ -33,7 +35,7 @@ param(
 # Versao impressa na partida e no painel. Sem carimbo, "qual versao esta
 # rodando ai?" so se responde abrindo arquivo e comparando a olho - e no
 # meio de um teste com janela de horario ninguem faz isso.
-$Versao = "5.5 - 23/09/2026"
+$Versao = "5.6 - 23/09/2026"
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
@@ -1485,6 +1487,14 @@ function Executar-Ciclo {
             if ($null -eq $praca) { continue }
             $null = Buscar-Praca $praca.uf $saida.cargo $praca.nome $Modo
         }
+        # Grava a tarja NO AR agora, antes de varrer as outras 26 pracas.
+        # Antes ela so era gravada no fim do ciclo: o dado da praca no ar
+        # chegava no primeiro segundo e ficava esperando o Acre, Alagoas,
+        # Amapa... ate Tocantins serem lidos - uns 11 segundos num dia bom,
+        # MINUTOS se o CDN do TSE estiver lento em algum estado. O que esta
+        # no ar nao pode depender do que nao esta. A gravacao do fim do
+        # ciclo continua existindo e so reescreve se algo mudou.
+        $null = Publicar-Selecionada $script:CacheBoletins
     }
 
     # --- varredura das demais pracas : a cada N ciclos
@@ -1965,6 +1975,269 @@ if ($Modelos) {
     Write-Host "  Assim que o TESTE ou o INICIAR rodar, os MESMOS arquivos sao"
     Write-Host "  reescritos com o dado real - sem refazer vinculo."
     Write-Host ""
+    exit 0
+}
+
+# ------------------------------------------------------------- diagnostico
+
+if ($Diagnostico) {
+    # UMA ferramenta, UM arquivo. Antes eram quatro (CONFERIR, VALIDAR,
+    # CONFERIR-COLUNAS e o log), cada uma com o seu .txt, e a pergunta
+    # "esta funcionando?" dependia de alguem juntar as quatro na cabeca -
+    # com a janela do simulado fechando. Aqui ela vira um veredito escrito.
+    #
+    # Reaproveita os modos que ja existem rodando o proprio gctse como
+    # processo filho: o que valida aqui e EXATAMENTE o mesmo codigo que
+    # valida no VALIDAR, e nao uma segunda copia que poderia divergir.
+    $linhasD = New-Object System.Collections.ArrayList
+    function D { param([string] $Texto = "") [void] $linhasD.Add($Texto); Write-Host $Texto }
+
+    $exe = (Get-Process -Id $PID).Path
+    $raiz = (Get-Location).Path
+    $pastaT = $PastaSaida
+    if (-not [IO.Path]::IsPathRooted($pastaT)) { $pastaT = Join-Path $raiz $pastaT }
+    $modoD = "OFICIAL"
+    if ($Teste) { $modoD = "SIMULADO" }
+    $argsModo = @()
+    if ($Teste) { $argsModo = @("-Teste") }
+
+    $veredito = [ordered]@{}
+
+    D "==========================================================="
+    D " DIAGNOSTICO gctse - validacao completa contra o TSE"
+    D " $(Get-Date -Format 'dd/MM/yyyy HH:mm:ss')   modo: $modoD"
+    D " maquina ..: $([Environment]::MachineName)"
+    D " versao ...: $Versao"
+    D " pasta ....: $raiz"
+    D "==========================================================="
+
+    # ---- 1. rede
+    D ""
+    D "1. A MAQUINA ALCANCA O TSE?"
+    D ""
+    $alvosRede = @(
+        @{ rotulo = "SIMULADO"; base = "$($cfg.tse.base_url_simulado)" },
+        @{ rotulo = "OFICIAL "; base = "$UrlOficial" }
+    )
+    $redeOk = @{}
+    foreach ($alvo in $alvosRede) {
+        $url = "$($alvo.base.TrimEnd('/'))/comum/config/ele-c.json"
+        $relogio = [Diagnostics.Stopwatch]::StartNew()
+        try {
+            $r = Invoke-WebRequest -Uri $url -TimeoutSec 12 -UseBasicParsing
+            $relogio.Stop()
+            D ("   {0}  RESPONDE   HTTP {1} em {2} ms" -f $alvo.rotulo, [int] $r.StatusCode, $relogio.ElapsedMilliseconds)
+            $redeOk[$alvo.rotulo.Trim()] = $true
+        } catch {
+            $relogio.Stop()
+            $motivo = $_.Exception.Message
+            if ($motivo.Length -gt 90) { $motivo = $motivo.Substring(0, 90) }
+            D ("   {0}  NAO RESPONDE  ({1} ms) - {2}" -f $alvo.rotulo, $relogio.ElapsedMilliseconds, $motivo)
+            $redeOk[$alvo.rotulo.Trim()] = $false
+        }
+    }
+
+    # ---- 2. a coleta esta viva?
+    D ""
+    D "2. A COLETA (TESTE.bat / INICIAR.bat) ESTA RODANDO?"
+    D ""
+    $intervaloD = 20
+    if (Tem-Propriedade $cfg "intervalo_segundos") { $intervaloD = [int] $cfg.intervalo_segundos }
+    $limiteVivo = 3 * $intervaloD + 15
+    $batida = Join-Path $pastaT "coleta.json"
+    $viva = $false
+    $modoErrado = $false
+    if (Test-Path $batida) {
+        $idade = [int] ((Get-Date) - (Get-Item $batida).LastWriteTime).TotalSeconds
+        $modoBat = ""; $cicloBat = ""
+        try {
+            $b = Get-Content $batida -Raw -Encoding UTF8 | ConvertFrom-Json
+            if (Tem-Propriedade $b "modo") { $modoBat = "$($b.modo)" }
+            if (Tem-Propriedade $b "ciclo") { $cicloBat = "$($b.ciclo)" }
+        } catch { }
+        $modoEsperado = "AR"
+        if ($Teste) { $modoEsperado = "TESTE" }
+        if ($idade -le $limiteVivo -and $modoBat -and $modoBat -ne $modoEsperado) {
+            # A confusao mais provavel de todas: INICIAR.bat aberto quando
+            # se queria o TESTE.bat, ou o contrario. O oficial ainda nao tem
+            # boletim de 2026, entao as tarjas ficam VAZIAS e o sintoma e
+            # exatamente "nao estou recebendo dados" - com tudo funcionando.
+            $modoErrado = $true
+            $nomeBat = "INICIAR.bat (OFICIAL)"
+            if ($modoBat -eq "TESTE") { $nomeBat = "TESTE.bat (SIMULADO)" }
+            $nomeCerto = "TESTE.bat"
+            if (-not $Teste) { $nomeCerto = "INICIAR.bat" }
+            D "   SIM, mas no MODO ERRADO: quem esta rodando e o $nomeBat."
+            D "   Este diagnostico e do $modoD. Feche aquela janela e abra o $nomeCerto."
+            D "   As duas gravam na MESMA pasta TARJAS - nao deixe as duas abertas."
+        } elseif ($idade -le $limiteVivo) {
+            $viva = $true
+            D "   SIM. Ultimo ciclo fechou ha $idade s (modo $modoBat, ciclo $cicloBat)."
+        } else {
+            D "   NAO. O ultimo ciclo fechou ha $idade s - a coleta esta parada."
+        }
+    } else {
+        D "   NAO. Nenhum ciclo foi completado ainda nesta pasta."
+    }
+    if (-not $viva) {
+        D ""
+        D "   Rodando UM ciclo agora, aqui mesmo, para ter o que conferir..."
+        $saidaCiclo = & $exe -NoProfile -ExecutionPolicy Bypass -File $PSCommandPath -UmaVez @argsModo | Out-String
+        $ult = @($saidaCiclo -split "`r?`n" | Where-Object { $_ -match '\S' } | Select-Object -Last 6)
+        foreach ($l in $ult) { D "     $l" }
+    }
+
+    # ---- 3. os arquivos que o Castalia le
+    D ""
+    D "3. OS ARQUIVOS QUE O CASTALIA / LIVEBOARD DEVE LER"
+    D ""
+    D "   Pasta: $pastaT"
+    D "   O DataSource tem que apontar para ESTES arquivos, e nao para copias."
+    D ""
+    # "Gravado agora" nao quer dizer "tem dado": sem boletim, o sistema
+    # grava a tarja VAZIA de proposito (nome da praca certo, candidatos
+    # escondidos). Para quem opera, as duas coisas sao opostas - uma e o
+    # sistema funcionando, a outra e a tela sem numero. Contam separado.
+    $frescas = 0; $esperadas = 0; $comDado = 0
+    foreach ($nome in @("tarja-presidente", "tarja-governador", "tarja-senador")) {
+        $esperadas++
+        $arq = Join-Path $pastaT "$nome.json"
+        if (-not (Test-Path $arq)) { D ("   {0,-22} NAO EXISTE" -f "$nome.json"); continue }
+        $idadeA = [int] ((Get-Date) - (Get-Item $arq).LastWriteTime).TotalSeconds
+        $cols = 0; $temDado = $false
+        try {
+            $obj = Get-Content $arq -Raw -Encoding UTF8 | ConvertFrom-Json
+            $cols = @($obj.PSObject.Properties).Count
+            if ((Tem-Propriedade $obj "cand1_visivel") -and "$($obj.cand1_visivel)" -eq "1") { $temDado = $true }
+        } catch { }
+        if ($temDado) { $comDado++ }
+        $estado = "com dado"
+        if (-not $temDado) { $estado = "VAZIA - sem candidato" }
+        if ($idadeA -gt $limiteVivo) { $estado = "$estado, PARADO" } else { $frescas++ }
+        D ("   {0,-22} gravado ha {1,4} s   {2,2} colunas   {3}" -f "$nome.json", $idadeA, $cols, $estado)
+    }
+    D ""
+    D "   (Um arquivo 'sem mudanca' pode ficar sem ser regravado se o TSE nao"
+    D "    mudou nada. PARADO so preocupa se a coleta estiver rodando.)"
+
+    # ---- 4. confere com o TSE
+    D ""
+    D "4. O QUE ESTA NOS ARQUIVOS CONFERE COM O TSE?"
+    D ""
+    $null = & $exe -NoProfile -ExecutionPolicy Bypass -File $PSCommandPath -Validar @argsModo | Out-String
+    $okV = 0; $falhaV = 0; $nadaV = $false; $conferidasV = ""
+    if (Test-Path "VALIDACAO.txt") {
+        $txtV = Get-Content "VALIDACAO.txt" -Encoding UTF8
+        # -cmatch, e nao -match: o -match do PowerShell ignora maiusculas, e
+        # frase de rodape como "se a ordem CONFERE aqui" contaria como
+        # resultado. Contagem de veredito tem que ser exata.
+        $okV = @($txtV | Where-Object { $_ -cmatch '^   OK ' }).Count
+        $falhaV = @($txtV | Where-Object { $_ -cmatch '^   FALHA' }).Count
+        $nadaV = [bool] (@($txtV | Where-Object { $_ -cmatch 'NADA FOI CONFERIDO' }).Count)
+        $linhaV = @($txtV | Where-Object { $_ -cmatch 'NENHUMA DIVERGENCIA|DIVERGENCIA\(S\)|NADA FOI' }) | Select-Object -First 1
+        if ($linhaV) { $conferidasV = "$linhaV".Trim() }
+        D "   $($okV + $falhaV) conferencias campo a campo: $okV batem, $falhaV divergem."
+        if ($conferidasV) { D "   $conferidasV" }
+        foreach ($l in @($txtV | Where-Object { $_ -cmatch '^   FALHA' } | Select-Object -First 8)) { D "   $l" }
+    } else {
+        D "   O validador nao gerou VALIDACAO.txt."
+    }
+
+    # ---- 5. colunas
+    D ""
+    D "5. AS COLUNAS ESTAO NA ORDEM QUE A CENA ESPERA?"
+    D ""
+    $null = & $exe -NoProfile -ExecutionPolicy Bypass -File $PSCommandPath -Campos | Out-String
+    $ordemOk = 0; $ordemRuim = 0
+    if (Test-Path "CAMPOS-AGORA.txt") {
+        $txtC = Get-Content "CAMPOS-AGORA.txt" -Encoding UTF8
+        $ordemOk = @($txtC | Where-Object { $_ -cmatch '^\s+ORDEM CONFERE:' }).Count
+        $ordemRuim = @($txtC | Where-Object { $_ -cmatch '^\s+ORDEM NAO CONFERE' }).Count
+        D "   $ordemOk tarja(s) na ordem travada, $ordemRuim fora de ordem."
+    }
+
+    # ---- 6. o que a tela tem que mostrar
+    D ""
+    D "6. O QUE A SUA TARJA TEM QUE MOSTRAR NA TELA AGORA"
+    D "   Compare, numero por numero, com o LiveBoard. Se a tela mostra"
+    D "   outra coisa, o arquivo esta certo e o problema e o vinculo da cena"
+    D "   ou o caminho do DataSource."
+    foreach ($nome in @("tarja-presidente", "tarja-governador", "tarja-senador")) {
+        $arq = Join-Path $pastaT "$nome.json"
+        if (-not (Test-Path $arq)) { continue }
+        try { $t = Get-Content $arq -Raw -Encoding UTF8 | ConvertFrom-Json } catch { continue }
+        D ""
+        D ("   {0} - {1}   urnas apuradas {2}   (campo 3)" -f $t.cargo, $t.abrangencia, $t.apuracao_pct)
+        if ("$($t.selo)") { D "   selo: $($t.selo)" }
+        foreach ($i in 1, 2) {
+            $vis = "$($t."cand${i}_visivel")"
+            if ($vis -ne "1") { D "     ${i}o  (vazio - sem candidato para mostrar)"; continue }
+            $extra = ""
+            if ((Tem-Propriedade $t "cand${i}_eleito_rotulo") -and "$($t."cand${i}_eleito_rotulo")") { $extra += "  [$($t."cand${i}_eleito_rotulo")]" }
+            if ((Tem-Propriedade $t "cand${i}_situacao") -and "$($t."cand${i}_situacao")" -and "$($t."cand${i}_situacao")" -notmatch '^V.lido') {
+                $extra += "  ($($t."cand${i}_situacao"))"
+            }
+            D ("     {0}o  {1,-22} {2,-12} {3,8}   barra {4}px{5}" -f $i, $t."cand${i}_nome", $t."cand${i}_partido",
+                $t."cand${i}_percentual", $t."cand${i}_barra_px", $extra)
+        }
+    }
+    D ""
+    D "   ATENCAO: 'urnas apuradas' (campo 3) e o percentual do 1o colocado"
+    D "   (campo 9) sao numeros DIFERENTES. Se na tela aparecem iguais,"
+    D "   o objeto de urnas esta vinculado no campo errado."
+
+    # ---- 7. log
+    D ""
+    D "7. ULTIMAS LINHAS DO LOG DE HOJE"
+    D ""
+    $arqLog = Join-Path "logs" ("gctse-{0}.log" -f (Get-Date -Format "yyyy-MM-dd"))
+    if (Test-Path $arqLog) {
+        foreach ($l in @(Get-Content $arqLog -Tail 30 -Encoding UTF8)) { D "   $l" }
+        $errosHoje = @(Get-Content $arqLog -Encoding UTF8 | Where-Object { $_ -cmatch ' ERRO ' }).Count
+        D ""
+        D "   linhas de ERRO no log de hoje: $errosHoje"
+    } else {
+        D "   (sem log de hoje)"
+    }
+
+    # ---- veredito
+    $redeModo = $redeOk["SIMULADO"]
+    if (-not $Teste) { $redeModo = $redeOk["OFICIAL"] }
+    # RECEBER e CONFERIR sao perguntas diferentes, e misturar as duas da a
+    # pista errada: tarja vazia com o TSE respondendo nao e "nao recebe",
+    # e "recebe e nao grava" - o conserto e em outro lugar.
+    $recebe = $redeModo -and (-not $nadaV) -and (($okV + $falhaV) -gt 0)
+    $confere = ($okV -gt 0) -and ($falhaV -eq 0) -and (-not $nadaV)
+    $colunas = ($ordemOk -eq 3) -and ($ordemRuim -eq 0)
+    $gravando = ($frescas -eq $esperadas) -and ($comDado -eq $esperadas)
+
+    D ""
+    D "==========================================================="
+    D " VEREDITO"
+    D "==========================================================="
+    function Marca { param([bool] $Ok) if ($Ok) { return "[ OK ]" } return "[FALHA]" }
+    D (" {0}  recebendo dados do TSE ({1})" -f (Marca $recebe), $modoD)
+    D (" {0}  tarjas COM DADO, gravadas nos ultimos {1} s ({2} de {3} com candidato)" -f (Marca $gravando), $limiteVivo, $comDado, $esperadas)
+    D (" {0}  tarjas conferem com o TSE, campo a campo ({1} de {2})" -f (Marca $confere), $okV, ($okV + $falhaV))
+    if ($modoErrado) { D " [FALHA]  a coleta que esta rodando e do OUTRO modo - ver item 2" }
+    D (" {0}  colunas na ordem que a cena espera" -f (Marca $colunas))
+    if ($Teste) {
+        if ($redeOk["OFICIAL"]) { D " [ OK ]  ambiente OFICIAL responde (o do dia 04/10)" }
+        else { D " [ !! ]  ambiente OFICIAL NAO respondeu - ver item 1. Nao impede o teste," ; D "         mas TEM que responder antes do dia 04/10." }
+    }
+    D ""
+    if ($recebe -and $confere -and $colunas -and $gravando -and -not $modoErrado) {
+        D " TUDO CERTO DO LADO DO SISTEMA. Se a tela do LiveBoard nao mostra"
+        D " o que esta no item 6, o problema esta na cena ou no DataSource."
+    } else {
+        D " HA PROBLEMA. Envie este arquivo inteiro (DIAGNOSTICO.txt)."
+    }
+    D "==========================================================="
+
+    $utf8d = New-Object System.Text.UTF8Encoding($true)
+    [IO.File]::WriteAllText((Join-Path $raiz "DIAGNOSTICO.txt"), ($linhasD -join "`r`n"), $utf8d)
+    Write-Host ""
+    Write-Host "  Gravado em DIAGNOSTICO.txt, nesta pasta. Envie esse arquivo." -ForegroundColor Green
     exit 0
 }
 
