@@ -44,6 +44,16 @@
     cargo por cargo. Se nao conseguir falar com o TSE, ele para na porta e
     manda rodar o CONFERIR.bat, em vez de sair pedindo 55 URLs invalidas.
 
+ 3b. PRECISA MONTAR OU REFAZER A CENA? MODELOS-VAZIOS.bat
+
+    Regrava as tres tarjas vazias com TODAS as colunas, na ordem certa.
+    Serve para o Castalia enxergar todos os campos na arvore do DataSource
+    antes de existir dado. Os MESMOS arquivos sao depois reescritos com o
+    dado real - voce nao refaz vinculo.
+
+    Rode sempre que atualizar a versao: se algum campo novo entrou, ele
+    aparece na arvore so depois disso.
+
  4. Duplo clique em TESTE.bat   e deixe a janela ABERTA.
 
     TESTE.bat le o ambiente de simulado do TSE e aceita boletim fase S.

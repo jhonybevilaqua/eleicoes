@@ -12,6 +12,7 @@
         .\gctse.ps1 -Validar      confere numero por numero contra o TSE
         .\gctse.ps1 -Fotos        lista os nomes de arquivo de foto aceitos
         .\gctse.ps1 -Campos       mostra as colunas dos arquivos, numeradas
+        .\gctse.ps1 -Modelos      regrava as tarjas VAZIAS, para montar a cena
         .\gctse.ps1 -Teste        aceita o simulado do TSE (fase S)
         .\gctse.ps1               no ar: so boletim oficial
 #>
@@ -23,6 +24,7 @@ param(
     [switch] $Validar,
     [switch] $Fotos,
     [switch] $Campos,
+    [switch] $Modelos,
     [switch] $Teste,
     [switch] $UmaVez,
     [string] $Config = "config.json"
@@ -31,7 +33,7 @@ param(
 # Versao impressa na partida e no painel. Sem carimbo, "qual versao esta
 # rodando ai?" so se responde abrindo arquivo e comparando a olho - e no
 # meio de um teste com janela de horario ninguem faz isso.
-$Versao = "5.3 - 23/09/2026"
+$Versao = "5.4 - 23/09/2026"
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
@@ -1909,6 +1911,43 @@ if ($Campos) {
     Write-Host ""
     $null = Escrever-Arquivo "CAMPOS-AGORA.txt" $texto
     Escrever-Log "gravei CAMPOS-AGORA.txt - pode mandar esse arquivo junto se a duvida continuar" "OK"
+    exit 0
+}
+
+# ---------------------------------------------------------------- modelos
+
+if ($Modelos) {
+    # Regrava as tres tarjas VAZIAS, com todas as colunas na ordem travada.
+    #
+    # Existe porque as tarjas de exemplo da entrega ja ficaram para tras
+    # duas vezes: o sistema passou a emitir campo novo e o exemplo continuou
+    # com a contagem antiga. Quem montasse a cena por ele nao veria os
+    # campos novos na arvore do DataSource.
+    #
+    # Gerando a partir da MESMA lista que a coleta usa, nao ha como divergir.
+    foreach ($modelo in @(
+        @{ arquivo = "tarja-presidente"; modelo = "presidente";  cargo = "PRESIDENTE" },
+        @{ arquivo = "tarja-governador"; modelo = "majoritaria"; cargo = "GOVERNADOR" },
+        @{ arquivo = "tarja-senador";    modelo = "majoritaria"; cargo = "SENADOR" })) {
+
+        $vazia = [ordered]@{}
+        foreach ($campo in (Ordem-Do-Modelo $modelo.modelo)) {
+            if ($campo -eq "cargo") { $vazia[$campo] = $modelo.cargo }
+            elseif ($campo -like "*_barra_px") { $vazia[$campo] = 0 }
+            elseif ($campo -like "*_visivel" -or $campo -like "*_eleito" -or
+                    $campo -like "*_foto_existe" -or $campo -eq "apuracao_encerrada") { $vazia[$campo] = "0" }
+            else { $vazia[$campo] = "" }
+        }
+        $caminho = Join-Path $PastaSaida "$($modelo.arquivo).json"
+        $null = Escrever-Arquivo $caminho ($vazia | ConvertTo-Json -Depth 5)
+        Escrever-Log "$($modelo.arquivo).json regravado vazio, com $($vazia.Count) colunas" "OK"
+    }
+    Write-Host ""
+    Write-Host "  Pronto. Aponte o DataSource do Castalia para estes arquivos e monte"
+    Write-Host "  a cena: todas as colunas aparecem na arvore, mesmo sem dado nenhum."
+    Write-Host "  Assim que o TESTE ou o INICIAR rodar, os MESMOS arquivos sao"
+    Write-Host "  reescritos com o dado real - sem refazer vinculo."
+    Write-Host ""
     exit 0
 }
 
