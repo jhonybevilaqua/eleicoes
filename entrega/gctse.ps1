@@ -33,7 +33,7 @@ param(
 # Versao impressa na partida e no painel. Sem carimbo, "qual versao esta
 # rodando ai?" so se responde abrindo arquivo e comparando a olho - e no
 # meio de um teste com janela de horario ninguem faz isso.
-$Versao = "5.4 - 23/09/2026"
+$Versao = "5.5 - 23/09/2026"
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
@@ -1489,11 +1489,28 @@ function Executar-Ciclo {
 
     # --- varredura das demais pracas : a cada N ciclos
     if ($varredura -and (Tem-Propriedade $cfg "selecao")) {
+        # O PRIMEIRO ciclo fala enquanto varre. A linha de resumo so sai
+        # quando o ciclo fecha, e uma varredura de 55 leituras leva uns dez
+        # segundos - dez segundos de tela muda logo depois de dar partida,
+        # que e exatamente quando o operador esta olhando para ver se
+        # funcionou. Tela muda no arranque parece defeito. Do segundo ciclo
+        # em diante ele cala: aí o resumo ja esta aparecendo de 20 em 20s.
+        $falante = ($script:Ciclo -eq 1)
+        $totalPracas = $cfg.selecao.pracas.Count
+        if ($falante) {
+            Escrever-Log "varrendo as $totalPracas pracas. O resumo sai quando o ciclo fechar."
+        }
+        $feitas = 0
         foreach ($p in $cfg.selecao.pracas) {
             foreach ($saida in $cfg.selecao.saidas) {
                 $null = Buscar-Praca $p.uf $saida.cargo $p.nome $Modo
             }
+            $feitas++
+            if ($falante -and ($feitas % 9) -eq 0 -and $feitas -lt $totalPracas) {
+                Escrever-Log "  ... $feitas de $totalPracas pracas lidas"
+            }
         }
+        if ($falante) { Escrever-Log "varredura completa: $totalPracas pracas" "OK" }
     }
 
     # --- escreve as tarjas do seletor
