@@ -1,4 +1,46 @@
 ===========================================================================
+ AS FOTOS DO TSE - o jeito que nao da trabalho
+===========================================================================
+
+ O TSE publica a foto de cada candidato, no proprio servidor de
+ resultados, em:
+
+    [ambiente]/[ciclo]/[eleicao]/fotos/[uf]/<sqcand>.jpeg
+
+ O <sqcand> e o numero sequencial do candidato, e vem dentro do proprio
+ boletim. Ou seja: o sistema sabe qual foto buscar sem ninguem digitar
+ nada. (Documento "Instrucoes para download dos arquivos da Divulgacao
+ de resultados das Eleicoes 2026", versao 1.0 de 25/05/2026.)
+
+ PARA LIGAR, no config.json, dentro de "texto":
+
+        "fotos_do_tse": true
+
+ O que acontece com isso ligado:
+
+   - a foto e baixada UMA vez e guardada em FOTOS\tse-<sqcand>.jpeg;
+   - nos ciclos seguintes usa o arquivo em disco, sem ir na rede;
+   - candidato sem foto publicada e tentado UMA vez por execucao e
+     nunca mais - cai na silhueta e segue.
+
+ VEM DESLIGADO DE PROPOSITO. Dois motivos:
+
+   1. Foto escolhida pela emissora manda mais do que a oficial. Com a
+      opcao desligada, so entra o que voce pos na pasta.
+   2. O TSE avisa que multiplos 404 podem bloquear o IP. Enquanto o
+      caminho das fotos nao for confirmado contra o servidor de verdade,
+      ligar isso e assumir um risco que a silhueta nao justifica.
+
+ A ORDEM DE BUSCA, com a opcao ligada:
+
+   1. o mapa "fotos" do config.json (apelido que voce escolheu)
+   2. arquivo em disco, por numero ou por nome
+   3. a foto oficial do TSE, pelo sqcand
+   4. a silhueta sem-foto.png
+
+ Confirme no CONFERIR da janela de teste antes de usar no ar.
+
+===========================================================================
  FOTOS DOS CANDIDATOS
 ===========================================================================
 

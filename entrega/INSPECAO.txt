@@ -1,5 +1,95 @@
 ===========================================================================
- LAUDO DE INSPECAO - gctse 5.0
+ LAUDO DE INSPECAO - gctse 5.2
+ 23/09/2026 - conferido contra a especificacao oficial do TSE
+===========================================================================
+
+ Foram lidos dois documentos oficiais do TSE:
+
+   "Instrucoes para download dos arquivos da Divulgacao de resultados das
+    Eleicoes 2026", versao 1.0 de 25/05/2026
+   "Manual de verificacao dos arquivos JWS"
+
+ A ESPECIFICACAO CONFIRMA O QUE ESTA IMPLEMENTADO
+
+   Estrutura de pastas ... [ambiente]/[ciclo]/[eleicao]/dados/[uf]/
+                           bate com o nosso padrao_url.
+   Nome do arquivo ....... <br|uf|zz>-c<CCCC>-e<ELEICA>-u.json
+                           bate exatamente.
+   Codigo do cargo ....... 4 digitos: Presidente 0001, Governador 0003,
+                           Senador 0005. Sao os que usamos.
+   Codigo da eleicao ..... 6 digitos com zeros a esquerda, a partir de um
+                           codigo de 4. O documento da o exemplo: codigo
+                           544 vira e000544. Logo 6257 vira e006257 - que
+                           e o que o sistema monta. Conferido.
+   ele-c.json ............ fica em [ambiente]/comum/config/. E de la que
+                           a descoberta automatica le.
+   Exterior .............. sigla "zz". Nao usamos, mas o molde aceita.
+
+ O QUE A ESPECIFICACAO REVELOU - as fotos sao publicadas pelo TSE
+
+   [ambiente]/[ciclo]/[eleicao]/fotos/[uf]/<sqcand>.jpeg
+
+   O <sqcand> vem dentro do proprio boletim, em cada candidato. Ou seja:
+   a foto do presidente, que ate ontem dependia de alguem caçar imagem e
+   nomear arquivo na mao, pode ser buscada sozinha.
+
+   Implementado, DESLIGADO por padrao ("fotos_do_tse": false). Quando
+   ligado: baixa uma vez, guarda em FOTOS\tse-<sqcand>.jpeg, e nos ciclos
+   seguintes le do disco. Candidato sem foto publicada e tentado UMA vez
+   por execucao e nunca mais - o TSE avisa que multiplos 404 podem
+   bloquear o IP, e foto que falta nao justifica esse risco.
+
+   Medido: 4 ciclos, 1 pedido da foto que existe, 1 pedido da que falta,
+   e o arquivo em cache reusado no resto.
+
+   Vem desligado por dois motivos: foto escolhida pela emissora manda
+   mais do que a oficial, e o caminho das fotos ainda nao foi confirmado
+   contra o servidor de verdade.
+
+ ARQUIVOS .jws - assinatura digital e OPCIONAL
+
+   Os resultados saem em PARES: .json e .jws. O .jws tem os mesmos dados
+   mais uma assinatura Ed25519 do TSE, para integridade e autenticidade.
+   O manual diz, com todas as letras, que fica "a criterio do interessado
+   a escolha entre esses dois para consumo".
+
+   Consumimos .json. Esta dentro da regra. Se algum dia o Jornalismo ou o
+   Juridico pedir prova de procedencia, o caminho existe e esta
+   documentado - exige a chave publica do ambiente e uma biblioteca JWS.
+
+ OUTROS ARQUIVOS QUE O TSE PUBLICA E NAO USAMOS
+
+   <br|uf>-c<CCCC>-e<ELEICA>-e.json .. arquivo de ELEITOS, gerado so
+                                       depois da totalizacao final da
+                                       primeira UF. Nos lemos o campo de
+                                       eleito de dentro do proprio
+                                       boletim, que chega antes.
+   br-e<ELEICA>-ab.json .............. acompanhamento Brasil
+   <uf>-e<ELEICA>-ab.json ............ acompanhamento por UF
+   mun-e<ELEICA>-cm.json ............. configuracao de municipios
+   cert-e<ELEICA>-a.cer .............. certificado para o .jws
+
+ DOIS DOCUMENTOS VIERAM EM BRANCO
+
+   O faq.pdf e o pagina_simulados.pdf sao capturas de tela sem texto
+   nenhum: 6 e 5 paginas, zero fontes, e todas as imagens em branco - o
+   pixel mais escuro das dez imagens e 200 de 255, sem um unico pixel
+   abaixo disso. A pagina foi impressa antes do conteudo carregar.
+
+   O FAQ continua por ler, e e justamente onde costumam aparecer as
+   pegadinhas de formato.
+
+ VERIFICADO NA 5.2
+
+   URL oficial com pleito 3220 e eleicao 6257                       OK
+   Validador: 36 conferencias, 0 divergencia                        OK
+   Foto do TSE baixada e usada quando existe                        OK
+   Candidato sem foto cai na silhueta, sem repetir o pedido         OK
+   Opcao desligada nao toca na rede                                 OK
+   Ordem travada 23/23/29                                           OK
+
+===========================================================================
+ LAUDO ANTERIOR - gctse 5.0
  23/09/2026 - alinhado a pagina de informacoes tecnicas do TSE
 ===========================================================================
 

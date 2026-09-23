@@ -1,6 +1,6 @@
 ===========================================================================
  CAMPOS DE CADA ARQUIVO - referencia para vincular no Castalia
- gctse 5.1
+ gctse 5.2
 ===========================================================================
 
  REGRA: as 19 PRIMEIRAS posicoes sao iguais nas tres tarjas e NUNCA

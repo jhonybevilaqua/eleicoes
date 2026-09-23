@@ -31,7 +31,7 @@ param(
 # Versao impressa na partida e no painel. Sem carimbo, "qual versao esta
 # rodando ai?" so se responde abrindo arquivo e comparando a olho - e no
 # meio de um teste com janela de horario ninguem faz isso.
-$Versao = "5.1 - 23/09/2026"
+$Versao = "5.2 - 23/09/2026"
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
@@ -244,6 +244,8 @@ if ($PastaFotos -and -not [IO.Path]::IsPathRooted($PastaFotos)) {
 }
 $FotoReserva = ""
 if (Tem-Propriedade $cfg.texto "foto_reserva") { $FotoReserva = "$($cfg.texto.foto_reserva)" }
+$FotosDoTse = $false
+if (Tem-Propriedade $cfg.texto "fotos_do_tse") { $FotosDoTse = [bool] $cfg.texto.fotos_do_tse }
 $FotoNomeFixo = $false
 if (Tem-Propriedade $cfg.texto "foto_nome_fixo") { $FotoNomeFixo = [bool] $cfg.texto.foto_nome_fixo }
 
@@ -601,6 +603,10 @@ function Montar-Candidato {
     $situacao = Decodificar-Entidades "$(Obter-Campo $C @('dvt') '')"
     return [pscustomobject]@{
         Numero     = "$(Obter-Campo $C @('n') '')"
+        # O TSE publica a foto de cada candidato em fotos/<uf>/<sqcand>.jpeg.
+        # Sem guardar este numero, a foto so poderia vir de arquivo que
+        # alguem baixou e nomeou na mao.
+        Sequencial = "$(Obter-Campo $C @('sqcand') '')"
         Nome       = "$(Obter-Campo $C @('nmu','nm','nmurna') '')"
         Partido    = "$partido"
         Votos      = $votos
@@ -706,11 +712,66 @@ function Nomes-De-Foto-Aceitos {
     return $nomes
 }
 
+$script:FotosTseTentadas = @{}
+
+function Baixar-Foto-Do-TSE {
+    # O TSE publica a foto em [ambiente]/[ciclo]/[eleicao]/fotos/[uf]/<sqcand>.jpeg
+    # (documento "Instrucoes para download dos arquivos", versao 1.0).
+    #
+    # UMA tentativa por candidato, por execucao. Se der 404, nunca mais se
+    # pede: o proprio TSE avisa que multiplos 404 podem bloquear o IP, e
+    # foto que falta nao justifica esse risco - a silhueta resolve.
+    param([string] $Sequencial, [string] $Abrangencia, [int] $Cargo)
+    if (-not $Sequencial) { return "" }
+    if ($script:FotosTseTentadas.ContainsKey($Sequencial)) {
+        return $script:FotosTseTentadas[$Sequencial]
+    }
+
+    $pasta = $PastaFotos
+    if (-not $pasta) { $pasta = "FOTOS" }
+    $destino = Join-Path $pasta "tse-$Sequencial.jpeg"
+    if (Test-Path $destino) {
+        $script:FotosTseTentadas[$Sequencial] = $destino
+        return $destino
+    }
+
+    $molde = "{base}/{ciclo}/{eleicao}/fotos/{dir}/{sqcand}.jpeg"
+    if ((Tem-Propriedade $cfg.tse "padrao_url_foto") -and $cfg.tse.padrao_url_foto) {
+        $molde = "$($cfg.tse.padrao_url_foto)"
+    }
+    $dir = $Abrangencia
+    if ($dir.Length -gt 2) { $dir = $dir.Substring(0, 2) }
+    $url = $molde.Replace("{base}", $cfg.tse.base_url.TrimEnd('/'))
+    $url = $url.Replace("{ciclo}", "$($cfg.tse.ciclo)")
+    $url = $url.Replace("{eleicao}", "$(Obter-Eleicao $Cargo)")
+    $url = $url.Replace("{dir}", $dir).Replace("{sqcand}", $Sequencial)
+
+    $script:FotosTseTentadas[$Sequencial] = ""
+    try {
+        if (-not (Test-Path $pasta)) { New-Item -ItemType Directory -Path $pasta -Force | Out-Null }
+        Aguardar-Vez
+        $ua = "gctse/1.0"
+        if ((Tem-Propriedade $cfg.tse "user_agent") -and $cfg.tse.user_agent) { $ua = "$($cfg.tse.user_agent)" }
+        $temporario = "$destino.tmp"
+        Invoke-WebRequest -Uri $url -Headers @{ "User-Agent" = $ua } -TimeoutSec 20 `
+                          -UseBasicParsing -OutFile $temporario -ErrorAction Stop
+        Move-Item -Path $temporario -Destination $destino -Force
+        $script:FotosTseTentadas[$Sequencial] = $destino
+        Escrever-Log "foto do TSE baixada: $destino" "OK"
+        return $destino
+    } catch {
+        try { Remove-Item -Path "$destino.tmp" -Force -ErrorAction SilentlyContinue } catch { }
+        Escrever-Log "sem foto no TSE para o candidato $Sequencial (nao tento de novo nesta execucao)"
+        return ""
+    }
+}
+
 function Encontrar-Foto {
     # Procura a foto do candidato e devolve o caminho do que achou, ou o
     # caminho da reserva. A lista de nomes aceitos deixa a pasta ser
     # organizada por numero ou por nome, sem o operador ter que escolher.
-    param([string] $Numero, [string] $Nome)
+    param([string] $Numero, [string] $Nome, [string] $Sequencial = "",
+          [string] $Abrangencia = "br", [int] $Cargo = 1)
     $pasta = $PastaFotos
     if (-not $pasta) { $pasta = "FOTOS" }
 
@@ -732,7 +793,15 @@ function Encontrar-Foto {
         $caminho = Join-Path $pasta $nomeArq
         try { if (Test-Path $caminho) { return @{ caminho = $caminho; existe = "1" } } } catch { }
     }
-    # 3. silhueta, para nunca deixar quadro quebrado no ar
+    # 3. a foto que o proprio TSE publica, se estiver ligado no config.
+    #    Fica por ultimo de proposito: foto escolhida pela emissora manda
+    #    mais do que a oficial, e so se recorre a rede quando nao ha nada
+    #    em disco.
+    if ($FotosDoTse -and $Sequencial) {
+        $baixada = Baixar-Foto-Do-TSE $Sequencial $Abrangencia $Cargo
+        if ($baixada) { return @{ caminho = $baixada; existe = "1" } }
+    }
+    # 4. silhueta, para nunca deixar quadro quebrado no ar
     if ($FotoReserva) {
         $reserva = Join-Path $pasta (Split-Path -Leaf $FotoReserva)
         try { if (Test-Path $reserva) { return @{ caminho = $reserva; existe = "0" } } } catch { }
@@ -868,7 +937,9 @@ function Montar-Tarja {
             if ($Tarja.modelo -eq "presidente") {
                 # O TSE nao manda imagem: a foto e arquivo local, procurado
                 # pelo numero do candidato e, em seguida, pelo nome.
-                $achada = Encontrar-Foto $c.Numero $c.Nome
+                $seq = ""
+                if (Tem-Propriedade $c "Sequencial") { $seq = "$($c.Sequencial)" }
+                $achada = Encontrar-Foto $c.Numero $c.Nome $seq $Tarja.abrangencia ([int] $Tarja.cargo)
                 $extras[$p + "foto"] = $achada.caminho
                 $extras[$p + "foto_existe"] = $achada.existe
                 $extras[$p + "foto_fixa"] = ""

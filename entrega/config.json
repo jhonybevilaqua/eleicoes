@@ -19,7 +19,8 @@
       "5": "21272"
     },
     "user_agent": "",
-    "padrao_url": "{base}/{ciclo}/{eleicao}/dados/{dir}/{abr}-c{cargo4}-e{eleicao6}-u.json"
+    "padrao_url": "{base}/{ciclo}/{eleicao}/dados/{dir}/{abr}-c{cargo4}-e{eleicao6}-u.json",
+    "padrao_url_foto": "{base}/{ciclo}/{eleicao}/fotos/{dir}/{sqcand}.jpeg"
   },
   "intervalo_segundos": 20,
   "_comentario_limite": "O TSE bloqueia IP que passa do limite por minuto. 304 CONTA como requisicao. O gctse segura a fila sozinho; se estourar, aumente intervalo_segundos ou tire pracas.",
@@ -44,6 +45,7 @@
     "pasta_fotos": "FOTOS",
     "foto_reserva": "sem-foto.png",
     "foto_nome_fixo": true,
+    "fotos_do_tse": false,
     "fotos": {},
     "cor_padrao": "#6b86ab",
     "cores_partido": {}
