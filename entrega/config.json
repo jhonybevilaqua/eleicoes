@@ -4,9 +4,13 @@
     "base_url": "https://resultados.tse.jus.br/oficial",
     "base_url_simulado": "https://resultados-sim.tse.jus.br/simulado/simulado2026",
     "ciclo": "ele2026",
-    "pleito": "000",
-    "eleicao": "000",
-    "eleicao_por_cargo": {},
+    "pleito": "3220",
+    "eleicao": "6257",
+    "eleicao_por_cargo": {
+      "1": "6257",
+      "3": "6259",
+      "5": "6259"
+    },
     "pleito_simulado": "17801",
     "eleicao_simulado": "21270",
     "eleicao_por_cargo_simulado": {
@@ -19,7 +23,7 @@
   },
   "intervalo_segundos": 20,
   "_comentario_limite": "O TSE bloqueia IP que passa do limite por minuto. 304 CONTA como requisicao. O gctse segura a fila sozinho; se estourar, aumente intervalo_segundos ou tire pracas.",
-  "limite_requisicoes_por_minuto": 80,
+  "limite_requisicoes_por_minuto": 600,
   "intervalo_minimo_ms": 120,
   "pasta_saida": "TARJAS",
   "tarjas": [
@@ -524,7 +528,7 @@
     ]
   },
   "_comentario_varredura": "Varredura escalonada: o estado no ar e o presidente sao lidos a cada ciclo; os outros 26 estados a cada 'ciclos_varredura' ciclos. Sem isso, 27 estados x 2 cargos a cada 20s dariam 165 req/min e o TSE bloquearia o IP.",
-  "ciclos_varredura": 3,
+  "ciclos_varredura": 1,
   "alertas": {
     "arquivo": "alertas.json",
     "_comentario": "Marca qual praca/cargo recebeu boletim novo do TSE, para o painel avisar.",

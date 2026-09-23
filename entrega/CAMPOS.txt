@@ -1,6 +1,6 @@
 ===========================================================================
  CAMPOS DE CADA ARQUIVO - referencia para vincular no Castalia
- gctse 4.5
+ gctse 5.0
 ===========================================================================
 
  REGRA: as 19 PRIMEIRAS posicoes sao iguais nas tres tarjas e NUNCA
@@ -169,6 +169,23 @@
     depois e a tarja foi ao ar com o nome do estado onde ia o nome do
     candidato. E por isso que a ordem hoje e travada em lista, e nao
     apenas por convencao.
+
+===========================================================================
+ QUANDO O SELO DE ELEITO APARECE
+===========================================================================
+
+ Nao e quando o candidato passa dos 50%. O TSE so declara eleito depois de
+ fechar a totalizacao, e a propria pagina de informacoes tecnicas do TSE
+ diz: "o arquivo de eleitos e gerado somente apos a totalizacao final da
+ primeira UF".
+
+ Ou seja: na maior parte da noite os campos cand1_eleito e
+ cand1_eleito_rotulo vao estar em 0 e vazio, mesmo com o resultado ja
+ decidido na pratica. Isso e o certo - quem declara eleito e a Justica
+ Eleitoral, nao a emissora.
+
+ Se o Jornalismo quiser dizer "eleito" antes disso, e decisao editorial e
+ tem que ser um objeto manual na cena, NAO este campo.
 
 ===========================================================================
  SITUACAO DO VOTO - o campo que o TSE manda e quase ninguem olha

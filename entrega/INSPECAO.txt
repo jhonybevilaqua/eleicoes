@@ -1,5 +1,104 @@
 ===========================================================================
- LAUDO DE INSPECAO - gctse 4.5
+ LAUDO DE INSPECAO - gctse 5.0
+ 23/09/2026 - alinhado a pagina de informacoes tecnicas do TSE
+===========================================================================
+
+ A pagina do TSE foi lida e mudou tres coisas.
+
+ 1. OS CODIGOS DA ELEICAO OFICIAL SAIRAM
+
+    Ate ontem o config tinha "000" e dependia da descoberta automatica. O
+    TSE publicou:
+
+        url ....... https://resultados.tse.jus.br
+        ambiente .. oficial
+        pleito .... 3220        (1o turno, 04/10/2026)
+        6257 ...... Eleicao Geral Federal .......... Presidente
+        6259 ...... Eleicoes Gerais Estaduais ...... Governador e Senador
+        6261 ...... Eleicao Conselho Distrital ..... (nao usamos)
+
+    Estao no config.json. A descoberta automatica continua no lugar, como
+    rede de seguranca: se o TSE corrigir algum codigo, o sistema pergunta
+    e segue com o novo, sem ninguem digitar nada.
+
+    Repare que os codigos oficiais tem 4 digitos e os do simulado tem 5
+    (17801 / 21270). O molde da URL preenche com zeros a esquerda, entao
+    6257 vira e006257. Conferido.
+
+ 2. O LIMITE DO TSE NAO E O QUE ESTAVA ESCRITO AQUI
+
+    A pagina diz: 100 requisicoes por IP por SEGUNDO. Estourar da 10
+    minutos de bloqueio, e insistir durante o bloqueio REINICIA a contagem.
+
+    O sistema dizia "limite 80" no arranque, sem unidade, o que fazia
+    parecer que 80 por minuto era regra do TSE. Nao e - e a nossa valvula,
+    e estava 75 vezes mais apertada do que o necessario.
+
+    Com o limite real conhecido, a varredura das 27 pracas passou a ser
+    feita a CADA ciclo, e nao a cada tres. Na pratica:
+
+        55 requisicoes a cada 20s = 165/min = 2,8/s
+        limite do TSE ........... 100/s
+        margem .................. 36 vezes
+
+    O ganho e editorial: o sino de "chegou numero novo" de qualquer estado
+    acende em ate 20 segundos, e nao em ate 60.
+
+ 3. MULTIPLOS 404 PODEM BLOQUEAR O IP
+
+    Isto a pagina diz com todas as letras, e e um risco que o sistema
+    tinha sem ninguem errar nada: no comeco da noite o estado ainda nao
+    publicou boletim, o arquivo nao existe, e a varredura pedia de novo a
+    cada volta. Com 27 estados x 2 cargos, sao 54 respostas 404 por
+    varredura, hora apos hora - e agora a varredura e todo ciclo.
+
+    Quem responde 404 entra em RECUO: e pedido de novo depois de 1, 2, 4,
+    8 ciclos, ate o teto. Qualquer resposta que nao seja 404 zera a conta.
+    A praca que esta NO AR tem teto curto (2 ciclos), porque nela a demora
+    aparece na tela; as outras tem teto longo (10 ciclos).
+
+    Medido: um estado sem boletim recebeu 4 pedidos em 13 ciclos, em vez
+    de 13. E quando o boletim apareceu, entrou no ciclo seguinte.
+
+ O QUE A PAGINA CONFIRMOU SEM MUDAR NADA
+
+    ETag e Last-Modified suportados, com 304 para arquivo sem mudanca -
+    ja usamos If-None-Match desde a primeira versao.
+    Nao e possivel listar arquivos na infraestrutura - nunca tentamos.
+    Codigo de municipio com 5 digitos - nao usamos arquivo de municipio,
+    so BR e UF.
+
+ DUAS COISAS PARA O JORNALISMO SABER
+
+    O arquivo de eleitos so e gerado depois da totalizacao final da
+    PRIMEIRA UF. Ou seja: o selo de ELEITO vai ficar vazio na maior parte
+    da noite, mesmo com resultado decidido na pratica. Esta documentado no
+    CAMPOS.txt.
+
+    A lista de candidatos AINDA NAO E DEFINITIVA - a Justica Eleitoral
+    esta julgando os registros. Nomes podem mudar ate outubro.
+
+ VERIFICADO NA 5.0
+
+    URL oficial montada com pleito 3220 e eleicao 6257                OK
+    Validador no ambiente oficial: 36 conferencias, 0 divergencia     OK
+    Validador no simulado: 36 conferencias, 0 divergencia             OK
+    Descoberta automatica ainda acha 3220 com o config vazio          OK
+    Mapa por cargo: 1->6257, 3 e 5->6259                              OK
+    Recuo de 404: 4 pedidos em 13 ciclos, em vez de 13                OK
+    Estado que comeca a publicar entra no ciclo seguinte              OK
+    Ordem travada 23/23/29                                            OK
+    Corrida no ritmo novo: 6 ciclos, 162 req/min, 0 erro, 0 .tmp      OK
+
+ O QUE CONTINUA SEM PROVA
+
+    Nada foi rodado contra o TSE de verdade: este ambiente nao alcanca
+    tse.jus.br (bloqueio de rede, nao do TSE). Os codigos oficiais acima
+    vieram da pagina e ainda NAO foram batidos contra o servidor. O
+    CONFERIR.bat na sua maquina fecha isso em um minuto.
+
+===========================================================================
+ LAUDO ANTERIOR - gctse 4.5
  22/09/2026 - revisao completa, na vespera do teste valendo
 ===========================================================================
 

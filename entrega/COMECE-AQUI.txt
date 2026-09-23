@@ -29,9 +29,13 @@
     ha nada a ajustar. Se disser que nenhum molde funcionou, envie o
     CONFERIR.txt para analise.
 
-    Os codigos do OFICIAL ("pleito" e "eleicao") continuam zerados, de
-    proposito: o TSE so publica os da eleicao geral perto da data, e chutar
-    codigo e pior do que nao ter nenhum.
+    Os codigos do OFICIAL ja estao preenchidos, conforme o TSE publicou na
+    pagina de informacoes tecnicas em 23/09/2026:
+
+        pleito 3220  (1o turno, 04/10/2026)
+        6257 = Eleicao Geral Federal ............ Presidente
+        6259 = Eleicoes Gerais Estaduais ........ Governador e Senador
+        6261 = Eleicao Conselho Distrital ....... (nao usamos)
 
     Voce NAO vai precisar digitar isso no domingo. Na partida, faltando os
     codigos, o INICIAR.bat pergunta ao proprio TSE e resolve sozinho - e

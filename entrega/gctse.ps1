@@ -31,7 +31,7 @@ param(
 # Versao impressa na partida e no painel. Sem carimbo, "qual versao esta
 # rodando ai?" so se responde abrindo arquivo e comparando a olho - e no
 # meio de um teste com janela de horario ninguem faz isso.
-$Versao = "4.5 - 22/09/2026"
+$Versao = "5.0 - 23/09/2026"
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
@@ -498,8 +498,26 @@ function Ler-Texto-Resposta {
     return "$($Resposta.Content)"
 }
 
+$script:Ausentes = @{}   # url -> @{ vezes; pularAte } : recuo depois de 404
+
 function Obter-Boletim {
-    param([string] $Url)
+    # RECUO DEPOIS DE 404. O TSE avisa que requisicao para endereco que nao
+    # existe pode gerar bloqueio do IP. E no comeco da noite isso acontece
+    # sozinho, sem ninguem errar nada: o estado ainda nao publicou boletim,
+    # o arquivo ainda nao existe, e a varredura pede de novo a cada volta -
+    # 54 respostas 404 por varredura, hora apos hora.
+    #
+    # Entao quem responde 404 entra em recuo: e pedido de novo depois de 1,
+    # 2, 4, 8 ciclos, ate o teto. Qualquer resposta que nao seja 404 zera a
+    # conta. A praca que esta NO AR tem teto curto, porque nela a demora
+    # aparece na tela; as outras tem teto longo, porque nelas nao aparece.
+    param([string] $Url, [switch] $Prioritario)
+
+    if ($script:Ausentes.ContainsKey($Url)) {
+        $reg = $script:Ausentes[$Url]
+        if ($script:Ciclo -lt $reg.pularAte) { return $null }
+    }
+
     Aguardar-Vez
     # Configuravel porque CDN de governo as vezes recusa cliente que nao se
     # parece com navegador, e trocar isso no ar nao pode depender de recompilar.
@@ -512,11 +530,25 @@ function Obter-Boletim {
     } catch {
         $codigo = 0
         try { $codigo = [int] $_.Exception.Response.StatusCode } catch { }
-        if ($codigo -eq 304) { return "SEM-MUDANCA" }
-        if ($codigo -eq 404) { return $null }        # ainda nao publicado
+        if ($codigo -eq 304) {
+            if ($script:Ausentes.ContainsKey($Url)) { $script:Ausentes.Remove($Url) }
+            return "SEM-MUDANCA"
+        }
+        if ($codigo -eq 404) {
+            # Ainda nao publicado. Anota e espera mais da proxima vez.
+            $vezes = 1
+            if ($script:Ausentes.ContainsKey($Url)) { $vezes = $script:Ausentes[$Url].vezes + 1 }
+            $teto = 10
+            if ($Prioritario) { $teto = 2 }
+            $espera = [math]::Min([math]::Pow(2, $vezes - 1), $teto)
+            $script:Ausentes[$Url] = @{ vezes = $vezes; pularAte = $script:Ciclo + [int] $espera }
+            return $null
+        }
         Escrever-Log "falha em $Url : $($_.Exception.Message)" "AVISO"
         return $null
     }
+    # Respondeu: sai do recuo.
+    if ($script:Ausentes.ContainsKey($Url)) { $script:Ausentes.Remove($Url) }
     try { $Cache[$Url] = $resposta.Headers["ETag"] } catch { }
     # CDN sob carga responde HTTP 200 com pagina de erro em HTML, e conexao
     # interrompida entrega JSON pela metade. Sem esta protecao, uma resposta
@@ -1147,7 +1179,7 @@ function Buscar-Praca {
     $script:VistosNesteCiclo[$chave] = $true
 
     $b = $null
-    $bruto = Obter-Boletim (Montar-Url $Uf $Cargo)
+    $bruto = Obter-Boletim (Montar-Url $Uf $Cargo) -Prioritario:(Esta-No-Ar $Uf $Cargo)
     if ($bruto -eq "SEM-MUDANCA") {
         if ($script:CacheBoletins.ContainsKey($chave)) { return $script:CacheBoletins[$chave] }
         return $null
@@ -2558,7 +2590,12 @@ Escrever-Log "modo $Modo | saida em $PastaSaida | intervalo ${intervalo}s" "OK"
 Escrever-Log "caminho: $(Montar-Url 'br' 1)"
 if ($true) {
     Escrever-Log "$noAr req por ciclo comum, $naVarredura na varredura (1 a cada $ciclosVar)"
-    Escrever-Log "media de $porMinuto requisicoes por minuto (limite $limiteReq)"
+    # O limite do TSE e de 100 requisicoes por IP por SEGUNDO, e estourar da
+    # 10 minutos de bloqueio (que reinicia se voce insistir durante ele).
+    # O numero abaixo e a NOSSA valvula, deliberadamente muito mais baixa -
+    # deixar isso implicito ja fez parecer que 80/min era regra do TSE.
+    $porSegundo = [math]::Round($porMinuto / 60.0, 1)
+    Escrever-Log "media de $porMinuto req/min (${porSegundo}/s). Limite do TSE: 100/s. Valvula nossa: $limiteReq/min"
     # Projecao acima do limite significa que o limitador vai estrangular a
     # coleta: as varreduras ficam raras e os alertas chegam atrasados. E
     # regulagem de config, nao defeito - mas precisa aparecer na partida.
