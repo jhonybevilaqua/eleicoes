@@ -1,13 +1,13 @@
 ===========================================================================
  CAMPOS DE CADA ARQUIVO - referencia para vincular no Castalia
- gctse 5.2
+ gctse 5.3
 ===========================================================================
 
  REGRA: as 19 PRIMEIRAS posicoes sao iguais nas tres tarjas e NUNCA
  mudam de lugar. Campo novo entra sempre depois da 19.
 
 ---------------------------------------------------------------------------
- TARJA-GOVERNADOR.JSON e TARJA-SENADOR.JSON   (23 campos)
+ TARJA-GOVERNADOR.JSON e TARJA-SENADOR.JSON   (24 campos)
  Uma praca por vez, a que o painel mandou.
 ---------------------------------------------------------------------------
     1. cargo                  PRESIDENTE / GOVERNADOR / SENADOR
@@ -33,9 +33,10 @@
    21. cand2_eleito_rotulo    ELEITO ou vazio  -> objeto de TEXTO
    22. cand1_situacao         Valido / Anulado / Anulado sub judice
    23. cand2_situacao         idem, para o 2o colocado
+   24. apuracao_encerrada     1 quando o TSE fechou a totalizacao da praca
 
 ---------------------------------------------------------------------------
- TARJA-PRESIDENTE.JSON   (29 campos)
+ TARJA-PRESIDENTE.JSON   (30 campos)
  Sempre BRASIL. As 19 primeiras iguais as de cima; depois, foto e selo.
 ---------------------------------------------------------------------------
     1. cargo                  PRESIDENTE / GOVERNADOR / SENADOR
@@ -67,6 +68,7 @@
    27. cand2_eleito_rotulo    ELEITO ou vazio  -> objeto de TEXTO
    28. cand1_situacao         Valido / Anulado / Anulado sub judice
    29. cand2_situacao         idem, para o 2o colocado
+   30. apuracao_encerrada     1 quando o TSE fechou a totalizacao
 
 ---------------------------------------------------------------------------
  LISTA-GOVERNADOR.JSON, LISTA-SENADOR.JSON, TARJA-RODIZIO.JSON
@@ -169,6 +171,47 @@
     depois e a tarja foi ao ar com o nome do estado onde ia o nome do
     candidato. E por isso que a ordem hoje e travada em lista, e nao
     apenas por convencao.
+
+===========================================================================
+ SENADOR TEM DUAS VAGAS - E OS DOIS PRIMEIROS SAO ELEITOS
+===========================================================================
+
+ Isto estava em aberto com o Jornalismo e o FAQ do TSE respondeu:
+
+   "embora nas Eleicoes Gerais de 2026 cada eleitor possa votar em dois
+    candidatos, trata-se de um unico cargo com duas vagas em disputa.
+    Dessa forma, os eleitos sao divulgados normalmente por meio do
+    registro do cargo Senador no arquivo de eleitos."
+
+ O que isso significa para a tarja:
+
+   - a tarja de senador mostrando o 1o e o 2o esta CERTA, e nao e um
+     recorte arbitrario: os dois primeiros e que ficam com as vagas;
+
+   - os DOIS selos de ELEITO podem acender ao mesmo tempo. Os campos
+     cand1_eleito_rotulo e cand2_eleito_rotulo sao independentes de
+     proposito, entao a cena ja aguenta isso sem mudanca;
+
+   - no governador e no presidente, um selo so - uma vaga.
+
+ Vale avisar o apresentador antes do ar: no senador, "eleito" no plural.
+
+===========================================================================
+ APURACAO_ENCERRADA - nao e a mesma coisa que 100%
+===========================================================================
+
+ O campo apuracao_pct pode chegar a 100% ANTES de a totalizacao daquela
+ praca estar fechada. Quem diz que fechou e o campo "and" do TSE, que o
+ sistema traduz em apuracao_encerrada (1 ou 0).
+
+ Serve para: visibilidade de um selo "APURACAO ENCERRADA", ou para o
+ apresentador saber que aquele numero nao muda mais.
+
+ Regra do TSE, do FAQ:
+   Presidente (eleicao federal) - abrangencia BRASIL encerra quando ha
+     totalizacao final.
+   Governador e Senador (eleicao estadual) - a UF encerra quando ha
+     totalizacao final daquela UF.
 
 ===========================================================================
  QUANDO O SELO DE ELEITO APARECE

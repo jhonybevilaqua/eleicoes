@@ -1,5 +1,95 @@
 ===========================================================================
- LAUDO DE INSPECAO - gctse 5.2
+ LAUDO DE INSPECAO - gctse 5.3
+ 23/09/2026 - o FAQ do TSE, lido
+===========================================================================
+
+ DUAS PERGUNTAS ANTIGAS, RESPONDIDAS
+
+ 1. SENADOR - os dois primeiros sao eleitos.
+
+    Estava em aberto com o Jornalismo desde o comeco. O FAQ responde:
+    "embora nas Eleicoes Gerais de 2026 cada eleitor possa votar em dois
+    candidatos, trata-se de um unico cargo com duas vagas em disputa".
+
+    Ou seja: a tarja de senador mostrando 1o e 2o nao e recorte
+    arbitrario - sao exatamente os dois que ficam com as vagas. E os DOIS
+    selos de ELEITO podem acender juntos. Os campos ja eram independentes,
+    entao a cena aguenta sem mudanca. Documentado no CAMPOS.txt.
+
+ 2. PRESIDENTE - o eleito vem do arquivo que ja lemos.
+
+    "nao ha previsao de disponibilizacao de um arquivo EA10 especifico [para
+    Presidente] e a informacao pode ser obtida diretamente a partir da
+    totalizacao nacional disponivel no arquivo EA20 de abrangencia Brasil."
+
+    O EA20 e o -u.json que o sistema le. Para Presidente nao e so uma
+    escolha aceitavel: e o unico caminho.
+
+ CAMPO NOVO - apuracao_encerrada
+
+    O FAQ detalha o campo "and" (andamento): "f" e totalizacao FINAL da
+    abrangencia. E diferente de 100% das urnas - o percentual pode chegar
+    a 100 antes de a totalizacao fechar.
+
+    Agora sai como apuracao_encerrada (1 ou 0), no FIM da tarja. Serve de
+    visibilidade para um selo "APURACAO ENCERRADA", e diz ao apresentador
+    que aquele numero nao muda mais. Conferido: Parana com and=f deu 1,
+    Brasil com and=p deu 0.
+
+ O QUE O FAQ CONFIRMOU
+
+    304 CONTA no rate limit .... "As requisicoes que resultarem em HTTP
+        304 tambem sao contabilizadas para fins de rate limit." O codigo
+        ja dizia isso num comentario desde a primeira versao; agora esta
+        confirmado pela fonte.
+    404 sem limiar ............. "Nao ha um limiar divulgado." Ou seja,
+        nao da para calcular quantos 404 sao seguros. O recuo progressivo
+        da 5.0 e a resposta certa: reduzir, e nao contar.
+    Sem arquivos de indice ..... "Nao esta prevista a disponibilizacao de
+        arquivos de indice." Polling e o unico caminho.
+    Rate limit ................. 100 req/s por IP, bloqueio de 10 minutos
+        "renovado enquanto persistir a condicao". Ja aplicado.
+    Sem cadastro ............... nao e preciso autorizacao nem convenio.
+    Sem obrigacao de cobertura . nao e obrigatorio divulgar todas as UFs
+        e cargos.
+
+ UMA OTIMIZACAO QUE O FAQ OFERECE E QUE NAO FOI ADOTADA
+
+    "E possivel utilizar os arquivos EA14 e EA15 para identificar
+    atualizacoes e direcionar as consultas aos arquivos EA20? Sim."
+
+    O EA14 (br-e<ELEICA>-ab.json) traz, num arquivo so, a data e a hora
+    de totalizacao de cada UF. Daria para trocar as 55 requisicoes por
+    ciclo por uma so, e ir buscar apenas as UFs que mudaram - uma queda
+    de mais de 90% no volume.
+
+    NAO foi adotado, de proposito. O motivo e que o ganho nao resolve
+    problema nenhum que tenhamos: estamos em 2,8 req/s contra um limite
+    de 100/s, margem de 36 vezes. E o custo e real - o proprio FAQ avisa
+    que "os arquivos sao gerados em paralelo e posteriormente
+    sincronizados e distribuidos pela CDN", entao o EA14 pode demorar a
+    refletir uma UF que ja mudou. Trocar leitura direta por leitura
+    indireta economizaria banda que sobra e criaria o risco de PERDER
+    uma atualizacao. Na apuracao, perder numero e pior que gastar
+    requisicao.
+
+    Fica anotado como o caminho a seguir se algum dia o volume apertar.
+
+ UMA RESPOSTA DO FAQ JA ESTA DESATUALIZADA
+
+    "A URL dos simulados ja esta disponivel? Nao." - mas esta: e o
+    ambiente que o sistema le desde o dia 16, e de onde vieram os dois
+    CONFERIR de ontem. O FAQ foi escrito antes. Vale lembrar disso antes
+    de tomar qualquer resposta dele como definitiva.
+
+ VERIFICADO NA 5.3
+
+    apuracao_encerrada = 1 com and=f, 0 com and=p                    OK
+    Ordem travada 24/24/30, 19 primeiras intactas                    OK
+    Validador: 36 conferencias, 0 divergencia                        OK
+
+===========================================================================
+ LAUDO ANTERIOR - gctse 5.2
  23/09/2026 - conferido contra a especificacao oficial do TSE
 ===========================================================================
 

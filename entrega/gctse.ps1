@@ -31,7 +31,7 @@ param(
 # Versao impressa na partida e no painel. Sem carimbo, "qual versao esta
 # rodando ai?" so se responde abrindo arquivo e comparando a olho - e no
 # meio de um teste com janela de horario ninguem faz isso.
-$Versao = "5.2 - 23/09/2026"
+$Versao = "5.3 - 23/09/2026"
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
@@ -274,11 +274,12 @@ $OrdemBase = @(
     "cand2_barra_px", "cand2_cor", "cand2_eleito"
 )
 $OrdemMajoritaria = $OrdemBase + @("cand1_eleito_rotulo", "cand2_eleito_rotulo",
-                                   "cand1_situacao", "cand2_situacao")
+                                   "cand1_situacao", "cand2_situacao",
+                                   "apuracao_encerrada")
 $OrdemPresidente  = $OrdemBase + @(
     "cand1_foto", "cand1_foto_existe", "cand1_foto_fixa", "cand1_eleito_rotulo",
     "cand2_foto", "cand2_foto_existe", "cand2_foto_fixa", "cand2_eleito_rotulo",
-    "cand1_situacao", "cand2_situacao"
+    "cand1_situacao", "cand2_situacao", "apuracao_encerrada"
 )
 
 function Ordem-Do-Modelo {
@@ -664,6 +665,12 @@ function Normalizar-Boletim {
 
     return [pscustomobject]@{
         Fase        = $fase
+        # "and" = andamento. "f" significa totalizacao FINAL daquela
+        # abrangencia; "p" e parcial. O FAQ do TSE detalha a regra por
+        # cargo. E diferente de 100% das urnas: o percentual pode chegar a
+        # 100 antes de a totalizacao fechar, e e so com and=f que o
+        # resultado daquela praca esta encerrado de verdade.
+        Encerrada   = $(if ("$(Obter-Campo $Bruto @('and') '')".ToLower() -eq "f") { "1" } else { "0" })
         Oficial     = ($fase -eq "O")
         Praca       = $nome
         PctUrnas    = $pct
@@ -864,6 +871,9 @@ function Montar-Tarja {
         hora_atualizacao = (Get-Date -Format "HH:mm")
     }
 
+    $encerrada = "0"
+    if (Tem-Propriedade $Boletim "Encerrada") { $encerrada = "$($Boletim.Encerrada)" }
+
     $trilho = 0
     if (Tem-Propriedade $Tarja "trilho_px") { $trilho = [int] $Tarja.trilho_px }
 
@@ -971,6 +981,7 @@ function Montar-Tarja {
             $extras[$p + "situacao"] = $situacao
         }
     }
+    $extras["apuracao_encerrada"] = $encerrada
     foreach ($chave in $extras.Keys) { $saida[$chave] = $extras[$chave] }
     $arquivo = "tarja"
     if (Tem-Propriedade $Tarja "arquivo") { $arquivo = "$($Tarja.arquivo)" }
@@ -1383,7 +1394,7 @@ function Publicar-Selecionada {
             # achando que selecionou outro. Publica vazio, com o nome certo.
             $b = [pscustomobject]@{
                 Fase = "O"; Oficial = $true; Praca = $praca.nome
-                PctUrnas = 0.0; Geracao = ""; Candidatos = @()
+                PctUrnas = 0.0; Geracao = ""; Candidatos = @(); Encerrada = "0"
             }
         } else {
             $b = $b.PSObject.Copy()
