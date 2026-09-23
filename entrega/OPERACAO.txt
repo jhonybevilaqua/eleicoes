@@ -218,3 +218,53 @@
 
  O PLANO B CONTINUA SENDO ENTRADA MANUAL NO GC. Uma maquina so e um ponto
  unico de falha, e nenhum programa resolve isso.
+
+---------------------------------------------------------------------------
+ CONFERIR POR FORA: O APLICATIVO DO PROPRIO TSE
+---------------------------------------------------------------------------
+
+ O TSE publica um aplicativo com a totalizacao em tempo real. Serve como
+ segunda fonte, independente do nosso sistema: se o numero da tarja e o do
+ aplicativo baterem, nao ha o que discutir.
+
+    Web ....... https://resultados.tse.jus.br/oficial/app/index.html
+    Android ... app "Resultados", do TSE
+    iOS ....... idem
+
+ Deixe aberto num celular ou num segundo monitor na noite da apuracao.
+ Custa nada e e a forma mais rapida de responder "esse numero esta certo?"
+ sem depender de mim nem do VALIDAR.
+
+---------------------------------------------------------------------------
+ SE O PROBLEMA FOR DO LADO DO TSE
+---------------------------------------------------------------------------
+
+ Quando o CONFERIR.bat mostrar que a rede desta maquina esta boa e mesmo
+ assim o TSE nao responder, o canal oficial e um formulario:
+
+    https://30308800.tse.jus.br/
+
+ No campo Descricao, comece com:  Resultados - Divulgacao
+ e depois descreva em detalhe. Se for reabertura, informe o numero do
+ chamado anterior.
+
+ Leve junto o CONFERIR.txt: ele ja traz a maquina, a versao do Windows, os
+ enderecos testados e o codigo HTTP de cada um. E o que eles vao pedir.
+
+---------------------------------------------------------------------------
+ A REGRA QUE NOS OBRIGA - Resolucao 23.751, artigos 264 a 269
+---------------------------------------------------------------------------
+
+ Quem divulga resultado da eleicao segue os artigos 264 a 269 da Resolucao
+ de Atos Gerais no 23.751, de 26/02/2026.
+
+ O ponto que toca diretamente este sistema: NAO se pode alterar o conteudo
+ distribuido pela Justica Eleitoral. O que o sistema faz e so apresentar:
+
+   - corta nome comprido no limite da tarja, sem mudar o nome;
+   - calcula a largura da barra a partir do percentual que o TSE mandou;
+   - carimba PARCIAL - NAO OFICIAL enquanto o boletim nao for fase O;
+   - mostra a situacao do voto (Valido / Anulado) como o TSE mandou.
+
+ Nenhum numero e recalculado, arredondado por conta propria, projetado ou
+ completado. O que vai ao ar e o que veio do TSE.
