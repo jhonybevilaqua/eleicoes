@@ -35,7 +35,7 @@ param(
 # Versao impressa na partida e no painel. Sem carimbo, "qual versao esta
 # rodando ai?" so se responde abrindo arquivo e comparando a olho - e no
 # meio de um teste com janela de horario ninguem faz isso.
-$Versao = "5.6 - 23/09/2026"
+$Versao = "5.7 - 24/09/2026"
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
@@ -46,6 +46,20 @@ try {
     [Net.ServicePointManager]::SecurityProtocol =
         [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
 } catch { }
+
+# LIMITE DE CONEXOES. O .NET Framework, que e o que o Windows PowerShell 5.1
+# usa, abre no maximo DUAS conexoes simultaneas por servidor. Uma resposta
+# que nao e fechada prende uma delas; com duas presas, toda requisicao
+# seguinte ao TSE fica esperando conexao ate estourar o tempo - e a coleta
+# para sem dizer nada. O PowerShell 7 nao tem esse limite, e por isso isto
+# passava nos testes e travava na maquina do GC. Subir o teto e a segunda
+# linha de defesa; a primeira e fechar toda resposta (Fechar-Resposta).
+try { [Net.ServicePointManager]::DefaultConnectionLimit = 64 } catch { }
+
+# Barra de progresso do Invoke-WebRequest: no Windows PowerShell 5.1 ela
+# e desenhada a cada pedaco recebido e deixa o download varias vezes mais
+# lento. Numa coleta que faz 55 requisicoes por ciclo, isso e tempo de ar.
+$ProgressPreference = "SilentlyContinue"
 
 # Trabalha sempre a partir da pasta do proprio script: duplo clique herda um
 # diretorio qualquer, e ai os caminhos relativos apontam para o lugar errado.
@@ -409,6 +423,23 @@ function Atender-Troca-De-Praca {
     $script:UltimaCongelado = $congelado
     if ($agora -eq $script:UltimaSelecao -and -not $descongelou) { return $false }
     $script:UltimaSelecao = $agora
+    # Estado escolhido que ainda nao esta no cache (troca no meio da
+    # primeira varredura, por exemplo): busca AGORA, uma leitura so, antes de
+    # gravar. Sem isto ia ao ar a tarja VAZIA, "0,00%", ate a varredura
+    # chegar nesse estado - visto na 5.7, dois segundos de tarja em branco
+    # no ar. Perto do limite de requisicoes nao busca: a troca nao pode
+    # ficar esperando a fila; publica vazio e a varredura completa depois.
+    if (-not (Tarjas-Congeladas)) {
+        $limiteT = 80
+        if (Tem-Propriedade $cfg "limite_requisicoes_por_minuto") { $limiteT = [int] $cfg.limite_requisicoes_por_minuto }
+        foreach ($saida in $cfg.selecao.saidas) {
+            $praca = Ler-Selecao $saida.cargo
+            if ($null -eq $praca) { continue }
+            if ($script:CacheBoletins.ContainsKey("$($praca.uf)-$($saida.cargo)")) { continue }
+            if ($script:Requisicoes.Count -ge ($limiteT - 5)) { continue }
+            $null = Buscar-Praca $praca.uf $saida.cargo $praca.nome $script:Modo
+        }
+    }
     $null = Publicar-Selecionada $script:CacheBoletins
     foreach ($saida in $cfg.selecao.saidas) {
         $praca = Ler-Selecao $saida.cargo
@@ -507,6 +538,27 @@ function Ler-Texto-Resposta {
 
 $script:Ausentes = @{}   # url -> @{ vezes; pularAte } : recuo depois de 404
 
+function Fechar-Resposta {
+    # Toda resposta de ERRO do Invoke-WebRequest (304, 404, 500) vem dentro
+    # da excecao, com a conexao ainda presa a ela. No Windows PowerShell 5.1,
+    # se ninguem fecha, a conexao so volta quando o coletor de lixo passar -
+    # e com o limite de duas por servidor, duas respostas esquecidas bastam
+    # para travar TODA a coleta. Com ETag, o TSE responde 304 para cada
+    # arquivo que nao mudou: do segundo ciclo em diante, quase toda resposta
+    # e 304. Esta funcao e a diferenca entre funcionar e travar.
+    param($Erro)
+    try {
+        if ($null -ne $Erro -and $null -ne $Erro.Exception) {
+            $resp = $null
+            if (Tem-Propriedade $Erro.Exception "Response") { $resp = $Erro.Exception.Response }
+            if ($null -ne $resp) {
+                if ($resp -is [Net.WebResponse]) { $resp.Close() }
+                elseif ($resp -is [IDisposable]) { $resp.Dispose() }
+            }
+        }
+    } catch { }
+}
+
 function Obter-Boletim {
     # RECUO DEPOIS DE 404. O TSE avisa que requisicao para endereco que nao
     # existe pode gerar bloqueio do IP. E no comeco da noite isso acontece
@@ -531,12 +583,19 @@ function Obter-Boletim {
     $ua = "gctse/1.0"
     if ((Tem-Propriedade $cfg.tse "user_agent") -and $cfg.tse.user_agent) { $ua = "$($cfg.tse.user_agent)" }
     $cabecalhos = @{ "User-Agent" = $ua; "Accept" = "application/json,text/plain,*/*" }
-    if ($Cache.ContainsKey($Url)) { $cabecalhos["If-None-Match"] = $Cache[$Url] }
+    if ($Cache.ContainsKey($Url) -and "$($Cache[$Url])") { $cabecalhos["If-None-Match"] = "$($Cache[$Url])" }
+    $relogio = [Diagnostics.Stopwatch]::StartNew()
     try {
         $resposta = Invoke-WebRequest -Uri $Url -Headers $cabecalhos -TimeoutSec 15 -UseBasicParsing
+        $relogio.Stop()
     } catch {
+        $relogio.Stop()
         $codigo = 0
         try { $codigo = [int] $_.Exception.Response.StatusCode } catch { }
+        Fechar-Resposta $_
+        if ($relogio.Elapsed.TotalSeconds -ge 5) {
+            Escrever-Log ("TSE LENTO: {0:N1}s sem resposta em {1}" -f $relogio.Elapsed.TotalSeconds, $Url) "AVISO"
+        }
         if ($codigo -eq 304) {
             if ($script:Ausentes.ContainsKey($Url)) { $script:Ausentes.Remove($Url) }
             return "SEM-MUDANCA"
@@ -554,9 +613,24 @@ function Obter-Boletim {
         Escrever-Log "falha em $Url : $($_.Exception.Message)" "AVISO"
         return $null
     }
+    # Resposta que demora e o primeiro sinal de CDN sob carga - ou de
+    # conexao presa. Silenciosa, vira "a tarja nao atualiza" sem pista.
+    if ($relogio.Elapsed.TotalSeconds -ge 5) {
+        Escrever-Log ("TSE LENTO: {0:N1}s para responder {1}" -f $relogio.Elapsed.TotalSeconds, $Url) "AVISO"
+    }
     # Respondeu: sai do recuo.
     if ($script:Ausentes.ContainsKey($Url)) { $script:Ausentes.Remove($Url) }
-    try { $Cache[$Url] = $resposta.Headers["ETag"] } catch { }
+    # ETag como TEXTO, sempre. O Windows PowerShell 5.1 devolve o cabecalho
+    # como texto; o PowerShell 7 devolve como LISTA - e uma lista posta de
+    # volta no If-None-Match invalida o pedido antes de ele sair, de modo que
+    # do segundo ciclo em diante nenhuma requisicao chegava mais ao TSE e a
+    # tarja parava no primeiro numero. Isso so apareceu quando o servidor de
+    # teste passou a mandar ETag como o CDN do TSE manda.
+    try {
+        $etag = $resposta.Headers["ETag"]
+        if ($etag -is [array]) { $etag = $etag | Select-Object -First 1 }
+        if ($etag) { $Cache[$Url] = "$etag" } elseif ($Cache.ContainsKey($Url)) { $Cache.Remove($Url) }
+    } catch { }
     # CDN sob carga responde HTTP 200 com pagina de erro em HTML, e conexao
     # interrompida entrega JSON pela metade. Sem esta protecao, uma resposta
     # ruim derrubava o ciclo INTEIRO - as 55 pracas - em vez de custar so a
@@ -771,6 +845,7 @@ function Baixar-Foto-Do-TSE {
         Escrever-Log "foto do TSE baixada: $destino" "OK"
         return $destino
     } catch {
+        Fechar-Resposta $_
         try { Remove-Item -Path "$destino.tmp" -Force -ErrorAction SilentlyContinue } catch { }
         Escrever-Log "sem foto no TSE para o candidato $Sequencial (nao tento de novo nesta execucao)"
         return ""
@@ -1089,7 +1164,7 @@ tr.erro td{background:#2a1416}tr.aviso td{background:#2a2312}
 </style></head><body>
 <div class="topo"><h1>Painel de apuracao</h1>
 <div class="m">modo <b>$Modo</b> &middot; atualizado <b>$(Get-Date -Format 'HH:mm:ss')</b>
-&middot; recarrega a cada <b>${Intervalo}s</b></div></div>
+&middot; recarrega a cada <b>${intervalo}s</b></div></div>
 $faixa
 <main><table><thead><tr><th>Tarja</th><th>Praca</th><th class="num">Urnas</th>
 <th>1o colocado</th><th class="num">%</th><th>2o colocado</th><th class="num">%</th>
@@ -1266,6 +1341,12 @@ function Buscar-Praca {
 
     $b = $null
     $bruto = Obter-Boletim (Montar-Url $Uf $Cargo) -Prioritario:(Esta-No-Ar $Uf $Cargo)
+    # Falha de rede de UM pedido nao apaga o que ja se sabe: fica o ultimo
+    # boletim bom, como no 304. Antes o resumo dizia "sem dado" para uma
+    # praca que tinha dado de sobra, so porque um pedido falhou.
+    if ($null -eq $bruto -and $script:CacheBoletins.ContainsKey($chave)) {
+        return $script:CacheBoletins[$chave]
+    }
     if ($bruto -eq "SEM-MUDANCA") {
         if ($script:CacheBoletins.ContainsKey($chave)) { return $script:CacheBoletins[$chave] }
         return $null
@@ -1380,6 +1461,41 @@ function Tarjas-Congeladas {
     return (Test-Path "CONGELADO.txt")
 }
 
+$script:UltimoMostrado = @{}
+
+function Mostrar-No-Ar {
+    # Escreve na janela o que acabou de ir para o arquivo da tarja. So quando
+    # MUDA, entao nao vira ruido: numa apuracao parada, fica quieto.
+    #
+    # Existe porque "estou recebendo os dados?" nao pode depender de abrir
+    # arquivo, rodar ferramenta ou olhar o LiveBoard. O numero que o GC vai
+    # mostrar tem que estar escrito na tela de quem opera a coleta - e se o
+    # LiveBoard mostrar outra coisa, a diferenca aparece na hora.
+    param($Tarja)
+    try {
+        # So os numeros contam: a hora da tarja muda todo minuto e faria a
+        # mesma linha sair de novo sem nada ter mudado.
+        $assinatura = "$($Tarja["cargo"])|$($Tarja["abrangencia"])|$($Tarja["apuracao_pct"])|" +
+                      "$($Tarja["cand1_nome"])|$($Tarja["cand1_percentual"])|$($Tarja["cand2_nome"])|$($Tarja["cand2_percentual"])"
+        $chaveM = "$($Tarja["cargo"])"
+        if ($script:UltimoMostrado.ContainsKey($chaveM) -and $script:UltimoMostrado[$chaveM] -eq $assinatura) { return }
+        $script:UltimoMostrado[$chaveM] = $assinatura
+        $partes = @()
+        foreach ($i in 1, 2) {
+            if ("$($Tarja["cand${i}_visivel"])" -eq "1") {
+                $partes += ("{0}o {1} {2}" -f $i, $Tarja["cand${i}_nome"], $Tarja["cand${i}_percentual"])
+            }
+        }
+        # Tarja sem candidato NAO e "OK": sai em amarelo, para ninguem ler
+        # "NO ARQUIVO" e achar que o dado chegou.
+        $cands = "SEM DADO DO TSE (tarja vazia)"
+        $nivelM = "AVISO"
+        if ($partes.Count -gt 0) { $cands = $partes -join "  |  "; $nivelM = "OK" }
+        Escrever-Log ("NO ARQUIVO  {0} {1}  urnas {2}  |  {3}" -f $Tarja["cargo"], $Tarja["abrangencia"],
+                      $Tarja["apuracao_pct"], $cands) $nivelM
+    } catch { }
+}
+
 function Publicar-Selecionada {
     # Reescreve as tarjas do seletor a partir do cache. Nao consulta o TSE:
     # trocar de estado no ar tem que ser instantaneo.
@@ -1412,12 +1528,14 @@ function Publicar-Selecionada {
             $script:Impressoes[$saida.arquivo] = ""
             continue
         }
-        $json = ($(Montar-Tarja $b $saida) | ConvertTo-Json -Depth 5)
+        $montada = Montar-Tarja $b $saida
+        $json = ($montada | ConvertTo-Json -Depth 5)
         $hash = Obter-Hash $json
         if ($Impressoes[$saida.arquivo] -ne $hash) {
             if (Escrever-Arquivo (Join-Path $PastaSaida "$($saida.arquivo).json") $json) {
                 $Impressoes[$saida.arquivo] = $hash
                 $publicados += $saida.arquivo
+                Mostrar-No-Ar $montada
             }
         }
     }
@@ -1443,7 +1561,8 @@ function Executar-Ciclo {
         $b = Buscar-Praca $tarja.abrangencia $tarja.cargo $tarja.praca $Modo
         $situacao = "sem dado"
         if ($null -ne $b) {
-            $json = ($(Montar-Tarja $b $tarja) | ConvertTo-Json -Depth 5)
+            $montada = Montar-Tarja $b $tarja
+            $json = ($montada | ConvertTo-Json -Depth 5)
             $hash = Obter-Hash $json
             if (Tarjas-Congeladas) {
                 # Congelada: nao grava, mas o resto do ciclo segue igual - a
@@ -1455,6 +1574,7 @@ function Executar-Ciclo {
             } elseif (Escrever-Arquivo (Join-Path $PastaSaida "$($tarja.arquivo).json") $json) {
                 $Impressoes[$tarja.arquivo] = $hash
                 $situacao = "publicado"
+                Mostrar-No-Ar $montada
             } else {
                 $situacao = "gravacao falhou"
             }
@@ -1610,6 +1730,7 @@ function Descobrir-Codigos {
         $resp = Invoke-WebRequest -Uri $url -Headers $cabecalhos -TimeoutSec 20 -UseBasicParsing
         $bruto = (Ler-Texto-Resposta $resp) | ConvertFrom-Json
     } catch {
+        Fechar-Resposta $_
         Escrever-Log "nao consegui ler $url : $($_.Exception.Message)" "AVISO"
         return $null
     }
@@ -1644,7 +1765,12 @@ function Descobrir-Codigos {
                 $dataPleito = "$(Obter-Campo $pleito @('dt') '')"
                 if ($dataPleito -match '(\d{4})\s*$') { $cicloDerivado = "ele$($Matches[1])" }
                 $encontrado = @{
-                    ciclo   = $ciclo
+                    # Era "$ciclo", que nao existe aqui: sem diferenciar
+                    # maiuscula, o PowerShell achava o CONTADOR de ciclos
+                    # ($script:Ciclo = 1) e o caminho virava .../1/21270/...
+                    # - 404 a noite inteira justo quando o TSE troca o codigo
+                    # do simulado entre janelas. Achado e corrigido na 5.7.
+                    ciclo   = $cicloDerivado
                     pleito  = "$(Obter-Campo $pleito @('cd') '')"
                     eleicao = "$(Obter-Campo $eleicao @('cd') '')"
                     cargos  = @{}
@@ -1702,6 +1828,53 @@ function Garantir-Codigos {
     # demais para correr esse risco.
     Escrever-Log "descoberto agora, nao gravado no config.json - confira no CONFERIR.bat se duvidar"
     return $true
+}
+
+function Adotar-Codigos {
+    # Passa a usar, so em memoria, os codigos que o TSE publica agora.
+    param($Encontrado, [string] $Antes)
+    if ($Encontrado.ciclo) { $cfg.tse.ciclo = $Encontrado.ciclo }
+    $cfg.tse.pleito = $Encontrado.pleito
+    $cfg.tse.eleicao = $Encontrado.eleicao
+    $mapa = @{}
+    foreach ($num in $Encontrado.cargos.Keys) { $mapa[$num] = $Encontrado.cargos[$num] }
+    $cfg.tse.eleicao_por_cargo = [pscustomobject] $mapa
+    Escrever-Log "o codigo do config estava velho: $Antes virou $($Encontrado.pleito)/$($Encontrado.eleicao)" "OK"
+    Escrever-Log "seguindo com o codigo que o TSE publica agora. Caminho: $(Montar-Url 'br' 1)" "OK"
+}
+
+function Conferir-Codigo-No-TSE {
+    # O TSE troca o codigo do simulado entre uma janela de teste e outra. Com
+    # o codigo velho no config, as 55 pracas dao 404 e a tarja fica vazia sem
+    # nada na tela dizendo por que. Antes isto so era percebido no FIM do
+    # primeiro ciclo, e so pela coleta: o -Validar e o -Diagnostico seguiam
+    # com o codigo velho e acusavam FALHA mesmo com a coleta recebendo.
+    #
+    # Agora TODO modo pergunta na porta: uma requisicao ao boletim do
+    # presidente/Brasil. Respondeu, segue. 404 (ou 403, que e como alguns
+    # CDNs respondem a arquivo inexistente), le o ele-c.json do TSE e, se o
+    # codigo mudou, adota o novo. Falha de rede nao troca nada.
+    $url = Montar-Url "br" 1
+    $codigo = 0
+    try {
+        $ua = "gctse/1.0"
+        if ((Tem-Propriedade $cfg.tse "user_agent") -and $cfg.tse.user_agent) { $ua = "$($cfg.tse.user_agent)" }
+        $r = Invoke-WebRequest -Uri $url -Headers @{ "User-Agent" = $ua } -TimeoutSec 12 -UseBasicParsing
+        return
+    } catch {
+        try { $codigo = [int] $_.Exception.Response.StatusCode } catch { }
+        Fechar-Resposta $_
+    }
+    if ($codigo -ne 404 -and $codigo -ne 403) { return }
+    $antes = "$($cfg.tse.pleito)/$($cfg.tse.eleicao)"
+    Escrever-Log "o TSE respondeu $codigo para o codigo $antes do config - conferindo o codigo publicado" "AVISO"
+    $encontrado = Descobrir-Codigos $cfg.tse.base_url
+    if ($null -eq $encontrado) { return }
+    if ("$($encontrado.pleito)/$($encontrado.eleicao)" -ne $antes) {
+        Adotar-Codigos $encontrado $antes
+    } else {
+        Escrever-Log "o codigo $antes e o que o TSE publica; o boletim so ainda nao saiu" "AVISO"
+    }
 }
 
 function Parar-Sem-Codigos {
@@ -2030,6 +2203,7 @@ if ($Diagnostico) {
             $redeOk[$alvo.rotulo.Trim()] = $true
         } catch {
             $relogio.Stop()
+            Fechar-Resposta $_
             $motivo = $_.Exception.Message
             if ($motivo.Length -gt 90) { $motivo = $motivo.Substring(0, 90) }
             D ("   {0}  NAO RESPONDE  ({1} ms) - {2}" -f $alvo.rotulo, $relogio.ElapsedMilliseconds, $motivo)
@@ -2191,7 +2365,10 @@ if ($Diagnostico) {
     D "7. ULTIMAS LINHAS DO LOG DE HOJE"
     D ""
     $arqLog = Join-Path "logs" ("gctse-{0}.log" -f (Get-Date -Format "yyyy-MM-dd"))
+    $codigoVelho = ""
     if (Test-Path $arqLog) {
+        $v = @(Get-Content $arqLog -Encoding UTF8 | Where-Object { $_ -cmatch 'codigo do config estava velho: (.+)$' }) | Select-Object -Last 1
+        if ($v -and ("$v" -cmatch 'estava velho: (.+)$')) { $codigoVelho = $Matches[1] }
         foreach ($l in @(Get-Content $arqLog -Tail 30 -Encoding UTF8)) { D "   $l" }
         $errosHoje = @(Get-Content $arqLog -Encoding UTF8 | Where-Object { $_ -cmatch ' ERRO ' }).Count
         D ""
@@ -2220,6 +2397,13 @@ if ($Diagnostico) {
     D (" {0}  tarjas COM DADO, gravadas nos ultimos {1} s ({2} de {3} com candidato)" -f (Marca $gravando), $limiteVivo, $comDado, $esperadas)
     D (" {0}  tarjas conferem com o TSE, campo a campo ({1} de {2})" -f (Marca $confere), $okV, ($okV + $falhaV))
     if ($modoErrado) { D " [FALHA]  a coleta que esta rodando e do OUTRO modo - ver item 2" }
+    if ($codigoVelho) {
+        # O sistema ja se corrige sozinho, entao nao e FALHA. Mas quem le
+        # precisa saber, para acertar o config.json com calma.
+        D " [ !! ]  codigo do config.json VELHO ($codigoVelho)."
+        D "         A coleta ja usa o codigo novo sozinha. Rode CONFERIR.bat"
+        D "         para ver os numeros e acerte o config.json depois do teste."
+    }
     D (" {0}  colunas na ordem que a cena espera" -f (Marca $colunas))
     if ($Teste) {
         if ($redeOk["OFICIAL"]) { D " [ OK ]  ambiente OFICIAL responde (o do dia 04/10)" }
@@ -2275,6 +2459,7 @@ if ($Validar) {
             $cfg.tse.eleicao = $cfg.tse.eleicao_simulado
         }
     }
+    Conferir-Codigo-No-TSE
 
     Diz "==========================================================="
     Diz " gctse $Versao - validacao contra o dado cru do TSE"
@@ -2457,6 +2642,7 @@ if ($Conferir) {
             if (-not $corpo) {
                 try { $corpo = "$($_.ErrorDetails.Message)" } catch { }
             }
+            Fechar-Resposta $_
             Anotar "    NAO RECEBIDO   $cod   ($ms ms)"
             Anotar "    motivo: $($_.Exception.Message)"
             if ($servidor) { Anotar "    quem respondeu (Server): $servidor" }
@@ -2980,6 +3166,7 @@ if ($Teste) { $Modo = "TESTE" }
 # invalidas, tomaria 55 respostas 404 e ainda assim gastaria o limite de
 # requisicoes por minuto do TSE. Melhor parar na porta e dizer o porque.
 if (-not (Garantir-Codigos)) { Parar-Sem-Codigos }
+Conferir-Codigo-No-TSE
 
 $limiteReq = 80
 if (Tem-Propriedade $cfg "limite_requisicoes_por_minuto") { $limiteReq = [int] $cfg.limite_requisicoes_por_minuto }
@@ -3059,14 +3246,7 @@ do {
             $antes = "$($cfg.tse.pleito)/$($cfg.tse.eleicao)"
             $encontrado = Descobrir-Codigos $cfg.tse.base_url
             if ($null -ne $encontrado -and "$($encontrado.pleito)/$($encontrado.eleicao)" -ne $antes) {
-                if ($encontrado.ciclo) { $cfg.tse.ciclo = $encontrado.ciclo }
-                $cfg.tse.pleito = $encontrado.pleito
-                $cfg.tse.eleicao = $encontrado.eleicao
-                $mapa = @{}
-                foreach ($num in $encontrado.cargos.Keys) { $mapa[$num] = $encontrado.cargos[$num] }
-                $cfg.tse.eleicao_por_cargo = [pscustomobject] $mapa
-                Escrever-Log "o codigo do config estava velho: $antes virou $($encontrado.pleito)/$($encontrado.eleicao)" "OK"
-                Escrever-Log "seguindo com o codigo que o TSE publica agora. Caminho: $(Montar-Url 'br' 1)" "OK"
+                Adotar-Codigos $encontrado $antes
             } else {
                 Write-Host ""
                 Write-Host "  O codigo do pleito confere com o que o TSE publica,"

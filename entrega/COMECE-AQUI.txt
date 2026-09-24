@@ -60,6 +60,17 @@
     Enquanto a janela estiver aberta, os arquivos da pasta TARJAS sao
     atualizados sozinhos. Se fechar a janela, a coleta para.
 
+    Em um ou dois segundos a janela mostra o que foi para cada tarja:
+
+      OK    NO ARQUIVO  GOVERNADOR PARANA  urnas 65,03%  |  1o ...
+
+    Verde = chegou dado do TSE. Amarelo "SEM DADO DO TSE" = tarja vazia.
+    Se o LiveBoard mostra numero diferente dessa linha, o problema e o
+    vinculo da cena ou o caminho do DataSource, nao a coleta.
+
+    Se o TSE tiver trocado o codigo do simulado, a janela diz "o codigo
+    do config estava velho" e segue sozinha com o codigo novo.
+
  5. Duplo clique em PAINEL.bat   e abra http://localhost:8099
 
     E por ali que voce escolhe o estado no ar, ve o sino aceso quando

@@ -1,5 +1,99 @@
 ===========================================================================
- LAUDO DE INSPECAO - gctse 5.6
+ LAUDO DE INSPECAO - gctse 5.7
+ 24/09/2026 - "ainda nao consegui receber ontem"
+===========================================================================
+
+ DEFEITO 1: O CODIGO DO SIMULADO TROCADO QUEBRAVA O CAMINHO A NOITE TODA
+
+   O TSE troca o codigo do simulado entre uma janela e outra. O sistema ja
+   percebia isso no fim do primeiro ciclo e perguntava o codigo novo ao
+   TSE - mas, ao adotar, gravava o CICLO errado no caminho:
+
+        esperado .. .../ele2026/21270/dados/br/br-c0001-e021270-u.json
+        gravava ... .../1/21270/dados/br/br-c0001-e021270-u.json
+
+   Causa: a funcao montava o ciclo certo (ele2026, pela data do pleito)
+   numa variavel e entregava OUTRA, "$ciclo", que nao existia ali. O
+   PowerShell nao diferencia maiuscula de minuscula e achou o CONTADOR de
+   ciclos da coleta ($Ciclo = 1). Resultado: 404 nas 55 pracas ate
+   alguem fechar a janela - tarja vazia, com o log dizendo "codigo
+   corrigido". Reproduzido aqui antes de corrigir.
+
+   Corrigido, e mais: agora TODO modo (coleta, VALIDAR, DIAGNOSTICO)
+   confere o codigo NA PORTA, com uma leitura so. Se o TSE responde 404,
+   le o codigo publicado e passa a usa-lo antes do primeiro ciclo:
+
+        antes .... tarja vazia o primeiro ciclo inteiro, depois caminho
+                   quebrado para sempre
+        agora .... codigo velho no config, tarja com dado em 1 s
+
+   O DIAGNOSTICO.txt avisa [ !! ] codigo do config.json VELHO, com os
+   numeros, para acertar o config com calma depois.
+
+   Uma varredura nova procura esse tipo de erro no arquivo inteiro:
+   variavel lida numa funcao sem ter sido definida nela, ou com maiuscula
+   diferente da definicao. Achou este e nenhum outro. Entrou no teste de
+   regressao.
+
+ DEFEITO 2: CONEXAO PRESA NO WINDOWS POWERSHELL 5.1
+
+   Resposta de ERRO (304 "nada mudou", 404 "ainda nao publicado") nunca
+   era fechada. O Windows PowerShell 5.1 - o das maquinas da emissora -
+   abre no maximo 2 conexoes por servidor, e cada resposta nao fechada
+   segura uma. Do segundo ciclo em diante quase tudo que o TSE devolve e
+   304: duas respostas esquecidas e a coleta para, esperando conexao,
+   sem mensagem nenhuma. Toda resposta de erro agora e fechada, o limite
+   subiu para 64, e a barra de progresso do 5.1 (que atrasa cada leitura)
+   foi desligada.
+
+ DEFEITO 3: O ETAG VIRAVA LISTA NO POWERSHELL 7
+
+   No PowerShell 7 o cabecalho ETag chega como lista, e o sistema o
+   devolvia assim ao TSE - "System.String[]", que nao e um ETag valido.
+   Do segundo ciclo em diante nenhuma leitura saia. O servidor de teste
+   nunca mandava ETag, por isso nao aparecia. Agora o teste usa um
+   servidor que imita o CDN do TSE (ETag e 304): ciclo 1 com 56 leituras
+   200, os seguintes com 304, e dado novo do TSE entra na hora.
+
+ DEFEITO 4: TARJA VAZIA NO AR AO TROCAR DE ESTADO
+
+   Trocar de estado no meio da primeira varredura gravava a tarja do
+   estado novo VAZIA ("0,00%") e so a preenchia quando a varredura
+   chegava nele - dois segundos de tarja em branco no ar. Agora o estado
+   escolhido e lido do TSE na hora da troca, antes de gravar.
+
+ A TELA DA COLETA MOSTRA O QUE FOI PARA A TARJA
+
+   A cada mudanca, uma linha com o numero que o GC tem que mostrar:
+
+     OK    NO ARQUIVO  GOVERNADOR PARANÁ  urnas 65,03%  |  1o ... 11,36%
+     AVISO NO ARQUIVO  SENADOR SÃO PAULO  urnas 0,00%  |  SEM DADO DO TSE
+
+   Em verde, chegou dado. Em amarelo, a tarja esta vazia. Se o LiveBoard
+   mostra outra coisa, o problema e o vinculo da cena ou o caminho do
+   DataSource - nao a coleta.
+
+   Tambem: uma leitura que falha nao apaga mais o ultimo dado bom, e
+   leitura que demora 5 s ou mais sai como "TSE LENTO".
+
+ VERIFICADO NA 5.7
+
+   Codigo velho no config: corrigido na porta, dado em 1 s           OK
+   Codigo certo: nenhuma consulta extra, nenhum aviso                 OK
+   DIAGNOSTICO com codigo velho: tudo certo + aviso [ !! ]            OK
+   CDN com ETag: 200 no 1o ciclo, 304 nos seguintes, 0 x 404          OK
+   Troca de estado no meio da varredura: sem tarja vazia              OK
+   Congelado segura a troca; descongelar entra na hora                OK
+   Validador simulado e oficial: 36 / 0                               OK
+   Ordem travada 24/24/30                                             OK
+   Varredura de variaveis (gctse e painel): 0 achados                 OK
+   Sintaxe, BOM, .bat em CRLF                                         OK
+
+   NAO verificavel daqui: o ambiente do TSE (a rede deste teste bloqueia
+   tse.jus.br). A prova e o DIAGNOSTICO.txt rodado na maquina do GC.
+
+===========================================================================
+ LAUDO ANTERIOR - gctse 5.6
  23/09/2026 - "ainda nao consigo receber os dados"
 ===========================================================================
 
