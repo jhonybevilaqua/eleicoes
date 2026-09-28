@@ -174,6 +174,10 @@
 
  Faixa vermelha          A COLETA PAROU. A janela preta fechou ou travou.
                          Os numeros no ar estao congelados. Reabra.
+                         Se o titulo da janela comeca com "Selecionar",
+                         alguem clicou nela e ela congelou: clique e
+                         aperte ESC. (Da 6.0 em diante o clique nao
+                         congela mais - mas janela de versao antiga sim.)
 
  Faixa vermelha          NAO ESTAMOS RECEBENDO DADOS DO TSE. A janela esta
  "NAO ESTAMOS            aberta, mas o TSE nao responde ha mais de 60 s.

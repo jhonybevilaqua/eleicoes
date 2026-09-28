@@ -22,6 +22,27 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+# Um clique na janela preta poe o console em modo "Selecionar" e CONGELA o
+# programa ate alguem apertar uma tecla. Painel congelado nao atende o
+# navegador. Desliga a edicao rapida (QuickEdit) desta janela.
+if ($env:OS -eq "Windows_NT") {
+    try {
+        Add-Type -Namespace GcTsePainel -Name JanelaConsole -ErrorAction Stop -MemberDefinition @'
+[DllImport("kernel32.dll", SetLastError = true)] public static extern IntPtr GetStdHandle(int nStdHandle);
+[DllImport("kernel32.dll", SetLastError = true)] public static extern bool GetConsoleMode(IntPtr hConsoleHandle, out uint lpMode);
+[DllImport("kernel32.dll", SetLastError = true)] public static extern bool SetConsoleMode(IntPtr hConsoleHandle, uint dwMode);
+'@
+        $entradaConsole = [GcTsePainel.JanelaConsole]::GetStdHandle(-10)
+        [uint32] $modoConsole = 0
+        if ([GcTsePainel.JanelaConsole]::GetConsoleMode($entradaConsole, [ref] $modoConsole)) {
+            if (($modoConsole -band 0x40) -ne 0) { $modoConsole = $modoConsole - 0x40 }
+            $modoConsole = $modoConsole -bor 0x80
+            [void] [GcTsePainel.JanelaConsole]::SetConsoleMode($entradaConsole, $modoConsole)
+        }
+    } catch { }
+}
+
 $Raiz = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $Raiz
 
@@ -426,7 +447,8 @@ function Montar-Pagina {
                            "<b>$idade segundos</b> (o normal e no maximo $limiteIdade). " +
                            "Os numeros no ar estao CONGELADOS - nao sobem mais. " +
                            "Verifique a janela do INICIAR/TESTE e reabra se estiver fechada. " +
-                           "Se ela esta aberta, a coleta pode estar presa esperando o TSE responder.</span></div>"
+                           "Se ela esta aberta e o titulo comeca com <b>Selecionar</b>, alguem clicou nela: " +
+                           "clique na janela e aperte <b>ESC</b>. Se nao, a coleta pode estar presa esperando o TSE.</span></div>"
         }
     }
 

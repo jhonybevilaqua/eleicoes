@@ -35,7 +35,7 @@ param(
 # Versao impressa na partida e no painel. Sem carimbo, "qual versao esta
 # rodando ai?" so se responde abrindo arquivo e comparando a olho - e no
 # meio de um teste com janela de horario ninguem faz isso.
-$Versao = "5.9 - 28/09/2026"
+$Versao = "6.0 - 28/09/2026"
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
@@ -60,6 +60,32 @@ try { [Net.ServicePointManager]::DefaultConnectionLimit = 64 } catch { }
 # e desenhada a cada pedaco recebido e deixa o download varias vezes mais
 # lento. Numa coleta que faz 55 requisicoes por ciclo, isso e tempo de ar.
 $ProgressPreference = "SilentlyContinue"
+
+# MODO DE SELECAO DA JANELA. No console do Windows, UM clique dentro da janela
+# preta entra no modo "Selecionar" (a palavra aparece no titulo) e o programa
+# CONGELA ate alguem apertar uma tecla - sem erro, sem aviso. Visto em
+# 28/09/2026 na maquina do GC: o CONFERIR ficou parado na etapa 1 ate
+# apertarem ESC, e depois recebeu tudo do TSE em milissegundos. A coleta
+# congelada assim e exatamente "nao estou recebendo os dados". Desliga a
+# edicao rapida (QuickEdit) desta janela: clique passa a nao fazer nada.
+if ($env:OS -eq "Windows_NT") {
+    try {
+        Add-Type -Namespace GcTse -Name JanelaConsole -ErrorAction Stop -MemberDefinition @'
+[DllImport("kernel32.dll", SetLastError = true)] public static extern IntPtr GetStdHandle(int nStdHandle);
+[DllImport("kernel32.dll", SetLastError = true)] public static extern bool GetConsoleMode(IntPtr hConsoleHandle, out uint lpMode);
+[DllImport("kernel32.dll", SetLastError = true)] public static extern bool SetConsoleMode(IntPtr hConsoleHandle, uint dwMode);
+'@
+        $entradaConsole = [GcTse.JanelaConsole]::GetStdHandle(-10)
+        [uint32] $modoConsole = 0
+        if ([GcTse.JanelaConsole]::GetConsoleMode($entradaConsole, [ref] $modoConsole)) {
+            # 0x40 = QuickEdit (desliga); 0x80 = ExtendedFlags (necessario
+            # para a mudanca do QuickEdit valer).
+            if (($modoConsole -band 0x40) -ne 0) { $modoConsole = $modoConsole - 0x40 }
+            $modoConsole = $modoConsole -bor 0x80
+            [void] [GcTse.JanelaConsole]::SetConsoleMode($entradaConsole, $modoConsole)
+        }
+    } catch { }
+}
 
 # Trabalha sempre a partir da pasta do proprio script: duplo clique herda um
 # diretorio qualquer, e ai os caminhos relativos apontam para o lugar errado.
@@ -769,14 +795,34 @@ function Obter-Campo {
     return $Padrao
 }
 
+$script:SituacoesAvisadas = @{}
+
 function Montar-Candidato {
     param($C, [string] $Sigla, [int] $Validos)
     $votos = Converter-Inteiro (Obter-Campo $C @("vap", "votos"))
     $perc = Converter-Decimal (Obter-Campo $C @("pvap"))
     if ($perc -eq 0 -and $Validos -gt 0) { $perc = [math]::Round(100.0 * $votos / $Validos, 2) }
+    # ELEITO so com a PALAVRA do TSE. Em 28/09/2026, no simulado, presidente
+    # e governador do PR sairam com os DOIS primeiros marcados ELEITO, com 8%
+    # cada - cargo de uma vaga, sem maioria: o quadro de quem vai ao 2o
+    # turno, e nao de eleito. O "st" (situacao) e o texto que o TSE escreve
+    # ("Eleito", "Nao eleito", "2o turno"...); quando ele vem, manda ele. A
+    # marca "e" sozinha so vale quando o "st" nao vem. Selo de ELEITO errado
+    # no ar e pior do que selo nenhum.
     $eleito = "0"
-    if ("$(Obter-Campo $C @('e'))".ToLower() -eq "s") { $eleito = "1" }
-    if ("$(Obter-Campo $C @('st'))" -match "^Eleito") { $eleito = "1" }
+    $situacaoTse = Decodificar-Entidades "$(Obter-Campo $C @('st') '')"
+    $marcaE = "$(Obter-Campo $C @('e') '')".ToLower()
+    if ($situacaoTse) {
+        if ($situacaoTse -match "^Eleito") { $eleito = "1" }
+        elseif ($marcaE -eq "s") {
+            $chaveS = "$(Obter-Campo $C @('nmu','nm') '')|$situacaoTse"
+            if (-not $script:SituacoesAvisadas.ContainsKey($chaveS)) {
+                $script:SituacoesAvisadas[$chaveS] = $true
+                Escrever-Log ("o TSE marcou e=s para {0} com situacao '{1}' - NAO mostro ELEITO" -f
+                              "$(Obter-Campo $C @('nmu','nm') '')", $situacaoTse) "AVISO"
+            }
+        }
+    } elseif ($marcaE -eq "s") { $eleito = "1" }
     $partido = $Sigla
     if (-not $partido) { $partido = "$(Obter-Campo $C @('cc','sgp') '')" }
     # dvt = destinacao dos votos. Nos dados reais do simulado aparecem
@@ -797,6 +843,7 @@ function Montar-Candidato {
         Percentual = $perc
         Eleito     = $eleito
         Situacao   = "$situacao"
+        SituacaoTse = "$situacaoTse"
     }
 }
 

@@ -1,5 +1,48 @@
 ===========================================================================
- LAUDO DE INSPECAO - gctse 5.9
+ LAUDO DE INSPECAO - gctse 6.0
+ 28/09/2026 - janela extra do simulado, maquina do GC (DESKTOP-38DJ8E4)
+===========================================================================
+
+ VALIDADO NA MAQUINA DO GC, CONTRA O TSE DE VERDADE
+
+   DIAGNOSTICO de 28/09 14:10, versao 5.9, D:\ELEICOES\GCTSE:
+     simulado HTTP 200 em 97 ms, oficial HTTP 200 em 172 ms
+     36 de 36 campos conferem com o TSE, colunas na ordem, 0 ERRO no log
+     veredito: TUDO CERTO DO LADO DO SISTEMA
+
+ CAUSA ACHADA: A JANELA CONGELAVA COM UM CLIQUE
+
+   O CONFERIR e o DIAGNOSTICO ficaram parados e o titulo da janela dizia
+   "Selecionar gctse - ...". E o modo de selecao do console do Windows:
+   um clique dentro da janela preta e o programa congela ate alguem
+   apertar uma tecla. Sem erro. Depois do ESC, o CONFERIR recebeu tudo
+   do TSE em milissegundos. Uma coleta congelada assim e exatamente o
+   "nao estou recebendo os dados" dos dias anteriores.
+
+   Agora o gctse e o painel desligam esse modo na propria janela ao
+   abrir: clique deixa de congelar. A faixa vermelha "A COLETA PAROU" do
+   painel passa a dizer: se o titulo comeca com Selecionar, aperte ESC.
+
+ SELO DE ELEITO SO COM A PALAVRA DO TSE
+
+   No mesmo DIAGNOSTICO, presidente e governador do PR sairam com os
+   DOIS primeiros marcados ELEITO, 8% cada: cargo de uma vaga, sem
+   maioria - quadro de 2o turno, nao de eleito. Agora ELEITO so quando o
+   TSE escreve "Eleito" na situacao do candidato (st). A marca "e" so
+   vale sozinha quando nao vem situacao. Quando vem e=s com outra
+   situacao, a janela avisa: "o TSE marcou e=s para X com situacao
+   '2o turno' - NAO mostro ELEITO".
+
+ VERIFICADO NA 6.0
+
+   e=s + "2o turno" nos dois: sem selo, aviso na janela               OK
+   "Eleito" nos dois senadores: selo nos dois                         OK
+   e=s sem situacao: selo (regra antiga)                              OK
+   Codigo de desligar o modo de selecao: compila; 0x1F7 -> 0x1B7      OK
+   Regressao completa                                            22 / 0 OK
+
+===========================================================================
+ LAUDO ANTERIOR - gctse 5.9
  28/09/2026 - selo de ELEITO no Castalia, lido no manual do CastaliaCG
 ===========================================================================
 
