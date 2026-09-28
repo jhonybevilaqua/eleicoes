@@ -132,7 +132,7 @@ def cmd_modo(args) -> int:
             # que nao dizer nada: a pessoa iria embora achando que escolheu.
             print(f"  ATENCAO: GCTSE_MODO={variavel} nao e um modo conhecido")
             print(f"  e foi ignorada. Valendo o do arquivo: {cfg.modo.upper()}.")
-        print(f"  pleito {cfg.tse.get('pleito', '-')} / eleicao {cfg.tse.get('eleicao', '-')}")
+        print(f"  pleito {cfg.tse.get('pleito', '-')}")
         print(f"  aceita fase simulada: {'sim' if cfg.simulado else 'nao'}")
         print("\nPara trocar:  gctse modo simulado   |   gctse modo producao")
         return 0
@@ -187,7 +187,7 @@ def cmd_validar(args) -> int:
 
     print(f"Configuracao OK ({cfg.caminho})")
     print(f"  modo.........: {cfg.modo.upper()}")
-    print(f"  pleito.......: {cfg.tse.get('pleito', '-')} / eleicao {cfg.tse.get('eleicao', '-')}")
+    print(f"  pleito.......: {cfg.tse.get('pleito', '-')}")
     print(f"  fonte........: {cfg.coleta.get('fonte', 'tse')}")
     print(f"  intervalo....: {cfg.intervalo}s")
     print(f"  exporters....: {', '.join(cfg.exporters)}")

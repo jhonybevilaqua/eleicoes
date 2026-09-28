@@ -30,6 +30,7 @@ from gctse.historico import Historico, Ponto
 from gctse.modelos import Apuracao
 from gctse.simulador import Simulador, boletim_em_branco
 from gctse.tse.cliente import ClienteTSE, Resposta
+from gctse.tse.compasso import Compasso
 from gctse.tse.endpoints import Endpoints
 from gctse.tse.parser import analisar
 
@@ -84,6 +85,15 @@ class Coletor:
         self.estados: dict[str, Apuracao] = {}
         self.serie: dict[str, list[Ponto]] = self.historico.series() if self.historico.ativo else {}
 
+        # Espacamento das tentativas em praca que ainda nao publicou: o TSE
+        # bloqueia o IP por 10 minutos depois de muitos 404, e 404 e o estado
+        # normal durante horas.
+        self.compasso = Compasso(
+            tolerancia=int(cfg.coleta.get("tolerancia_404", 2)),
+            base_segundos=float(cfg.coleta.get("espera_404_segundos", 30)),
+            teto_segundos=float(cfg.coleta.get("espera_404_teto_segundos", 300)),
+        )
+
         self._gerado_em: dict[str, datetime] = {}
         self._falhas: dict[str, int] = {}
         self._trava = threading.Lock()
@@ -116,6 +126,9 @@ class Coletor:
         return self.cliente.buscar_json(self.endpoints.resultado(praca, self.cfg.cargo))
 
     def _buscar(self, praca: str) -> str:
+        if self.local is None and not self.compasso.pode_tentar(praca):
+            # ainda na espera do 404 anterior: nao bate na porta de novo
+            return "aguardando-publicacao"
         resposta = self._obter(praca)
 
         if resposta.inalterado:
@@ -123,13 +136,19 @@ class Coletor:
         if not resposta.ok:
             falhas = self._falhas.get(praca, 0) + 1
             self._falhas[praca] = falhas
-            if resposta.status == 404 and falhas == 1:
-                log.info("praca '%s': boletim ainda nao publicado", praca)
+            if resposta.status == 404:
+                espera = self.compasso.registrar_404(praca)
+                if falhas == 1:
+                    log.info("praca '%s': boletim ainda nao publicado", praca)
+                elif espera:
+                    log.debug("praca '%s': %d 404 seguidos, proxima em %.0fs",
+                              praca, self.compasso.espera_de(praca), espera)
             elif falhas == int(self.cfg.coleta.get("falhas_para_alerta", 3)):
                 log.warning("praca '%s' falhou %dx seguidas: %s", praca, falhas,
                             resposta.erro or resposta.status)
             return f"falha({resposta.erro or resposta.status})"
         self._falhas.pop(praca, None)
+        self.compasso.registrar_ok(praca)
 
         ap = analisar(
             resposta.dados or {},

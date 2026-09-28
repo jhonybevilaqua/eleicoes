@@ -244,6 +244,42 @@ class Config:
         erros, pendencias = self.conferir()
         return erros + pendencias
 
+    def _conferir_tse(self, cargo: int) -> tuple[list[str], list[str]]:
+        """Confere os codigos do TSE que ESTE cargo vai usar.
+
+        A eleicao nao e uma so: um pleito carrega varias, e cada cargo mora
+        na sua. Conferir um 'tse.eleicao' generico deixava passar o caso que
+        de fato quebra - o codigo federal preenchido e o estadual em branco,
+        com o telao pedindo governador.
+        """
+        from gctse.tse.endpoints import Endpoints
+
+        problemas: list[str] = []
+        pendencias: list[str] = []
+        tse = self.tse
+        for campo in ("base_url", "ciclo"):
+            if not str(tse.get(campo) or "").strip():
+                problemas.append(f"tse.{campo} nao definido (modo {self.modo})")
+
+        alvos = [("pleito", str(tse.get("pleito") or "").strip())]
+        eleicao = str(Endpoints(tse).eleicao_do_cargo(cargo) or "").strip()
+        alvos.append((f"eleicao do cargo {cargo}", eleicao))
+        for rotulo, valor in alvos:
+            if not valor:
+                problemas.append(
+                    f"tse.{rotulo} nao definido (modo {self.modo}): preencha em "
+                    f"modos.{self.modo}.tse"
+                )
+            elif set(valor) <= {"0"}:
+                # '000' e o marcador de 'ainda nao preenchi'. Subir assim monta
+                # uma URL que sempre devolve 404, e o TSE bloqueia o IP por 10
+                # minutos depois de muitos 404 seguidos.
+                pendencias.append(
+                    f"tse.{rotulo} ainda esta em '{valor}' no modo {self.modo}: "
+                    f"rode 'telao descobrir' e preencha em modos.{self.modo}.tse"
+                )
+        return problemas, pendencias
+
     def conferir(self) -> tuple[list[str], list[str]]:
         """Separa o que esta ERRADO do que so esta POR PREENCHER.
 
@@ -259,18 +295,9 @@ class Config:
         problemas: list[str] = []
         pendencias: list[str] = []
         if str(self.coleta.get("fonte", "tse")).lower() == "tse":
-            for campo in ("base_url", "ciclo", "pleito", "eleicao"):
-                valor = str(self.tse.get(campo) or "").strip()
-                if not valor:
-                    problemas.append(f"tse.{campo} nao definido (modo {self.modo})")
-                elif campo in ("pleito", "eleicao") and set(valor) <= {"0"}:
-                    # '000' e o marcador de 'ainda nao preenchi'. Subir assim
-                    # monta uma URL que sempre devolve 404, e o telao passa a
-                    # noite inteira 'aguardando boletim' sem ninguem entender.
-                    pendencias.append(
-                        f"tse.{campo} ainda esta em '{valor}' no modo {self.modo}: "
-                        f"rode 'telao descobrir' e preencha em modos.{self.modo}.tse"
-                    )
+            erros_tse, pend_tse = self._conferir_tse(self.cargo)
+            problemas += erros_tse
+            pendencias += pend_tse
         if self.cargo not in CARGOS_VALIDOS:
             problemas.append(
                 f"apuracao.cargo {self.cargo} nao vale para o telao "

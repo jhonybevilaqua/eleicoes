@@ -32,6 +32,18 @@ Orientação: Retrato. Sem isso o Windows entrega 1920 × 1080 ao navegador.
 `resultados.tse.jus.br` na porta 443. Peça à TI com antecedência — é o item
 que mais atrasa esse tipo de operação.
 
+**Atenção a uma regra do TSE:** *"múltiplos erros 404 podem provocar o bloqueio
+temporário do endereço IP"* — 10 minutos, e reiniciam a contagem se você tentar
+de novo antes. Isso importa porque 404 é o estado **normal** por horas: antes
+de as urnas fecharem, nenhum arquivo existe. O sistema já trata isso — a praça
+que responde 404 vai sendo consultada cada vez mais devagar, até 5 minutos, e
+volta ao ritmo normal no ciclo seguinte ao primeiro boletim. Mas **não abra
+duas cópias** apontando para o mesmo pleito, e não fique reiniciando o atalho
+em sequência: aí a proteção reinicia junto.
+
+O outro limite do TSE, 100 requisições por IP por segundo, não é problema:
+o sistema faz 28 leituras a cada 20 segundos, com no máximo 8 ao mesmo tempo.
+
 ## Terça de manhã — descobrir os códigos
 
 Assim que o TSE publicar a configuração do teste:
@@ -53,15 +65,40 @@ modos:
   simulado:
     tse:
       pleito: "<código do teste>"
-      eleicao: "<código do teste>"
+      eleicoes:
+        federal: "<código do teste>"
+        estadual: "<código do teste>"
   producao:
     tse:
-      pleito: "<código oficial>"
-      eleicao: "<código oficial>"
+      pleito: "3220"
+      eleicoes:
+        federal: "6257"
+        estadual: "6259"
 ```
 
 O `ciclo: ele2026` fica na seção `tse` de cima, fora dos modos — é o mesmo
 para os dois.
+
+**O modo produção já vem preenchido** com o que o TSE publicou para o 1º turno
+de 4 de outubro. Só o bloco `simulado` fica pendente, até saírem os códigos do
+teste.
+
+### Por que são dois códigos de eleição, e não um
+
+Um pleito é a data; uma eleição é o conjunto de cargos. O pleito 3220 carrega
+três eleições:
+
+| Código | Eleição | Cargos |
+|---|---|---|
+| 6257 | Eleição Geral Federal | presidente, senador, deputado federal |
+| 6259 | Eleições Gerais Estaduais | governador, deputado estadual e distrital |
+| 6261 | Eleição Conselho Distrital | — (não usamos) |
+
+**Cada cargo só existe no arquivo da sua eleição.** Pedir governador com o
+código federal não devolve erro claro: devolve 404. O sistema escolhe sozinho
+pelo cargo — presidente e senador vão no 6257, governador no 6259 — e o
+`validar` mostra a URL montada para cada alvo, para você conferir antes de
+subir.
 
 Preencha **os dois agora**, nos **dois arquivos**. É o que faz a virada de
 quinta para domingo ser uma troca de atalho, e não uma edição de configuração
@@ -105,6 +142,12 @@ carimbado.
 | 5 | **A mesa responde em ~1 segundo** | Clique numa tela e cronometre. |
 | 6 | **O rodízio vertical gira** | 10 s por tela, seis telas, volta ao começo. |
 | 7 | **As cores de partido** | Estado vizinho com cor parecida? É agora que se resolve com a arte, não no dia 4. |
+
+Sobre o item 1: a Justiça Eleitoral ainda está julgando os registros de
+candidatura, então **até o fim dessa fase não existe lista definitiva de
+candidatos**. Nome vazio ou lista curta nos dias de teste pode ser isso, e não
+defeito. O que não pode acontecer é a tela sumir: se a lista vier vazia, o
+placar desenha as vagas com travessão e o resto do painel segue.
 
 ### Se algo der errado
 

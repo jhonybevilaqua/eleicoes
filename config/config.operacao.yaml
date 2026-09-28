@@ -27,14 +27,23 @@ modos:
     selo: "SIMULADO - TESTE, NAO E RESULTADO"
     tse:
       pleito: "000"     # <<< PREENCHER com o codigo do TESTE
-      eleicao: "000"    # <<< PREENCHER com o codigo do TESTE
+      eleicoes:
+        federal: "000"  # <<< presidente e senador
+        estadual: "000" # <<< governador
 
-  # Dia 4. So boletim oficial (fase 'O'); nenhum valor deste arquivo
-  # derruba essa trava.
+  # Dia 4 de outubro de 2026, 1o turno. Codigos publicados pelo TSE.
   producao:
     tse:
-      pleito: "000"     # <<< PREENCHER com o codigo OFICIAL
-      eleicao: "000"    # <<< PREENCHER com o codigo OFICIAL
+      pleito: "3220"
+      eleicoes:
+        # Um pleito, tres eleicoes. Cada cargo so existe no arquivo da SUA:
+        #   6257  Geral Federal ..... presidente, senador, deputado federal
+        #   6259  Gerais Estaduais .. governador, deputado estadual/distrital
+        #   6261  Conselho Distrital (nao usamos)
+        # Pedir governador com o codigo federal devolve 404, e o TSE bloqueia
+        # o IP por 10 minutos depois de muitos 404.
+        federal: "6257"
+        estadual: "6259"
 
 # --- daqui para baixo, so mexa se precisar --------------------------------
 

@@ -15,6 +15,19 @@ O padrao publicado pelo TSE nos ultimos pleitos e:
 Os codigos de ciclo/pleito/eleicao de 2026 so sao publicados pelo TSE proximo
 ao pleito, por isso TODOS os trechos vem de config (tse.padroes.*) e podem ser
 ajustados sem mexer no codigo. Use 'gctse descobrir' para le-los do proprio TSE.
+
+UM PLEITO, VARIAS ELEICOES
+--------------------------
+O pleito e a data; a eleicao e o conjunto de cargos. Em 2026, o 1o turno saiu
+como pleito 3220 com TRES eleicoes dentro:
+
+  6257  Eleicao Geral Federal ....... Presidente, Senador, Deputado Federal
+  6259  Eleicoes Gerais Estaduais ... Governador, Dep. Estadual e Distrital
+  6261  Eleicao Conselho Distrital
+
+Cada cargo so existe no arquivo da SUA eleicao. Pedir governador com o codigo
+federal devolve 404 - e o TSE avisa que 404 repetido pode bloquear o IP por
+10 minutos. Por isso a eleicao e escolhida por cargo, e nao uma so para tudo.
 """
 
 from __future__ import annotations
@@ -25,6 +38,11 @@ PADRAO_SIMPLIFICADO = (
 PADRAO_COMPLETO = "{base_url}/{ciclo}/{pleito}/dados/{dir}/{abr}-c{cargo:04d}-e{eleicao:06d}-r.json"
 PADRAO_CONFIG_ELEICOES = "{base_url}/comum/config/ele-c.json"
 PADRAO_MUNICIPIOS = "{base_url}/{ciclo}/{pleito}/config/{uf}/{uf}-e{eleicao:06d}-i.json"
+
+
+# Quais cargos vivem em qual eleicao. Vale a tabela de cargos do TSE.
+CARGOS_FEDERAIS = {1, 2, 5, 6, 9, 10}      # presidente, senador e suplentes, dep. federal
+CARGOS_ESTADUAIS = {3, 4, 7, 8}            # governador, dep. estadual e distrital
 
 
 def diretorio_abrangencia(abrangencia: str) -> str:
@@ -57,25 +75,49 @@ class Endpoints:
         self.ciclo = str(cfg_tse.get("ciclo", "ele2026"))
         self.pleito = str(cfg_tse.get("pleito", ""))
         self.eleicao = str(cfg_tse.get("eleicao", ""))
+        # 'eleicoes: {federal: ..., estadual: ...}' e a forma recomendada; um
+        # 'eleicao' solto continua valendo para quem cobre so um conjunto de
+        # cargos, e como ultimo recurso se a config nova nao estiver preenchida.
+        eleicoes = cfg_tse.get("eleicoes") or {}
+        self.eleicao_federal = str(eleicoes.get("federal", "") or self.eleicao)
+        self.eleicao_estadual = str(eleicoes.get("estadual", "") or self.eleicao)
+        self.eleicao_por_cargo = {
+            int(c): str(e) for c, e in (cfg_tse.get("eleicao_por_cargo") or {}).items()
+        }
         padroes = cfg_tse.get("padroes") or {}
         self.p_simplificado = padroes.get("simplificado", PADRAO_SIMPLIFICADO)
         self.p_completo = padroes.get("completo", PADRAO_COMPLETO)
         self.p_config_eleicoes = padroes.get("config_eleicoes", PADRAO_CONFIG_ELEICOES)
         self.p_municipios = padroes.get("municipios", PADRAO_MUNICIPIOS)
 
-    def _comuns(self) -> dict:
+    def _comuns(self, cargo: int | None = None) -> dict:
         return {
             "base_url": self.base_url,
             "ciclo": self.ciclo,
             "pleito": self.pleito,
-            "eleicao": self.eleicao,
+            "eleicao": self.eleicao if cargo is None else self.eleicao_do_cargo(cargo),
         }
+
+    def eleicao_do_cargo(self, cargo: int) -> str:
+        """O codigo da eleicao em que ESTE cargo e apurado.
+
+        A ordem e: o que a config disser explicitamente para o cargo; senao a
+        eleicao do conjunto a que ele pertence; senao o 'eleicao' solto.
+        """
+        cargo = int(cargo)
+        if cargo in self.eleicao_por_cargo:
+            return self.eleicao_por_cargo[cargo]
+        if cargo in CARGOS_ESTADUAIS:
+            return self.eleicao_estadual
+        if cargo in CARGOS_FEDERAIS:
+            return self.eleicao_federal
+        return self.eleicao
 
     def resultado(self, abrangencia: str, cargo: int, completo: bool = False) -> str:
         padrao = self.p_completo if completo else self.p_simplificado
         return montar(
             padrao,
-            **self._comuns(),
+            **self._comuns(cargo),
             dir=diretorio_abrangencia(abrangencia),
             abr=abrangencia.strip().lower(),
             cargo=cargo,

@@ -23,6 +23,7 @@ from .estado import Estado
 from .exporters import criar
 from .exporters.base import Exporter
 from .fontes import criar_fonte
+from .tse.compasso import Compasso
 from .historico import Historico, Ponto, projecao, viradas
 from .modelos import Apuracao
 from .painel import renderizar as renderizar_painel
@@ -57,6 +58,15 @@ class Pipeline:
             user_agent=cfg.coleta.get("user_agent"),
         )
         self.fonte = criar_fonte(cfg, self.cliente, self.endpoints)
+        # Espacamento das tentativas em alvo que ainda nao publicou: o TSE
+        # bloqueia o IP por 10 minutos depois de muitos 404, e 404 e o estado
+        # normal durante horas - antes de as urnas fecharem, nenhum arquivo
+        # existe.
+        self.compasso = Compasso(
+            tolerancia=int(cfg.coleta.get("tolerancia_404", 2)),
+            base_segundos=float(cfg.coleta.get("espera_404_segundos", 30)),
+            teto_segundos=float(cfg.coleta.get("espera_404_teto_segundos", 300)),
+        )
 
         self.exporters: dict[str, Exporter] = {
             nome: criar(nome, opcoes, cfg.texto, cfg.saida) for nome, opcoes in cfg.exporters.items()
@@ -134,6 +144,10 @@ class Pipeline:
     # --- por alvo ---
 
     def processar_alvo(self, alvo: Alvo) -> str:
+        se_tse = str(self.cfg.coleta.get("fonte", "tse")).lower() == "tse"
+        if se_tse and not self.compasso.pode_tentar(alvo.nome):
+            # ainda na espera do 404 anterior: nao bate na porta de novo
+            return "aguardando-publicacao"
         resposta = self.fonte.obter(alvo.abrangencia, alvo.cargo, alvo.turno)
 
         if resposta.inalterado:
@@ -144,8 +158,13 @@ class Pipeline:
             falhas = self._falhas.get(alvo.nome, 0) + 1
             self._falhas[alvo.nome] = falhas
             limite = int(self.cfg.coleta.get("falhas_para_alerta", 3))
-            if resposta.status == 404 and falhas == 1:
-                log.info("alvo '%s': boletim ainda nao publicado (%s)", alvo.nome, resposta.url)
+            if resposta.status == 404:
+                espera = self.compasso.registrar_404(alvo.nome)
+                if falhas == 1:
+                    log.info("alvo '%s': boletim ainda nao publicado (%s)", alvo.nome, resposta.url)
+                elif espera:
+                    log.debug("alvo '%s': %d 404 seguidos, proxima tentativa em %.0fs",
+                              alvo.nome, self.compasso.espera_de(alvo.nome), espera)
             elif falhas >= limite:
                 self.alertas.enviar(
                     f"falha:{alvo.nome}",
@@ -155,6 +174,7 @@ class Pipeline:
             return f"falha({resposta.erro or resposta.status})"
 
         self._falhas.pop(alvo.nome, None)
+        self.compasso.registrar_ok(alvo.nome)
         self.alertas.resolver(f"falha:{alvo.nome}")
 
         apuracao = analisar(

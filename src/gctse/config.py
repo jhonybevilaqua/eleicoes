@@ -286,20 +286,38 @@ class Config:
         Erro impede rodar em qualquer situacao. Pendencia impede rodar contra
         o TSE de verdade, mas nao impede ensaiar nem conferir o pacote.
         """
+        from .tse.endpoints import Endpoints
+
         problemas: list[str] = []
         pendencias: list[str] = []
         tse = self.tse
         contra_o_tse = str(self.coleta.get("fonte", "tse")).lower() == "tse"
-        for campo in ("base_url", "ciclo", "pleito", "eleicao"):
-            valor = str(tse.get(campo) or "").strip()
-            if not valor:
+        for campo in ("base_url", "ciclo"):
+            if not str(tse.get(campo) or "").strip():
                 problemas.append(f"tse.{campo} nao definido (modo {self.modo})")
-            elif contra_o_tse and campo in ("pleito", "eleicao") and set(valor) <= {"0"}:
+
+        # A eleicao nao e uma so: um pleito carrega varias, e cada cargo mora
+        # na sua. Conferir um 'tse.eleicao' generico deixava passar o caso que
+        # de fato quebra - federal preenchida, estadual em branco, e o alvo de
+        # governador batendo numa URL que sempre devolve 404.
+        endpoints = Endpoints(tse)
+        codigos = {"pleito": str(tse.get("pleito") or "").strip()}
+        for cargo in sorted({a.cargo for a in self.alvos}):
+            codigos[f"eleicao do cargo {cargo}"] = str(
+                endpoints.eleicao_do_cargo(cargo) or ""
+            ).strip()
+        for rotulo, valor in codigos.items():
+            if not valor:
+                problemas.append(
+                    f"tse.{rotulo} nao definido (modo {self.modo}): preencha em "
+                    f"modos.{self.modo}.tse"
+                )
+            elif contra_o_tse and set(valor) <= {"0"}:
                 # '000' e o marcador de 'ainda nao preenchi'. Subir assim monta
-                # uma URL que sempre devolve 404, e a operacao passa a noite
-                # em 'aguardando boletim' sem ninguem entender por que.
+                # uma URL que sempre devolve 404 - e o TSE bloqueia o IP por 10
+                # minutos depois de muitos 404 seguidos.
                 pendencias.append(
-                    f"tse.{campo} ainda esta em '{valor}' no modo {self.modo}: "
+                    f"tse.{rotulo} ainda esta em '{valor}' no modo {self.modo}: "
                     f"rode 'gctse descobrir' e preencha em modos.{self.modo}.tse"
                 )
 

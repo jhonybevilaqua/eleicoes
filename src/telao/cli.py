@@ -98,7 +98,9 @@ def cmd_modo(args) -> int:
         if os.environ.get("TELAO_MODO"):
             print(f"  (vindo da variavel TELAO_MODO={os.environ['TELAO_MODO']},")
             print("   que tem prioridade sobre o arquivo)")
-        print(f"  pleito {cfg.tse.get('pleito', '-')} / eleicao {cfg.tse.get('eleicao', '-')}")
+        endpoints = Endpoints(cfg.tse)
+        print(f"  pleito {cfg.tse.get('pleito', '-')} / "
+              f"eleicao {endpoints.eleicao_do_cargo(cfg.cargo) or '-'} (cargo {cfg.cargo})")
         print(f"  aceita fase simulada: {'sim' if cfg.simulado else 'nao'}")
         print("\nPara trocar:  telao modo simulado   |   telao modo producao")
         return 0
@@ -154,7 +156,10 @@ def cmd_validar(args) -> int:
     print(f"Configuracao OK ({cfg.caminho})")
     print(f"  modo........: {cfg.modo.upper()}")
     print(f"  fonte.......: {cfg.coleta.get('fonte', 'tse')}")
-    print(f"  pleito......: {cfg.tse.get('pleito', '-')} / eleicao {cfg.tse.get('eleicao', '-')}")
+    endpoints = Endpoints(cfg.tse)
+    print(f"  pleito......: {cfg.tse.get('pleito', '-')}")
+    print(f"  eleicao.....: {endpoints.eleicao_do_cargo(cfg.cargo) or '-'} "
+          f"(a do cargo {cfg.cargo}; um pleito tem varias)")
     print(f"  cargo.......: {cfg.cargo} (turno {cfg.turno})")
     print(f"  pracas......: br + {len(cfg.estados)} estado(s)")
     print(f"  intervalo...: {cfg.intervalo}s")
@@ -169,7 +174,10 @@ def cmd_validar(args) -> int:
         print(f"\n  monitor vertical 1080x1920 -> {cfg.vertical.get('destino', 'telao-vertical')}")
         print(f"    rodizio de {cfg.vertical.get('rodizio_segundos', 10)}s: {', '.join(tipos)}")
     if str(cfg.coleta.get("fonte", "tse")).lower() == "tse":
-        print(f"\n  exemplo de URL: {Endpoints(cfg.tse).resultado('br', cfg.cargo)}")
+        # A URL inteira, para conferir no navegador antes de subir: e mais
+        # rapido do que descobrir pelo log que ela devolve 404.
+        print(f"\n  confira esta URL no navegador antes de subir:")
+        print(f"  {endpoints.resultado('br', cfg.cargo)}")
     return 0
 
 
