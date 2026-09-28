@@ -1,5 +1,39 @@
 ===========================================================================
- LAUDO DE INSPECAO - gctse 6.1
+ LAUDO DE INSPECAO - gctse 6.2
+ 28/09/2026 - validador: "24 DIVERGENCIAS", TSE com 0% e tarja com 100%
+===========================================================================
+
+ DEFEITO: A TARJA FICAVA PRESA QUANDO O TSE REINICIAVA
+
+   As 14:40 o TSE reiniciou o simulado (arquivos novos, 0% das urnas).
+   A tarja continuou com os 100% de 24/09. O validador mostrou: TSE 0,00%,
+   tarja 100,00%, nos tres cargos.
+
+   A protecao anti-regressao segura numero que ANDA PARA TRAS (copia
+   velha de CDN) e so aceita depois de ve-lo 3 vezes. Mas da 2a leitura
+   em diante o TSE responde 304 ("nada mudou") e a coleta devolvia o
+   boletim velho SEM CONTAR. A conta parava na 1a vez para sempre.
+   Reproduzido com a 6.1: "mantendo o ultimo bom (1a vez)" e a tarja
+   parada em 65,03% depois de o TSE zerar.
+
+ CORRECAO
+
+   1. Hora de geracao do TSE (dg/hg). Copia velha tem geracao MAIS
+      ANTIGA; reinicio ou correcao tem geracao MAIS NOVA. Mais nova e
+      aceita na hora, com o aviso "o TSE publicou numero MENOR com
+      geracao mais nova (...) - reinicio ou correcao do TSE, aceito".
+   2. Quando segura, esquece o ETag daquela praca: a leitura seguinte
+      traz o arquivo inteiro e a conta anda (1a, 2a, aceita na 3a).
+
+ VERIFICADO NA 6.2
+
+   6.1, TSE reinicia: presa em 65,03% ("1a vez" para sempre)   reproduzido
+   6.2, TSE reinicia (geracao nova): aceita na 1a leitura, 0,00%      OK
+   6.2, copia velha (geracao antiga): segura 1a, 2a, aceita na 3a     OK
+   Regressao completa                                            25 / 0 OK
+
+===========================================================================
+ LAUDO ANTERIOR - gctse 6.1
  28/09/2026 - "as colunas do JSON nao conferem os dados"
 ===========================================================================
 

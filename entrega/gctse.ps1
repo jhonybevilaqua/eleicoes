@@ -35,7 +35,7 @@ param(
 # Versao impressa na partida e no painel. Sem carimbo, "qual versao esta
 # rodando ai?" so se responde abrindo arquivo e comparando a olho - e no
 # meio de um teste com janela de horario ninguem faz isso.
-$Versao = "6.1 - 28/09/2026"
+$Versao = "6.2 - 28/09/2026"
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
@@ -1392,6 +1392,17 @@ function Ler-Selecao {
     return $cfg.selecao.pracas[0]
 }
 
+function Converter-Geracao {
+    # "28/09/2026 14:40:30" (dg + hg do TSE) -> data. $null se nao der.
+    param([string] $Texto)
+    if (-not $Texto) { return $null }
+    $data = [datetime]::MinValue
+    $formatos = [string[]] @("dd/MM/yyyy HH:mm:ss", "dd/MM/yyyy HH:mm")
+    if ([datetime]::TryParseExact($Texto.Trim(), $formatos, [Globalization.CultureInfo]::InvariantCulture,
+                                  [Globalization.DateTimeStyles]::None, [ref] $data)) { return $data }
+    return $null
+}
+
 function Obter-Impressao-Boletim {
     # O que caracteriza "boletim novo": percentual de urnas e os votos dos
     # dois primeiros. Nao uso a hora de geracao do TSE porque ela muda a cada
@@ -1498,7 +1509,8 @@ function Buscar-Praca {
     $script:VistosNesteCiclo[$chave] = $true
 
     $b = $null
-    $bruto = Obter-Boletim (Montar-Url $Uf $Cargo) -Prioritario:(Esta-No-Ar $Uf $Cargo)
+    $urlPraca = Montar-Url $Uf $Cargo
+    $bruto = Obter-Boletim $urlPraca -Prioritario:(Esta-No-Ar $Uf $Cargo)
     # Falha de rede de UM pedido nao apaga o que ja se sabe: fica o ultimo
     # boletim bom, como no 304. Antes o resumo dizia "sem dado" para uma
     # praca que tinha dado de sobra, so porque um pedido falhou.
@@ -1528,6 +1540,20 @@ function Buscar-Praca {
         foreach ($c in $velho.Candidatos) { $votosVelhos += $c.Votos }
         $regrediu = ($b.PctUrnas -lt $velho.PctUrnas - 0.001) -or
                     ($votosNovos -lt $votosVelhos -and $velho.Candidatos.Count -gt 0)
+        # Copia velha de CDN tem hora de GERACAO mais ANTIGA que a do ultimo
+        # bom. Reinicio ou correcao do TSE tem hora MAIS NOVA. Visto em
+        # 28/09/2026: o TSE reiniciou o simulado as 14:40 (0% das urnas) e a
+        # tarja ficou presa nos 100% de 24/09 - o arquivo novo, gerado depois,
+        # era tratado como copia velha. Gerado mais novo = aceita na hora.
+        if ($regrediu) {
+            $geradoNovo = Converter-Geracao $b.Geracao
+            $geradoVelho = Converter-Geracao $velho.Geracao
+            if ($null -ne $geradoNovo -and $null -ne $geradoVelho -and $geradoNovo -gt $geradoVelho) {
+                Escrever-Log ("${chave}: o TSE publicou numero MENOR com geracao mais nova ({0} -> {1}) - reinicio ou correcao do TSE, aceito" -f `
+                    $velho.Geracao, $b.Geracao) "AVISO"
+                $regrediu = $false
+            }
+        }
         if ($regrediu) {
             # NAO chamar de $impressao: no PowerShell seria a MESMA variavel
             # que $Impressao, a tabela de escopo script. Hoje esta funcao nao
@@ -1543,6 +1569,12 @@ function Buscar-Praca {
             }
             $vezes = $script:RegressaoVista[$chave].vezes
             if ($vezes -lt 3) {
+                # Sem isto a contagem nunca andava: guardado o ETag do arquivo
+                # novo, as leituras seguintes voltam 304 ("nada mudou") e
+                # devolvem o boletim velho sem contar - a tarja presa para
+                # sempre. Esquecendo o ETag, a proxima leitura traz o arquivo
+                # inteiro e conta de novo.
+                if ($Cache.ContainsKey($urlPraca)) { $Cache.Remove($urlPraca) }
                 Escrever-Log ("$chave regrediu de {0:N2}% para {1:N2}% das urnas: mantendo o ultimo bom ({2}a vez)" -f `
                     $velho.PctUrnas, $b.PctUrnas, $vezes) "AVISO"
                 return $velho
