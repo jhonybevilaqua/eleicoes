@@ -17,19 +17,25 @@ rem ---------------------------------------------------------------------------
 
 set "GCTSE_MODO=simulado"
 
-echo ==================================================================
-echo   MODO SIMULADO - dados de TESTE do TSE
-echo.
-echo   As tarjas saem carimbadas. Para o dia da eleicao use
-echo   GC-PRODUCAO.bat.
-echo.
+rem O programa imprime a faixa do modo sozinho; aqui so o que ele nao sabe.
+echo   Para o dia da eleicao use GC-PRODUCAO.bat.
 echo   Acompanhe abrindo TARJAS\painel.html
 echo   Deixe esta janela aberta. Ctrl+C encerra.
-echo ==================================================================
 echo.
 :loop
 gctse.exe rodar
+if %ERRORLEVEL% EQU 2 goto configuracao
 echo.
 echo Encerrou (codigo %ERRORLEVEL%). Reiniciando em 10s...
 timeout /t 10 /nobreak >nul
 goto loop
+
+:configuracao
+rem Reiniciar aqui nao adianta: falta preencher alguma coisa, e o programa
+rem acabou de dizer o que. A janela fica aberta com a mensagem a vista.
+echo.
+echo Nao vou reiniciar: isso acima nao se resolve sozinho.
+echo Corrija e abra este atalho de novo.
+echo.
+pause
+exit /b 2

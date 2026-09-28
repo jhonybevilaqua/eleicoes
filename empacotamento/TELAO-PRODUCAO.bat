@@ -1,34 +1,35 @@
 @echo off
 setlocal
-title TELAO - PRODUCAO (no ar)
+title TELAO - NO AR (dia da eleicao)
 cd /d "%~dp0"
 
 rem ---------------------------------------------------------------------------
-rem  NO AR. So aceita boletim oficial do TSE (fase 'O').
+rem  O atalho do dia 4. So aceita boletim oficial (fase 'O'): um simulado do
+rem  TSE que apareca no meio da noite e descartado, e nenhuma linha de config
+rem  derruba essa trava.
 rem
-rem  Boletim simulado e descartado aqui, aconteca o que acontecer na config:
-rem  a trava de fase e ligada pelo modo e nao ha valor de arquivo que a
-rem  desligue. E a garantia de que um simulado do TSE nao vai ao ar como
-rem  resultado.
+rem  Se a janela fechar sozinha, ela volta em 10s. Isso cobre queda de rede e
+rem  erro nao previsto sem ninguem ter de ficar olhando o PC.
 rem
-rem  Se o programa recusar subir dizendo que o codigo do pleito esta em '000',
-rem  rode  telao.exe descobrir  e preencha os codigos em telao.yaml, na secao
-rem  modos: producao:. Isso e de proposito: subir com codigo em branco passaria
-rem  a noite inteira 'aguardando boletim' sem ninguem entender por que.
+rem  O programa imprime a faixa do modo sozinho; aqui nao se repete.
 rem ---------------------------------------------------------------------------
 
 set "TELAO_MODO=producao"
 
-echo ==================================================================
-echo   PRODUCAO - NO AR. So boletim oficial.
-echo.
-echo   Deixe esta janela aberta. Ctrl+C encerra.
-echo   Reinicia sozinho se cair.
-echo ==================================================================
-echo.
 :loop
 telao.exe rodar
+if %ERRORLEVEL% EQU 2 goto configuracao
 echo.
 echo Encerrou (codigo %ERRORLEVEL%). Reiniciando em 10s...
 timeout /t 10 /nobreak >nul
 goto loop
+
+:configuracao
+rem Reiniciar aqui nao adianta: falta preencher alguma coisa, e o programa
+rem acabou de dizer o que. A janela fica aberta com a mensagem a vista.
+echo.
+echo Nao vou reiniciar: isso acima nao se resolve sozinho.
+echo Corrija e abra este atalho de novo.
+echo.
+pause
+exit /b 2

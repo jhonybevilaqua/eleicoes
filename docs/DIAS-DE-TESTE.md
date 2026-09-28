@@ -73,7 +73,9 @@ TELAO\telao.exe -c TELAO\telao.yaml validar
 ```
 
 Os dois têm de dizer `Configuracao OK` sem pendência. Se reclamar que o código
-está em `000`, é porque ainda falta preencher aquele modo.
+está em `000`, é porque ainda falta preencher aquele modo — e, se você abrir o
+atalho antes disso, ele **para e explica** em vez de ficar reiniciando: código
+de pleito não se conserta sozinho.
 
 ## Nos três dias de teste
 

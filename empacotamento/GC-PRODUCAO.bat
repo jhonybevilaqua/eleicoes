@@ -14,16 +14,25 @@ rem ---------------------------------------------------------------------------
 
 set "GCTSE_MODO=producao"
 
-echo ==================================================================
-echo   NO AR - lendo o TSE e gravando na pasta TARJAS
-echo.
-echo   So boletim oficial. Acompanhe abrindo TARJAS\painel.html
+rem O programa imprime a faixa do modo sozinho; aqui so o que ele nao sabe.
+echo   Gravando na pasta TARJAS.
+echo   Acompanhe abrindo TARJAS\painel.html
 echo   Deixe esta janela aberta. Ctrl+C encerra.
-echo ==================================================================
 echo.
 :loop
 gctse.exe rodar
+if %ERRORLEVEL% EQU 2 goto configuracao
 echo.
 echo Encerrou (codigo %ERRORLEVEL%). Reiniciando em 10s...
 timeout /t 10 /nobreak >nul
 goto loop
+
+:configuracao
+rem Reiniciar aqui nao adianta: falta preencher alguma coisa, e o programa
+rem acabou de dizer o que. A janela fica aberta com a mensagem a vista.
+echo.
+echo Nao vou reiniciar: isso acima nao se resolve sozinho.
+echo Corrija e abra este atalho de novo.
+echo.
+pause
+exit /b 2

@@ -251,3 +251,47 @@ def test_painel_poe_a_fonte_na_frente_do_modo():
         corpo = alvo.read_text(encoding="utf-8")
         assert "FONTE DE ENSAIO" in corpo
         assert "MODO SIMULADO —" not in corpo
+
+
+# --- o atalho nao pode reiniciar para sempre ------------------------------
+
+def test_config_por_preencher_sai_com_codigo_proprio(tmp_path, monkeypatch):
+    """Codigo 2 e o que faz o .bat PARAR em vez de reiniciar a cada 10s.
+
+    Veio de um print do operador: a janela repetindo a mesma mensagem de
+    pleito em '000' de dez em dez segundos. Reiniciar cobre queda de rede;
+    nao cobre configuracao, que nao se conserta sozinha.
+    """
+    import subprocess
+    import sys
+    import textwrap
+
+    config = tmp_path / "telao.yaml"
+    config.write_text(textwrap.dedent("""
+        modo: simulado
+        tse: {base_url: "https://exemplo", ciclo: ele2026, turno: 1}
+        modos:
+          simulado: {tse: {pleito: "000", eleicao: "000"}}
+        apuracao: {cargo: 1}
+        saida: {destino: "telao"}
+    """), encoding="utf-8")
+
+    fim = subprocess.run(
+        [sys.executable, "-m", "telao", "-c", str(config), "rodar"],
+        capture_output=True, text=True, cwd=tmp_path,
+        env={**os.environ, "PYTHONPATH": str(Path(__file__).resolve().parents[1] / "src")},
+    )
+    assert fim.returncode == 2, fim.stdout + fim.stderr
+    assert "NAO DA PARA SUBIR" in fim.stdout
+    assert "descobrir" in fim.stdout          # diz o proximo comando
+    assert "modos: simulado: tse:" in fim.stdout   # e onde preencher
+
+
+def test_atalhos_param_no_codigo_de_configuracao():
+    """Os quatro .bat tem de tratar o codigo 2 - senao a correcao nao chega."""
+    raiz = Path(__file__).resolve().parents[1] / "empacotamento"
+    for nome in ("GC-SIMULADO.bat", "GC-PRODUCAO.bat",
+                 "TELAO-SIMULADO.bat", "TELAO-PRODUCAO.bat"):
+        texto = (raiz / nome).read_text(encoding="utf-8")
+        assert "EQU 2 goto configuracao" in texto, nome
+        assert ":configuracao" in texto, nome

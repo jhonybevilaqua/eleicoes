@@ -35,6 +35,15 @@ from .vertical import PublicadorVertical
 
 log = logging.getLogger("telao")
 
+# Codigo de saida para CONFIGURACAO INVALIDA, separado do erro generico.
+#
+# Existe por causa do atalho: ele reinicia o programa 10s depois de qualquer
+# saida, o que e certo para queda de rede e errado para config - pleito em
+# '000' nao se conserta sozinho, e a janela enche da mesma mensagem ate
+# alguem ler com atencao. Com um codigo proprio, o .bat para e explica.
+SAIDA_CONFIG = 2
+
+
 
 def _ancorar_na_pasta_do_executavel() -> None:
     """No executavel empacotado, trabalha a partir da pasta do proprio .exe.
@@ -211,10 +220,27 @@ def _executar(cfg, args, uma_vez: bool) -> int:
     if contra_o_tse:
         erros = erros + pendencias
     if erros:
-        print("Configuracao invalida; corrija antes de executar:")
+        print()
+        print("=" * 66)
+        print("  NAO DA PARA SUBIR: falta preencher a configuracao")
+        print("=" * 66)
         for problema in erros:
             print(f"  - {problema}")
-        return 1
+        if pendencias and contra_o_tse:
+            print()
+            print("  COMO RESOLVER, na ordem:")
+            print()
+            print("   1. telao.exe descobrir")
+            print("      (lista os pleitos que o TSE publicou; anote o codigo)")
+            print()
+            print(f"   2. abra {cfg.caminho} no Bloco de Notas e preencha")
+            print(f"      em  modos: {cfg.modo}: tse:  as duas linhas:")
+            print('          pleito: "<codigo>"')
+            print('          eleicao: "<codigo>"')
+            print()
+            print("   3. telao.exe validar   ate dizer Configuracao OK")
+            print()
+        return SAIDA_CONFIG
 
     publicador = Publicador(cfg)
     vertical = PublicadorVertical(cfg)
