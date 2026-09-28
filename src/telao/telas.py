@@ -243,14 +243,15 @@ def _mapa_reduzido(dados: dict, x: float, y: float, escala: float) -> list[str]:
 
 
 def _apoio(ap: Apuracao, dados) -> str:
-    """A linha abaixo do titulo.
+    """A linha abaixo do titulo, nas telas que leem SO o boletim nacional.
 
-    Antes do primeiro boletim ela diz isso com todas as letras. Escrever
-    '0,00% das urnas totalizadas' seria verdade, mas leria como uma medicao -
-    e nao ha medicao nenhuma ainda.
+    Quando ele nao chegou, o percentual viria do boletim vazio e seria 0,00% -
+    verdade, mas leria como medicao. Pior: com os estados ja publicando, a
+    tela ao lado mostraria 63% e as duas pareceriam discordar.
     """
-    if dados.sem_boletim:
-        return "aguardando o primeiro boletim"
+    if dados.nacional is None:
+        return ("aguardando o primeiro boletim" if dados.sem_boletim
+                else "aguardando o boletim nacional")
     return f"{ap.abrangencia_nome}  |  {pct_br(ap.pct_secoes)}% das urnas totalizadas"
 
 
@@ -440,7 +441,7 @@ def tela_placar(moldura: Moldura, tela: Tela, dados) -> str:
     limite = max(1, int(tela.opcoes.get("limite_candidatos", 6)))
     ap = dados.nacional_ou_vazio(moldura.cfg.cargo, moldura.cfg.turno, limite)
     titulo = tela.titulo or ap.cargo_nome or "PLACAR"
-    candidatos = ap.candidatos[:limite]
+    candidatos = dados.vagas(ap, limite, moldura.cfg.cargo, moldura.cfg.turno)
 
     partes = moldura.abrir()
     partes += moldura.cabecalho(
@@ -525,6 +526,29 @@ class Dados:
         """
         if self.nacional is not None:
             return self.nacional
+        return self._vazio(cargo, turno, vagas)
+
+    def vagas(self, ap: Apuracao, limite: int, cargo: int, turno: int = 1) -> list:
+        """As linhas do placar, nunca uma lista vazia.
+
+        Boletim sem candidato nenhum nao e hipotese de laboratorio: basta o
+        TSE renomear a chave da lista entre pleitos - ja aconteceu - e o
+        parser devolve a apuracao com os numeros gerais certos e zero
+        candidatos. Dividir a area util por essa lista dava divisao por zero,
+        o desenho falhava e a tela sumia do ar sem explicacao.
+
+        Devolvendo as vagas vazias, a tela continua no ar mostrando o que ela
+        de fato tem: os travessoes dizem que os nomes nao chegaram, enquanto
+        as outras telas seguem com o dado que chegou.
+        """
+        if ap.candidatos:
+            return ap.candidatos[:limite]
+        log.warning("boletim sem candidato: placar desenhado com as vagas vazias")
+        return self._vazio(cargo, turno, limite).candidatos[:limite]
+
+    @staticmethod
+    def _vazio(cargo: int, turno: int, vagas: int) -> Apuracao:
+        """Boletim com a forma do TSE e nenhum conteudo."""
         return analisar(
             boletim_em_branco("br", cargo, max(1, vagas)),
             abrangencia="br", cargo=cargo, turno=turno,

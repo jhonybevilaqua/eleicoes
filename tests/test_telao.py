@@ -606,3 +606,65 @@ def test_historico_do_teste_nao_entra_na_serie_da_eleicao(tmp_path):
     assert "simulado" in simulado.historico.caminho.name
     simulado.fechar()
     producao.fechar()
+
+
+# ---------------------------------------------------------------------------
+# O que a tela faz quando o boletim chega estranho
+# ---------------------------------------------------------------------------
+
+
+def _ap_sem_candidato():
+    """Boletim com numeros gerais certos e a lista de candidatos vazia.
+
+    E o que acontece se o TSE renomear a chave da lista entre pleitos: o
+    parser le urnas, comparecimento e brancos, e nao encontra ninguem.
+    """
+    ap = _ap()
+    ap.candidatos = []
+    return ap
+
+
+def test_placar_sem_candidato_nao_derruba_a_tela(tmp_path):
+    """Divisao por zero aqui tirava o placar do ar sem dizer por que."""
+    cfg = _cfg(tmp_path)
+    tela = next(t for t in cfg.telas if t.tipo == "placar")
+    svg = desenhar(cfg, tela, _dados(nacional=_ap_sem_candidato()))
+    raiz = ET.fromstring(svg)
+    assert raiz.get("viewBox") == "0 0 1920 1080"
+    assert "—" in svg          # as vagas aparecem vazias, a tela continua
+
+
+def test_placar_vertical_sem_candidato_nao_derruba_a_tela(tmp_path):
+    from telao.vertical import desenhar as desenhar_v
+
+    svg = desenhar_v(_cfg_vertical(tmp_path), "placar", _dados(nacional=_ap_sem_candidato()))
+    assert ET.fromstring(svg).get("viewBox") == "0 0 1080 1920"
+
+
+def test_sem_o_nacional_a_tela_nao_anuncia_zero_por_cento(tmp_path):
+    """Os estados publicaram, o arquivo nacional nao.
+
+    Formatar o boletim vazio poria '0,00% das urnas totalizadas' no ar
+    enquanto a tela ao lado mostra 63% - as duas pareceriam discordar.
+    """
+    from telao.vertical import desenhar as desenhar_v
+
+    dados = _dados(nacional=None, estados=_estados())
+    cfg = _cfg(tmp_path)
+    for tipo in ("como-votou", "placar"):
+        tela = next(t for t in cfg.telas if t.tipo == tipo)
+        svg = desenhar(cfg, tela, dados)
+        assert "aguardando o boletim nacional" in svg, tipo
+        assert "0,00% das urnas" not in svg, tipo
+    vertical = desenhar_v(_cfg_vertical(tmp_path), "placar", dados)
+    assert "aguardando o boletim nacional" in vertical
+
+
+def test_tela_vertical_vazia_sai_carimbada(tmp_path):
+    """Layout completo de resultado sem selo e o pior dos dois mundos."""
+    from telao.vertical import desenhar as desenhar_v
+
+    cfg = _cfg_vertical(tmp_path)
+    vazio = Dados(nacional=None, estados={}, serie=[], total_secoes=(0, 0))
+    for tipo in ("placar", "brancos-nulos", "comparecimento"):
+        assert "NÃO OFICIAL" in desenhar_v(cfg, tipo, vazio), tipo

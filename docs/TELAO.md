@@ -315,9 +315,17 @@ completa — a troca é dissolvência.
 rede oscilando), a última tela boa continua no ar. Tela preta por soluço de
 rede seria pior do que uma tela vinte segundos atrasada.
 
-**Sem boletim não é tela preta.** Praça que ainda não publicou gera uma tela
-dizendo "aguardando boletim", e no mapa o estado fica cinza com a sigla
-legível. Buraco no mapa parece erro de arte; preto parece cabo solto.
+**Sem boletim, a tela sai inteira com os campos vazios.** Antes do primeiro
+boletim as doze telas desenham a estrutura completa — barras, rosca, contador,
+lista, mapa — com zeros e travessões no lugar dos números, e a linha de apoio
+diz "aguardando o primeiro boletim". Nada é inventado: é a mesma estrutura que
+o TSE vai preencher. No mapa, praça sem boletim fica cinza com a sigla legível.
+
+Isso serve a três momentos: a arte confere enquadramento meses antes; o
+operador vê que o sistema está desenhando e só não recebeu nada ainda; e, se
+uma dessas telas for ao ar por engano, o que aparece é um placar visivelmente
+vazio, não um resultado falso. Buraco no mapa parece erro de arte; preto
+parece cabo solto; tela quase vazia parece programa travado.
 
 **Dois relógios, não um.** A exibição relê a *seleção* a cada segundo — quem
 clica na mesa espera a tela entrar agora — e o *desenho* no intervalo

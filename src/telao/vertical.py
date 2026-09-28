@@ -136,8 +136,14 @@ class MolduraV:
             )
         return partes
 
-    def selo(self, dados: Dados) -> str:
-        return self.base.selo(dados.nacional)
+    def selo(self, dados: Dados, ap=None) -> str:
+        """Carimbo da tela.
+
+        Recebe o boletim EFETIVO quando existe um: sem isso, tela montada
+        sobre a estrutura vazia sairia limpa em producao - um layout completo
+        de resultado, sem numero nenhum e sem dizer que nao e resultado.
+        """
+        return self.base.selo(ap if ap is not None else dados.nacional)
 
     def fechar(self, partes: list[str]) -> str:
         partes.append("</svg>")
@@ -202,13 +208,16 @@ def _barra(partes: list[str], y: float, fracao: float, altura: float = 34) -> fl
 
 
 def _apoio(ap, dados) -> str:
-    """A linha de apoio: antes do primeiro boletim diz isso, com todas as letras.
+    """A linha de apoio destas telas, que leem SO o boletim nacional.
 
-    '0,00% das urnas apuradas' seria verdade, mas leria como uma medicao - e
-    ainda nao ha medicao nenhuma.
+    Quando ele nao chegou, o percentual sai do boletim vazio e seria 0,00% -
+    verdade, mas leria como medicao. Pior: com os estados ja publicando, a
+    tela seguinte do rodizio mostraria 63% dez segundos depois, e as duas
+    pareceriam discordar.
     """
-    if dados.sem_boletim:
-        return "aguardando o primeiro boletim"
+    if dados.nacional is None:
+        return ("aguardando o primeiro boletim" if dados.sem_boletim
+                else "aguardando o boletim nacional")
     return f"{pct_br(ap.pct_secoes)}% das urnas apuradas"
 
 
@@ -256,7 +265,7 @@ def v_brancos_nulos(m: MolduraV, dados: Dados) -> str:
     ap = dados.nacional_ou_vazio(m.cfg.cargo, m.cfg.turno)
     partes = m.abrir()
     partes += m.cabecalho(
-        TITULOS["brancos-nulos"], _apoio(ap, dados), m.selo(dados)
+        TITULOS["brancos-nulos"], _apoio(ap, dados), m.selo(dados, ap)
     )
 
     centro_x, centro_y, raio = LARGURA / 2, 800.0, 260.0
@@ -317,7 +326,7 @@ def v_comparecimento(m: MolduraV, dados: Dados) -> str:
     ap = dados.nacional_ou_vazio(m.cfg.cargo, m.cfg.turno)
     partes = m.abrir()
     partes += m.cabecalho(
-        TITULOS["comparecimento"], _apoio(ap, dados), m.selo(dados)
+        TITULOS["comparecimento"], _apoio(ap, dados), m.selo(dados, ap)
     )
 
     partes.append(texto(MARGEM, TOPO + 30, "FORAM VOTAR", tamanho=34,
@@ -366,10 +375,10 @@ def v_placar(m: MolduraV, dados: Dados, limite: int = 5) -> str:
     """Os candidatos em lista vertical - o formato natural do retrato."""
     limite = max(1, limite)
     ap = dados.nacional_ou_vazio(m.cfg.cargo, m.cfg.turno, limite)
-    candidatos = ap.candidatos[:limite]
+    candidatos = dados.vagas(ap, limite, m.cfg.cargo, m.cfg.turno)
     partes = m.abrir()
     partes += m.cabecalho(
-        ap.cargo_nome.upper(), _apoio(ap, dados), m.selo(dados)
+        ap.cargo_nome.upper(), _apoio(ap, dados), m.selo(dados, ap)
     )
 
     topo = TOPO + 40
