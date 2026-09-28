@@ -297,7 +297,11 @@ def tela_estados(moldura: Moldura, mapa: Mapa, tela: Tela, dados) -> str:
     partes += moldura.cabecalho(
         tela.titulo or "COMO CADA ESTADO VOTOU",
         f"{com_dado} de 27 estados com boletim publicado",
-        moldura.selo(dados.nacional),
+        # O selo destas telas vem das PRACAS que elas mostram, nao do boletim
+        # nacional: e o mapa que decide, pela mesma regra do exporter. Sem
+        # isto, 'estados' carimbava e 'lideranca' nao, mostrando o mesmo dado
+        # lado a lado - duas telas discordando sobre o que e oficial.
+        mapa_dados["selo"],
     )
     partes += _mapa_reduzido(mapa_dados, 40.0, 185.0, 1.26)
 

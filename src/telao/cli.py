@@ -238,7 +238,9 @@ def _executar(cfg, args, uma_vez: bool) -> int:
             print('          pleito: "<codigo>"')
             print('          eleicao: "<codigo>"')
             print()
-            print("   3. telao.exe validar   ate dizer Configuracao OK")
+            print("   3. telao.exe validar")
+            print("      Tem de dizer Configuracao OK SEM a parte")
+            print("      'FALTA PREENCHER' - essa e a que ainda falta.")
             print()
         return SAIDA_CONFIG
 

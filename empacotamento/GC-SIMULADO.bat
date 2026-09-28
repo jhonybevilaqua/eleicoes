@@ -31,11 +31,18 @@ timeout /t 10 /nobreak >nul
 goto loop
 
 :configuracao
-rem Reiniciar aqui nao adianta: falta preencher alguma coisa, e o programa
-rem acabou de dizer o que. A janela fica aberta com a mensagem a vista.
+rem Falta preencher alguma coisa, e o programa acabou de dizer o que. Nao da
+rem para reiniciar em 10s como nas outras saidas - a mensagem sumiria da tela
+rem antes de alguem ler, e a janela viraria uma parede de texto repetido.
+rem
+rem Mas tambem nao da para PARAR de vez: este atalho pode ter subido
+rem minimizado pelo INICIAR-COM-O-WINDOWS, sem ninguem olhando, e ai ficaria
+rem parado para sempre mesmo depois de a config ser corrigida.
+rem
+rem Entao espera 60s e tenta de novo: tempo de sobra para ler, e volta
+rem sozinho assim que o arquivo for arrumado.
 echo.
-echo Nao vou reiniciar: isso acima nao se resolve sozinho.
-echo Corrija e abra este atalho de novo.
-echo.
-pause
-exit /b 2
+echo Isso acima nao se resolve sozinho: corrija a configuracao.
+echo Vou reler o arquivo em 60s. Ctrl+C encerra.
+timeout /t 60 /nobreak >nul
+goto loop

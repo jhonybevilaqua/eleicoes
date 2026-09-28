@@ -295,3 +295,10 @@ def test_atalhos_param_no_codigo_de_configuracao():
         texto = (raiz / nome).read_text(encoding="utf-8")
         assert "EQU 2 goto configuracao" in texto, nome
         assert ":configuracao" in texto, nome
+        # Espera longa, nao os 10s do reinicio comum: a mensagem tem de ficar
+        # legivel na tela.
+        assert "timeout /t 60" in texto, nome
+        # E nao pode PARAR: o atalho pode ter subido minimizado pelo
+        # INICIAR-COM-O-WINDOWS, e ai ficaria travado mesmo depois de alguem
+        # corrigir o arquivo.
+        assert "pause" not in texto.split(":configuracao")[1], nome

@@ -427,7 +427,8 @@ def v_mapa(m: MolduraV, mapa: Mapa, dados: Dados) -> str:
     partes += m.cabecalho(
         TITULOS["mapa"],
         f"{mapa_dados['pracas_com_dado']} de 27 estados com boletim",
-        m.selo(dados),
+        # selo das pracas, nao do nacional - ver a nota em telas.py
+        mapa_dados["selo"],
     )
 
     escala = 1.5
@@ -489,7 +490,7 @@ def v_estados(m: MolduraV, mapa: Mapa, dados: Dados) -> str:
     partes += m.cabecalho(
         TITULOS["estados"],
         f"{mapa_dados['pracas_com_dado']} de 27 estados com boletim",
-        m.selo(dados),
+        mapa_dados["selo"],
     )
 
     topo, passo = 400.0, 54.0

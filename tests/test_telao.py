@@ -694,3 +694,45 @@ def test_em_simulado_toda_tela_carimba_ate_boletim_oficial(tmp_path):
                            "rodizio_segundos": 10})
     for tipo in TIPOS_V:
         assert "SIMULADO" in desenhar_v(cfg_v, tipo, dados), tipo
+
+
+def test_o_selo_segue_o_dado_que_a_tela_mostra(tmp_path):
+    """A regra, escrita como teste.
+
+    O selo nao e por tela nem por boletim nacional: e pelo dado QUE AQUELA
+    TELA MOSTRA. Sem isso, 'estados' carimbava e 'lideranca' nao, lado a
+    lado, com o mesmo dado - e duas telas discordando sobre o que e oficial
+    e pior do que as duas erradas juntas.
+    """
+    from telao.vertical import desenhar as desenhar_v
+
+    vertical = {"ativo": True, "destino": str(tmp_path / "v"), "rodizio_segundos": 10}
+    so_estados = ("lideranca", "estados", "apuracao-estados")
+    so_estados_v = ("mapa", "estados")
+
+    def carimbada(cfg, tela, dados):
+        return "NÃO OFICIAL" in desenhar(cfg, tela, dados)
+
+    # Estados oficiais publicados, arquivo nacional ainda nao: as telas que
+    # so mostram estados estao mostrando dado oficial; as que dependem do
+    # nacional estao mostrando o que ainda nao chegou.
+    cfg = _cfg(tmp_path, modo="producao")
+    cfg_v = _cfg(tmp_path, modo="producao", vertical=vertical)
+    dados = _dados(nacional=None, estados=_estados())
+    for tela in cfg.telas:
+        assert carimbada(cfg, tela, dados) is (tela.tipo not in so_estados), tela.id
+    for tipo in ("mapa", "estados", "placar", "urnas"):
+        svg = desenhar_v(cfg_v, tipo, dados)
+        assert ("NÃO OFICIAL" in svg) is (tipo not in so_estados_v), tipo
+
+    # Tudo oficial: nenhuma carimba.
+    completo = _dados(nacional=_ap(fase="O"), estados=_estados())
+    for tela in cfg.telas:
+        assert not carimbada(cfg, tela, completo), tela.id
+
+    # Uma unica praca fora da fase oficial contamina o mapa inteiro.
+    estados = _estados()
+    estados["AC"] = _ap(fase="S")
+    parcial = _dados(nacional=_ap(fase="O"), estados=estados)
+    tela = next(t for t in cfg.telas if t.tipo == "lideranca")
+    assert carimbada(cfg, tela, parcial)
