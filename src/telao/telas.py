@@ -143,10 +143,15 @@ class Moldura:
         Em producao, carimba o que nao for oficial - e la a trava de fase ja
         teria descartado o boletim antes de chegar aqui, entao isto e a
         segunda linha de defesa, nao a primeira.
+
+        SEM boletim tambem carimba. Nao ha nada de oficial numa tela montada
+        sobre a estrutura vazia, nem numa que soma pracas enquanto o arquivo
+        nacional nao saiu: deixa-la limpa daria a um layout completo de
+        resultado o mesmo aspecto do resultado.
         """
-        if self.cfg.simulado:
+        if self.cfg.simulado or ap is None:
             return self.selo_texto
-        return "" if (ap is None or ap.oficial) else self.selo_texto
+        return "" if ap.oficial else self.selo_texto
 
     def cor_partido(self, sigla: str) -> str:
         sigla = (sigla or "").strip().upper()
@@ -198,6 +203,12 @@ class Mapa:
                 "cores_partido": self.moldura.cores_partido,
                 "cor_padrao": self.moldura.cor_padrao,
                 "selo_nao_oficial": self.moldura.selo_texto,
+                # Mesma regra das outras telas: em simulado o carimbo nao
+                # depende da fase do boletim. Sem esta linha, num dia de teste
+                # com fase 'O' os dois mapas saiam limpos enquanto as quatro
+                # telas vizinhas saiam carimbadas - e o telespectador so veria
+                # a que estivesse no ar.
+                "selo_sempre": self.cfg.simulado,
             },
             cfg_saida={},
         )
@@ -421,8 +432,9 @@ def tela_apuracao_nacional(moldura: Moldura, tela: Tela, dados) -> str:
     partes.append(retangulo(MARGEM, 660, trilho, 30, COR_LINHA, raio=2))
     partes.append(retangulo(MARGEM, 660, trilho * max(0.0, min(100.0, pct)) / 100.0, 30,
                             COR_ESCALA, raio=2))
-    partes.append(texto(MARGEM, 790, f"Faltam {int_br(max(0, total - totalizadas))} urnas",
-                        tamanho=40))
+    # Sem total, "Faltam 0 urnas" afirmaria apuracao concluida. Travessao.
+    faltam = f"Faltam {int_br(max(0, total - totalizadas))} urnas" if total else "Faltam —"
+    partes.append(texto(MARGEM, 790, faltam, tamanho=40))
 
     if ap is not None and len(ap.candidatos) > 1 and not ap.totalizada:
         recado = (
@@ -495,6 +507,8 @@ def tela_placar(moldura: Moldura, tela: Tela, dados) -> str:
 class Dados:
     """O que as telas leem do coletor, sem conhecer o coletor."""
 
+    _avisou_sem_candidato = False
+
     def __init__(self, nacional: Apuracao | None, estados: dict[str, Apuracao],
                  serie: list[Ponto], total_secoes: tuple[int, int]):
         self.nacional = nacional
@@ -543,7 +557,11 @@ class Dados:
         """
         if ap.candidatos:
             return ap.candidatos[:limite]
-        log.warning("boletim sem candidato: placar desenhado com as vagas vazias")
+        # Uma vez por processo: isto se repete a cada ciclo, e a noite inteira
+        # de log identico esconderia o que aconteceu depois.
+        if not Dados._avisou_sem_candidato:
+            Dados._avisou_sem_candidato = True
+            log.warning("boletim sem candidato: placar desenhado com as vagas vazias")
         return self._vazio(cargo, turno, limite).candidatos[:limite]
 
     @staticmethod

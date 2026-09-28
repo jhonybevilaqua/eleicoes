@@ -660,11 +660,37 @@ def test_sem_o_nacional_a_tela_nao_anuncia_zero_por_cento(tmp_path):
     assert "aguardando o boletim nacional" in vertical
 
 
-def test_tela_vertical_vazia_sai_carimbada(tmp_path):
-    """Layout completo de resultado sem selo e o pior dos dois mundos."""
-    from telao.vertical import desenhar as desenhar_v
+def test_toda_tela_vazia_sai_carimbada(tmp_path):
+    """Layout completo de resultado sem selo e o pior dos dois mundos.
 
-    cfg = _cfg_vertical(tmp_path)
+    As doze, nao as que eu lembrei de conferir: o telespectador so ve a que
+    estiver no ar, entao uma unica tela limpa basta para o erro acontecer.
+    """
+    from telao.vertical import TIPOS as TIPOS_V, desenhar as desenhar_v
+
     vazio = Dados(nacional=None, estados={}, serie=[], total_secoes=(0, 0))
-    for tipo in ("placar", "brancos-nulos", "comparecimento"):
-        assert "NÃO OFICIAL" in desenhar_v(cfg, tipo, vazio), tipo
+    cfg = _cfg(tmp_path)
+    for tela in cfg.telas:
+        assert "NÃO OFICIAL" in desenhar(cfg, tela, vazio), tela.id
+    cfg_v = _cfg_vertical(tmp_path)
+    for tipo in TIPOS_V:
+        assert "NÃO OFICIAL" in desenhar_v(cfg_v, tipo, vazio), tipo
+
+
+def test_em_simulado_toda_tela_carimba_ate_boletim_oficial(tmp_path):
+    """Dia de teste com fase 'O': as doze telas carimbam, inclusive os mapas.
+
+    Os mapas passam por outro caminho de desenho, e era por ali que duas
+    telas saiam limpas enquanto as vizinhas saiam carimbadas.
+    """
+    from telao.vertical import TIPOS as TIPOS_V, desenhar as desenhar_v
+
+    dados = _dados(nacional=_ap(fase="O"), estados=_estados())
+    cfg = _cfg(tmp_path, modo="simulado")
+    for tela in cfg.telas:
+        assert "SIMULADO" in desenhar(cfg, tela, dados), tela.id
+    cfg_v = _cfg(tmp_path, modo="simulado",
+                 vertical={"ativo": True, "destino": str(tmp_path / "v"),
+                           "rodizio_segundos": 10})
+    for tipo in TIPOS_V:
+        assert "SIMULADO" in desenhar_v(cfg_v, tipo, dados), tipo

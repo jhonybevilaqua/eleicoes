@@ -164,10 +164,30 @@ class ExporterMapa(Exporter):
             "secoes_total": total,
             "apuracao_pct": round(100.0 * totalizadas / total, 2) if total else 0.0,
             "nacional": nacional,
-            "selo": next((e["selo"] for e in com_dado if e["selo"]), ""),
+            "selo": self._selo_do_mapa(com_dado),
             "hora_geracao": max((e["hora_geracao"] for e in com_dado), default=""),
             "estados": {sigla: estados[sigla] for sigla in sorted(estados)},
         }
+
+    def _selo_do_mapa(self, com_dado: list[dict]) -> str:
+        """O carimbo do mapa inteiro.
+
+        Normalmente e o da primeira praca que trouxe um - basta uma praca nao
+        oficial para o mapa todo nao ser resultado. Duas excecoes carimbam
+        mesmo sem praca nenhuma dizer nada:
+
+        - 'selo_sempre' (modo simulado), que nao negocia com a fase; sem isto
+          o mapa saia limpo num dia de teste enquanto as telas vizinhas saiam
+          carimbadas, e o telespectador so ve a que esta no ar;
+        - mapa sem praca alguma com boletim, que e um desenho completo do
+          Brasil sem um unico dado - o oposto de um resultado oficial.
+        """
+        for estado in com_dado:
+            if estado["selo"]:
+                return estado["selo"]
+        if bool(self.cfg_texto.get("selo_sempre")) or not com_dado:
+            return str(self.cfg_texto.get("selo_nao_oficial", "") or "")
+        return ""
 
     def _completar_cores(self, estados: dict[str, dict]) -> None:
         """Da cor aos partidos que a config nao nomeou, e so entao pinta.
