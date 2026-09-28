@@ -44,75 +44,45 @@ em sequência: aí a proteção reinicia junto.
 O outro limite do TSE, 100 requisições por IP por segundo, não é problema:
 o sistema faz 28 leituras a cada 20 segundos, com no máximo 8 ao mesmo tempo.
 
-## Terça de manhã — descobrir os códigos
+## Os códigos já estão no pacote
 
-Assim que o TSE publicar a configuração do teste:
+Não há nada para preencher. O TSE publicou, para o 1º turno de 4 de outubro:
+
+```
+url        https://resultados.tse.jus.br
+ambiente   oficial
+pleito     3220
+eleições   6257  Geral Federal ....... presidente, senador, deputado federal
+           6259  Gerais Estaduais .... governador, dep. estadual e distrital
+           6261  Conselho Distrital .. (não usamos)
+```
+
+Isso já está nas duas configurações, e **os dois modos usam os mesmos
+códigos** — nos dias de teste o TSE publica o simulado nos mesmos caminhos,
+mudando a fase do boletim de `O` para `S`. O modo decide o que se faz com
+isso: em simulado a fase `S` é aceita e tudo sai carimbado; em produção ela é
+descartada.
+
+É por isso que terça diz alguma coisa sobre domingo: é a mesma URL.
+
+Confira antes de subir:
 
 ```bat
 cd C:\gctse
-gctse.exe descobrir
-```
-
-Ele lista os pleitos disponíveis. Anote o código do **teste** e, se já
-estiver publicado, o do **pleito oficial**.
-
-São **dois arquivos** para preencher, com a mesma estrutura: `config.yaml`
-(o GC) e `TELAO\telao.yaml` (as telas). Abra cada um no Bloco de Notas e
-preencha os dois modos:
-
-```yaml
-modos:
-  simulado:
-    tse:
-      pleito: "<código do teste>"
-      eleicoes:
-        federal: "<código do teste>"
-        estadual: "<código do teste>"
-  producao:
-    tse:
-      pleito: "3220"
-      eleicoes:
-        federal: "6257"
-        estadual: "6259"
-```
-
-O `ciclo: ele2026` fica na seção `tse` de cima, fora dos modos — é o mesmo
-para os dois.
-
-**O modo produção já vem preenchido** com o que o TSE publicou para o 1º turno
-de 4 de outubro. Só o bloco `simulado` fica pendente, até saírem os códigos do
-teste.
-
-### Por que são dois códigos de eleição, e não um
-
-Um pleito é a data; uma eleição é o conjunto de cargos. O pleito 3220 carrega
-três eleições:
-
-| Código | Eleição | Cargos |
-|---|---|---|
-| 6257 | Eleição Geral Federal | presidente, senador, deputado federal |
-| 6259 | Eleições Gerais Estaduais | governador, deputado estadual e distrital |
-| 6261 | Eleição Conselho Distrital | — (não usamos) |
-
-**Cada cargo só existe no arquivo da sua eleição.** Pedir governador com o
-código federal não devolve erro claro: devolve 404. O sistema escolhe sozinho
-pelo cargo — presidente e senador vão no 6257, governador no 6259 — e o
-`validar` mostra a URL montada para cada alvo, para você conferir antes de
-subir.
-
-Preencha **os dois agora**, nos **dois arquivos**. É o que faz a virada de
-quinta para domingo ser uma troca de atalho, e não uma edição de configuração
-sob pressão.
-
-```bat
 gctse.exe validar
 TELAO\telao.exe -c TELAO\telao.yaml validar
 ```
 
-Os dois têm de dizer `Configuracao OK` sem pendência. Se reclamar que o código
-está em `000`, é porque ainda falta preencher aquele modo — e, se você abrir o
-atalho antes disso, ele **para e explica** em vez de ficar reiniciando: código
-de pleito não se conserta sozinho.
+Os dois têm de dizer `Configuracao OK` **sem** a parte `FALTA PREENCHER`. Eles
+imprimem a URL montada de cada alvo — abra uma no navegador. Se vier JSON, a
+cadeia está fechada. Se vier 404, o TSE ainda não publicou aquele arquivo, o
+que é normal antes das urnas fecharem.
+
+### Por que são dois códigos de eleição, e não um
+
+Um pleito é a data; uma eleição é o conjunto de cargos, e **cada cargo só
+existe no arquivo da sua**. Pedir governador com o código federal não devolve
+erro claro: devolve 404. O sistema escolhe sozinho pelo cargo do alvo.
 
 ## Nos três dias de teste
 

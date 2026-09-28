@@ -184,3 +184,64 @@ def test_fonte_escrita_errada_mantem_o_freio_ligado():
 
     assert "tsee" not in FONTES_LOCAIS
     assert "simulador" in FONTES_LOCAIS and "em-branco" in FONTES_LOCAIS
+
+
+# --- o pacote tem de sair pronto -----------------------------------------
+
+def _config_entregue(nome: str):
+    import yaml
+
+    caminho = Path(__file__).resolve().parents[1] / "config" / nome
+    return yaml.safe_load(caminho.read_text(encoding="utf-8")), caminho
+
+
+@pytest.mark.parametrize("nome", ["config.operacao.yaml", "telao.yaml"])
+def test_config_entregue_nao_tem_nada_para_preencher(nome, monkeypatch):
+    """A config que vai no pacote sobe sem ninguem editar uma linha.
+
+    Pedido direto do operador: 'nao quero eu ter que preencher o arquivo'.
+    Os codigos do TSE sao conhecidos, entao deixar '000' esperando edicao era
+    trabalho meu empurrado para a noite de quem opera.
+    """
+    bruto, caminho = _config_entregue(nome)
+    texto = caminho.read_text(encoding="utf-8")
+    # '000' so pode aparecer em comentario, nunca como valor
+    for linha in texto.splitlines():
+        sem_comentario = linha.split("#", 1)[0]
+        assert '"000"' not in sem_comentario, f"{nome}: {linha.strip()}"
+
+    for modo in ("simulado", "producao"):
+        monkeypatch.setenv("TELAO_MODO", modo)
+        monkeypatch.setenv("GCTSE_MODO", modo)
+        if nome == "telao.yaml":
+            from telao.config import Config as ConfigTelao
+
+            cfg = ConfigTelao(bruto=bruto, caminho=caminho)
+        else:
+            cfg = Config(bruto=bruto, caminho=caminho)
+        erros, pendencias = cfg.conferir()
+        assert erros == [], f"{nome} / {modo}: {erros}"
+        assert pendencias == [], f"{nome} / {modo}: {pendencias}"
+
+
+@pytest.mark.parametrize("nome", ["config.operacao.yaml", "telao.yaml"])
+def test_os_dois_modos_apontam_para_o_mesmo_arquivo_do_tse(nome, monkeypatch):
+    """Simulado e producao leem o MESMO caminho - muda a fase, nao a URL.
+
+    E o desenho que faz o teste provar a operacao de verdade: se o simulado
+    lesse outro lugar, terca nao diria nada sobre domingo.
+    """
+    bruto, caminho = _config_entregue(nome)
+    urls = set()
+    for modo in ("simulado", "producao"):
+        monkeypatch.setenv("TELAO_MODO", modo)
+        monkeypatch.setenv("GCTSE_MODO", modo)
+        if nome == "telao.yaml":
+            from telao.config import Config as ConfigTelao
+
+            cfg = ConfigTelao(bruto=bruto, caminho=caminho)
+        else:
+            cfg = Config(bruto=bruto, caminho=caminho)
+        urls.add(Endpoints(cfg.tse).resultado("br", 1))
+    assert len(urls) == 1, urls
+    assert "e006257" in urls.pop()

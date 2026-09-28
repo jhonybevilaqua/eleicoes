@@ -23,56 +23,55 @@
 #       modo: simulado  + fonte: tse         -> TSE de verdade, dado de teste
 #       fonte: simulador                     -> dado inventado, sem internet
 #
-# O que fazer, na ordem:
-#   1. telao descobrir        pega os codigos do pleito no TSE
-#   2. preencha os codigos do modo que vai usar, na secao 'modos' abaixo
-#   3. telao validar          confere tudo antes do ar
-#   4. telao ensaio           treina com dado inventado, sem tocar o TSE
-#   5. TELAO-SIMULADO.bat     nos dias de teste
-#   6. TELAO-PRODUCAO.bat     no dia da eleicao
+# Os codigos do TSE ja estao preenchidos: NAO HA NADA PARA EDITAR aqui antes
+# de rodar. O que fazer, na ordem:
+#   1. telao validar          confere tudo antes do ar
+#   2. telao ensaio           treina com dado inventado, sem tocar o TSE
+#   3. TELAO-SIMULADO.bat     nos dias de teste
+#   4. TELAO-PRODUCAO.bat     no dia da eleicao
 # ---------------------------------------------------------------------------
 
 modo: producao
 
-# Os codigos de cada modo. O simulado do TSE costuma sair em caminho e codigo
-# de pleito proprios - por isso cada modo tem os seus. Preencher os dois agora
-# significa que trocar de teste para o ar e UMA LINHA, e nao uma edicao de
-# config sob pressao no domingo a noite.
+# Os dois modos usam os MESMOS codigos do TSE (secao 'tse', mais abaixo), e e
+# assim que tem de ser: nos dias de teste o TSE publica o simulado nos mesmos
+# caminhos, mudando a fase do boletim de 'O' para 'S'. O que o modo troca e o
+# que se faz com isso - em simulado a fase 'S' e aceita e tudo sai carimbado;
+# em producao ela e descartada.
+#
+# Se algum ano o TSE separar o teste em pleito proprio, basta acrescentar um
+# bloco 'tse:' aqui dentro de 'simulado' com os codigos de la; ele sobrepoe os
+# de baixo so naquele modo.
 modos:
   simulado:
-    tse:
-      # <- PREENCHER com o que o TSE publicar para os dias de teste.
-      #    'telao descobrir' lista os pleitos disponiveis.
-      pleito: "000"
-      eleicoes:
-        federal: "000"     # presidente e senador
-        estadual: "000"    # governador
     # O selo que carimba todas as telas neste modo. Nao pode ser desligado.
     selo: "SIMULADO — TESTE, NÃO É RESULTADO"
-
-  # Dia 4 de outubro de 2026, 1o turno. Codigos publicados pelo TSE.
-  producao:
-    tse:
-      pleito: "3220"
-      eleicoes:
-        # Um pleito, TRES eleicoes - cada cargo so existe no arquivo da sua:
-        #   6257  Geral Federal ..... presidente, senador, deputado federal
-        #   6259  Gerais Estaduais .. governador, deputado estadual/distrital
-        #   6261  Conselho Distrital (nao usamos)
-        # O telao mostra UM cargo (apuracao.cargo), entao na pratica vale so
-        # um destes - mas os dois ficam preenchidos para trocar de cargo sem
-        # ter de procurar codigo no meio da noite.
-        federal: "6257"
-        estadual: "6259"
 
 log:
   nivel: INFO
   arquivo: logs/telao.log
 
-# Comum aos dois modos. O que muda entre eles (pleito, eleicao) esta em 'modos'.
+# Os codigos do TSE para o 1o turno de 04/10/2026, ja preenchidos. Nao ha
+# nada para editar aqui antes de rodar.
+#
+# UM PLEITO, TRES ELEICOES. O pleito e a data; a eleicao e o conjunto de
+# cargos, e cada cargo so existe no arquivo da SUA:
+#
+#   3220  pleito de 04/10/2026, 1o turno
+#   6257  Eleicao Geral Federal ....... presidente, senador, deputado federal
+#   6259  Eleicoes Gerais Estaduais ... governador, dep. estadual e distrital
+#   6261  Eleicao Conselho Distrital .. (nao usamos)
+#
+# O telao mostra UM cargo (apuracao.cargo abaixo), entao na pratica vale so um
+# destes - mas os dois ficam preenchidos para trocar de cargo sem ter de
+# procurar codigo no meio da noite.
 tse:
   base_url: https://resultados.tse.jus.br/oficial
   ciclo: ele2026
+  pleito: "3220"
+  eleicoes:
+    federal: "6257"
+    estadual: "6259"
   turno: 1
 
 # O telao sempre quer a mesma coisa: o resultado nacional e o dos estados para

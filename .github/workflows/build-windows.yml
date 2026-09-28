@@ -143,8 +143,22 @@ jobs:
         working-directory: dist\gctse
         run: |
           .\gctse.exe --version
-          .\gctse.exe validar          # acha config.yaml na raiz sozinho
           .\gctse.exe modo             # mostra em que modo o pacote sai de fabrica
+          # O pacote tem de subir SEM ninguem editar config. Se a saida trouxer
+          # 'FALTA PREENCHER', alguem deixou um codigo por preencher e a
+          # operacao descobriria isso no dia, no PC, sob pressao.
+          foreach ($modo in @("producao","simulado")) {
+            $env:GCTSE_MODO = $modo
+            $saida = .\gctse.exe validar 2>&1 | Out-String
+            Write-Host $saida
+            if ($LASTEXITCODE -ne 0) { throw "gctse validar falhou no modo $modo" }
+            if ($saida -match "FALTA PREENCHER") { throw "config do gctse pendente no modo $modo" }
+            $saida = .\TELAO\telao.exe -c TELAO\telao.yaml validar 2>&1 | Out-String
+            if ($LASTEXITCODE -ne 0) { throw "telao validar falhou no modo $modo" }
+            if ($saida -match "FALTA PREENCHER") { throw "config do telao pendente no modo $modo" }
+          }
+          $env:GCTSE_MODO = $null
+          Write-Host "As duas configs sobem nos dois modos, sem edicao: OK"
           Write-Host "=== Raiz do pacote (o que a pessoa ve ao extrair) ==="
           Get-ChildItem | Where-Object { $_.Name -ne "_internal" } |
             Select-Object Mode, Length, Name | Format-Table -AutoSize

@@ -20,12 +20,19 @@ O QUE FAZER, NA ORDEM
     ESTE E O CAMINHO DEFINITIVO. No teste e na noite da apuracao os mesmos
     arquivos sao reescritos com o dado real. Voce nunca troca o caminho.
 
- 3. Abra config.yaml no Bloco de Notas e preencha os codigos do TSE,
-    na secao 'modos'. Sao DOIS pares: um do teste, outro do oficial.
-    Para saber quais sao, rode na pasta:  gctse.exe descobrir
+ 3. Nao ha nada para preencher. Os codigos do TSE para o 1o turno de
+    4 de outubro de 2026 ja estao no config.yaml:
 
-    Preencha os dois agora. E o que faz a virada de quinta para domingo
-    ser troca de atalho, e nao edicao de config sob pressao.
+        pleito 3220
+        6257   presidente, senador, deputado federal
+        6259   governador, deputado estadual
+
+    Os dois modos usam os MESMOS codigos: nos dias de teste o TSE publica
+    o simulado nos mesmos caminhos, mudando a fase do boletim. E por isso
+    que o teste de terca diz alguma coisa sobre domingo.
+
+    Para conferir:  gctse.exe validar
+    Ele imprime a URL de cada alvo; abra uma no navegador.
 
  4. Use os botoes:
 
@@ -75,8 +82,8 @@ O QUE FAZER, NA ORDEM
 
     Ponha o monitor em RETRATO nas configuracoes do Windows antes.
 
-    Antes do ar, preencha TELAO\telao.yaml com os codigos do pleito
-    (TELAO\telao.exe descobrir) e as cores dos partidos.
+    O TELAO\telao.yaml ja vem com os codigos do pleito. O que falta
+    ali sao as CORES DOS PARTIDOS, que dependem da arte.
 
     O roteiro completo dos dias de teste esta em
     docs\DIAS-DE-TESTE.md - leia antes de terca.
