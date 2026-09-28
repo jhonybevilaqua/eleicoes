@@ -1,5 +1,49 @@
 ===========================================================================
- LAUDO DE INSPECAO - gctse 6.0
+ LAUDO DE INSPECAO - gctse 6.1
+ 28/09/2026 - "as colunas do JSON nao conferem os dados"
+===========================================================================
+
+ DEFEITO (introduzido na 5.9): TARJA EMBARALHADA NO AR
+
+   No ar, 28/09 14:21, senador AC: "1o P 9998 / 4,73%" (partido e
+   percentual do 2o no lugar do 1o), "SENADOR" onde iam as urnas, o
+   codigo do cargo (5) como nome. O arquivo estava certo - o painel
+   mostrava os dados certos.
+
+   Causa: o Castalia guarda o vinculo pela POSICAO do campo na ordem
+   interna do Java (HashMap), nao pelo nome nem pela ordem do arquivo.
+   Essa ordem depende do CONJUNTO de nomes. A 5.9 acrescentou
+   cand1_eleito_largura e cand2_eleito_largura "no fim"; com 26 nomes a
+   tabela interna do Java dobra de tamanho e a ordem inteira muda.
+   Comprovado: simulando a ordem do Java para os 24 nomes da 5.8, sai
+   exatamente a lista do DataSource Editor do print de 28/09
+   (selo, cand1_eleito, cand2_eleito_rotulo, cand1_eleito_rotulo...); e
+   com os 26 nomes, a posicao do cand1_nome passa a ser a do
+   cand2_partido, a do cand1_partido a do cand2_percentual e a do
+   apuracao_pct a do cargo - o que foi ao ar.
+
+ CORRECAO
+
+   Os nomes das tarjas voltaram a ser EXATAMENTE os da 5.8 (24/24/30);
+   os modelos vazios sao identicos byte a byte aos da 5.8. Os vinculos
+   feitos na 5.8 voltam a valer sem refazer nada.
+
+   O selo de ELEITO nao precisa de campo novo: cand1_eleito passa a sair
+   100 ou 0 (era 1 ou 0). Shape do selo ligado nele: 100 inteiro, 0 some.
+
+   Regra gravada no codigo: nao se acrescenta nem se renomeia campo nas
+   tarjas. O teste de regressao passou a conferir os nomes contra os da
+   5.8.
+
+ VERIFICADO NA 6.1
+
+   Nomes das tres tarjas iguais aos da 5.8 (teste novo)            3 / 0 OK
+   Senador com duas vagas: eleito 100 e 100, rotulo ELEITO nos dois   OK
+   Governador "2o turno": eleito 0, sem rotulo                        OK
+   Regressao completa                                            25 / 0 OK
+
+===========================================================================
+ LAUDO ANTERIOR - gctse 6.0
  28/09/2026 - janela extra do simulado, maquina do GC (DESKTOP-38DJ8E4)
 ===========================================================================
 

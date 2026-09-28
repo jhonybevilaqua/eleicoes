@@ -35,7 +35,7 @@ param(
 # Versao impressa na partida e no painel. Sem carimbo, "qual versao esta
 # rodando ai?" so se responde abrindo arquivo e comparando a olho - e no
 # meio de um teste com janela de horario ninguem faz isso.
-$Versao = "6.0 - 28/09/2026"
+$Versao = "6.1 - 28/09/2026"
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
@@ -307,8 +307,14 @@ if (Tem-Propriedade $cfg.texto "foto_nome_fixo") { $FotoNomeFixo = [bool] $cfg.t
 # As 19 primeiras sao iguais nos tres modelos, de proposito: uma cena
 # montada para governador funciona no senador e no presidente.
 #
-# REGRA: campo novo entra SEMPRE no fim da lista do modelo. Nunca no meio.
-# Mexer aqui = remontar a cena no Castalia.
+# REGRA (6.1): NAO SE ACRESCENTA NEM SE RENOMEIA CAMPO NAS TARJAS. NUNCA.
+# O Castalia guarda o vinculo pela POSICAO do campo na ordem interna do Java
+# (HashMap), e essa ordem depende do CONJUNTO de nomes, nao da ordem do
+# arquivo. Na 5.9 entraram 2 campos "no fim" e a ordem interna mudou toda:
+# em 28/09 a tarja foi ao ar com o partido do 2o no lugar do nome do 1o e
+# "SENADOR" no lugar das urnas. Comprovado simulando a ordem do Java: com os
+# 24 nomes da 5.8 ela bate campo a campo com o DataSource Editor. Informacao
+# nova vai no VALOR de um campo que ja existe, nunca num campo novo.
 
 $OrdemBase = @(
     "cargo", "abrangencia", "apuracao_pct", "selo", "hora_atualizacao",
@@ -317,21 +323,13 @@ $OrdemBase = @(
     "cand2_visivel", "cand2_nome", "cand2_partido", "cand2_percentual",
     "cand2_barra_px", "cand2_cor", "cand2_eleito"
 )
-# cand1/2_eleito_largura (5.9): 100 ou 0. O manual do CastaliaCG ("Histograms
-# with the SHAPE object") diz que Shape ligado ao DataSource le o valor como
-# PERCENTUAL (0 a 100) da largura com que foi criado. Nao existe ligar a
-# VISIBILIDADE a um campo - entao o selo grafico de ELEITO e um Shape ligado
-# aqui: 100 aparece inteiro, 0 some. O "eleito" (1/0) nao serve para isso: 1
-# viraria um Shape com 1% da largura.
 $OrdemMajoritaria = $OrdemBase + @("cand1_eleito_rotulo", "cand2_eleito_rotulo",
                                    "cand1_situacao", "cand2_situacao",
-                                   "apuracao_encerrada",
-                                   "cand1_eleito_largura", "cand2_eleito_largura")
+                                   "apuracao_encerrada")
 $OrdemPresidente  = $OrdemBase + @(
     "cand1_foto", "cand1_foto_existe", "cand1_foto_fixa", "cand1_eleito_rotulo",
     "cand2_foto", "cand2_foto_existe", "cand2_foto_fixa", "cand2_eleito_rotulo",
-    "cand1_situacao", "cand2_situacao", "apuracao_encerrada",
-    "cand1_eleito_largura", "cand2_eleito_largura"
+    "cand1_situacao", "cand2_situacao", "apuracao_encerrada"
 )
 
 function Ordem-Do-Modelo {
@@ -1143,7 +1141,6 @@ function Montar-Tarja {
             $saida[$p + "cor"] = ""
             $saida[$p + "eleito"] = "0"
             $extras[$p + "eleito_rotulo"] = ""
-            $extras[$p + "eleito_largura"] = 0
             $extras[$p + "situacao"] = ""
         } else {
             $largura = 0
@@ -1174,8 +1171,7 @@ function Montar-Tarja {
                 $saida[$p + "cor"] = ""
                 $saida[$p + "eleito"] = "0"
                 $extras[$p + "eleito_rotulo"] = ""
-                $extras[$p + "eleito_largura"] = 0
-                $extras[$p + "situacao"] = ""
+                    $extras[$p + "situacao"] = ""
                 continue
             }
             $saida[$p + "visivel"] = "1"
@@ -1199,11 +1195,15 @@ function Montar-Tarja {
             $saida[$p + "percentual"] = Formatar-Percentual $c.Percentual
             $saida[$p + "barra_px"] = $largura
             $saida[$p + "cor"] = Obter-Cor $c.Partido
-            $saida[$p + "eleito"] = $c.Eleito
+            # "eleito" sai 100 ou 0 (6.1). O manual do CastaliaCG ("Histograms
+            # with the SHAPE object"): Shape ligado ao DataSource le o valor como
+            # PERCENTUAL (0 a 100) da largura com que foi criado, e nao ha como
+            # ligar visibilidade a um campo. Shape do selo ligado aqui: 100
+            # aparece inteiro, 0 some. Era 1/0 - 1 viraria 1% da largura.
+            $saida[$p + "eleito"] = $(if ($c.Eleito -eq "1") { "100" } else { "0" })
             # Campo de TEXTO para o selo: a cena vincula um objeto de texto
             # aqui e ele aparece sozinho quando o TSE declara o eleito. Quem
-            # preferir um grafico pronto usa o campo "eleito" (1 ou 0) na
-            # visibilidade. Os dois existem porque os geradores diferem.
+            # preferir um grafico pronto liga um Shape no campo "eleito" (100/0).
             # NAO chamar esta variavel de $rotuloEleito: no PowerShell ela
             # seria a MESMA que $RotuloEleito, que guarda o texto do config -
             # e a atribuicao de "" apagaria o texto antes de usa-lo.
@@ -1213,8 +1213,6 @@ function Montar-Tarja {
             $seloEleito = ""
             if ($c.Eleito -eq "1") { $seloEleito = $RotuloEleito }
             $extras[$p + "eleito_rotulo"] = $seloEleito
-            # Shape do selo: 100 = largura inteira (aparece), 0 = some.
-            $extras[$p + "eleito_largura"] = $(if ($c.Eleito -eq "1") { 100 } else { 0 })
             $situacao = ""
             if (Tem-Propriedade $c "Situacao") { $situacao = "$($c.Situacao)" }
             $extras[$p + "situacao"] = $situacao
@@ -1645,7 +1643,7 @@ function Mostrar-No-Ar {
         foreach ($i in 1, 2) {
             if ("$($Tarja["cand${i}_visivel"])" -eq "1") {
                 $parte = "{0}o {1} {2}" -f $i, $Tarja["cand${i}_nome"], $Tarja["cand${i}_percentual"]
-                if ("$($Tarja["cand${i}_eleito"])" -eq "1") { $parte += " ELEITO" }
+                if ("$($Tarja["cand${i}_eleito"])" -eq "100") { $parte += " ELEITO" }
                 $partes += $parte
             }
         }
@@ -2296,7 +2294,7 @@ if ($Modelos) {
         $vazia = [ordered]@{}
         foreach ($campo in (Ordem-Do-Modelo $modelo.modelo)) {
             if ($campo -eq "cargo") { $vazia[$campo] = $modelo.cargo }
-            elseif ($campo -like "*_barra_px" -or $campo -like "*_eleito_largura") { $vazia[$campo] = 0 }
+            elseif ($campo -like "*_barra_px") { $vazia[$campo] = 0 }
             elseif ($campo -like "*_visivel" -or $campo -like "*_eleito" -or
                     $campo -like "*_foto_existe" -or $campo -eq "apuracao_encerrada") { $vazia[$campo] = "0" }
             else { $vazia[$campo] = "" }
