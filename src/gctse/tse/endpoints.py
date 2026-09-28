@@ -126,5 +126,11 @@ class Endpoints:
     def config_eleicoes(self) -> str:
         return montar(self.p_config_eleicoes, **self._comuns())
 
-    def municipios(self, uf: str) -> str:
-        return montar(self.p_municipios, **self._comuns(), uf=uf.strip().lower())
+    def municipios(self, uf: str, cargo: int = 3) -> str:
+        """Config de municipios de uma UF.
+
+        Cargo 3 por padrao porque a lista de municipios acompanha a eleicao
+        ESTADUAL. Sem isto ficava com a eleicao legada - vazia desde que os
+        codigos passaram a ser por cargo - e montava '...-e000000-i.json'.
+        """
+        return montar(self.p_municipios, **self._comuns(cargo), uf=uf.strip().lower())

@@ -8,14 +8,29 @@ log:
   arquivo: logs/gctse.log  # rotaciona a meia-noite, guarda 14 dias
 
 # --- Origem dos dados no TSE ------------------------------------------------
-# ATENCAO: ciclo/pleito/eleicao de 2026 so existem quando o TSE publica a
-# configuracao do pleito. Rode 'gctse descobrir' para ler os codigos reais e
-# preencha aqui. Os valores abaixo sao um exemplo, nao os codigos oficiais.
+# UM PLEITO, VARIAS ELEICOES. O pleito e a data; a eleicao e o conjunto de
+# cargos, e cada cargo so existe no arquivo da SUA. No 1o turno de 2026:
+#
+#   3220  pleito de 04/10/2026
+#   6257  Eleicao Geral Federal ....... presidente, senador, deputado federal
+#   6259  Eleicoes Gerais Estaduais ... governador, dep. estadual e distrital
+#   6261  Eleicao Conselho Distrital
+#
+# Pedir governador com o codigo federal devolve 404 - e o TSE bloqueia o IP
+# por 10 minutos depois de muitos 404. Por isso a eleicao vai por conjunto de
+# cargos, e o sistema escolhe sozinho pelo cargo do alvo.
+#
+# Rode 'gctse descobrir' para ler os codigos do proprio TSE.
 tse:
   base_url: https://resultados.tse.jus.br/oficial
   ciclo: ele2026
-  pleito: "000"     # <- preencher com o codigo do pleito (gctse descobrir)
-  eleicao: "000"    # <- preencher com o codigo da eleicao
+  pleito: "3220"
+  eleicoes:
+    federal: "6257"
+    estadual: "6259"
+  # Escape, se algum dia o TSE dividir os cargos de outro jeito: aponta um
+  # cargo especifico e sobrepoe a regra acima.
+  # eleicao_por_cargo: {5: "6261"}
   turno: 1
   # Padroes de URL. So mexa se o TSE mudar o layout dos caminhos em 2026.
   padroes:

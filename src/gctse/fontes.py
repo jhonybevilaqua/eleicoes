@@ -18,6 +18,11 @@ from .tse.endpoints import Endpoints
 
 log = logging.getLogger("gctse.fonte")
 
+# Fontes que NAO falam com o TSE. Listadas em vez de 'tudo que nao for tse'
+# porque 'criar_fonte' cai no TSE para qualquer valor desconhecido: quem
+# precisa saber se ha rede envolvida tem de perguntar pelo lado seguro.
+FONTES_LOCAIS = frozenset({"simulador", "em-branco", "arquivo"})
+
 
 class Fonte(Protocol):
     def obter(self, abrangencia: str, cargo: int, turno: int) -> Resposta: ...

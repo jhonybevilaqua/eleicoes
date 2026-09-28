@@ -126,6 +126,8 @@ class Coletor:
         return self.cliente.buscar_json(self.endpoints.resultado(praca, self.cfg.cargo))
 
     def _buscar(self, praca: str) -> str:
+        # 'self.local' cobre simulador e em-branco; qualquer outra coisa fala
+        # com o TSE de verdade e precisa do freio.
         if self.local is None and not self.compasso.pode_tentar(praca):
             # ainda na espera do 404 anterior: nao bate na porta de novo
             return "aguardando-publicacao"
@@ -138,11 +140,18 @@ class Coletor:
             self._falhas[praca] = falhas
             if resposta.status == 404:
                 espera = self.compasso.registrar_404(praca)
+                seguidos = self.compasso.espera_de(praca)
                 if falhas == 1:
                     log.info("praca '%s': boletim ainda nao publicado", praca)
                 elif espera:
                     log.debug("praca '%s': %d 404 seguidos, proxima em %.0fs",
-                              praca, self.compasso.espera_de(praca), espera)
+                              praca, seguidos, espera)
+                # 404 que nao passa e quase sempre URL errada - codigo de
+                # eleicao do cargo trocado, por exemplo. So no debug, isso
+                # viraria uma noite inteira de tela vazia em silencio.
+                if seguidos == int(self.cfg.coleta.get("alerta_404_seguidos", 10)):
+                    log.warning("praca '%s': %d 404 seguidos - confira a URL: %s",
+                                praca, seguidos, resposta.url)
             elif falhas == int(self.cfg.coleta.get("falhas_para_alerta", 3)):
                 log.warning("praca '%s' falhou %dx seguidas: %s", praca, falhas,
                             resposta.erro or resposta.status)

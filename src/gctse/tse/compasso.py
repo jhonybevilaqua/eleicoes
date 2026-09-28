@@ -59,8 +59,14 @@ class Compasso:
         if seguidos <= self.tolerancia:
             self._proxima.pop(chave, None)
             return 0.0
-        # dobra a cada 404 alem da tolerancia, ate o teto
-        espera = min(self.teto, self.base * (2 ** (seguidos - self.tolerancia - 1)))
+        # Dobra a cada 404 alem da tolerancia, ate o teto. O expoente e
+        # limitado ANTES da potencia: 2**n cresce sem limite e, num arquivo
+        # que nunca publique, estouraria em OverflowError depois de uns tres
+        # dias - e a excecao deixaria o prazo antigo em pe, devolvendo a praca
+        # ao ritmo sem freio, que e o oposto do que este codigo existe para
+        # fazer.
+        passos = min(30, max(0, seguidos - self.tolerancia - 1))
+        espera = min(self.teto, self.base * (2 ** passos))
         self._proxima[chave] = self._agora(agora) + espera
         return espera
 

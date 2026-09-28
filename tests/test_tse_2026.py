@@ -138,3 +138,49 @@ def test_a_espera_e_por_praca_e_nao_atrasa_as_outras():
     compasso.registrar_404("ac", 0.0)
     assert not compasso.pode_tentar("ac", 0.0)
     assert compasso.pode_tentar("sp", 0.0)
+
+
+# --- as pontas soltas da migracao ----------------------------------------
+
+def test_espera_nao_estoura_em_arquivo_que_nunca_publica():
+    """2**n cresce sem limite; tres dias de 404 davam OverflowError.
+
+    Pior do que o erro: ele estourava DEPOIS de contar o 404 e antes de
+    regravar o prazo, deixando o prazo velho em pe - a praca voltava ao
+    ritmo sem freio, o oposto do que este codigo existe para fazer.
+    """
+    compasso = Compasso(tolerancia=0, base_segundos=30, teto_segundos=300)
+    esperas = [compasso.registrar_404("br", 0.0) for _ in range(2000)]
+    assert esperas[0] == 30            # a rampa comeca na base
+    assert esperas[-1] == 300          # e termina no teto, sem estourar
+    assert max(esperas) == 300
+    assert not compasso.pode_tentar("br", 0.0)
+
+
+def test_config_de_referencia_monta_a_url_de_cada_cargo():
+    """Comecar pelo config.example nao pode reproduzir o bug do governador."""
+    import yaml
+
+    caminho = Path(__file__).resolve().parents[1] / "config" / "config.example.yaml"
+    tse = yaml.safe_load(caminho.read_text(encoding="utf-8"))["tse"]
+    endpoints = Endpoints(tse)
+    assert endpoints.eleicao_do_cargo(1) != endpoints.eleicao_do_cargo(3)
+    for cargo in (1, 3, 5):
+        assert "e000000" not in endpoints.resultado("br", cargo)
+
+
+def test_config_de_municipios_usa_a_eleicao_estadual():
+    """Ficava com a eleicao legada, vazia, e montava '...-e000000-i.json'."""
+    assert "e006259" in Endpoints(PLEITO_2026).municipios("pr")
+
+
+def test_fonte_escrita_errada_mantem_o_freio_ligado():
+    """'criar_fonte' cai no TSE de verdade para qualquer valor desconhecido.
+
+    Testar 'fonte == tse' deixaria um erro de digitacao batendo no TSE com o
+    freio desligado - o pior dos dois mundos.
+    """
+    from gctse.fontes import FONTES_LOCAIS
+
+    assert "tsee" not in FONTES_LOCAIS
+    assert "simulador" in FONTES_LOCAIS and "em-branco" in FONTES_LOCAIS

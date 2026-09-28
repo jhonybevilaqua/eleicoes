@@ -22,7 +22,7 @@ from .config import Alvo, Config
 from .estado import Estado
 from .exporters import criar
 from .exporters.base import Exporter
-from .fontes import criar_fonte
+from .fontes import FONTES_LOCAIS, criar_fonte
 from .tse.compasso import Compasso
 from .historico import Historico, Ponto, projecao, viradas
 from .modelos import Apuracao
@@ -144,8 +144,11 @@ class Pipeline:
     # --- por alvo ---
 
     def processar_alvo(self, alvo: Alvo) -> str:
-        se_tse = str(self.cfg.coleta.get("fonte", "tse")).lower() == "tse"
-        if se_tse and not self.compasso.pode_tentar(alvo.nome):
+        # Negativo, nao positivo: 'criar_fonte' devolve o TSE de verdade para
+        # qualquer valor que nao reconheca, entao um 'fonte' escrito errado
+        # bateria no TSE COM o freio desligado - o pior dos dois mundos.
+        local = str(self.cfg.coleta.get("fonte", "tse")).lower() in FONTES_LOCAIS
+        if not local and not self.compasso.pode_tentar(alvo.nome):
             # ainda na espera do 404 anterior: nao bate na porta de novo
             return "aguardando-publicacao"
         resposta = self.fonte.obter(alvo.abrangencia, alvo.cargo, alvo.turno)
@@ -160,11 +163,27 @@ class Pipeline:
             limite = int(self.cfg.coleta.get("falhas_para_alerta", 3))
             if resposta.status == 404:
                 espera = self.compasso.registrar_404(alvo.nome)
+                seguidos = self.compasso.espera_de(alvo.nome)
                 if falhas == 1:
                     log.info("alvo '%s': boletim ainda nao publicado (%s)", alvo.nome, resposta.url)
                 elif espera:
                     log.debug("alvo '%s': %d 404 seguidos, proxima tentativa em %.0fs",
-                              alvo.nome, self.compasso.espera_de(alvo.nome), espera)
+                              alvo.nome, seguidos, espera)
+                # 404 que nao passa e quase sempre URL errada - codigo de
+                # eleicao do cargo trocado, por exemplo. Ficar so no debug
+                # transformaria isso numa noite silenciosa de tela vazia, que
+                # e exatamente o que nao pode acontecer.
+                if seguidos == int(self.cfg.coleta.get("alerta_404_seguidos", 10)):
+                    log.warning(
+                        "alvo '%s': %d 404 seguidos - confira a URL: %s",
+                        alvo.nome, seguidos, resposta.url,
+                    )
+                    self.alertas.enviar(
+                        f"falha:{alvo.nome}",
+                        f"alvo '{alvo.nome}': {seguidos} respostas 404 seguidas. "
+                        f"Confira o codigo da eleicao deste cargo. URL: {resposta.url}",
+                        "ERRO",
+                    )
             elif falhas >= limite:
                 self.alertas.enviar(
                     f"falha:{alvo.nome}",
