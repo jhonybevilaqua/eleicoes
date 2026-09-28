@@ -35,7 +35,7 @@ param(
 # Versao impressa na partida e no painel. Sem carimbo, "qual versao esta
 # rodando ai?" so se responde abrindo arquivo e comparando a olho - e no
 # meio de um teste com janela de horario ninguem faz isso.
-$Versao = "5.8 - 28/09/2026"
+$Versao = "5.9 - 28/09/2026"
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
@@ -291,13 +291,21 @@ $OrdemBase = @(
     "cand2_visivel", "cand2_nome", "cand2_partido", "cand2_percentual",
     "cand2_barra_px", "cand2_cor", "cand2_eleito"
 )
+# cand1/2_eleito_largura (5.9): 100 ou 0. O manual do CastaliaCG ("Histograms
+# with the SHAPE object") diz que Shape ligado ao DataSource le o valor como
+# PERCENTUAL (0 a 100) da largura com que foi criado. Nao existe ligar a
+# VISIBILIDADE a um campo - entao o selo grafico de ELEITO e um Shape ligado
+# aqui: 100 aparece inteiro, 0 some. O "eleito" (1/0) nao serve para isso: 1
+# viraria um Shape com 1% da largura.
 $OrdemMajoritaria = $OrdemBase + @("cand1_eleito_rotulo", "cand2_eleito_rotulo",
                                    "cand1_situacao", "cand2_situacao",
-                                   "apuracao_encerrada")
+                                   "apuracao_encerrada",
+                                   "cand1_eleito_largura", "cand2_eleito_largura")
 $OrdemPresidente  = $OrdemBase + @(
     "cand1_foto", "cand1_foto_existe", "cand1_foto_fixa", "cand1_eleito_rotulo",
     "cand2_foto", "cand2_foto_existe", "cand2_foto_fixa", "cand2_eleito_rotulo",
-    "cand1_situacao", "cand2_situacao", "apuracao_encerrada"
+    "cand1_situacao", "cand2_situacao", "apuracao_encerrada",
+    "cand1_eleito_largura", "cand2_eleito_largura"
 )
 
 function Ordem-Do-Modelo {
@@ -1088,12 +1096,17 @@ function Montar-Tarja {
             $saida[$p + "cor"] = ""
             $saida[$p + "eleito"] = "0"
             $extras[$p + "eleito_rotulo"] = ""
+            $extras[$p + "eleito_largura"] = 0
             $extras[$p + "situacao"] = ""
         } else {
             $largura = 0
             if ($trilho -gt 0) {
                 $largura = [int] [math]::Round($trilho * $c.Percentual / 100.0)
-                if ($c.Percentual -gt 0 -and $largura -lt 6) { $largura = 6 }
+                # Minimo de 1% do trilho, para candidato com voto nao sumir.
+                # Com trilho 560 da 6 (o valor fixo de antes); com trilho 100
+                # - o que o Shape do Castalia pede - da 1, e nao infla 4% em 6%.
+                $minimoBarra = [math]::Max(1, [int] [math]::Round($trilho / 100.0))
+                if ($c.Percentual -gt 0 -and $largura -lt $minimoBarra) { $largura = $minimoBarra }
             }
             # Candidato sem nome vira linha em branco na tela, que e pior do
             # que slot escondido: o operador ve um espaco vazio no ar e nao
@@ -1114,6 +1127,7 @@ function Montar-Tarja {
                 $saida[$p + "cor"] = ""
                 $saida[$p + "eleito"] = "0"
                 $extras[$p + "eleito_rotulo"] = ""
+                $extras[$p + "eleito_largura"] = 0
                 $extras[$p + "situacao"] = ""
                 continue
             }
@@ -1152,6 +1166,8 @@ function Montar-Tarja {
             $seloEleito = ""
             if ($c.Eleito -eq "1") { $seloEleito = $RotuloEleito }
             $extras[$p + "eleito_rotulo"] = $seloEleito
+            # Shape do selo: 100 = largura inteira (aparece), 0 = some.
+            $extras[$p + "eleito_largura"] = $(if ($c.Eleito -eq "1") { 100 } else { 0 })
             $situacao = ""
             if (Tem-Propriedade $c "Situacao") { $situacao = "$($c.Situacao)" }
             $extras[$p + "situacao"] = $situacao
@@ -1573,14 +1589,17 @@ function Mostrar-No-Ar {
         # So os numeros contam: a hora da tarja muda todo minuto e faria a
         # mesma linha sair de novo sem nada ter mudado.
         $assinatura = "$($Tarja["cargo"])|$($Tarja["abrangencia"])|$($Tarja["apuracao_pct"])|" +
-                      "$($Tarja["cand1_nome"])|$($Tarja["cand1_percentual"])|$($Tarja["cand2_nome"])|$($Tarja["cand2_percentual"])"
+                      "$($Tarja["cand1_nome"])|$($Tarja["cand1_percentual"])|$($Tarja["cand2_nome"])|$($Tarja["cand2_percentual"])|" +
+                      "$($Tarja["cand1_eleito"])|$($Tarja["cand2_eleito"])"
         $chaveM = "$($Tarja["cargo"])"
         if ($script:UltimoMostrado.ContainsKey($chaveM) -and $script:UltimoMostrado[$chaveM] -eq $assinatura) { return }
         $script:UltimoMostrado[$chaveM] = $assinatura
         $partes = @()
         foreach ($i in 1, 2) {
             if ("$($Tarja["cand${i}_visivel"])" -eq "1") {
-                $partes += ("{0}o {1} {2}" -f $i, $Tarja["cand${i}_nome"], $Tarja["cand${i}_percentual"])
+                $parte = "{0}o {1} {2}" -f $i, $Tarja["cand${i}_nome"], $Tarja["cand${i}_percentual"]
+                if ("$($Tarja["cand${i}_eleito"])" -eq "1") { $parte += " ELEITO" }
+                $partes += $parte
             }
         }
         # Tarja sem candidato NAO e "OK": sai em amarelo, para ninguem ler
@@ -2230,7 +2249,7 @@ if ($Modelos) {
         $vazia = [ordered]@{}
         foreach ($campo in (Ordem-Do-Modelo $modelo.modelo)) {
             if ($campo -eq "cargo") { $vazia[$campo] = $modelo.cargo }
-            elseif ($campo -like "*_barra_px") { $vazia[$campo] = 0 }
+            elseif ($campo -like "*_barra_px" -or $campo -like "*_eleito_largura") { $vazia[$campo] = 0 }
             elseif ($campo -like "*_visivel" -or $campo -like "*_eleito" -or
                     $campo -like "*_foto_existe" -or $campo -eq "apuracao_encerrada") { $vazia[$campo] = "0" }
             else { $vazia[$campo] = "" }
@@ -2648,7 +2667,8 @@ if ($Validar) {
                 if ($b.Candidatos.Count -lt $k) { continue }
                 $pc = $b.Candidatos[$k - 1].Percentual
                 $esperada = [int] [math]::Round($trilho * $pc / 100.0)
-                if ($pc -gt 0 -and $esperada -lt 6) { $esperada = 6 }
+                $minimoV = [math]::Max(1, [int] [math]::Round($trilho / 100.0))
+                if ($pc -gt 0 -and $esperada -lt $minimoV) { $esperada = $minimoV }
                 Confere "${k}a barra ($pc% de ${trilho}px)" $esperada $tarja."cand${k}_barra_px"
             }
         }

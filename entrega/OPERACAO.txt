@@ -41,7 +41,7 @@
  PRESIDENTE - praca fixa, sem escolha
    TARJAS\tarja-presidente.json
    Sempre BRASIL. Atualiza sozinho a cada ciclo. Nao tem seletor porque
-   nao ha o que selecionar. Trilho da barra: 300px.
+   nao ha o que selecionar. Barra: 0 a 100 (% da largura do Shape).
 
  GOVERNADOR - praca escolhida pelo operador
    TARJAS\tarja-governador.json

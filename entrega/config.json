@@ -34,7 +34,7 @@
       "abrangencia": "br",
       "cargo": 1,
       "praca": "BRASIL",
-      "trilho_px": 300
+      "trilho_px": 100
     }
   ],
   "texto": {
@@ -409,13 +409,13 @@
         "arquivo": "tarja-governador",
         "modelo": "majoritaria",
         "cargo": 3,
-        "trilho_px": 560
+        "trilho_px": 100
       },
       {
         "arquivo": "tarja-senador",
         "modelo": "majoritaria",
         "cargo": 5,
-        "trilho_px": 560
+        "trilho_px": 100
       }
     ],
     "pracas": [

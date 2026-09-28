@@ -123,7 +123,7 @@
 
     Ele pega o boletim CRU do TSE e compara, numero por numero, com o
     que esta no arquivo da tarja: praca, % de urnas, nome, partido,
-    percentual e a largura da barra em pixels.
+    percentual e a largura da barra (0 a 100).
 
     Sai a conferencia lado a lado e o veredito no fim. Grava tudo em
     VALIDACAO.txt. Na noite da apuracao, o equivalente e o

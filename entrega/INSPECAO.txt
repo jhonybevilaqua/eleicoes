@@ -1,5 +1,40 @@
 ===========================================================================
- LAUDO DE INSPECAO - gctse 5.8
+ LAUDO DE INSPECAO - gctse 5.9
+ 28/09/2026 - selo de ELEITO no Castalia, lido no manual do CastaliaCG
+===========================================================================
+
+ O QUE O MANUAL DIZ
+
+   "Histograms with the SHAPE object": Shape ligado ao DataSource le o
+   valor como PERCENTUAL (0 a 100) da largura com que foi criado. O manual
+   nao preve ligar a visibilidade de um objeto a um campo.
+
+ CAMPO NOVO - cand1_eleito_largura / cand2_eleito_largura (100 ou 0)
+
+   No FIM das tres tarjas: 24 -> 26 colunas (governador, senador),
+   30 -> 32 (presidente). Nenhuma coluna existente mudou de posicao.
+   Shape do selo ligado aqui: 100 aparece inteiro, 0 some. O texto
+   "ELEITO" continua em cand1_eleito_rotulo.
+
+ BARRA - trilho_px 560/300 -> 100
+
+   cand1_barra_px saia em PIXELS (48% -> 269). Pelo manual, um Shape
+   leria 269 como 269% da largura. Com trilho 100 o campo vira o proprio
+   percentual do candidato (48% -> 48). Minimo de barra passou de 6 fixo
+   para 1% do trilho: com 560 continua 6, com 100 e 1 - senao 4,39%
+   viraria 6.
+
+ VERIFICADO NA 5.9
+
+   Governador eleito: rotulo ELEITO, largura 100; 2o: vazio, 0         OK
+   Senador com as duas vagas: 100 e 100                                OK
+   Presidente sem eleito: 0 e 0                                        OK
+   Barra: 11,36% -> 11, 4,39% -> 4                                     OK
+   Modelos vazios: 26/26/32, diff so acrescenta as 2 linhas no fim     OK
+   Regressao completa (validador 36/0 com trilho 100)            22 / 0 OK
+
+===========================================================================
+ LAUDO ANTERIOR - gctse 5.8
  28/09/2026 - "se nao tiver dados do TSE, preciso de uma msg que me avise"
 ===========================================================================
 

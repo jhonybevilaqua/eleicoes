@@ -1,13 +1,13 @@
 ===========================================================================
  CAMPOS DE CADA ARQUIVO - referencia para vincular no Castalia
- gctse 5.8
+ gctse 5.9
 ===========================================================================
 
  REGRA: as 19 PRIMEIRAS posicoes sao iguais nas tres tarjas e NUNCA
  mudam de lugar. Campo novo entra sempre depois da 19.
 
 ---------------------------------------------------------------------------
- TARJA-GOVERNADOR.JSON e TARJA-SENADOR.JSON   (24 campos)
+ TARJA-GOVERNADOR.JSON e TARJA-SENADOR.JSON   (26 campos)
  Uma praca por vez, a que o painel mandou.
 ---------------------------------------------------------------------------
     1. cargo                  PRESIDENTE / GOVERNADOR / SENADOR
@@ -19,14 +19,14 @@
     7. cand1_nome             nome de urna, ja cortado no limite
     8. cand1_partido          sigla do partido
     9. cand1_percentual       % dos VOTOS VALIDOS do candidato
-   10. cand1_barra_px         largura da barra EM PIXELS, ja calculada
+   10. cand1_barra_px         0 a 100 = % do voto -> Shape da barra
    11. cand1_cor              cor do partido, #rrggbb
    12. cand1_eleito           1 ou 0  -> VISIBILIDADE de um selo grafico
    13. cand2_visivel          1 mostra, 0 esconde  -> visibilidade do grupo
    14. cand2_nome             nome de urna, ja cortado no limite
    15. cand2_partido          sigla do partido
    16. cand2_percentual       % dos VOTOS VALIDOS do candidato
-   17. cand2_barra_px         largura da barra EM PIXELS, ja calculada
+   17. cand2_barra_px         0 a 100 = % do voto -> Shape da barra
    18. cand2_cor              cor do partido, #rrggbb
    19. cand2_eleito           1 ou 0  -> VISIBILIDADE de um selo grafico
    20. cand1_eleito_rotulo    ELEITO ou vazio  -> objeto de TEXTO
@@ -34,9 +34,11 @@
    22. cand1_situacao         Valido / Anulado / Anulado sub judice
    23. cand2_situacao         idem, para o 2o colocado
    24. apuracao_encerrada     1 quando o TSE fechou a totalizacao da praca
+   25. cand1_eleito_largura   100 ou 0  -> Shape do selo de ELEITO
+   26. cand2_eleito_largura   100 ou 0  -> Shape do selo de ELEITO
 
 ---------------------------------------------------------------------------
- TARJA-PRESIDENTE.JSON   (30 campos)
+ TARJA-PRESIDENTE.JSON   (32 campos)
  Sempre BRASIL. As 19 primeiras iguais as de cima; depois, foto e selo.
 ---------------------------------------------------------------------------
     1. cargo                  PRESIDENTE / GOVERNADOR / SENADOR
@@ -48,14 +50,14 @@
     7. cand1_nome             nome de urna, ja cortado no limite
     8. cand1_partido          sigla do partido
     9. cand1_percentual       % dos VOTOS VALIDOS do candidato
-   10. cand1_barra_px         largura da barra EM PIXELS, ja calculada
+   10. cand1_barra_px         0 a 100 = % do voto -> Shape da barra
    11. cand1_cor              cor do partido, #rrggbb
    12. cand1_eleito           1 ou 0  -> VISIBILIDADE de um selo grafico
    13. cand2_visivel          1 mostra, 0 esconde  -> visibilidade do grupo
    14. cand2_nome             nome de urna, ja cortado no limite
    15. cand2_partido          sigla do partido
    16. cand2_percentual       % dos VOTOS VALIDOS do candidato
-   17. cand2_barra_px         largura da barra EM PIXELS, ja calculada
+   17. cand2_barra_px         0 a 100 = % do voto -> Shape da barra
    18. cand2_cor              cor do partido, #rrggbb
    19. cand2_eleito           1 ou 0  -> VISIBILIDADE de um selo grafico
    20. cand1_foto             caminho completo da foto do candidato
@@ -69,6 +71,8 @@
    28. cand1_situacao         Valido / Anulado / Anulado sub judice
    29. cand2_situacao         idem, para o 2o colocado
    30. apuracao_encerrada     1 quando o TSE fechou a totalizacao
+   31. cand1_eleito_largura   100 ou 0  -> Shape do selo de ELEITO
+   32. cand2_eleito_largura   100 ou 0  -> Shape do selo de ELEITO
 
 ---------------------------------------------------------------------------
  LISTA-GOVERNADOR.JSON, LISTA-SENADOR.JSON, TARJA-RODIZIO.JSON
@@ -110,10 +114,10 @@
    Nome 1                    cand1_nome
    Partido 1                 cand1_partido
    Percentual 1              cand1_percentual
-   LARGURA da barra 1        cand1_barra_px
+   Shape da barra 1          cand1_barra_px       (0 a 100)
    Cor da barra 1            cand1_cor
    Visibilidade do grupo 1   cand1_visivel
-   Selo de eleito (grafico)  cand1_eleito         (visibilidade)
+   Selo de eleito (Shape)    cand1_eleito_largura (100 aparece, 0 some)
    Selo de eleito (texto)    cand1_eleito_rotulo  (texto)
    Foto 1                    cand1_foto           (so presidente)
    Estado / praca            abrangencia
@@ -122,6 +126,31 @@
    Situacao do voto          cand1_situacao       (ver abaixo)
 
    Idem para o 2o colocado, trocando cand1_ por cand2_.
+
+===========================================================================
+ NO CASTALIA: SHAPE LE PERCENTUAL, NAO PIXEL NEM VISIBILIDADE
+===========================================================================
+
+ Manual do CastaliaCG, "Histograms with the SHAPE object": um Shape ligado
+ ao DataSource le o valor como PERCENTUAL (0 a 100) da largura que ele
+ tinha quando foi criado. O manual nao preve ligar a VISIBILIDADE de um
+ objeto a um campo. Por isso:
+
+ BARRA DO CANDIDATO
+   Desenhe o Shape com a largura TOTAL do trilho (a barra de quem tivesse
+   100%). Ligue em cand1_barra_px. Candidato com 48% -> Shape com 48% da
+   largura. No config.json, trilho_px = 100 nas tres tarjas (antes era
+   560/300, em pixels - o Shape leria 269 como 269% e estouraria a tela).
+
+ SELO DE ELEITO
+   Shape do fundo do selo  -> cand1_eleito_largura  (100 inteiro, 0 some)
+   Texto "ELEITO"          -> cand1_eleito_rotulo   (ELEITO ou vazio)
+   NAO use cand1_eleito (1/0) no Shape: 1 viraria 1% da largura.
+   O Shape do selo nao deve ter borda: com 0 de largura, borda pode
+   deixar um risco na tela.
+
+ Numero no DataSource segue o formato ingles (ponto decimal). Os campos
+ de largura saem inteiros, sem virgula - nao ha o que converter.
 
 ===========================================================================
  A TARJA APARECEU EMBARALHADA NO AR - o que fazer
@@ -160,7 +189,7 @@
 
  1. Vincular texto ao campo 'eleito'. Ele imprime 0 na tela quando o
     candidato nao e eleito - um zero solto ao lado do nome, no ar.
-    Campo eleito -> visibilidade. Campo eleito_rotulo -> texto.
+    Shape do selo -> eleito_largura. Texto -> eleito_rotulo.
 
  2. Apontar o DataSource para lista-governador.json quando se queria
     tarja-governador.json. Nao da erro: o arquivo abre, o Status fica
