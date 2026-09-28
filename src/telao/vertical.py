@@ -94,6 +94,7 @@ class MolduraV:
     """Moldura do retrato: faixa de topo, corpo e rodape discreto."""
 
     def __init__(self, cfg: Config):
+        self.cfg = cfg
         self.base = Moldura(cfg)
         self.fonte = self.base.fonte
         self.fundo = self.base.fundo
@@ -137,16 +138,6 @@ class MolduraV:
 
     def selo(self, dados: Dados) -> str:
         return self.base.selo(dados.nacional)
-
-    def aviso(self, titulo: str) -> str:
-        partes = self.abrir()
-        partes += self.cabecalho(titulo)
-        partes.append(
-            texto(LARGURA / 2, ALTURA / 2, "AGUARDANDO BOLETIM", tamanho=48,
-                  cor=COR_APOIO, ancora="middle", espacamento="2")
-        )
-        partes.append("</svg>")
-        return "\n".join(partes)
 
     def fechar(self, partes: list[str]) -> str:
         partes.append("</svg>")
@@ -210,19 +201,29 @@ def _barra(partes: list[str], y: float, fracao: float, altura: float = 34) -> fl
 # ---------------------------------------------------------------------------
 
 
+def _apoio(ap, dados) -> str:
+    """A linha de apoio: antes do primeiro boletim diz isso, com todas as letras.
+
+    '0,00% das urnas apuradas' seria verdade, mas leria como uma medicao - e
+    ainda nao ha medicao nenhuma.
+    """
+    if dados.sem_boletim:
+        return "aguardando o primeiro boletim"
+    return f"{pct_br(ap.pct_secoes)}% das urnas apuradas"
+
+
 def v_urnas(m: MolduraV, dados: Dados) -> str:
     """Urnas apuradas no Brasil. E o numero que mais se repete no ar."""
     totalizadas, total = dados.total_secoes
-    if not total:
-        return m.aviso(TITULOS["urnas"])
-
-    pct = 100.0 * totalizadas / total
+    pct = 100.0 * totalizadas / total if total else 0.0
     partes = m.abrir()
-    partes += m.cabecalho(
-        TITULOS["urnas"],
-        "no Brasil" if dados.nacional else "soma das praças com boletim",
-        m.selo(dados),
-    )
+    if dados.sem_boletim:
+        apoio = "aguardando o primeiro boletim"
+    elif dados.nacional:
+        apoio = "no Brasil"
+    else:
+        apoio = "soma das praças com boletim"
+    partes += m.cabecalho(TITULOS["urnas"], apoio, m.selo(dados))
 
     partes.append(texto(MARGEM, TOPO + 30, "URNAS TOTALIZADAS", tamanho=34,
                         cor=COR_APOIO, espacamento="5"))
@@ -252,13 +253,10 @@ def v_urnas(m: MolduraV, dados: Dados) -> str:
 
 def v_brancos_nulos(m: MolduraV, dados: Dados) -> str:
     """Brancos e nulos: a rosca grande, com os absolutos embaixo."""
-    ap = dados.nacional
-    if ap is None or not ap.votos_apurados:
-        return m.aviso(TITULOS["brancos-nulos"])
-
+    ap = dados.nacional_ou_vazio(m.cfg.cargo, m.cfg.turno)
     partes = m.abrir()
     partes += m.cabecalho(
-        TITULOS["brancos-nulos"], f"{pct_br(ap.pct_secoes)}% das urnas apuradas", m.selo(dados)
+        TITULOS["brancos-nulos"], _apoio(ap, dados), m.selo(dados)
     )
 
     centro_x, centro_y, raio = LARGURA / 2, 800.0, 260.0
@@ -268,6 +266,14 @@ def v_brancos_nulos(m: MolduraV, dados: Dados) -> str:
         (ap.pct_brancos, COR_BRANCOS, "Brancos", ap.votos_brancos),
         (ap.pct_nulos, COR_NULOS, "Nulos", ap.votos_nulos),
     )
+    # Trilho por baixo das fatias: sem ele, tudo em zero nao desenha rosca
+    # nenhuma e sobra um numero solto no meio da tela. Ver a mesma nota na
+    # tela horizontal.
+    partes.append(
+        f'<circle cx="{centro_x:g}" cy="{centro_y:g}" r="{raio:g}" fill="none" '
+        f'stroke="{COR_LINHA}" stroke-width="112"/>'
+    )
+
     acumulado = 0.0
     for pct, cor, _rotulo, _votos in fatias:
         arco = circunferencia * pct / 100.0
@@ -308,13 +314,10 @@ def v_comparecimento(m: MolduraV, dados: Dados) -> str:
     conteudo desde a hora em que as urnas fecham - e nao fica aguardando
     boletim enquanto o resto do painel ainda esta vazio.
     """
-    ap = dados.nacional
-    if ap is None or not ap.eleitorado_apto:
-        return m.aviso(TITULOS["comparecimento"])
-
+    ap = dados.nacional_ou_vazio(m.cfg.cargo, m.cfg.turno)
     partes = m.abrir()
     partes += m.cabecalho(
-        TITULOS["comparecimento"], f"{pct_br(ap.pct_secoes)}% das urnas apuradas", m.selo(dados)
+        TITULOS["comparecimento"], _apoio(ap, dados), m.selo(dados)
     )
 
     partes.append(texto(MARGEM, TOPO + 30, "FORAM VOTAR", tamanho=34,
@@ -361,14 +364,12 @@ def v_comparecimento(m: MolduraV, dados: Dados) -> str:
 
 def v_placar(m: MolduraV, dados: Dados, limite: int = 5) -> str:
     """Os candidatos em lista vertical - o formato natural do retrato."""
-    ap = dados.nacional
-    if ap is None or not ap.candidatos:
-        return m.aviso(TITULOS["placar"])
-
-    candidatos = ap.candidatos[: max(1, limite)]
+    limite = max(1, limite)
+    ap = dados.nacional_ou_vazio(m.cfg.cargo, m.cfg.turno, limite)
+    candidatos = ap.candidatos[:limite]
     partes = m.abrir()
     partes += m.cabecalho(
-        ap.cargo_nome.upper(), f"{pct_br(ap.pct_secoes)}% das urnas apuradas", m.selo(dados)
+        ap.cargo_nome.upper(), _apoio(ap, dados), m.selo(dados)
     )
 
     topo = TOPO + 40
@@ -410,9 +411,8 @@ def v_mapa(m: MolduraV, mapa: Mapa, dados: Dados) -> str:
     inteiro na largura e ainda sobra altura para a legenda - que na tela
     horizontal precisa ir para o lado.
     """
-    if not dados.estados:
-        return m.aviso(TITULOS["mapa"])
-
+    # Sem estado nenhum o mapa sai inteiro em cinza: as 27 pracas existem e
+    # nenhuma publicou, que e a informacao certa.
     mapa_dados = mapa.dados(dados.estados, "partido")
     partes = m.abrir()
     partes += m.cabecalho(
@@ -475,9 +475,6 @@ def v_estados(m: MolduraV, mapa: Mapa, dados: Dados) -> str:
     A altura do retrato comporta as 27 linhas sem apertar - na horizontal isso
     exigiria duas colunas e letra menor.
     """
-    if not dados.estados:
-        return m.aviso(TITULOS["estados"])
-
     mapa_dados = mapa.dados(dados.estados, "partido")
     partes = m.abrir()
     partes += m.cabecalho(

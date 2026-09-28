@@ -147,12 +147,41 @@ def test_cada_tela_sai_em_1920x1080(tmp_path, tipo):
     assert raiz.get("viewBox") == "0 0 1920 1080"
 
 
-def test_tela_sem_dado_avisa_em_vez_de_sair_preta(tmp_path):
+def test_tela_sem_dado_desenha_a_estrutura_vazia(tmp_path):
+    """Sem boletim, a tela sai INTEIRA com os campos vazios.
+
+    Antes ela virava um titulo e a frase 'aguardando boletim' no meio de uma
+    tela quase preta. Como aviso funcionava; como tela, nao: a arte nao tinha
+    o que conferir e o operador nao via se o desenho estava certo antes de o
+    TSE publicar. Agora desenha barras, rosca, contador e lista, com zeros e
+    travessoes - e nada que o TSE nao tenha mandado.
+    """
     cfg = _cfg(tmp_path)
     vazio = Dados(nacional=None, estados={}, serie=[], total_secoes=(0, 0))
     for tela in cfg.telas:
         svg = desenhar(cfg, tela, vazio)
-        assert "aguardando boletim" in svg, tela.id
+        raiz = ET.fromstring(svg)
+        assert raiz.get("viewBox") == "0 0 1920 1080", tela.id
+        # Medido contra a MESMA tela com dado: a estrutura tem de continuar
+        # inteira, nao encolher para um titulo e um aviso.
+        com_dado = ET.fromstring(
+            desenhar(cfg, tela, _dados(nacional=_ap(), estados=_estados()))
+        )
+        nos_vazio = len(list(raiz.iter()))
+        nos_cheio = len(list(com_dado.iter()))
+        assert nos_vazio >= nos_cheio * 0.6, (
+            f"{tela.id} encolheu: {nos_vazio} nos vazia contra {nos_cheio} com dado"
+        )
+        assert "aguardando" in svg, tela.id
+
+
+def test_tela_sem_dado_nao_inventa_nome_nem_numero(tmp_path):
+    cfg = _cfg(tmp_path)
+    vazio = Dados(nacional=None, estados={}, serie=[], total_secoes=(0, 0))
+    for tela in cfg.telas:
+        svg = desenhar(cfg, tela, vazio)
+        assert "ENSAIO" not in svg, tela.id
+        assert "PART-" not in svg, tela.id
 
 
 def test_estado_sem_boletim_fica_cinza_e_nao_some_do_mapa(tmp_path):
@@ -330,12 +359,29 @@ def test_cada_tela_vertical_sai_em_1080x1920(tmp_path, tipo):
     assert raiz.get("viewBox") == "0 0 1080 1920"
 
 
-def test_tela_vertical_sem_dado_avisa(tmp_path):
+def test_tela_vertical_sem_dado_desenha_a_estrutura_vazia(tmp_path):
+    """Mesma regra da horizontal: estrutura inteira, campos vazios.
+
+    No monitor de cena isto pesa ainda mais - ele fica no ar o tempo todo,
+    inclusive antes do primeiro boletim, e uma tela quase preta girando a cada
+    10 segundos parece equipamento com defeito.
+    """
     from telao.vertical import TIPOS as TIPOS_V, desenhar as desenhar_v
 
+    cfg = _cfg_vertical(tmp_path)
     vazio = Dados(nacional=None, estados={}, serie=[], total_secoes=(0, 0))
     for tipo in TIPOS_V:
-        assert "AGUARDANDO BOLETIM" in desenhar_v(_cfg_vertical(tmp_path), tipo, vazio)
+        svg = desenhar_v(cfg, tipo, vazio)
+        raiz = ET.fromstring(svg)
+        assert raiz.get("viewBox") == "0 0 1080 1920", tipo
+        com_dado = ET.fromstring(
+            desenhar_v(cfg, tipo, _dados(nacional=_ap(), estados=_estados()))
+        )
+        nos_vazio, nos_cheio = len(list(raiz.iter())), len(list(com_dado.iter()))
+        assert nos_vazio >= nos_cheio * 0.6, (
+            f"{tipo} encolheu: {nos_vazio} nos vazia contra {nos_cheio} com dado"
+        )
+        assert "ENSAIO" not in svg and "PART-" not in svg, tipo
 
 
 def test_numero_comprido_encolhe_para_nao_vazar_a_margem(tmp_path):

@@ -16,6 +16,12 @@ Todas sao desenhadas do zero a cada mudanca de boletim e gravadas inteiras -
 nao ha estado parcial em disco. Praca sem boletim aparece em cinza com a sigla
 legivel: buraco no mapa parece erro de arte no ar, cinza informa que o dado
 ainda nao chegou.
+
+SEM BOLETIM NENHUM, a tela sai INTEIRA com os campos vazios: barras, rosca,
+contador e lista no lugar, com zeros e travessoes. Nada e inventado - e a
+mesma estrutura que o TSE vai preencher, so que ainda sem numero. Antes a
+tela encolhia para um titulo e a frase "aguardando boletim", o que funcionava
+como aviso mas nao deixava a arte conferir enquadramento nenhum antes do dia.
 """
 
 from __future__ import annotations
@@ -25,6 +31,8 @@ from typing import Any
 
 from gctse.exporters.mapa import ExporterMapa
 from gctse.historico import Ponto, projecao
+from gctse.simulador import boletim_em_branco
+from gctse.tse.parser import analisar
 from gctse.malha_br import CENTRO, CONTORNO, CREDITO, LEGENDA_EXTERNA, NOMES
 from gctse.modelos import Apuracao
 from gctse.util.svg import (
@@ -148,18 +156,6 @@ class Moldura:
             return cor_de_reserva(sum(ord(c) for c in sigla))
         return self.cor_padrao or cor_de_reserva(0)
 
-    def aviso(self, titulo: str, motivo: str) -> str:
-        """Tela sem dado: diz o que falta, em vez de sair preta.
-
-        Preto no ar parece cabo solto e manda o operador procurar defeito no
-        lugar errado.
-        """
-        partes = self.abrir()
-        partes += self.cabecalho(titulo)
-        partes.append(texto(MARGEM, ALTURA / 2, motivo, tamanho=44, cor=COR_APOIO))
-        partes.append("</svg>")
-        return "\n".join(partes)
-
     def fechar(self, partes: list[str]) -> str:
         partes.append("</svg>")
         return "\n".join(partes)
@@ -246,6 +242,18 @@ def _mapa_reduzido(dados: dict, x: float, y: float, escala: float) -> list[str]:
     return partes
 
 
+def _apoio(ap: Apuracao, dados) -> str:
+    """A linha abaixo do titulo.
+
+    Antes do primeiro boletim ela diz isso com todas as letras. Escrever
+    '0,00% das urnas totalizadas' seria verdade, mas leria como uma medicao -
+    e nao ha medicao nenhuma ainda.
+    """
+    if dados.sem_boletim:
+        return "aguardando o primeiro boletim"
+    return f"{ap.abrangencia_nome}  |  {pct_br(ap.pct_secoes)}% das urnas totalizadas"
+
+
 # ---------------------------------------------------------------------------
 # As telas
 # ---------------------------------------------------------------------------
@@ -253,15 +261,14 @@ def _mapa_reduzido(dados: dict, x: float, y: float, escala: float) -> list[str]:
 
 def tela_lideranca(moldura: Moldura, mapa: Mapa, tela: Tela, dados) -> str:
     """Mapa do Brasil pintado pela cor do partido de quem lidera cada estado."""
-    if not dados.estados:
-        return moldura.aviso(tela.titulo or "LIDERANÇA POR ESTADO", "aguardando boletim")
+    # Sem estado nenhum o mapa sai inteiro em cinza, que ja e a resposta
+    # certa: as 27 pracas existem e nenhuma publicou. Melhor do que a tela
+    # quase vazia que ficava aqui antes.
     return mapa.desenhar(dados.estados, "partido", tela.titulo or "LIDERANÇA POR ESTADO")
 
 
 def tela_apuracao_estados(moldura: Moldura, mapa: Mapa, tela: Tela, dados) -> str:
     """O mesmo mapa, pintado pelo percentual de urnas totalizadas."""
-    if not dados.estados:
-        return moldura.aviso(tela.titulo or "APURAÇÃO POR ESTADO", "aguardando boletim")
     return mapa.desenhar(dados.estados, "apuracao", tela.titulo or "APURAÇÃO POR ESTADO")
 
 
@@ -272,9 +279,6 @@ def tela_estados(moldura: Moldura, mapa: Mapa, tela: Tela, dados) -> str:
     perto ('quem ganhou em Sergipe'). Juntos cobrem as duas perguntas que o
     apresentador faz sobre o mesmo quadro.
     """
-    if not dados.estados:
-        return moldura.aviso(tela.titulo or "COMO CADA ESTADO VOTOU", "aguardando boletim")
-
     mapa_dados = mapa.dados(dados.estados, "partido")
     partes = moldura.abrir()
     com_dado = mapa_dados["pracas_com_dado"]
@@ -320,15 +324,13 @@ def tela_estados(moldura: Moldura, mapa: Mapa, tela: Tela, dados) -> str:
 
 def tela_como_votou(moldura: Moldura, tela: Tela, dados) -> str:
     """Validos, brancos e nulos numa rosca; abstencao fora dela."""
-    ap = dados.nacional
     titulo = tela.titulo or "COMO O BRASIL VOTOU"
-    if ap is None or not ap.votos_apurados:
-        return moldura.aviso(titulo, "aguardando boletim")
+    ap = dados.nacional_ou_vazio(moldura.cfg.cargo, moldura.cfg.turno)
 
     partes = moldura.abrir()
     partes += moldura.cabecalho(
         titulo,
-        f"{ap.abrangencia_nome}  |  {pct_br(ap.pct_secoes)}% das urnas totalizadas",
+        _apoio(ap, dados),
         moldura.selo(ap),
     )
 
@@ -338,6 +340,15 @@ def tela_como_votou(moldura: Moldura, tela: Tela, dados) -> str:
         (ap.pct_validos, COR_VALIDOS, "Válidos", ap.votos_validos),
         (ap.pct_brancos, COR_BRANCOS, "Brancos", ap.votos_brancos),
         (ap.pct_nulos, COR_NULOS, "Nulos", ap.votos_nulos),
+    )
+
+    # Trilho da rosca: o anel cinza que fica por baixo das fatias. Sem ele,
+    # boletim com tudo em zero desenha tres arcos de comprimento zero e a
+    # rosca simplesmente nao aparece - a tela fica com um numero solto no
+    # meio do nada. Com o trilho, o desenho existe antes do dado.
+    partes.append(
+        f'<circle cx="{centro_x:g}" cy="{centro_y:g}" r="{raio:g}" fill="none" '
+        f'stroke="{COR_LINHA}" stroke-width="104"/>'
     )
 
     acumulado = 0.0
@@ -387,17 +398,17 @@ def tela_apuracao_nacional(moldura: Moldura, tela: Tela, dados) -> str:
     ap = dados.nacional
     titulo = tela.titulo or "APURAÇÃO NACIONAL"
     totalizadas, total = dados.total_secoes
-    if not total:
-        return moldura.aviso(titulo, "aguardando boletim")
 
     pct = round(100.0 * totalizadas / total, 2) if total else 0.0
     parcial = ap is None      # sem o arquivo nacional, o numero e soma de UFs
+    if dados.sem_boletim:
+        apoio = "aguardando o primeiro boletim"
+    elif parcial:
+        apoio = "soma das praças com boletim"
+    else:
+        apoio = "atualiza sozinho a cada boletim"
     partes = moldura.abrir()
-    partes += moldura.cabecalho(
-        titulo,
-        "soma das praças com boletim" if parcial else "atualiza sozinho a cada boletim",
-        moldura.selo(ap),
-    )
+    partes += moldura.cabecalho(titulo, apoio, moldura.selo(ap))
 
     partes.append(texto(MARGEM, 330, "URNAS TOTALIZADAS", tamanho=34, cor=COR_APOIO,
                         espacamento="6"))
@@ -426,18 +437,15 @@ def tela_apuracao_nacional(moldura: Moldura, tela: Tela, dados) -> str:
 
 def tela_placar(moldura: Moldura, tela: Tela, dados) -> str:
     """Os candidatos, com barra, percentual e votos."""
-    ap = dados.nacional
-    titulo = tela.titulo or (ap.cargo_nome if ap else "PLACAR")
-    if ap is None or not ap.candidatos:
-        return moldura.aviso(titulo, "aguardando boletim")
-
-    limite = int(tela.opcoes.get("limite_candidatos", 6))
-    candidatos = ap.candidatos[: max(1, limite)]
+    limite = max(1, int(tela.opcoes.get("limite_candidatos", 6)))
+    ap = dados.nacional_ou_vazio(moldura.cfg.cargo, moldura.cfg.turno, limite)
+    titulo = tela.titulo or ap.cargo_nome or "PLACAR"
+    candidatos = ap.candidatos[:limite]
 
     partes = moldura.abrir()
     partes += moldura.cabecalho(
         titulo,
-        f"{ap.abrangencia_nome}  |  {pct_br(ap.pct_secoes)}% das urnas totalizadas",
+        _apoio(ap, dados),
         moldura.selo(ap),
     )
 
@@ -501,6 +509,31 @@ class Dados:
             serie=coletor.serie.get("nacional", []),
             total_secoes=coletor.total_secoes(),
         )
+
+    def nacional_ou_vazio(self, cargo: int, turno: int = 1, vagas: int = 6) -> Apuracao:
+        """O boletim nacional, ou um boletim VAZIO com a mesma forma.
+
+        Antes, tela sem boletim virava um titulo e a frase 'aguardando
+        boletim' no meio de uma tela preta. Funciona como aviso, mas nao serve
+        para o que a tela precisa fazer antes do primeiro boletim: mostrar o
+        DESENHO, para a arte conferir o enquadramento e o operador ver que o
+        sistema esta vivo e so nao recebeu nada ainda.
+
+        Devolvendo um boletim vazio, a tela desenha inteira - barras, rosca,
+        contador, lista - com zeros e travessoes no lugar dos numeros. Nada
+        e inventado: e a mesma estrutura que o TSE vai preencher.
+        """
+        if self.nacional is not None:
+            return self.nacional
+        return analisar(
+            boletim_em_branco("br", cargo, max(1, vagas)),
+            abrangencia="br", cargo=cargo, turno=turno,
+        )
+
+    @property
+    def sem_boletim(self) -> bool:
+        """Nenhuma praca respondeu ainda - muda so o texto de apoio."""
+        return self.nacional is None and not self.estados
 
 
 def desenhar(cfg: Config, tela: Tela, dados: Dados) -> str:
