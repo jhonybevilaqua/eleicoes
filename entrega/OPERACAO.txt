@@ -175,6 +175,16 @@
  Faixa vermelha          A COLETA PAROU. A janela preta fechou ou travou.
                          Os numeros no ar estao congelados. Reabra.
 
+ Faixa vermelha          NAO ESTAMOS RECEBENDO DADOS DO TSE. A janela esta
+ "NAO ESTAMOS            aberta, mas o TSE nao responde ha mais de 60 s.
+  RECEBENDO"             Diz a hora do ultimo dado recebido e o ultimo
+                         erro. As tarjas ficam no ultimo dado REAL (ou
+                         vazias, se nada chegou) - nunca numero inventado.
+                         A coleta segue tentando; quando o TSE volta, a
+                         faixa some e a janela escreve em verde
+                         "VOLTAMOS A RECEBER DADOS DO TSE". Rode o
+                         DIAGNOSTICO.bat enquanto a faixa estiver acesa.
+
  Sino no botao do estado chegou boletim novo daquela praca. Apaga sozinho
                          quando voce poe a praca no ar.
 

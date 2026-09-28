@@ -71,6 +71,16 @@
     Se o TSE tiver trocado o codigo do simulado, a janela diz "o codigo
     do config estava velho" e segue sozinha com o codigo novo.
 
+    SE O TSE NAO MANDAR DADO por mais de 60 segundos, aparece um quadro
+    VERMELHO na janela e uma faixa vermelha no painel:
+
+      ATENCAO: NAO ESTAMOS RECEBENDO DADOS DO TSE
+      ultimo dado recebido: 14:03:12 (ha 95 s)
+
+    O sistema NUNCA inventa numero: sem dado do TSE, a tarja fica no
+    ultimo dado real recebido, ou vazia se nada chegou. Quando o TSE
+    volta, a janela escreve em verde "VOLTAMOS A RECEBER DADOS DO TSE".
+
  5. Duplo clique em PAINEL.bat   e abra http://localhost:8099
 
     E por ali que voce escolhe o estado no ar, ve o sino aceso quando

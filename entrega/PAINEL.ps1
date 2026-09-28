@@ -403,12 +403,30 @@ function Montar-Pagina {
                 $frase = "SIMULADO do TSE (fase S, nao e resultado). " + $frase
             }
             $placar = "<div class='$classe'><span>$frase</span></div>"
+            # Coleta VIVA que nao recebe nada do TSE. Sem esta faixa o painel
+            # so acusava a coleta parada, e "a janela esta aberta mas o TSE nao
+            # responde" passava em silencio.
+            if ((Tem-Propriedade $bat "recebendo_tse") -and ($bat.recebendo_tse -eq $false)) {
+                $ultimoTse = "nenhum dado do TSE chegou desde que a coleta abriu - as tarjas estao VAZIAS"
+                if ((Tem-Propriedade $bat "ultimo_dado_tse") -and "$($bat.ultimo_dado_tse)") {
+                    $ultimoTse = "ultimo dado recebido as <b>$(Html-Seguro "$($bat.ultimo_dado_tse)")</b> - " +
+                                 "as tarjas estao PARADAS nesse dado"
+                }
+                $motivoTse = ""
+                if ((Tem-Propriedade $bat "motivo_sem_tse") -and "$($bat.motivo_sem_tse)") {
+                    $motivoTse = "<br><small>ultimo erro: $(Html-Seguro "$($bat.motivo_sem_tse)")</small>"
+                }
+                $paradoAviso = "<div class='parado'><span><b>NAO ESTAMOS RECEBENDO DADOS DO TSE.</b> " +
+                               "$ultimoTse. A coleta continua tentando sozinha. " +
+                               "Rode o <b>DIAGNOSTICO.bat</b>.$motivoTse</span></div>"
+            }
         } catch { }
         if ($idade -gt $limiteIdade) {
             $paradoAviso = "<div class='parado'><span>A COLETA PAROU. O ultimo ciclo fechou ha " +
                            "<b>$idade segundos</b> (o normal e no maximo $limiteIdade). " +
                            "Os numeros no ar estao CONGELADOS - nao sobem mais. " +
-                           "Verifique a janela do INICIAR/TESTE e reabra se estiver fechada.</span></div>"
+                           "Verifique a janela do INICIAR/TESTE e reabra se estiver fechada. " +
+                           "Se ela esta aberta, a coleta pode estar presa esperando o TSE responder.</span></div>"
         }
     }
 

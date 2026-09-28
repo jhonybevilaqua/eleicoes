@@ -1,5 +1,49 @@
 ===========================================================================
- LAUDO DE INSPECAO - gctse 5.7
+ LAUDO DE INSPECAO - gctse 5.8
+ 28/09/2026 - "se nao tiver dados do TSE, preciso de uma msg que me avise"
+===========================================================================
+
+ NOVO: ALARME "NAO ESTAMOS RECEBENDO DADOS DO TSE"
+
+   Antes, o unico aviso forte era no fim do PRIMEIRO ciclo. Se o TSE
+   parasse de responder no meio do teste, a janela mostrava centenas de
+   linhas amarelas soltas e o painel ficava quieto - ele so acusava a
+   coleta PARADA, nao a coleta viva que nao recebe nada.
+
+   Agora, 60 s sem resposta do TSE (ou 3 ciclos, o que for maior):
+     - janela: quadro VERMELHO com a hora do ultimo dado e o ultimo
+       erro, repetido a cada 30 s enquanto durar
+     - linha de resumo de cada ciclo termina com "TSE: SEM RESPOSTA"
+       em vermelho (normal: "TSE: recebendo (ultima resposta HH:MM:SS)")
+     - painel: faixa vermelha "NAO ESTAMOS RECEBENDO DADOS DO TSE"
+     - quando volta: "VOLTAMOS A RECEBER DADOS DO TSE", em verde
+
+   Conta como receber: resposta 200 com JSON valido, ou 304 ("nada
+   mudou" - o TSE respondeu). Nao conta: 404, 403, tempo esgotado, erro
+   de rede, resposta que nao e JSON.
+
+   As falhas pedido a pedido (55 por ciclo com o TSE fora) saem na tela
+   no maximo uma a cada 10 s, com a conta das outras. O log guarda
+   todas. No teste: 544 linhas amarelas viraram 9.
+
+ DADO INVENTADO: NENHUM
+
+   Conferido no codigo: nao ha gerador de numero, sorteio ou simulador
+   interno. Tudo que vai para a tarja vem de boletim do TSE. Sem boletim,
+   a tarja fica no ultimo dado real ou vazia. As tarjas do pacote sao
+   modelos vazios (so as colunas).
+
+ VERIFICADO NA 5.8
+
+   TSE fora desde a partida: alarme em 60 s, "NENHUM", tarjas vazias  OK
+   TSE cai no meio: alarme em 60 s, tarja fica no ultimo dado real    OK
+   TSE volta: "VOLTAMOS A RECEBER" e faixa do painel apaga            OK
+   Painel mostra a faixa vermelha com hora e erro                     OK
+   TSE normal: nenhum alarme falso, resumo "TSE: recebendo"           OK
+   Regressao completa da 5.7                                     22 / 0 OK
+
+===========================================================================
+ LAUDO ANTERIOR - gctse 5.7
  24/09/2026 - "ainda nao consegui receber ontem"
 ===========================================================================
 

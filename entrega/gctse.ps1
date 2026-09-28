@@ -35,7 +35,7 @@ param(
 # Versao impressa na partida e no painel. Sem carimbo, "qual versao esta
 # rodando ai?" so se responde abrindo arquivo e comparando a olho - e no
 # meio de um teste com janela de horario ninguem faz isso.
-$Versao = "5.7 - 24/09/2026"
+$Versao = "5.8 - 28/09/2026"
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
@@ -559,6 +559,86 @@ function Fechar-Resposta {
     } catch { }
 }
 
+# ------------------------------------------------ estamos recebendo do TSE?
+#
+# "Nao estamos recebendo" tem que GRITAR, e continuar gritando enquanto for
+# verdade. Antes o unico aviso forte era no fim do primeiro ciclo; se o TSE
+# parasse de responder no meio do teste, a janela so mostrava linhas
+# amarelas soltas e o painel ficava quieto (ele so acusa a coleta PARADA,
+# nao a coleta viva que nao recebe nada). Conta como RECEBER: resposta 200
+# com JSON valido, ou 304 ("nada mudou" - o TSE respondeu). Nao conta: 404,
+# 403, tempo esgotado, erro de rede, resposta que nao e JSON.
+$script:InicioColeta = Get-Date
+$script:UltimaRespostaTse = $null
+$script:MotivoSemTse = ""
+$script:AlarmeSemTse = $false
+$script:UltimoBannerSemTse = [datetime]::MinValue
+$script:UltimaFalhaNaTela = [datetime]::MinValue
+$script:FalhasCaladas = 0
+
+function Registrar-Resposta-Tse {
+    $script:UltimaRespostaTse = Get-Date
+    if ($script:AlarmeSemTse) {
+        $script:AlarmeSemTse = $false
+        Escrever-Log "VOLTAMOS A RECEBER DADOS DO TSE" "OK"
+    }
+}
+
+function Registrar-Falha-Tse {
+    param([string] $Motivo)
+    $script:MotivoSemTse = "$((Get-Date).ToString('HH:mm:ss')) $Motivo"
+    Conferir-Recebimento
+}
+
+function Limite-Sem-Tse {
+    # Tres ciclos sem resposta nenhuma, e nunca menos de 60 s: um ciclo
+    # perdido e soluco de rede, tres seguidos e problema.
+    $intervaloT = 20
+    if (Tem-Propriedade $cfg "intervalo_segundos") { $intervaloT = [int] $cfg.intervalo_segundos }
+    return [math]::Max(60, 3 * $intervaloT)
+}
+
+function Segundos-Sem-Tse {
+    $desde = $script:InicioColeta
+    if ($null -ne $script:UltimaRespostaTse) { $desde = $script:UltimaRespostaTse }
+    return [int] ((Get-Date) - $desde).TotalSeconds
+}
+
+function Conferir-Recebimento {
+    # Chamada a cada falha e a cada fim de ciclo. Repete o quadro vermelho no
+    # maximo a cada 30 s, para nao virar rolagem que esconde o resto.
+    $seg = Segundos-Sem-Tse
+    if ($seg -lt (Limite-Sem-Tse)) { return }
+    $script:AlarmeSemTse = $true
+    if (((Get-Date) - $script:UltimoBannerSemTse).TotalSeconds -lt 30) { return }
+    $script:UltimoBannerSemTse = Get-Date
+    $ultimo = "NENHUM desde que a coleta abriu"
+    $situacao = "As tarjas estao VAZIAS: nada do TSE chegou ainda."
+    if ($null -ne $script:UltimaRespostaTse) {
+        $ultimo = "$($script:UltimaRespostaTse.ToString('HH:mm:ss')) (ha $seg s)"
+        $situacao = "As tarjas estao PARADAS no ultimo dado recebido."
+    }
+    $motivo = $script:MotivoSemTse
+    if (-not $motivo) { $motivo = "nenhuma resposta do TSE" }
+    if ($motivo.Length -gt 110) { $motivo = $motivo.Substring(0, 110) + "..." }
+    $cor = @{ ForegroundColor = "White"; BackgroundColor = "DarkRed" }
+    Write-Host ""
+    Write-Host ("  {0,-72}" -f "") @cor
+    Write-Host ("  {0,-72}" -f "ATENCAO: NAO ESTAMOS RECEBENDO DADOS DO TSE") @cor
+    Write-Host ("  {0,-72}" -f "ultimo dado recebido: $ultimo") @cor
+    Write-Host ("  {0,-72}" -f $situacao) @cor
+    Write-Host ("  {0,-72}" -f "") @cor
+    Write-Host "  ultimo erro: $motivo" -ForegroundColor Yellow
+    Write-Host "  A coleta continua tentando sozinha. Rode DIAGNOSTICO.bat e envie o DIAGNOSTICO.txt." -ForegroundColor Yellow
+    Write-Host ""
+    # So o registro no arquivo de log; o quadro acima ja foi para a tela.
+    try {
+        $arqL = Join-Path "logs" ("gctse-{0}.log" -f (Get-Date -Format "yyyy-MM-dd"))
+        Add-Content -Path $arqL -Value ("{0} ERRO  NAO ESTAMOS RECEBENDO DADOS DO TSE - ultimo: {1} - {2}" -f
+                                        (Get-Date -Format "HH:mm:ss"), $ultimo, $motivo)
+    } catch { }
+}
+
 function Obter-Boletim {
     # RECUO DEPOIS DE 404. O TSE avisa que requisicao para endereco que nao
     # existe pode gerar bloqueio do IP. E no comeco da noite isso acontece
@@ -598,8 +678,11 @@ function Obter-Boletim {
         }
         if ($codigo -eq 304) {
             if ($script:Ausentes.ContainsKey($Url)) { $script:Ausentes.Remove($Url) }
+            Registrar-Resposta-Tse
             return "SEM-MUDANCA"
         }
+        if ($codigo -gt 0) { Registrar-Falha-Tse "HTTP $codigo em $Url" }
+        else { Registrar-Falha-Tse "$($_.Exception.Message)" }
         if ($codigo -eq 404) {
             # Ainda nao publicado. Anota e espera mais da proxima vez.
             $vezes = 1
@@ -610,7 +693,19 @@ function Obter-Boletim {
             $script:Ausentes[$Url] = @{ vezes = $vezes; pularAte = $script:Ciclo + [int] $espera }
             return $null
         }
-        Escrever-Log "falha em $Url : $($_.Exception.Message)" "AVISO"
+        # Com o TSE fora, sao 55 falhas por ciclo - centenas de linhas
+        # amarelas que enterram o quadro vermelho. Na tela sai no maximo uma
+        # a cada 10 s, com a conta das outras; o arquivo de log guarda todas.
+        $linhaF = "falha em $Url : $($_.Exception.Message)"
+        if (((Get-Date) - $script:UltimaFalhaNaTela).TotalSeconds -ge 10) {
+            if ($script:FalhasCaladas -gt 0) { $linhaF += "  (+$($script:FalhasCaladas) outras falhas nos ultimos segundos)" }
+            $script:FalhasCaladas = 0
+            $script:UltimaFalhaNaTela = Get-Date
+            Escrever-Log $linhaF "AVISO"
+        } else {
+            $script:FalhasCaladas++
+            try { Add-Content -Path (Join-Path "logs" ("gctse-{0}.log" -f (Get-Date -Format "yyyy-MM-dd"))) -Value ("{0} AVISO {1}" -f (Get-Date -Format "HH:mm:ss"), $linhaF) } catch { }
+        }
         return $null
     }
     # Resposta que demora e o primeiro sinal de CDN sob carga - ou de
@@ -643,11 +738,13 @@ function Obter-Boletim {
         $inicio = ""
         if ($texto) { $inicio = $texto.Substring(0, [math]::Min(80, $texto.Length)) -replace '\s+', ' ' }
         Escrever-Log "resposta nao e JSON em $Url : $inicio" "AVISO"
+        Registrar-Falha-Tse "resposta nao e JSON em $Url"
         # ETag de resposta ruim nao serve: forca releitura no proximo ciclo.
         if ($Cache.ContainsKey($Url)) { $Cache.Remove($Url) }
         return $null
     }
     $script:BoletinsOk = $script:BoletinsOk + 1
+    Registrar-Resposta-Tse
     return $objeto
 }
 
@@ -3229,7 +3326,16 @@ do {
         $linhas = Executar-Ciclo $Modo
         $resumo = ($linhas | ForEach-Object { "$($_.Tarja)=$($_.Situacao)" }) -join "  "
         $naJanela = $script:Requisicoes.Count
-        Escrever-Log "$resumo | req: $naJanela no ultimo minuto"
+        Conferir-Recebimento
+        # A linha de resumo diz tambem se o TSE esta respondendo: "publicado"
+        # com o TSE fora e so a hora da tarja mudando, nao dado novo.
+        if ($script:AlarmeSemTse) {
+            Escrever-Log "$resumo | req: $naJanela no ultimo minuto | TSE: SEM RESPOSTA ha $(Segundos-Sem-Tse) s" "ERRO"
+        } elseif ($null -eq $script:UltimaRespostaTse) {
+            Escrever-Log "$resumo | req: $naJanela no ultimo minuto | TSE: aguardando 1a resposta ($(Segundos-Sem-Tse) s)" "AVISO"
+        } else {
+            Escrever-Log "$resumo | req: $naJanela no ultimo minuto | TSE: recebendo (ultima resposta $($script:UltimaRespostaTse.ToString('HH:mm:ss')))"
+        }
 
         # Primeiro ciclo sem nenhum boletim e quase sempre caminho errado, e
         # nao ausencia de dado. Sem este aviso o operador fica olhando tarja
@@ -3293,6 +3399,12 @@ do {
             mudancas_total = $script:MudancasTotal
             ultima_mudanca = $(if ($script:UltimaMudanca) { $script:UltimaMudanca.ToString("HH:mm:ss") } else { "" })
             segundos_sem_mudanca = $(if ($script:UltimaMudanca) { [int] ((Get-Date) - $script:UltimaMudanca).TotalSeconds } else { -1 })
+            # O painel le estes campos para acender a faixa vermelha de
+            # "nao estamos recebendo dados do TSE".
+            recebendo_tse = (-not $script:AlarmeSemTse)
+            ultimo_dado_tse = $(if ($script:UltimaRespostaTse) { $script:UltimaRespostaTse.ToString("HH:mm:ss") } else { "" })
+            segundos_sem_tse = (Segundos-Sem-Tse)
+            motivo_sem_tse = $script:MotivoSemTse
         }
         $null = Escrever-Arquivo (Join-Path $PastaSaida "coleta.json") ($batida | ConvertTo-Json -Depth 4)
     } catch {
