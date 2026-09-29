@@ -35,7 +35,7 @@ param(
 # Versao impressa na partida e no painel. Sem carimbo, "qual versao esta
 # rodando ai?" so se responde abrindo arquivo e comparando a olho - e no
 # meio de um teste com janela de horario ninguem faz isso.
-$Versao = "6.2 - 28/09/2026"
+$Versao = "6.3 - 29/09/2026"
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
@@ -1139,7 +1139,7 @@ function Montar-Tarja {
             $saida[$p + "percentual"] = ""
             $saida[$p + "barra_px"] = 0
             $saida[$p + "cor"] = ""
-            $saida[$p + "eleito"] = "0"
+            $saida[$p + "eleito"] = ""
             $extras[$p + "eleito_rotulo"] = ""
             $extras[$p + "situacao"] = ""
         } else {
@@ -1169,7 +1169,7 @@ function Montar-Tarja {
                 $saida[$p + "percentual"] = ""
                 $saida[$p + "barra_px"] = 0
                 $saida[$p + "cor"] = ""
-                $saida[$p + "eleito"] = "0"
+                $saida[$p + "eleito"] = ""
                 $extras[$p + "eleito_rotulo"] = ""
                     $extras[$p + "situacao"] = ""
                 continue
@@ -1195,12 +1195,12 @@ function Montar-Tarja {
             $saida[$p + "percentual"] = Formatar-Percentual $c.Percentual
             $saida[$p + "barra_px"] = $largura
             $saida[$p + "cor"] = Obter-Cor $c.Partido
-            # "eleito" sai 100 ou 0 (6.1). O manual do CastaliaCG ("Histograms
-            # with the SHAPE object"): Shape ligado ao DataSource le o valor como
-            # PERCENTUAL (0 a 100) da largura com que foi criado, e nao ha como
-            # ligar visibilidade a um campo. Shape do selo ligado aqui: 100
-            # aparece inteiro, 0 some. Era 1/0 - 1 viraria 1% da largura.
-            $saida[$p + "eleito"] = $(if ($c.Eleito -eq "1") { "100" } else { "0" })
+            # "eleito" sai com o TEXTO "ELEITO" ou vazio (6.3), pedido do
+            # operador: o objeto de texto da cena ligado aqui mostra ELEITO
+            # quando o TSE declara, e nada quando nao. Mudou so o VALOR - o
+            # nome do campo e o mesmo desde a 5.8, entao a posicao que o
+            # Castalia guarda nao muda (ver a REGRA la em cima).
+            $saida[$p + "eleito"] = $(if ($c.Eleito -eq "1") { $RotuloEleito } else { "" })
             # Campo de TEXTO para o selo: a cena vincula um objeto de texto
             # aqui e ele aparece sozinho quando o TSE declara o eleito. Quem
             # preferir um grafico pronto liga um Shape no campo "eleito" (100/0).
@@ -1675,7 +1675,7 @@ function Mostrar-No-Ar {
         foreach ($i in 1, 2) {
             if ("$($Tarja["cand${i}_visivel"])" -eq "1") {
                 $parte = "{0}o {1} {2}" -f $i, $Tarja["cand${i}_nome"], $Tarja["cand${i}_percentual"]
-                if ("$($Tarja["cand${i}_eleito"])" -eq "100") { $parte += " ELEITO" }
+                if ("$($Tarja["cand${i}_eleito"])") { $parte += " ELEITO" }
                 $partes += $parte
             }
         }
@@ -2327,7 +2327,7 @@ if ($Modelos) {
         foreach ($campo in (Ordem-Do-Modelo $modelo.modelo)) {
             if ($campo -eq "cargo") { $vazia[$campo] = $modelo.cargo }
             elseif ($campo -like "*_barra_px") { $vazia[$campo] = 0 }
-            elseif ($campo -like "*_visivel" -or $campo -like "*_eleito" -or
+            elseif ($campo -like "*_visivel" -or
                     $campo -like "*_foto_existe" -or $campo -eq "apuracao_encerrada") { $vazia[$campo] = "0" }
             else { $vazia[$campo] = "" }
         }

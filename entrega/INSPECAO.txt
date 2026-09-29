@@ -1,5 +1,27 @@
 ===========================================================================
- LAUDO DE INSPECAO - gctse 6.2
+ LAUDO DE INSPECAO - gctse 6.3
+ 29/09/2026 - "no json principal, converter para ELEITO"
+===========================================================================
+
+ cand1_eleito e cand2_eleito passam a sair com o TEXTO "ELEITO" quando o
+ TSE declara o candidato eleito, e vazios quando nao. O objeto de texto
+ da cena ligado neles mostra ELEITO ou nada - sem condicao, sem Shape.
+ Antes: 1/0 ate a 6.0, 100/0 na 6.1 e 6.2 (aparecia "100" no ar).
+
+ So o VALOR mudou. Os nomes dos campos sao os mesmos da 5.8, entao a
+ posicao que o Castalia guarda para cada vinculo nao muda. O teste de
+ regressao confere os nomes contra os da 5.8.
+
+ VERIFICADO NA 6.3
+
+   Senador, duas vagas "Eleito": ELEITO / ELEITO                     OK
+   Presidente, 1o eleito: ELEITO / vazio                             OK
+   Governador "2o turno": vazio / vazio, aviso na janela              OK
+   Modelos vazios: so "0" -> "" no eleito, nomes iguais aos da 5.8     OK
+   Regressao completa                                            25 / 0 OK
+
+===========================================================================
+ LAUDO ANTERIOR - gctse 6.2
  28/09/2026 - validador: "24 DIVERGENCIAS", TSE com 0% e tarja com 100%
 ===========================================================================
 
