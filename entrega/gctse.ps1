@@ -35,7 +35,7 @@ param(
 # Versao impressa na partida e no painel. Sem carimbo, "qual versao esta
 # rodando ai?" so se responde abrindo arquivo e comparando a olho - e no
 # meio de um teste com janela de horario ninguem faz isso.
-$Versao = "6.4 - 29/09/2026"
+$Versao = "6.5 - 29/09/2026"
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
@@ -212,6 +212,25 @@ function Escrever-Arquivo {
             Start-Sleep -Milliseconds (60 * $tentativas)
         }
     }
+}
+
+function Arquivo-Igual {
+    # O arquivo NO DISCO e o que esta coleta gravou? A impressao guardada so
+    # diz o que ela gravou por ultimo - nao que continua la. Em 29/09 um
+    # DIAGNOSTICO de outro modo rodou um ciclo na mesma pasta e gravou tarja
+    # vazia; a coleta que estava no ar achou que "nada mudou" e nao
+    # regravou, e o vazio ficou no ar. Idem para MODELOS-VAZIOS ou copia
+    # feita a mao com a coleta rodando. Custa ler 6 arquivos pequenos por
+    # ciclo. Em duvida (arquivo preso pelo LiveBoard), responde que confere,
+    # para nao regravar a toa.
+    param([string] $Caminho, [string] $Hash)
+    try {
+        if (-not (Test-Path $Caminho)) { return $false }
+        $atual = [IO.File]::ReadAllText($Caminho, [Text.Encoding]::UTF8)
+        $igual = ((Obter-Hash $atual) -eq $Hash)
+        if (-not $igual) { Escrever-Log "$(Split-Path -Leaf $Caminho) foi alterado por fora da coleta - regravando" "AVISO" }
+        return $igual
+    } catch { return $true }
 }
 
 function Tem-Propriedade {
@@ -1724,8 +1743,9 @@ function Publicar-Selecionada {
         $montada = Montar-Tarja $b $saida
         $json = ($montada | ConvertTo-Json -Depth 5)
         $hash = Obter-Hash $json
-        if ($Impressoes[$saida.arquivo] -ne $hash) {
-            if (Escrever-Arquivo (Join-Path $PastaSaida "$($saida.arquivo).json") $json) {
+        $arqSaida = Join-Path $PastaSaida "$($saida.arquivo).json"
+        if ($Impressoes[$saida.arquivo] -ne $hash -or -not (Arquivo-Igual $arqSaida $hash)) {
+            if (Escrever-Arquivo $arqSaida $json) {
                 $Impressoes[$saida.arquivo] = $hash
                 $publicados += $saida.arquivo
                 Mostrar-No-Ar $montada
@@ -1762,7 +1782,8 @@ function Executar-Ciclo {
                 # linha continua saindo no log e a impressao NAO e guardada,
                 # para que ao descongelar o arquivo seja reescrito na hora.
                 $situacao = "congelada"
-            } elseif ($Impressoes[$tarja.arquivo] -eq $hash) {
+            } elseif ($Impressoes[$tarja.arquivo] -eq $hash -and
+                      (Arquivo-Igual (Join-Path $PastaSaida "$($tarja.arquivo).json") $hash)) {
                 $situacao = "sem mudanca"
             } elseif (Escrever-Arquivo (Join-Path $PastaSaida "$($tarja.arquivo).json") $json) {
                 $Impressoes[$tarja.arquivo] = $hash
@@ -1868,8 +1889,9 @@ function Executar-Ciclo {
             $lista = Montar-Lista $listaCfg $boletins
             $json = ($lista | ConvertTo-Json -Depth 6)
             $hash = Obter-Hash $json
-            if ($Impressoes[$listaCfg.arquivo] -ne $hash) {
-                if (Escrever-Arquivo (Join-Path $PastaSaida "$($listaCfg.arquivo).json") $json) {
+            $arqLista = Join-Path $PastaSaida "$($listaCfg.arquivo).json"
+            if ($Impressoes[$listaCfg.arquivo] -ne $hash -or -not (Arquivo-Igual $arqLista $hash)) {
+                if (Escrever-Arquivo $arqLista $json) {
                     $Impressoes[$listaCfg.arquivo] = $hash
                 }
             }
@@ -2409,11 +2431,15 @@ if ($Diagnostico) {
     D ""
     D "1. A MAQUINA ALCANCA O TSE?"
     D ""
-    $alvosRede = @(
-        @{ rotulo = "SIMULADO"; base = "$($cfg.tse.base_url_simulado)" },
-        @{ rotulo = "OFICIAL "; base = "$UrlOficial" }
-    )
+    # O simulado so e testado no modo TESTE: o pacote do dia da eleicao
+    # nao traz os enderecos do simulado no config.json.
+    $alvosRede = @()
+    if ($Teste -and (Tem-Propriedade $cfg.tse "base_url_simulado") -and $cfg.tse.base_url_simulado) {
+        $alvosRede += @{ rotulo = "SIMULADO"; base = "$($cfg.tse.base_url_simulado)" }
+    }
+    $alvosRede += @{ rotulo = "OFICIAL "; base = "$UrlOficial" }
     $redeOk = @{}
+    $redeCodigo = @{}
     foreach ($alvo in $alvosRede) {
         $url = "$($alvo.base.TrimEnd('/'))/comum/config/ele-c.json"
         $relogio = [Diagnostics.Stopwatch]::StartNew()
@@ -2424,10 +2450,21 @@ if ($Diagnostico) {
             $redeOk[$alvo.rotulo.Trim()] = $true
         } catch {
             $relogio.Stop()
+            $codigoR = 0
+            try { $codigoR = [int] $_.Exception.Response.StatusCode } catch { }
             Fechar-Resposta $_
             $motivo = $_.Exception.Message
             if ($motivo.Length -gt 90) { $motivo = $motivo.Substring(0, 90) }
-            D ("   {0}  NAO RESPONDE  ({1} ms) - {2}" -f $alvo.rotulo, $relogio.ElapsedMilliseconds, $motivo)
+            $redeCodigo[$alvo.rotulo.Trim()] = $codigoR
+            if ($codigoR -eq 404) {
+                # 404 e o servidor do TSE RESPONDENDO que o arquivo nao esta
+                # la. Chamar isso de "nao responde" mandava procurar defeito
+                # na rede (visto em 29/09: o oficial deu 404 depois de ter
+                # dado 200 em 28/09 - o TSE trocando a configuracao).
+                D ("   {0}  ALCANCADO, mas o TSE nao publicou este arquivo agora (HTTP 404, {1} ms)" -f $alvo.rotulo, $relogio.ElapsedMilliseconds)
+            } else {
+                D ("   {0}  NAO RESPONDE  ({1} ms) - {2}" -f $alvo.rotulo, $relogio.ElapsedMilliseconds, $motivo)
+            }
             $redeOk[$alvo.rotulo.Trim()] = $false
         }
     }
@@ -2474,7 +2511,15 @@ if ($Diagnostico) {
     } else {
         D "   NAO. Nenhum ciclo foi completado ainda nesta pasta."
     }
-    if (-not $viva) {
+    if ($modoErrado) {
+        # NUNCA rodar ciclo aqui com outra coleta viva: o ciclo grava na
+        # MESMA pasta TARJAS que o LiveBoard le. Em 29/09 um diagnostico
+        # OFICIAL com o TESTE aberto gravou tarja vazia no ar; no dia 04/10,
+        # o inverso poria numero do SIMULADO na tarja oficial.
+        D ""
+        D "   NAO rodo ciclo aqui: gravaria na mesma pasta que a coleta do"
+        D "   outro modo esta usando, e isso muda o que esta no ar."
+    } elseif (-not $viva) {
         D ""
         D "   Rodando UM ciclo agora, aqui mesmo, para ter o que conferir..."
         $saidaCiclo = & $exe -NoProfile -ExecutionPolicy Bypass -File $PSCommandPath -UmaVez @argsModo | Out-String
@@ -2615,6 +2660,11 @@ if ($Diagnostico) {
     D "==========================================================="
     function Marca { param([bool] $Ok) if ($Ok) { return "[ OK ]" } return "[FALHA]" }
     D (" {0}  recebendo dados do TSE ({1})" -f (Marca $recebe), $modoD)
+    if (-not $Teste -and -not $recebe -and $redeCodigo.ContainsKey("OFICIAL") -and $redeCodigo["OFICIAL"] -eq 404) {
+        D "         -> a maquina ALCANCA o TSE (HTTP 404 = servidor respondeu), mas o"
+        D "            TSE ainda nao publicou os arquivos. Antes da divulgacao isso e"
+        D "            NORMAL. Nao e rede e nao e o sistema."
+    }
     D (" {0}  tarjas COM DADO, gravadas nos ultimos {1} s ({2} de {3} com candidato)" -f (Marca $gravando), $limiteVivo, $comDado, $esperadas)
     D (" {0}  tarjas conferem com o TSE, campo a campo ({1} de {2})" -f (Marca $confere), $okV, ($okV + $falhaV))
     if ($modoErrado) { D " [FALHA]  a coleta que esta rodando e do OUTRO modo - ver item 2" }
@@ -2628,6 +2678,11 @@ if ($Diagnostico) {
     D (" {0}  colunas na ordem que a cena espera" -f (Marca $colunas))
     if ($Teste) {
         if ($redeOk["OFICIAL"]) { D " [ OK ]  ambiente OFICIAL responde (o do dia 04/10)" }
+        elseif ($redeCodigo.ContainsKey("OFICIAL") -and $redeCodigo["OFICIAL"] -eq 404) {
+            D " [ !! ]  ambiente OFICIAL: a maquina ALCANCA o TSE, mas a configuracao"
+            D "         ainda nao esta publicada (HTTP 404). Nao e rede. Rode de novo"
+            D "         em 03/10 ou na manha de 04/10."
+        }
         else { D " [ !! ]  ambiente OFICIAL NAO respondeu - ver item 1. Nao impede o teste," ; D "         mas TEM que responder antes do dia 04/10." }
     }
     D ""

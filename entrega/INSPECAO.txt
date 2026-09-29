@@ -1,5 +1,63 @@
 ===========================================================================
- LAUDO DE INSPECAO - gctse 6.4
+ LAUDO DE INSPECAO - gctse 6.5
+ 29/09/2026 - log e DIAGNOSTICO do ultimo simulado; pacote do dia 04/10
+===========================================================================
+
+ O LOG DO SIMULADO CONFIRMOU A REGRA DO ELEITO
+
+   O TSE marcou os dois primeiros de presidente e de governador com e=s
+   e situacao "2o turno" (28 candidatos). Sem a regra da 6.0, a tarja
+   teria ido ao ar com DOIS "ELEITO". Onde o TSE escreveu "Eleito", o
+   selo acendeu: governador RR (66,18%) e os dois senadores de RR, AC,
+   PR, MG, PE e TO. DIAGNOSTICO 16:56: 36/36, TUDO CERTO.
+
+ DEFEITO 1: DIAGNOSTICO GRAVAVA POR CIMA DA TARJA NO AR
+
+   16:24 - DIAGNOSTICO-OFICIAL rodado com o TESTE aberto. Ele marcava
+   "modo errado" e mesmo assim rodava um ciclo seu na pasta TARJAS:
+   gravou governador/senador SAO PAULO vazios. No dia 04/10 o inverso
+   poria numero do SIMULADO na tarja oficial. Agora, com outra coleta
+   viva, o diagnostico NAO roda ciclo.
+
+ DEFEITO 2: A COLETA NAO REPARAVA ARQUIVO MEXIDO POR FORA
+
+   A coleta so regravava quando o DADO mudava. Tarja sobrescrita por
+   fora (diagnostico, MODELOS-VAZIOS, copia a mao) ficava errada ate o
+   TSE mandar numero novo. Agora cada ciclo confere o arquivo no disco
+   e regrava se nao for o que ela gravou ("alterado por fora da coleta
+   - regravando"). Testado: modelo vazio copiado por cima da tarja no
+   ar; em menos de 12 s o dado voltou.
+
+ DIAGNOSTICO: 404 NAO E "NAO RESPONDE"
+
+   O oficial deu 404 em 29/09 (200 em 28/09). 404 e o servidor do TSE
+   respondendo que o arquivo nao esta la - nao e rede. Agora sai
+   "ALCANCADO, mas o TSE nao publicou" e, no modo oficial, a explicacao
+   de que antes da divulgacao isso e normal. No pacote do dia, o
+   diagnostico nao testa mais o simulado.
+
+ PACOTE DO DIA DA ELEICAO (GCTSE-ELEICAO)
+
+   So o que se usa em 04/10: INICIAR, PAINEL, DIAGNOSTICO-OFICIAL,
+   VALIDAR-OFICIAL, MODELOS-VAZIOS, CONFERIR-COLUNAS, FOTOS-QUAIS-NOMES
+   (modo oficial), SELECIONAR-ESTADO, TARJAS vazias, DIA-DA-ELEICAO.txt,
+   CAMPOS.txt, OPERACAO.txt. config.json so com o oficial (3220,
+   6257/6259). Sem TESTE, simulado ou arquivo de teste.
+   DIA-DA-ELEICAO.txt: abrir o INICIAR perto das 16h45 (muitos 404 antes
+   da divulgacao podem bloquear o IP, diz o TSE) e renomear as fotos
+   pelo numero OFICIAL.
+
+ VERIFICADO NA 6.5
+
+   Pacote: coleta oficial, validador 36/0, diagnostico TUDO CERTO,
+   modelos 24/24/30, ordem 3/0, painel, fotos em modo oficial      10 / 0 OK
+   Diagnostico oficial com TESTE aberto: tarja intacta                OK
+   Tarja sobrescrita por fora: regravada em < 12 s                    OK
+   Oficial com 404: "ALCANCADO ... NORMAL antes da divulgacao"        OK
+   Regressao completa                                            25 / 0 OK
+
+===========================================================================
+ LAUDO ANTERIOR - gctse 6.4
  29/09/2026 - fim dos simulados, preparacao para 04/10
 ===========================================================================
 

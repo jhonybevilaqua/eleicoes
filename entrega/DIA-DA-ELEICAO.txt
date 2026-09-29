@@ -1,6 +1,6 @@
 ===========================================================================
  DIA DA ELEICAO - 04/10/2026 (1o turno) - passo a passo
- gctse 6.4 - pasta D:\ELEICOES\GCTSE
+ gctse 6.5 - pasta D:\ELEICOES\GCTSE
 ===========================================================================
 
  Codigos do TSE ja no config.json (pagina oficial do TSE):
@@ -15,7 +15,9 @@
 
  1. Duplo clique em DIAGNOSTICO-OFICIAL.bat e envie o DIAGNOSTICO.txt.
     O esperado:
-      - OFICIAL RESPONDE (a maquina alcanca o TSE)
+      - OFICIAL RESPONDE, ou "ALCANCADO, mas o TSE nao publicou (404)".
+        Os dois querem dizer que a maquina chega no TSE. So "NAO RESPONDE"
+        (tempo esgotado, conexao recusada) e problema de rede.
       - tarjas VAZIAS / "nada foi conferido": NORMAL. O TSE so publica os
         boletins no dia. O que importa aqui e o item 1.
 
@@ -25,18 +27,31 @@
 
  3. No painel, deixe o modo em 2 CLIQUES (previa + COLOCAR NO AR).
 
+ 4. FOTOS DO PRESIDENTE. A foto e procurada na pasta FOTOS pelo NUMERO
+    oficial do candidato (13.png, 22.jpg...) ou pelo nome de urna. As
+    fotos preparadas para o simulado NAO servem no dia: nomes e numeros
+    do simulado sao ficticios ("CANDIDATO 9987" era o numero 68). Salve
+    cada foto com o numero oficial de urna. Foto que nao for achada vira a silhueta sem-foto.png
+    - nunca a foto de outro candidato.
+    No dia, depois que o TSE publicar, o FOTOS-QUAIS-NOMES.bat lista os
+    candidatos reais e o nome certo de cada arquivo.
+
 ---------------------------------------------------------------------------
  NO DIA - 04/10
 ---------------------------------------------------------------------------
 
  1. Feche todas as janelas pretas antigas.
 
- 2. Abra o INICIAR.bat   (NAO o TESTE.bat - o TESTE le o simulado)
-    A janela deve dizer: gctse versao 6.4 ... modo AR
+ 2. Abra o INICIAR.bat PERTO DAS 16h45 - nao de manha.
+    Antes da divulgacao o TSE responde 404 (arquivo ainda nao existe), e o
+    TSE avisa que muitos 404 podem bloquear o IP por um tempo. O sistema ja
+    espaca as tentativas, mas horas de janela aberta sao centenas de 404
+    sem necessidade.
+    A janela deve dizer: gctse versao 6.5 ... modo AR
 
  3. Abra o PAINEL.bat e o navegador em http://localhost:8099
 
- 4. Ate o TSE publicar (em geral depois das 17h):
+ 4. Ate o TSE publicar (depois das 17h, quando fecha a votacao):
       - janela: quadro VERMELHO "NAO ESTAMOS RECEBENDO DADOS DO TSE"
       - painel: faixa vermelha com a mesma frase
       - tarjas vazias
