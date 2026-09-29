@@ -142,18 +142,49 @@ jobs:
           path: dist/telao
           retention-days: 90
 
-      - name: Publicar Release (somente em tag)
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Empacotar o zip
         shell: pwsh
         run: Compress-Archive -Path dist\telao\* -DestinationPath telao-windows.zip
 
-      - uses: softprops/action-gh-release@v2
+      # Release de LINK FIXO, atualizado a cada compilacao.
+      #
+      # O artefato da aba Actions so abre para quem esta logado no GitHub, e
+      # nao abre no celular - foi assim que a operacao ficou sem conseguir
+      # baixar. Um Release em repositorio publico baixa sem login, direto, e
+      # o endereco nunca muda:
+      #
+      #   https://github.com/<owner>/<repo>/releases/latest/download/telao-windows.zip
+      - name: Publicar o Release de link fixo
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ultima
+          name: Ultima compilacao
+          # NAO marcar como pre-release: o endereco '/releases/latest/' do
+          # GitHub pula pre-releases, e era justamente ele que se queria fixo.
+          prerelease: false
+          make_latest: "true"
+          files: telao-windows.zip
+          body: |
+            **Telas de apuracao do TSE** — executavel Windows autocontido.
+            Nao precisa de Python instalado.
+
+            Baixe `telao-windows.zip` aqui embaixo, extraia numa pasta
+            (ex.: `C:\TELAO`) e abra `LEIA-ME.txt`.
+
+            Botao direito no ZIP > Propriedades > **Desbloquear**, antes de
+            extrair: o Windows marca arquivo baixado da internet e alguns
+            atalhos abrem com aviso de seguranca.
+
+            Para conferir antes de subir:
+
+            ```
+            telao.exe validar
+            ```
+
+            Este endereco aponta sempre para a compilacao mais recente.
+
+      - name: Publicar Release de versao (somente em tag)
+        uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: telao-windows.zip
-          body: |
-            Telas de apuracao do TSE, executavel Windows autocontido.
-            Nao precisa de Python instalado.
-
-            Baixe o zip, extraia numa pasta e rode `telao.exe validar`.
-            Passo a passo em `LEIA-ME.txt`.
