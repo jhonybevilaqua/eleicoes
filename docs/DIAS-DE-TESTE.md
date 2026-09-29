@@ -8,13 +8,13 @@ na ordem.
 
 **1. Baixe e extraia o pacote.**
 GitHub → aba **Actions** → fluxo **Executavel Windows** → última execução →
-**Artifacts** → `gctse-windows.zip`. Extraia numa pasta fixa, por exemplo
-`C:\gctse`. Não instala nada; para desinstalar, apague a pasta.
+**Artifacts** → `telao-windows.zip`. Extraia numa pasta fixa, por exemplo
+`C:\TELAO`. Não instala nada; para desinstalar, apague a pasta.
 
 **2. Prove que roda, sem internet e sem TSE.**
 
 ```bat
-cd C:\gctse\TELAO
+cd C:\TELAO
 TELAO-ENSAIO.bat
 ```
 
@@ -68,12 +68,11 @@ descartada.
 Confira antes de subir:
 
 ```bat
-cd C:\gctse
-gctse.exe validar
-TELAO\telao.exe -c TELAO\telao.yaml validar
+cd C:\TELAO
+telao.exe validar
 ```
 
-Os dois têm de dizer `Configuracao OK` **sem** a parte `FALTA PREENCHER`. Eles
+Tem de dizer `Configuracao OK` **sem** a parte `FALTA PREENCHER`. Eles
 imprimem a URL montada de cada alvo — abra uma no navegador. Se vier JSON, a
 cadeia está fechada. Se vier 404, o TSE ainda não publicou aquele arquivo, o
 que é normal antes das urnas fecharem.
@@ -89,12 +88,11 @@ erro claro: devolve 404. O sistema escolhe sozinho pelo cargo do alvo.
 Dois atalhos, um em cada janela:
 
 ```bat
-GC-SIMULADO.bat            (na pasta C:\gctse)
-TELAO\TELAO-SIMULADO.bat   (as telas cheias)
+TELAO-SIMULADO.bat
 ```
 
-**Tudo sai carimbado** com o selo de simulado — as tarjas do GC e as telas do
-telão —, e o carimbo não desliga. É proposital: se um desses atalhos for
+**Todas as telas saem carimbadas** com o selo de simulado, e o carimbo não
+desliga. É proposital: se um desses atalhos for
 aberto por engano no dia 4, o carimbo aparece no ar e o erro é visto na hora.
 
 O carimbo é decidido pelo **dia**, não pelo campo que vem no arquivo do TSE:
@@ -108,7 +106,7 @@ carimbado.
 | 1 | **Os nomes dos candidatos aparecem** | Se vierem vazios, o TSE mudou uma abreviação — é o risco número um, e a correção é uma linha em `mapeamento`. Me chame. |
 | 2 | **Os números batem com o site do TSE** | Abra o site do TSE ao lado e confira urnas apuradas e percentual do 1º colocado. Têm de ser idênticos. |
 | 3 | **Os 27 estados pintam** | Nenhum pode ficar cinza depois que o TSE publicar todos. Cinza = aquela praça não chegou. |
-| 4 | **O carimbo está em tudo** | Nas tarjas do GC, no monitor vertical e nas telas de mapa. |
+| 4 | **O carimbo está em tudo** | Nas seis telas cheias e nas seis do monitor vertical. |
 | 5 | **A mesa responde em ~1 segundo** | Clique numa tela e cronometre. |
 | 6 | **O rodízio vertical gira** | 10 s por tela, seis telas, volta ao começo. |
 | 7 | **As cores de partido** | Estado vizinho com cor parecida? É agora que se resolve com a arte, não no dia 4. |
@@ -137,8 +135,8 @@ oficial pode só aparecer depois dos testes.
 o que pinta o mapa — sem elas, o sistema usa uma paleta de reserva que serve
 para ensaiar, não para o ar.
 
-**3. Troque os atalhos.** No dia 4, `GC-PRODUCAO.bat` e `TELAO-PRODUCAO.bat`
-em vez dos dois `-SIMULADO`. Só isso. Não precisa recompilar nem editar
+**3. Troque o atalho.** No dia 4, `TELAO-PRODUCAO.bat` em vez de
+`TELAO-SIMULADO.bat`. Só isso. Não precisa recompilar nem editar
 configuração.
 
 **4. Apague o histórico de teste**, se quiser a curva limpa:

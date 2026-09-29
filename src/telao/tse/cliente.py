@@ -7,7 +7,7 @@ Pontos que importam em dia de eleicao:
   gasta banda nem CPU - e nos permite pesquisar em intervalo curto sem abusar
   da origem.
 * Retentativa com backoff: falha de rede no ar nao pode derrubar o processo.
-  Quem chama recebe None e mantem o ultimo boletim valido no GC.
+  Quem chama recebe None e a tela mantem o ultimo boletim valido.
 * Timeout curto e obrigatorio: uma conexao pendurada trava o ciclo inteiro.
 """
 
@@ -23,7 +23,7 @@ import requests
 
 from .. import __version__
 
-log = logging.getLogger("gctse.tse")
+log = logging.getLogger("telao.tse")
 
 
 @dataclass
@@ -59,7 +59,7 @@ class ClienteTSE:
         self.sessao = requests.Session()
         self.sessao.headers.update(
             {
-                "User-Agent": user_agent or f"gctse/{__version__} (automacao GC emissora)",
+                "User-Agent": user_agent or f"telao/{__version__} (telas de apuracao, emissora de TV)",
                 "Accept": "application/json, text/plain, */*",
                 "Accept-Encoding": "gzip, deflate",
             }

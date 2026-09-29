@@ -1,19 +1,25 @@
-"""Telao - sistema de exibicao de apuracao em tela cheia.
+"""Telao - telas de apuracao do TSE.
 
-Um programa proprio, separado do gctse. O gctse abastece o gerador de
-caracteres com as tarjas; o telao desenha telas inteiras de 1920x1080 e as
-entrega prontas para um PC de exibicao, cuja saida de video entra no switcher
-como uma fonte qualquer.
+Le os boletins da Divulgacao de Resultados do TSE e desenha telas inteiras,
+prontas para entrar no switcher como fonte de video:
 
-Os dois nao se falam. Executavel proprio, configuracao propria, pasta propria,
-coleta propria. Dar problema num nao derruba o outro, e a operacao do GC no dia
-- que estara ocupada com as tarjas - nao divide atencao com o telao.
+  1920x1080  seis telas para o switcher, escolhidas numa mesa
+  1080x1920  seis telas para o monitor vertical de cena, girando sozinhas
 
-O que os dois compartilham e a BIBLIOTECA de leitura do TSE: o cliente HTTP com
-cache condicional, o parser das abreviacoes do boletim, as travas de fase e de
-regressao e a malha do Brasil. Reescrever isso aqui seria manter duas copias das
-travas que impedem um simulado de ir ao ar - e, no dia em que o TSE mudar uma
-abreviacao, corrigir uma e esquecer a outra.
+O sistema nao produz mais nada: nao alimenta gerador de caracteres, nao
+escreve arquivo para outro programa ler. Um executavel, uma configuracao, uma
+pasta - e o que sai dela sao desenhos.
+
+O caminho do dado, de ponta a ponta:
+
+  TSE -> cliente HTTP (cache condicional, espacamento por 404)
+      -> parser das abreviacoes do boletim
+      -> travas de fase e de regressao
+      -> desenho (SVG)
+      -> pasta compartilhada -> PC de exibicao
+
+Antes do primeiro boletim as telas saem inteiras com os campos vazios. Nada
+e inventado em lugar nenhum: o que aparece na tela veio do TSE.
 """
 
-__version__ = "1.0.0"
+__version__ = "2.0.0"

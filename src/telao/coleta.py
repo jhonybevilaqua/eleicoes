@@ -1,10 +1,7 @@
 """Coleta propria do telao: o nacional e os 27 estados, a cada ciclo.
 
-Usa a biblioteca de leitura do TSE do gctse - cliente com cache condicional,
-parser das abreviacoes, travas de fase e de regressao - mas com estado, pasta e
-processo proprios. Nada aqui depende de o gctse estar rodando.
-
-As duas travas sao repetidas aqui de proposito, com o mesmo criterio do GC:
+Cliente com cache condicional, parser das abreviacoes e as duas travas que
+decidem o que pode chegar a tela:
 
 1. FASE. O TSE publica simulados nos mesmos caminhos nos dias que antecedem o
    pleito. Boletim fora da fase 'O' e descartado, entao um simulado nao vira
@@ -26,13 +23,13 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
-from gctse.historico import Historico, Ponto
-from gctse.modelos import Apuracao
-from gctse.simulador import Simulador, boletim_em_branco
-from gctse.tse.cliente import ClienteTSE, Resposta
-from gctse.tse.compasso import Compasso
-from gctse.tse.endpoints import Endpoints
-from gctse.tse.parser import analisar
+from .historico import Historico, Ponto
+from .modelos import Apuracao
+from .simulador import Simulador, boletim_em_branco
+from .tse.cliente import ClienteTSE, Resposta
+from .tse.compasso import Compasso
+from .tse.endpoints import Endpoints
+from .tse.parser import analisar
 
 from .config import Config
 

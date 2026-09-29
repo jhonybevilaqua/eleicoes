@@ -34,9 +34,9 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
-from gctse.malha_br import CENTRO, CONTORNO, CREDITO, LEGENDA_EXTERNA
-from gctse.util.arquivos import escrever_texto
-from gctse.util.svg import (
+from .malha_br import CENTRO, CONTORNO, CREDITO, LEGENDA_EXTERNA
+from .util.arquivos import escrever_texto
+from .util.svg import (
     COR_APOIO,
     COR_DISCRETA,
     COR_LINHA,

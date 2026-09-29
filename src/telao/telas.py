@@ -29,13 +29,13 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from gctse.exporters.mapa import ExporterMapa
-from gctse.historico import Ponto, projecao
-from gctse.simulador import boletim_em_branco
-from gctse.tse.parser import analisar
-from gctse.malha_br import CENTRO, CONTORNO, CREDITO, LEGENDA_EXTERNA, NOMES
-from gctse.modelos import Apuracao
-from gctse.util.svg import (
+from .mapa import Mapa as MapaSVG
+from .historico import Ponto, projecao
+from .simulador import boletim_em_branco
+from .tse.parser import analisar
+from .malha_br import CENTRO, CONTORNO, CREDITO, LEGENDA_EXTERNA, NOMES
+from .modelos import Apuracao
+from .util.svg import (
     COR_APOIO,
     COR_DISCRETA,
     COR_FUNDO,
@@ -172,36 +172,27 @@ class Moldura:
 
 
 class Mapa:
-    """Ponte para o desenho de mapa ja testado do gctse.
+    """Monta o desenhista de mapa com a aparencia desta configuracao.
 
-    O gctse desenha o mesmo mapa para o hot folder do GC. Reusar aqui, em vez
-    de escrever um segundo, evita o pior defeito possivel nesse tipo de
-    sistema: o mapa da tarja e o mapa do telao discordando sobre quem venceu
-    num estado, ao vivo, no mesmo bloco.
+    Existe para as quatro telas que mostram o mapa partilharem exatamente a
+    mesma paleta e o mesmo criterio de selo. Duas telas de mapa discordando
+    sobre quem venceu num estado, ao vivo, no mesmo bloco, e o pior defeito
+    possivel neste sistema.
     """
 
     def __init__(self, moldura: Moldura, cfg: Config):
         self.moldura = moldura
         self.cfg = cfg
 
-    def _exportador(self, modo: str, titulo: str) -> ExporterMapa:
-        return ExporterMapa(
-            nome="telao",
+    def _desenhista(self, modo: str, titulo: str) -> MapaSVG:
+        return MapaSVG(
             opcoes={
-                "tipo": "mapa",
                 "modo": modo,
                 "titulo": titulo,
-                "formatos": [],
                 "fonte": self.moldura.fonte,
                 "cor_fundo": self.moldura.fundo,
                 "cor_escala": str(self.cfg.aparencia.get("cor_escala", COR_ESCALA)),
                 "paleta_reserva": self.moldura.paleta_reserva,
-            },
-            cfg_texto={
-                "caixa": "alta",
-                "formatar_numeros": True,
-                "cores_partido": self.moldura.cores_partido,
-                "cor_padrao": self.moldura.cor_padrao,
                 "selo_nao_oficial": self.moldura.selo_texto,
                 # Mesma regra das outras telas: em simulado o carimbo nao
                 # depende da fase do boletim. Sem esta linha, num dia de teste
@@ -210,7 +201,10 @@ class Mapa:
                 # a que estivesse no ar.
                 "selo_sempre": self.cfg.simulado,
             },
-            cfg_saida={},
+            aparencia={
+                "cores_partido": self.moldura.cores_partido,
+                "cor_padrao": self.moldura.cor_padrao,
+            },
         )
 
     def itens(self, estados: dict[str, Apuracao]) -> list[tuple[int, str, Apuracao | None]]:
@@ -220,11 +214,11 @@ class Mapa:
         ]
 
     def dados(self, estados: dict[str, Apuracao], modo: str = "partido") -> dict:
-        return self._exportador(modo, "").montar(self.itens(estados))
+        return self._desenhista(modo, "").montar(self.itens(estados))
 
     def desenhar(self, estados: dict[str, Apuracao], modo: str, titulo: str) -> str:
-        exportador = self._exportador(modo, titulo)
-        return exportador.desenhar(exportador.montar(self.itens(estados)))
+        desenhista = self._desenhista(modo, titulo)
+        return desenhista.desenhar(desenhista.montar(self.itens(estados)))
 
 
 def _mapa_reduzido(dados: dict, x: float, y: float, escala: float) -> list[str]:

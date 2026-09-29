@@ -144,7 +144,7 @@ class Simulador:
         }
 
 
-# Marcador de campo sem dado. Travessao, nao vazio: campo vazio no GC some e
+# Marcador de campo sem dado. Travessao, nao vazio: campo vazio some da tela e
 # a cena parece quebrada; travessao mostra que o espaco existe e ainda nao
 # chegou numero nenhum.
 SEM_DADO = "—"
@@ -155,7 +155,7 @@ def boletim_em_branco(abrangencia: str, cargo: int, vagas: int = 5) -> dict[str,
 
     Existe por um pedido direto: o pacote entregue nao pode levar nome de
     candidato inventado. Mas os arquivos precisam existir nos caminhos
-    definitivos antes do dia, senao o GC so poderia ser amarrado depois que o
+    definitivos antes do dia, senao a cena so poderia ser montada depois que o
     dado real comecar a chegar - e amarrar cena com o ar aberto e o jeito mais
     caro de fazer isso.
 

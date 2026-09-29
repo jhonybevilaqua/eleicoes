@@ -1,4 +1,4 @@
-from gctse.tse.parser import analisar
+from telao.tse.parser import analisar
 
 BOLETIM = {
     "ele": "619",

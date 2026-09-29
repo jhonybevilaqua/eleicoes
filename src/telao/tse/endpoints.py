@@ -14,7 +14,7 @@ O padrao publicado pelo TSE nos ultimos pleitos e:
 
 Os codigos de ciclo/pleito/eleicao de 2026 so sao publicados pelo TSE proximo
 ao pleito, por isso TODOS os trechos vem de config (tse.padroes.*) e podem ser
-ajustados sem mexer no codigo. Use 'gctse descobrir' para le-los do proprio TSE.
+ajustados sem mexer no codigo. Use 'telao descobrir' para le-los do proprio TSE.
 
 UM PLEITO, VARIAS ELEICOES
 --------------------------

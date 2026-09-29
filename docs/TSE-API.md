@@ -57,7 +57,7 @@ Em 2026 (eleições gerais) valem 1, 3, 5, 6, 7 e 8.
 ## Campos do arquivo simplificado
 
 O arquivo usa chaves abreviadas. O mapeamento padrão do parser
-(`src/gctse/tse/parser.py`) cobre as abreviações usadas nos pleitos recentes:
+(`src/telao/tse/parser.py`) cobre as abreviações usadas nos pleitos recentes:
 
 | Campo do modelo | Chaves tentadas, em ordem |
 |---|---|
@@ -78,7 +78,7 @@ garantia de que 2026 mantenha todas. O comando abaixo baixa um arquivo real e
 lista as chaves que ele de fato tem:
 
 ```bash
-gctse inspecionar --abrangencia br --cargo 1
+telao inspecionar --abrangencia br --cargo 1
 ```
 
 Qualquer diferença se corrige na seção `mapeamento` do `config.yaml`, que entra
@@ -101,7 +101,7 @@ resultado real.
 Por isso `seguranca.bloquear_nao_oficial: true` é o padrão, e o campo `selo`
 fica disponível em todos os exporters para o template estampar
 “PARCIAL — NÃO OFICIAL” quando for o caso. **Não desligue essa trava em
-produção.** Para ensaiar, use `gctse ensaio`, que usa o simulador interno e
+produção.** Para ensaiar, use `telao ensaio`, que usa o simulador interno e
 nunca toca o TSE.
 
 ## Números em pt-BR
@@ -120,9 +120,9 @@ LiveBoard — contra dado **real** do TSE, sem esperar 2026. O resultado de 2022
 é conhecido e imutável, então qualquer divergência é erro nosso, não do dado.
 
 ```bash
-gctse -c config/config.validacao-2022.yaml descobrir
-gctse -c config/config.validacao-2022.yaml inspecionar --abrangencia br --cargo 1
-gctse -c config/config.validacao-2022.yaml uma-vez
+telao descobrir
+telao inspecionar --abrangencia br --cargo 1
+telao uma-vez
 ```
 
 Rode da rede da emissora. Confira em `dados/validacao-2022/gc/presidente-br.json`
@@ -141,12 +141,12 @@ ser que o TSE tenha mudado o caminho ou retirado o pleito antigo do ar.
 
 Semanas antes do pleito, quando o TSE publicar a configuração:
 
-1. `gctse descobrir` → anote o código do pleito e da eleição.
+1. `telao descobrir` → anote o código do pleito e da eleição.
 2. Preencha `tse.ciclo`, `tse.pleito`, `tse.eleicao` no `config.yaml`.
-3. `gctse validar` → confira as URLs montadas para cada alvo.
-4. `gctse inspecionar` em um alvo de cada tipo (BR, UF, município) → confira as
+3. `telao validar` → confira a URL montada.
+4. `telao inspecionar` no nacional e numa UF → confira as
    chaves e ajuste `mapeamento` se preciso.
-5. `gctse amostrar` → grave as amostras em `dados/amostras/` para poder
+5. `telao amostrar` → grave as amostras em `dados/amostras/` para poder
    reproduzir o dia offline (`coleta.fonte: arquivo`).
 6. Na janela de simulado do TSE, rode com
    `seguranca.bloquear_nao_oficial: false` em uma pasta de saída **de teste**

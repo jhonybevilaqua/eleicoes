@@ -13,7 +13,7 @@ from typing import Any
 from .cliente import ClienteTSE
 from .endpoints import Endpoints
 
-log = logging.getLogger("gctse.descoberta")
+log = logging.getLogger("telao.descoberta")
 
 # Chaves ja usadas pelo TSE no ele-c.json, em ordem de preferencia.
 _CH_ELEICOES = ["pl", "pleitos", "eleicoes", "e"]

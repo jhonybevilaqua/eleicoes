@@ -9,7 +9,7 @@ rem  de video deste PC entra no switcher como uma fonte qualquer.
 rem
 rem  Uso:
 rem    TELAO-TELA.bat                 telao na pasta local
-rem    TELAO-TELA.bat "\\PC-OPERACAO\gctse\TELAO\telao\index.html"
+rem    TELAO-TELA.bat "\\PC-OPERACAO\TELAO\telao\index.html"
 rem
 rem  No segundo caso este PC nao precisa de nada instalado - so precisa
 rem  enxergar a pasta compartilhada do PC que coleta.
@@ -35,7 +35,7 @@ if not exist "%PAGINA%" (
   echo  Rode TELAO-SIMULADO.bat, TELAO-PRODUCAO.bat ou TELAO-ENSAIO.bat.
   echo.
   echo  Se o telao esta em outro PC, passe o caminho:
-  echo    TELAO-TELA.bat "\\PC-OPERACAO\gctse\TELAO\telao\index.html"
+  echo    TELAO-TELA.bat "\\PC-OPERACAO\TELAO\telao\index.html"
   echo.
   pause
   exit /b 1

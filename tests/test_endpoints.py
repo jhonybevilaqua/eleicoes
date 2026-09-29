@@ -1,4 +1,4 @@
-from gctse.tse.endpoints import Endpoints, diretorio_abrangencia, tipo_abrangencia
+from telao.tse.endpoints import Endpoints, diretorio_abrangencia, tipo_abrangencia
 
 CFG = {"base_url": "https://resultados.tse.jus.br/oficial", "ciclo": "ele2026", "pleito": "619", "eleicao": "619"}
 

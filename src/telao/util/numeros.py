@@ -53,11 +53,11 @@ def para_float(valor, padrao: float = 0.0) -> float:
 
 
 def formatar_int(valor: int, separador: str = ".") -> str:
-    """12345678 -> '12.345.678' (para exibicao no GC)."""
+    """12345678 -> '12.345.678'."""
     return f"{int(valor):,}".replace(",", "\x00").replace("\x00", separador)
 
 
 def formatar_pct(valor: float, casas: int = 2, sufixo: str = "%") -> str:
-    """49.1 -> '49,10%' (para exibicao no GC)."""
+    """49.1 -> '49,10%'."""
     texto = f"{float(valor):.{casas}f}".replace(".", ",")
     return f"{texto}{sufixo}"

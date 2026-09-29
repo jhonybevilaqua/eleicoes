@@ -1,16 +1,15 @@
-"""Telao: o sistema de exibicao, separado do gctse.
+"""As telas: do boletim do TSE ao SVG que vai ao ar.
 
 O que estes testes protegem:
 
-* as travas continuam valendo aqui. O telao coleta por conta propria, entao
-  repetir fase e regressao foi necessario - e e aqui que se prova que nao
-  ficaram para tras: um simulado nao pode virar tela cheia com cara de
+* as duas travas. Um simulado nao pode virar tela cheia com cara de
   resultado, e o numero no ar nao pode andar para tras.
 * a selecao sai nos DOIS formatos. A exibicao le o .js (file:// bloqueia fetch
   e XHR); a mesa le o .json. Gravar so um deixa a mesa marcando uma tela
   enquanto o ar mostra outra.
-* tela sem dado avisa, nao sai preta - preto parece cabo solto.
-* o telao nao depende da configuracao do gctse para nada.
+* sem dado, a tela sai INTEIRA com os campos vazios - nao encolhe para um
+  aviso, nao sai preta, e nao inventa nada.
+* o selo segue o dado que cada tela mostra.
 """
 
 import json
@@ -19,9 +18,9 @@ from xml.etree import ElementTree as ET
 
 import pytest
 
-from gctse.historico import Ponto
-from gctse.malha_br import UFS
-from gctse.modelos import Apuracao, Candidato
+from telao.historico import Ponto
+from telao.malha_br import UFS
+from telao.modelos import Apuracao, Candidato
 from telao.coleta import Coletor
 from telao.config import Config, carregar
 from telao.exibicao import Publicador, escrever_selecao, ler_selecao, ler_telas
@@ -102,7 +101,7 @@ def _svg(caminho):
 # --- configuracao propria ---
 
 
-def test_config_do_telao_nao_precisa_da_config_do_gctse(tmp_path):
+def test_config_resolve_as_28_pracas_a_partir_do_cargo(tmp_path):
     cfg = _cfg(tmp_path)
     assert cfg.validar() == []
     assert cfg.cargo == 1
@@ -325,7 +324,7 @@ def test_simulador_passa_pela_trava_de_fase_para_o_ensaio_funcionar(tmp_path):
 
 
 def _resposta(fase="O", hora="20:41:00", pct="63,00"):
-    from gctse.tse.cliente import Resposta
+    from telao.tse.cliente import Resposta
 
     return Resposta(
         url="x",

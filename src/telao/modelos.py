@@ -2,7 +2,7 @@
 
 Tudo que vem do TSE e convertido para estas estruturas antes de chegar aos
 exporters. Assim, se o TSE mudar nomes de campo em 2026, so o parser muda -
-os exporters e os templates do GC continuam iguais.
+as telas continuam iguais.
 """
 
 from __future__ import annotations
@@ -101,7 +101,7 @@ class Apuracao:
     fonte_url: str = ""
     bruto: dict[str, Any] = field(default_factory=dict)
 
-    # --- propriedades usadas pelos templates de GC ---
+    # --- propriedades usadas pelas telas ---
 
     @property
     def oficial(self) -> bool:
@@ -137,7 +137,7 @@ class Apuracao:
     #
     # O TSE manda os absolutos; o percentual de cada fatia nao vem pronto. Como
     # o grafico de brancos e nulos e sempre percentual, a conta fica aqui: um
-    # lugar so, testado, em vez de espalhada por cada template de GC.
+    # lugar so, testado, em vez de espalhada por cada tela.
 
     @property
     def votos_apurados(self) -> int:

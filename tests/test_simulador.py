@@ -1,5 +1,5 @@
-from gctse.simulador import Simulador
-from gctse.tse.parser import analisar
+from telao.simulador import Simulador
+from telao.tse.parser import analisar
 
 
 def test_simulador_gera_boletim_analisavel():

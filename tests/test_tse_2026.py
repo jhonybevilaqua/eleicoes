@@ -22,9 +22,9 @@ from pathlib import Path
 
 import pytest
 
-from gctse.config import Config
-from gctse.tse.compasso import Compasso
-from gctse.tse.endpoints import Endpoints
+from telao.config import Config
+from telao.tse.compasso import Compasso
+from telao.tse.endpoints import Endpoints
 
 PLEITO_2026 = {
     "base_url": "https://resultados.tse.jus.br/oficial",
@@ -75,28 +75,28 @@ def test_cargo_pode_ser_apontado_um_a_um():
     assert Endpoints(ajustada).eleicao_do_cargo(1) == "6257"
 
 
-def test_validacao_cobra_a_eleicao_de_CADA_cargo_configurado():
-    """O caso que quebra de verdade: federal preenchida, estadual em branco.
+def test_validacao_cobra_a_eleicao_DO_CARGO_que_o_telao_mostra():
+    """Federal preenchida, estadual em branco, e o telao mostrando governador.
 
-    Antes a validacao olhava um 'tse.eleicao' generico e dava OK - e so o
-    alvo de governador batia em 404, a noite inteira.
+    Antes a validacao olhava um 'tse.eleicao' generico e dava OK - e a tela
+    passava a noite pedindo uma URL que sempre devolve 404.
     """
     cfg = Config(
         bruto={
             "tse": {**PLEITO_2026, "eleicoes": {"federal": "6257", "estadual": "000"}},
-            "coleta": {"fonte": "tse", "intervalo_segundos": 20},
-            "exporters": {"j": {"tipo": "json"}},
-            "alvos": [
-                {"nome": "presidente", "abrangencia": "br", "cargo": 1, "exporters": ["j"]},
-                {"nome": "governador", "abrangencia": "pr", "cargo": 3, "exporters": ["j"]},
-            ],
+            "apuracao": {"cargo": 3},        # governador
+            "saida": {"destino": "telao"},
         },
-        caminho=Path("config.yaml"),
+        caminho=Path("telao.yaml"),
     )
     erros, pendencias = cfg.conferir()
     assert erros == []
     assert len(pendencias) == 1
-    assert "cargo 3" in pendencias[0]          # aponta o cargo, nao 'tse.eleicao'
+    assert "cargo 3" in pendencias[0]
+
+    # com o cargo federal, a mesma config nao tem pendencia nenhuma
+    cfg.bruto["apuracao"]["cargo"] = 1
+    assert cfg.conferir() == ([], [])
 
 
 # --- nao apanhar do TSE por insistencia -----------------------------------
@@ -157,33 +157,31 @@ def test_espera_nao_estoura_em_arquivo_que_nunca_publica():
     assert not compasso.pode_tentar("br", 0.0)
 
 
-def test_config_de_referencia_monta_a_url_de_cada_cargo():
-    """Comecar pelo config.example nao pode reproduzir o bug do governador."""
-    import yaml
-
-    caminho = Path(__file__).resolve().parents[1] / "config" / "config.example.yaml"
-    tse = yaml.safe_load(caminho.read_text(encoding="utf-8"))["tse"]
-    endpoints = Endpoints(tse)
-    assert endpoints.eleicao_do_cargo(1) != endpoints.eleicao_do_cargo(3)
-    for cargo in (1, 3, 5):
-        assert "e000000" not in endpoints.resultado("br", cargo)
-
-
 def test_config_de_municipios_usa_a_eleicao_estadual():
     """Ficava com a eleicao legada, vazia, e montava '...-e000000-i.json'."""
     assert "e006259" in Endpoints(PLEITO_2026).municipios("pr")
 
 
-def test_fonte_escrita_errada_mantem_o_freio_ligado():
-    """'criar_fonte' cai no TSE de verdade para qualquer valor desconhecido.
+def test_fonte_desconhecida_fala_com_o_tse_e_mantem_o_freio():
+    """Fonte escrita errada nao pode virar 'sem freio'.
 
-    Testar 'fonte == tse' deixaria um erro de digitacao batendo no TSE com o
-    freio desligado - o pior dos dois mundos.
+    O coletor so trata como local o que reconhece; qualquer outra coisa fala
+    com o TSE de verdade, e ai o espacamento por 404 tem de valer.
     """
-    from gctse.fontes import FONTES_LOCAIS
+    from telao.coleta import Coletor
 
-    assert "tsee" not in FONTES_LOCAIS
-    assert "simulador" in FONTES_LOCAIS and "em-branco" in FONTES_LOCAIS
+    cfg = Config(
+        bruto={"tse": PLEITO_2026, "apuracao": {"cargo": 1},
+               "saida": {"destino": "telao"},
+               "coleta": {"fonte": "tsee", "historico": False}},
+        caminho=Path("telao.yaml"),
+    )
+    coletor = Coletor(cfg)
+    try:
+        assert coletor.local is None       # nao reconheceu: vai ao TSE
+        assert coletor.compasso is not None
+    finally:
+        coletor.fechar()
 
 
 # --- o pacote tem de sair pronto -----------------------------------------
@@ -195,14 +193,14 @@ def _config_entregue(nome: str):
     return yaml.safe_load(caminho.read_text(encoding="utf-8")), caminho
 
 
-@pytest.mark.parametrize("nome", ["config.operacao.yaml", "telao.yaml"])
-def test_config_entregue_nao_tem_nada_para_preencher(nome, monkeypatch):
+def test_config_entregue_nao_tem_nada_para_preencher(monkeypatch):
     """A config que vai no pacote sobe sem ninguem editar uma linha.
 
     Pedido direto do operador: 'nao quero eu ter que preencher o arquivo'.
     Os codigos do TSE sao conhecidos, entao deixar '000' esperando edicao era
     trabalho meu empurrado para a noite de quem opera.
     """
+    nome = "telao.yaml"
     bruto, caminho = _config_entregue(nome)
     texto = caminho.read_text(encoding="utf-8")
     # '000' so pode aparecer em comentario, nunca como valor
@@ -212,36 +210,24 @@ def test_config_entregue_nao_tem_nada_para_preencher(nome, monkeypatch):
 
     for modo in ("simulado", "producao"):
         monkeypatch.setenv("TELAO_MODO", modo)
-        monkeypatch.setenv("GCTSE_MODO", modo)
-        if nome == "telao.yaml":
-            from telao.config import Config as ConfigTelao
-
-            cfg = ConfigTelao(bruto=bruto, caminho=caminho)
-        else:
-            cfg = Config(bruto=bruto, caminho=caminho)
+        cfg = Config(bruto=bruto, caminho=caminho)
         erros, pendencias = cfg.conferir()
         assert erros == [], f"{nome} / {modo}: {erros}"
         assert pendencias == [], f"{nome} / {modo}: {pendencias}"
 
 
-@pytest.mark.parametrize("nome", ["config.operacao.yaml", "telao.yaml"])
-def test_os_dois_modos_apontam_para_o_mesmo_arquivo_do_tse(nome, monkeypatch):
+def test_os_dois_modos_apontam_para_o_mesmo_arquivo_do_tse(monkeypatch):
     """Simulado e producao leem o MESMO caminho - muda a fase, nao a URL.
 
     E o desenho que faz o teste provar a operacao de verdade: se o simulado
     lesse outro lugar, terca nao diria nada sobre domingo.
     """
+    nome = "telao.yaml"
     bruto, caminho = _config_entregue(nome)
     urls = set()
     for modo in ("simulado", "producao"):
         monkeypatch.setenv("TELAO_MODO", modo)
-        monkeypatch.setenv("GCTSE_MODO", modo)
-        if nome == "telao.yaml":
-            from telao.config import Config as ConfigTelao
-
-            cfg = ConfigTelao(bruto=bruto, caminho=caminho)
-        else:
-            cfg = Config(bruto=bruto, caminho=caminho)
+        cfg = Config(bruto=bruto, caminho=caminho)
         urls.add(Endpoints(cfg.tse).resultado("br", 1))
     assert len(urls) == 1, urls
     assert "e006257" in urls.pop()

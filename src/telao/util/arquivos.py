@@ -1,7 +1,7 @@
 """Escrita atomica de arquivos.
 
-Hot folders de GC leem o arquivo assim que ele aparece. Se escrevermos
-direto no destino, o GC pode ler um arquivo pela metade e colocar no ar um
+O PC de exibicao le o arquivo assim que ele aparece. Se escrevermos
+direto no destino, ele pode ler um arquivo pela metade e colocar no ar um
 placar truncado. Por isso todo arquivo e escrito em .tmp no mesmo volume e
 promovido com os.replace(), que e atomico no mesmo sistema de arquivos.
 """

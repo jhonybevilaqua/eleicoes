@@ -12,8 +12,8 @@ O que estes testes protegem:
 
 from datetime import datetime, timedelta
 
-from gctse.historico import Historico, Ponto, projecao, velocidade, viradas
-from gctse.modelos import Apuracao, Candidato
+from telao.historico import Historico, Ponto, projecao, velocidade, viradas
+from telao.modelos import Apuracao, Candidato
 
 
 def _ap(pct, hora, votos=(600_000, 400_000)):

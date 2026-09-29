@@ -1,7 +1,7 @@
-"""Ponto de entrada do executavel do telao (PyInstaller).
+"""Ponto de entrada do executavel (PyInstaller).
 
-Igual ao gctse_launcher.py: o PyInstaller precisa de um script, nao de um
-modulo. Nao ha logica aqui - veja src/telao/cli.py.
+O PyInstaller precisa de um script, nao de um modulo. Nao ha logica aqui -
+veja src/telao/cli.py.
 """
 
 import sys

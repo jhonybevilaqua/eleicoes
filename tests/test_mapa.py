@@ -6,21 +6,20 @@ O que estes testes protegem:
   ausente - buraco no mapa parece erro de arte no ar.
 * a cor do partido tem de ser a mesma o dia inteiro. Se a atribuicao de cor
   oscilar entre ciclos, o estado troca de cor sozinho no video.
-* o conteudo do 'montar' nao pode carregar relogio de captura, senao o dedupe
-  do pipeline reescreve o mapa a cada 20 segundos sem nada ter mudado.
-* o SVG precisa ser XML bem formado - o GC nao avisa quando nao e.
+* o conteudo do 'montar' nao pode carregar relogio de captura, senao a
+  deduplicacao reescreve o mapa a cada 20 segundos sem nada ter mudado.
+* o SVG precisa ser XML bem formado - o navegador do PC de exibicao nao avisa
+  quando nao e: simplesmente nao mostra nada.
 """
 
 import json
 from xml.etree import ElementTree as ET
 
-from gctse.exporters import criar
-from gctse.malha_br import CONTORNO, UFS
-from gctse.tse.parser import analisar
+from telao.mapa import Mapa
+from telao.malha_br import CONTORNO, UFS
+from telao.tse.parser import analisar
 
-TEXTO = {
-    "caixa": "alta",
-    "formatar_numeros": True,
+APARENCIA = {
     "cores_partido": {"PVL": "#2f97e8", "PDR": "#c0392b"},
     "cor_padrao": "#7d93b3",
 }
@@ -51,12 +50,12 @@ def _itens(faltando=()):
     ]
 
 
-def _exporter(tmp_path, **opcoes):
-    return criar("m", {"tipo": "mapa", "destino": str(tmp_path), **opcoes}, TEXTO, {})
+def _mapa(**opcoes):
+    return Mapa(opcoes=opcoes, aparencia=APARENCIA)
 
 
 def test_mapa_tem_sempre_os_27_estados(tmp_path):
-    dados = _exporter(tmp_path).montar(_itens(faltando={"RR", "AP"}))
+    dados = _mapa().montar(_itens(faltando={"RR", "AP"}))
     assert len(dados["estados"]) == 27
     assert dados["pracas_com_dado"] == 25
     assert dados["estados"]["RR"]["visivel"] is False
@@ -64,8 +63,8 @@ def test_mapa_tem_sempre_os_27_estados(tmp_path):
 
 
 def test_svg_desenha_os_27_contornos_e_e_xml_bem_formado(tmp_path):
-    arquivos = _exporter(tmp_path, formatos=["svg"]).exportar_lista(_itens(), "mapa")
-    raiz = ET.fromstring(arquivos[0].read_text(encoding="utf-8"))
+    mapa = _mapa()
+    raiz = ET.fromstring(mapa.desenhar(mapa.montar(_itens())))
     ids = {
         no.get("id")
         for no in raiz.iter("{http://www.w3.org/2000/svg}path")
@@ -77,25 +76,25 @@ def test_svg_desenha_os_27_contornos_e_e_xml_bem_formado(tmp_path):
 def test_cor_vem_do_partido_do_lider(tmp_path):
     itens = _itens()
     itens[0] = (1, "AC", _ap("ac", lider=("Gama", "PDR", "700.000", "70,00")))
-    estados = _exporter(tmp_path).montar(itens)["estados"]
+    estados = _mapa().montar(itens)["estados"]
     assert estados["AC"]["cor"] == "#c0392b"      # PDR
     assert estados["BA"]["cor"] == "#2f97e8"      # PVL
 
 
 def test_partido_sem_cor_recebe_a_paleta_de_reserva_e_nao_muda_entre_ciclos(tmp_path):
-    exporter = _exporter(tmp_path)
+    mapa = _mapa()
     itens = [
         (i, uf, _ap(uf.lower(), lider=("X", f"SEM{i % 3}", "600.000", "60,00")))
         for i, uf in enumerate(UFS, start=1)
     ]
-    primeiro = exporter.montar(itens)["estados"]
-    segundo = exporter.montar(itens)["estados"]
+    primeiro = mapa.montar(itens)["estados"]
+    segundo = mapa.montar(itens)["estados"]
     assert {e["cor"] for e in primeiro.values()} != {"#7d93b3"}   # nao ficou monocromatico
     assert all(primeiro[uf]["cor"] == segundo[uf]["cor"] for uf in UFS)
 
 
 def test_paleta_de_reserva_pode_ser_desligada(tmp_path):
-    estados = _exporter(tmp_path, paleta_reserva=False).montar(
+    estados = _mapa(paleta_reserva=False).montar(
         [(1, uf, _ap(uf.lower(), lider=("X", "SEMCOR", "600.000", "60,00"))) for uf in UFS]
     )["estados"]
     assert {e["cor"] for e in estados.values()} == {"#7d93b3"}    # cor_padrao
@@ -103,24 +102,24 @@ def test_paleta_de_reserva_pode_ser_desligada(tmp_path):
 
 def test_modo_apuracao_pinta_pelo_percentual(tmp_path):
     itens = [(1, "AC", _ap("ac", pct="10,00")), (2, "BA", _ap("ba", pct="90,00"))]
-    estados = _exporter(tmp_path, modo="apuracao").montar(itens)["estados"]
+    estados = _mapa(modo="apuracao").montar(itens)["estados"]
     assert estados["AC"]["cor"] != estados["BA"]["cor"]
     assert estados["RR"]["cor"] == "#6b7688"     # sem dado continua cinza
 
 
 def test_montar_nao_carrega_relogio_de_captura(tmp_path):
     """Se carregasse, o dedupe do pipeline reescreveria o mapa a cada ciclo."""
-    exporter = _exporter(tmp_path)
+    mapa = _mapa()
     itens = _itens()
-    primeiro = json.dumps(exporter.montar(itens), sort_keys=True, ensure_ascii=False)
-    segundo = json.dumps(exporter.montar(itens), sort_keys=True, ensure_ascii=False)
+    primeiro = json.dumps(mapa.montar(itens), sort_keys=True, ensure_ascii=False)
+    segundo = json.dumps(mapa.montar(itens), sort_keys=True, ensure_ascii=False)
     assert primeiro == segundo
     assert "hora_atualizacao" not in primeiro
     assert json.loads(primeiro)["hora_geracao"] == "20:41"
 
 
 def test_composicao_soma_as_pracas_com_boletim(tmp_path):
-    dados = _exporter(tmp_path).montar(_itens(faltando={"RR"}))
+    dados = _mapa().montar(_itens(faltando={"RR"}))
     comp = dados["composicao"]
     assert comp["pracas"] == 26
     assert comp["brancos"] == 26 * 20_000
@@ -133,7 +132,7 @@ def test_apelido_por_extenso_ainda_encontra_o_estado(tmp_path):
     ap = analisar(
         {**_boletim("pr"), "nmabr": "PARANA", "cdabr": "PR"}, abrangencia="pr", cargo=1
     )
-    estados = _exporter(tmp_path).montar([(1, "PARANA", ap)])["estados"]
+    estados = _mapa().montar([(1, "PARANA", ap)])["estados"]
     assert estados["PR"]["visivel"] is True
 
 
@@ -142,36 +141,9 @@ def test_alvo_nacional_vai_para_o_bloco_nacional_sem_pintar_estado(tmp_path):
         {**_boletim("br"), "tpabr": "BR", "cdabr": "BR", "nmabr": "BRASIL"},
         abrangencia="br", cargo=1,
     )
-    dados = _exporter(tmp_path).montar([(1, "BR", nacional), (2, "PR", _ap("pr"))])
+    dados = _mapa().montar([(1, "BR", nacional), (2, "PR", _ap("pr"))])
     assert dados["nacional"]["abrangencia"] == "BRASIL"
     assert dados["pracas_com_dado"] == 1     # so o PR pinta estado
-
-
-def test_exporter_de_mapa_recusa_alvo_isolado(tmp_path):
-    import pytest
-
-    with pytest.raises(NotImplementedError):
-        _exporter(tmp_path).exportar(_ap("pr"), "presidente-pr")
-
-
-def test_tela_sai_junto_e_aponta_para_o_svg_do_mesmo_grupo(tmp_path):
-    exporter = _exporter(tmp_path, formatos=["svg", "tela"], tela_intervalo_segundos=7)
-    escritos = exporter.exportar_lista(_itens(), "urnas-presidente")
-    pagina = next(p for p in escritos if p.suffix == ".html")
-    corpo = pagina.read_text(encoding="utf-8")
-
-    assert '"urnas-presidente.svg"' in corpo      # o par certo, nao outro mapa
-    assert "7 * 1000" in corpo                    # intervalo configurado
-    # duas camadas: a troca e dissolvencia, nunca um reload que pisca branco
-    assert corpo.count("<img") == 2
-    assert "location.reload" not in corpo
-    # falha na leitura nao pode limpar a tela
-    assert "onerror" in corpo
-
-
-def test_sem_tela_na_lista_de_formatos_nenhum_html_e_gravado(tmp_path):
-    escritos = _exporter(tmp_path, formatos=["svg"]).exportar_lista(_itens(), "mapa")
-    assert [p.suffix for p in escritos] == [".svg"]
 
 
 def test_malha_cobre_as_27_unidades_da_federacao():
@@ -197,6 +169,6 @@ def test_estado_com_zero_voto_apurado_fica_cinza(tmp_path):
     }
     itens = _itens()
     itens[0] = (1, "AC", analisar(zerado, abrangencia="ac", cargo=1))
-    estados = _exporter(tmp_path).montar(itens)["estados"]
+    estados = _mapa().montar(itens)["estados"]
     assert estados["AC"]["lider"] is None
     assert estados["AC"]["cor"] == "#6b7688"

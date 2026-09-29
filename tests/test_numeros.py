@@ -1,4 +1,4 @@
-from gctse.util.numeros import formatar_int, formatar_pct, para_float, para_int
+from telao.util.numeros import formatar_int, formatar_pct, para_float, para_int
 
 
 def test_inteiro_com_separador_de_milhar_do_tse():

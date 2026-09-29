@@ -2,15 +2,13 @@
 
 ## O que é
 
-Um programa **separado do gctse**. O gctse alimenta as tarjas do gerador de
-caracteres; o telão desenha telas inteiras de 1920 × 1080 e as entrega prontas
-para um PC de exibição, cuja saída de vídeo entra no switcher como uma fonte
-qualquer.
+O sistema lê o TSE e desenha telas inteiras — 1920 × 1080 para o switcher e
+1080 × 1920 para o monitor vertical de cena — entregando-as prontas para PCs
+de exibição, cuja saída de vídeo entra no switcher como uma fonte qualquer.
 
-Os dois não se falam: executável próprio (`telao.exe`), configuração própria
-(`telao.yaml`), pasta própria, coleta própria. Dar problema num não derruba o
-outro, e a operação do GC — que no dia estará ocupada com as tarjas — não
-divide atenção com o telão.
+É só isso: telas. Não há nada de gerador de caracteres, nem arquivo para
+outro sistema ler. Um executável (`telao.exe`), uma configuração
+(`telao.yaml`), uma pasta.
 
 ```
 PC que coleta                         PC de exibição
@@ -63,8 +61,7 @@ apuracao:
 ```
 
 Você diz o **cargo**; as 28 praças (nacional + 27 UFs) saem sozinhas. Não há
-lista de alvos para montar — esse é o trabalho que a config do gctse faz e que
-aqui não faz sentido, porque o telão sempre quer a mesma coisa.
+lista de alvos para montar: o telão sempre quer a mesma coisa.
 
 Listar estados serve para emissora regional: o mapa continua inteiro, com as
 praças de fora em cinza, e a coleta cai de 28 requisições por ciclo para o que
@@ -92,7 +89,7 @@ Os dois primeiros reiniciam sozinhos se caírem.
 **No PC de exibição:**
 
 ```bat
-TELAO-TELA.bat "\\PC-OPERACAO\gctse\TELAO\telao\index.html"
+TELAO-TELA.bat "\\PC-OPERACAO\TELAO\telao\index.html"
 ```
 
 Abre Chrome (ou Edge) em modo quiosque, com perfil próprio — uma aba que
@@ -292,8 +289,7 @@ de uma cor só durante os ensaios. Serve para ensaiar, não é decisão de arte.
 
 ## As travas continuam valendo
 
-O telão coleta por conta própria, então as duas travas do gctse foram
-repetidas aqui — com o mesmo critério e com teste próprio:
+Duas travas decidem o que pode chegar à tela — as duas com teste próprio:
 
 1. **Fase.** O TSE publica simulados nos mesmos caminhos antes do pleito.
    Boletim fora da fase `O` é descartado, então um simulado não vira tela cheia
@@ -341,20 +337,6 @@ do TSE existe, ele manda — é o próprio TSE somando. A soma das UFs só entra
 antes disso, e a tela diz "soma das praças" para ninguém ler um parcial como
 total oficial.
 
-## O que o telão compartilha com o gctse
-
-A **biblioteca** de leitura do TSE: o cliente HTTP com cache condicional, o
-parser das abreviações do boletim, a malha do Brasil e o desenho do mapa.
-
-Isso é deliberado. Reescrever aqui significaria manter duas cópias das travas
-que impedem um simulado de ir ao ar e, no dia em que o TSE mudar uma
-abreviação, corrigir uma e esquecer a outra. Pior: o mapa da tarja e o mapa do
-telão poderiam discordar sobre quem venceu num estado, ao vivo, no mesmo bloco.
-
-O que **não** é compartilhado: configuração, pasta de saída, processo,
-executável e ciclo de coleta. Você pode rodar o telão num PC onde o gctse nunca
-foi aberto.
-
 ## Testar antes do dia
 
 ```bash
@@ -377,9 +359,8 @@ telao exemplo --pasta telas --progresso 63
 
 ## Limites conhecidos
 
-**A tela é uma fonte de vídeo opaca.** Ela não compõe por cima da cena do GC.
-Se algum quadro precisar entrar sobre imagem, isso é trabalho do gctse (o
-exporter de mapa tem `fundo_transparente`), não do telão.
+**A tela é uma fonte de vídeo opaca.** Ela não compõe por cima de outra
+imagem — entra no switcher como fonte, não como sobreposição.
 
 **Uma tela por vez, por PC.** Para duas telas simultâneas, rode dois
 `TELAO-TELA.bat` em dois PCs ou duas saídas de vídeo: cada um obedece à mesma

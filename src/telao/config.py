@@ -1,9 +1,8 @@
 """Configuracao do telao: um arquivo proprio, curto de proposito.
 
-O gctse precisa de uma config longa porque cada alvo vira arquivo para uma cena
-diferente do GC. O telao nao: ele sempre quer a mesma coisa - o resultado
-nacional e o dos 27 estados para um cargo. Entao aqui voce diz o cargo, e as
-28 praças saem sozinhas.
+Curto de proposito: o telao sempre quer a mesma coisa - o resultado nacional
+e o dos 27 estados para UM cargo. Voce diz o cargo, e as 28 pracas saem
+sozinhas.
 """
 
 from __future__ import annotations
@@ -20,7 +19,7 @@ try:
 except ImportError:  # pragma: no cover - YAML e opcional se usar JSON
     yaml = None
 
-from gctse.malha_br import UFS
+from .malha_br import UFS
 
 _VAR_ENV = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}")
 
@@ -252,7 +251,7 @@ class Config:
         de fato quebra - o codigo federal preenchido e o estadual em branco,
         com o telao pedindo governador.
         """
-        from gctse.tse.endpoints import Endpoints
+        from .tse.endpoints import Endpoints
 
         problemas: list[str] = []
         pendencias: list[str] = []

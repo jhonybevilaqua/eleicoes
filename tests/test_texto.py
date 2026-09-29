@@ -1,4 +1,4 @@
-from gctse.util.texto import normalizar, slug, truncar
+from telao.util.texto import normalizar, slug, truncar
 
 
 def test_truncar_nao_quebra_palavra():

@@ -21,7 +21,7 @@ arquivo grande sem devolver nada em troca.
 
 NAO usa a escrita atomica de util/arquivos.py, e isso e deliberado: aquela
 troca o arquivo inteiro a cada gravacao, o que aqui significaria reescrever
-todo o historico a cada 20 segundos. Nenhum GC le este arquivo - ele alimenta
+todo o historico a cada 20 segundos. Nenhuma tela le este arquivo - ele alimenta
 grafico e conferencia -, entao o risco que a escrita atomica evita (o GC ler um
 arquivo pela metade) nao existe aqui.
 """
@@ -37,7 +37,7 @@ from pathlib import Path
 
 from .modelos import Apuracao
 
-log = logging.getLogger("gctse.historico")
+log = logging.getLogger("telao.historico")
 
 # Pontos usados na projecao de fechamento. Poucos demais e a conta oscila a
 # cada boletim; muitos demais e ela carrega o arranque rapido do inicio da

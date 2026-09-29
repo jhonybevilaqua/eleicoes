@@ -1,7 +1,7 @@
 """Modo Simulado / Producao, e a estrutura em branco.
 
-Os dois assuntos vivem no mesmo arquivo porque respondem a mesma pergunta:
-o que aparece na tela quando o dado NAO veio do TSE.
+Os dois assuntos respondem a mesma pergunta: o que aparece na tela quando o
+dado NAO veio do TSE.
 
   modo         decide se um boletim de teste pode subir, e se o selo aparece.
   em branco    e o que o pacote leva de fabrica - estrutura sem conteudo.
@@ -11,7 +11,8 @@ O que estes testes seguram, em ordem de gravidade:
 1. producao nunca aceita fase 'S', escreva-se o que se escrever na config;
 2. simulado sempre carimba, mesmo em boletim que venha marcado como oficial;
 3. esquecer de escolher o modo cai em producao, nao em simulado;
-4. a estrutura em branco nao inventa lider, numero nem nome.
+4. a estrutura em branco nao inventa lider, numero nem nome;
+5. erro de configuracao para o atalho, em vez de reinicia-lo para sempre.
 """
 
 import os
@@ -19,18 +20,32 @@ from pathlib import Path
 
 import pytest
 
-from gctse.config import Config
-from gctse.simulador import boletim_em_branco
-from gctse.tse.parser import analisar
+from telao.config import Config
+from telao.simulador import boletim_em_branco
+from telao.tse.parser import analisar
+
+BASE = {
+    "tse": {
+        "base_url": "https://resultados.tse.jus.br/oficial",
+        "ciclo": "ele2026",
+        "pleito": "3220",
+        "eleicoes": {"federal": "6257", "estadual": "6259"},
+        "turno": 1,
+    },
+    "apuracao": {"cargo": 1},
+    "saida": {"destino": "telao"},
+}
 
 
-def _cfg(**bruto):
-    return Config(bruto=bruto, caminho=Path("config.yaml"))
+def _cfg(**extra):
+    bruto = {k: (dict(v) if isinstance(v, dict) else v) for k, v in BASE.items()}
+    bruto.update(extra)
+    return Config(bruto=bruto, caminho=Path("telao.yaml"))
 
 
 @pytest.fixture(autouse=True)
 def _sem_variavel(monkeypatch):
-    monkeypatch.delenv("GCTSE_MODO", raising=False)
+    monkeypatch.delenv("TELAO_MODO", raising=False)
 
 
 # --- modo -----------------------------------------------------------------
@@ -49,13 +64,12 @@ def test_modo_em_branco_ou_desconhecido_cai_em_producao(valor):
 
 
 def test_modo_desconhecido_vira_problema_na_validacao():
-    erros, _ = _cfg(modo="teste", tse={"base_url": "x", "ciclo": "y"},
-                    alvos=[], exporters={}).conferir()
+    erros, _ = _cfg(modo="teste").conferir()
     assert any("nao e um modo conhecido" in e for e in erros)
 
 
 def test_variavel_de_ambiente_tem_prioridade_sobre_o_arquivo(monkeypatch):
-    monkeypatch.setenv("GCTSE_MODO", "simulado")
+    monkeypatch.setenv("TELAO_MODO", "simulado")
     assert _cfg(modo="producao").modo == "simulado"
 
 
@@ -71,48 +85,32 @@ def test_simulado_desliga_a_trava_mesmo_com_a_config_contra():
 
 def test_simulado_carimba_sempre():
     cfg = _cfg(modo="simulado")
-    assert cfg.texto["selo_sempre"] is True
-    assert "SIMULADO" in cfg.texto["selo_nao_oficial"]
+    assert "SIMULADO" in cfg.selo_do_modo
+    assert "SIMULADO" in cfg.aparencia["selo_nao_oficial"]
 
 
-def test_producao_nao_carimba_boletim_oficial():
-    assert _cfg(modo="producao").texto.get("selo_sempre") is not True
+def test_simulado_nao_deixa_a_aparencia_apagar_o_selo():
+    """Um 'selo_nao_oficial' vazio na aparencia nao vale mais que o modo."""
+    cfg = _cfg(modo="simulado", aparencia={"selo_nao_oficial": ""})
+    assert cfg.aparencia["selo_nao_oficial"]
 
 
-def test_cada_modo_traz_os_proprios_codigos_do_tse():
-    bruto = {
-        "tse": {"base_url": "https://exemplo", "ciclo": "ele2026", "turno": 1},
-        "modos": {
-            "simulado": {"tse": {"pleito": "111", "eleicao": "111"}},
-            "producao": {"tse": {"pleito": "999", "eleicao": "999"}},
-        },
-    }
-    assert _cfg(modo="simulado", **bruto).tse["pleito"] == "111"
-    assert _cfg(modo="producao", **bruto).tse["pleito"] == "999"
-    # o que nao e do modo continua vindo da base
-    assert _cfg(modo="simulado", **bruto).tse["ciclo"] == "ele2026"
+def test_producao_nao_impoe_selo():
+    assert _cfg(modo="producao").selo_do_modo == ""
+
+
+def test_modo_pode_sobrepor_os_codigos_do_tse():
+    """Se um ano o TSE separar o teste em pleito proprio."""
+    cfg = _cfg(modo="simulado", modos={"simulado": {"tse": {"pleito": "111"}}})
+    assert cfg.tse["pleito"] == "111"
+    assert cfg.tse["ciclo"] == "ele2026"      # o resto vem da base
 
 
 def test_modos_vazio_no_yaml_nao_estoura():
     """'modos:' sem nada embaixo vira None no YAML, nao dicionario."""
-    cfg = _cfg(modo="simulado", modos=None, tse={"pleito": "1"})
-    assert cfg.tse["pleito"] == "1"
+    cfg = _cfg(modo="simulado", modos=None)
+    assert cfg.tse["pleito"] == "3220"
     assert cfg.simulado is True
-
-
-def test_pleito_por_preencher_e_pendencia_nao_erro():
-    """O pacote sai de fabrica com '000'. Isso nao pode reprovar o pacote."""
-    erros, pendencias = _cfg(
-        modo="producao",
-        tse={"base_url": "x", "ciclo": "y"},
-        modos={"producao": {"tse": {"pleito": "000", "eleicao": "000"}}},
-        coleta={"fonte": "tse", "intervalo_segundos": 20},
-        alvos=[{"nome": "a", "abrangencia": "br", "cargo": 1, "exporters": ["j"]}],
-        exporters={"j": {"tipo": "json"}},
-    ).conferir()
-    assert erros == []
-    assert len(pendencias) == 2
-    assert all("000" in p for p in pendencias)
 
 
 # --- estrutura em branco --------------------------------------------------
@@ -146,119 +144,12 @@ def test_em_branco_respeita_o_numero_de_vagas():
     assert len(ap.candidatos) == 2
 
 
-# --- o que a revisao pegou ------------------------------------------------
-
-def test_simulado_separa_estado_e_historico():
-    """A curva dos tres dias de teste nao pode entrar na serie do dia 4."""
-    base = {"coleta": {"arquivo_estado": "dados/estado.json",
-                       "arquivo_historico": "dados/estado/historico.jsonl"}}
-    producao = _cfg(modo="producao", **base).coleta
-    simulado = _cfg(modo="simulado", **base).coleta
-    # Comparado como Path: no Windows a separacao vem com barra invertida, e
-    # o que importa aqui e o caminho, nao como ele foi escrito.
-    assert Path(producao["arquivo_historico"]) == Path("dados/estado/historico.jsonl")
-    assert Path(simulado["arquivo_historico"]) == Path("dados/estado/historico-simulado.jsonl")
-    assert simulado["arquivo_estado"] != producao["arquivo_estado"]
-
-
-def test_exporter_nao_consegue_apagar_o_selo_do_modo():
-    """Um bloco 'texto:' de tarja nao negocia com o selo de simulado.
-
-    'config.operacao.yaml' ja traz um exporter com bloco proprio (o rodizio,
-    que encurta o limite de nome). Herdar dali um selo vazio poria a tarja
-    limpa no ar num dia de teste.
-    """
-    from gctse.exporters import criar
-
-    cfg = _cfg(modo="simulado")
-    exporter = criar(
-        "r",
-        {"tipo": "json", "formato": "gc", "destino": ".",
-         "texto": {"selo_nao_oficial": "", "selo_sempre": False, "limites": {"nome": 14}}},
-        cfg.texto,
-        {},
-    )
-    assert exporter.cfg_texto["selo_sempre"] is True
-    assert "SIMULADO" in exporter.cfg_texto["selo_nao_oficial"]
-    assert exporter.cfg_texto["limites"]["nome"] == 14   # o resto do bloco vale
-
-
-def test_painel_avisa_o_modo_simulado_mesmo_lendo_o_tse():
-    """Nos dias de teste a fonte E o TSE e os numeros sao plausiveis.
-
-    Sem a faixa, o painel do coordenador fica identico ao da noite da eleicao
-    e quem passa na frente do monitor nao tem como saber que e ensaio.
-    """
-    from gctse.painel import renderizar
-
-    import tempfile
-
-    with tempfile.TemporaryDirectory() as pasta:
-        alvo = Path(pasta) / "painel.html"
-        for modo, esperado in (("simulado", True), ("producao", False)):
-            renderizar(
-                caminho=alvo, fonte="tse", modo=modo, ciclos=1, intervalo=20,
-                resultados={}, apuracoes={}, rodizios={},
-            )
-            corpo = alvo.read_text(encoding="utf-8")
-            assert ("MODO SIMULADO" in corpo) is esperado
-            assert f"modo <b>{modo.upper()}" in corpo
-
-
-def test_selo_sem_texto_configurado_nao_estoura():
-    """Config com 'selo_sempre' e sem texto de selo nao pode derrubar a subida."""
-    from gctse.exporters import criar
-
-    exporter = criar("j", {"tipo": "json", "formato": "gc", "destino": "."},
-                     {"selo_sempre": True}, {})
-    assert exporter.cfg_texto["selo_nao_oficial"] == "SIMULADO"
-
-
-def test_bloco_do_modo_nao_derruba_o_desvio_do_comando():
-    """'modos.simulado.coleta' nao pode trazer o ensaio de volta ao ar.
-
-    A camada 'forcado' existe exatamente para isso: quem escreveu um desvio
-    de coleta por modo na config nao imaginava que ele venceria o desvio que
-    o proprio comando acabou de impor.
-    """
-    cfg = _cfg(
-        modo="simulado",
-        coleta={"arquivo_historico": "dados/estado/historico.jsonl"},
-        modos={"simulado": {"coleta": {"arquivo_historico": "dados/estado/producao.jsonl"}}},
-    )
-    assert Path(cfg.coleta["arquivo_historico"]) == Path("dados/estado/producao-simulado.jsonl")
-    cfg.forcar("coleta", arquivo_historico="ENSAIO/descartavel.jsonl")
-    assert cfg.coleta["arquivo_historico"] == "ENSAIO/descartavel.jsonl"
-
-
-def test_comando_pode_remover_o_arquivo_de_saude():
-    """Um ensaio nao sobrescreve o que diz se a coleta de verdade esta viva."""
-    cfg = _cfg(coleta={"arquivo_saude": "dados/saude.json"})
-    assert "arquivo_saude" in cfg.coleta
-    cfg.forcado["coleta_remover"] = ("arquivo_saude",)
-    assert "arquivo_saude" not in cfg.coleta
-
-
-def test_painel_poe_a_fonte_na_frente_do_modo():
-    """Ensaio em modo simulado e ensaio, nao 'dados de teste do TSE'."""
-    from gctse.painel import renderizar
-    import tempfile
-
-    with tempfile.TemporaryDirectory() as pasta:
-        alvo = Path(pasta) / "painel.html"
-        renderizar(caminho=alvo, fonte="simulador", modo="simulado", ciclos=1,
-                   intervalo=20, resultados={}, apuracoes={}, rodizios={})
-        corpo = alvo.read_text(encoding="utf-8")
-        assert "FONTE DE ENSAIO" in corpo
-        assert "MODO SIMULADO —" not in corpo
-
-
 # --- o atalho nao pode reiniciar para sempre ------------------------------
 
-def test_config_por_preencher_sai_com_codigo_proprio(tmp_path, monkeypatch):
+def test_config_por_preencher_sai_com_codigo_proprio(tmp_path):
     """Codigo 2 e o que faz o .bat PARAR em vez de reiniciar a cada 10s.
 
-    Veio de um print do operador: a janela repetindo a mesma mensagem de
+    Veio de um print da operacao: a janela repetindo a mesma mensagem de
     pleito em '000' de dez em dez segundos. Reiniciar cobre queda de rede;
     nao cobre configuracao, que nao se conserta sozinha.
     """
@@ -268,10 +159,8 @@ def test_config_por_preencher_sai_com_codigo_proprio(tmp_path, monkeypatch):
 
     config = tmp_path / "telao.yaml"
     config.write_text(textwrap.dedent("""
-        modo: simulado
-        tse: {base_url: "https://exemplo", ciclo: ele2026, turno: 1}
-        modos:
-          simulado: {tse: {pleito: "000", eleicao: "000"}}
+        modo: producao
+        tse: {base_url: "https://exemplo", ciclo: ele2026, pleito: "000", turno: 1}
         apuracao: {cargo: 1}
         saida: {destino: "telao"}
     """), encoding="utf-8")
@@ -283,22 +172,19 @@ def test_config_por_preencher_sai_com_codigo_proprio(tmp_path, monkeypatch):
     )
     assert fim.returncode == 2, fim.stdout + fim.stderr
     assert "NAO DA PARA SUBIR" in fim.stdout
-    assert "descobrir" in fim.stdout          # diz o proximo comando
-    assert "modos: simulado: tse:" in fim.stdout   # e onde preencher
+    assert "descobrir" in fim.stdout
 
 
 def test_atalhos_param_no_codigo_de_configuracao():
-    """Os quatro .bat tem de tratar o codigo 2 - senao a correcao nao chega."""
+    """Os .bat tem de tratar o codigo 2 - senao a correcao nao chega."""
     raiz = Path(__file__).resolve().parents[1] / "empacotamento"
-    for nome in ("GC-SIMULADO.bat", "GC-PRODUCAO.bat",
-                 "TELAO-SIMULADO.bat", "TELAO-PRODUCAO.bat"):
+    for nome in ("TELAO-SIMULADO.bat", "TELAO-PRODUCAO.bat"):
         texto = (raiz / nome).read_text(encoding="utf-8")
         assert "EQU 2 goto configuracao" in texto, nome
         assert ":configuracao" in texto, nome
         # Espera longa, nao os 10s do reinicio comum: a mensagem tem de ficar
         # legivel na tela.
         assert "timeout /t 60" in texto, nome
-        # E nao pode PARAR: o atalho pode ter subido minimizado pelo
-        # INICIAR-COM-O-WINDOWS, e ai ficaria travado mesmo depois de alguem
-        # corrigir o arquivo.
+        # E nao pode PARAR: o atalho pode ter subido minimizado, e ai ficaria
+        # travado mesmo depois de alguem corrigir o arquivo.
         assert "pause" not in texto.split(":configuracao")[1], nome

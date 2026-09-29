@@ -3,9 +3,9 @@
 #
 # Como baixar o resultado:
 #   GitHub -> aba Actions -> "Executavel Windows" -> ultima execucao ->
-#   secao Artifacts -> gctse-windows.zip
+#   secao Artifacts -> telao-windows.zip
 #
-# Marcar uma tag (git tag v1.0.0 && git push --tags) publica o mesmo zip
+# Marcar uma tag (git tag v2.0.0 && git push --tags) publica o mesmo zip
 # como Release, que fica com link fixo e nao expira.
 
 name: Executavel Windows
@@ -13,7 +13,7 @@ name: Executavel Windows
 on:
   workflow_dispatch:        # botao "Run workflow" na aba Actions
   push:
-    branches: [claude/gc-tse-api-automation-v3nvef, "claude/**"]
+    branches: ["claude/**"]
     tags: ["v*"]
 
 permissions:
@@ -44,26 +44,11 @@ jobs:
       - name: Compilar o executavel
         run: >
           python -m PyInstaller
-          --name gctse --onedir --console --noconfirm --clean
-          --paths src
-          --hidden-import gctse.exporters.arquivo_csv
-          --hidden-import gctse.exporters.arquivo_json
-          --hidden-import gctse.exporters.arquivo_xml
-          --hidden-import gctse.exporters.caspar
-          --hidden-import gctse.exporters.classx
-          --hidden-import gctse.exporters.http_push
-          --hidden-import gctse.exporters.viz_tab
-          --hidden-import gctse.exporters.mapa
-          --hidden-import gctse.exporters.rodizio
-          gctse_launcher.py
-
-      - name: Compilar o executavel do telao
-        run: >
-          python -m PyInstaller
           --name telao --onedir --console --noconfirm --clean
           --paths src
-          --hidden-import gctse.exporters.mapa
+          --hidden-import telao.mapa
           --hidden-import telao.telas
+          --hidden-import telao.vertical
           --hidden-import telao.mesa
           --hidden-import tkinter
           telao_launcher.py
@@ -71,50 +56,22 @@ jobs:
       - name: Montar a pasta de distribuicao
         shell: pwsh
         run: |
-          $alvo = "dist\gctse"
+          $alvo = "dist\telao"
           New-Item -ItemType Directory -Force -Path "$alvo\docs" | Out-Null
-          # a config que a pessoa edita fica na RAIZ, com nome obvio
-          Copy-Item config\config.operacao.yaml "$alvo\config.yaml"
+          Copy-Item config\telao.yaml "$alvo\"
           Copy-Item docs\*.md "$alvo\docs\"
           Copy-Item empacotamento\*.bat "$alvo\"
           Copy-Item empacotamento\LEIA-ME.txt "$alvo\"
-          # O telao vai junto, em subpasta propria: executavel e config dele,
-          # separados do gctse. A pessoa copia uma coisa so.
-          New-Item -ItemType Directory -Force -Path "$alvo\TELAO" | Out-Null
-          Copy-Item dist\telao\* "$alvo\TELAO\" -Recurse -Force
-          Copy-Item config\telao.yaml "$alvo\TELAO\"
-          Copy-Item empacotamento\TELAO-*.bat "$alvo\TELAO\"
 
-      - name: Criar a pasta TARJAS em branco
+      - name: Conferir as telas
         shell: pwsh
-        working-directory: dist\gctse
-        run: |
-          # O Castalia ja pode ser amarrado ao extrair o pacote: os arquivos
-          # nascem nos caminhos DEFINITIVOS. No teste e no ar, estes mesmos
-          # arquivos sao reescritos - nunca troca caminho.
-          #
-          # EM BRANCO, nao com dado de exemplo: o pacote entregue nao leva um
-          # unico nome de candidato inventado. Se um desses arquivos for ao ar
-          # por engano, o que aparece e um placar vazio - um sistema sem dado,
-          # nao um resultado falso.
-          .\gctse.exe exemplo --destinos-reais --em-branco
-          if (-not (Test-Path "TARJAS\tarja-presidente.json")) { throw "TARJAS nao foi criada" }
-          Get-ChildItem TARJAS | Select-Object Length, Name | Format-Table -AutoSize
-          # nenhum nome de ensaio pode ter sobrado nos arquivos entregues
-          $sujeira = Get-ChildItem TARJAS -Filter *.json |
-            Select-String -Pattern "ENSAIO|PART-" -List
-          if ($sujeira) { throw "dado ficticio no pacote: $($sujeira.Path -join ', ')" }
-
-      - name: Conferir o telao
-        shell: pwsh
-        working-directory: dist\gctse\TELAO
+        working-directory: dist\telao
         run: |
           .\telao.exe --version
-          .\telao.exe -c telao.yaml validar
-          # Prova que as seis telas saem desenhadas, sem tocar o TSE. Vai para
+          # Prova que as doze telas saem desenhadas, sem tocar o TSE. Vai para
           # FORA do pacote, em pasta temporaria: a conferencia usa chapa
           # ficticia, e nada ficticio pode viajar no zip.
-          $prova = Join-Path $env:RUNNER_TEMP "prova-telao"
+          $prova = Join-Path $env:RUNNER_TEMP "prova"
           .\telao.exe -c telao.yaml exemplo --pasta $prova --progresso 63
           $svgs = Get-ChildItem "$prova\*.svg"
           if ($svgs.Count -lt 6) { throw "faltaram telas: $($svgs.Count)" }
@@ -123,14 +80,14 @@ jobs:
           if ($verticais.Count -lt 6) { throw "faltaram telas verticais: $($verticais.Count)" }
           Get-ChildItem "$prova\vertical" | Select-Object Length, Name | Format-Table -AutoSize
 
-      - name: Semear o telao em branco
+      - name: Semear as telas em branco
         shell: pwsh
-        working-directory: dist\gctse\TELAO
+        working-directory: dist\telao
         run: |
           # O que VIAJA no pacote: pagina e telas desenhadas, sem dado nenhum.
-          # Assim o PC de exibicao pode ser montado e apontado hoje - abre,
-          # mostra o desenho vazio e espera o boletim - em vez de dar "arquivo
-          # nao encontrado" ate a coleta rodar pela primeira vez.
+          # Assim os PCs de exibicao podem ser montados e apontados hoje -
+          # abrem, mostram o desenho vazio e esperam o boletim - em vez de dar
+          # "arquivo nao encontrado" ate a coleta rodar pela primeira vez.
           .\telao.exe -c telao.yaml exemplo --em-branco
           $svgs = Get-ChildItem telao\*.svg
           if ($svgs.Count -lt 6) { throw "telao nao foi semeado: $($svgs.Count)" }
@@ -140,51 +97,39 @@ jobs:
 
       - name: Conferir o pacote
         shell: pwsh
-        working-directory: dist\gctse
+        working-directory: dist\telao
         run: |
-          .\gctse.exe --version
-          .\gctse.exe modo             # mostra em que modo o pacote sai de fabrica
+          .\telao.exe modo             # mostra em que modo o pacote sai de fabrica
           # O pacote tem de subir SEM ninguem editar config. Se a saida trouxer
           # 'FALTA PREENCHER', alguem deixou um codigo por preencher e a
           # operacao descobriria isso no dia, no PC, sob pressao.
           foreach ($modo in @("producao","simulado")) {
-            $env:GCTSE_MODO = $modo
             $env:TELAO_MODO = $modo
-            $saida = .\gctse.exe validar 2>&1 | Out-String
-            Write-Host $saida
-            if ($LASTEXITCODE -ne 0) { throw "gctse validar falhou no modo $modo" }
-            if ($saida -match "FALTA PREENCHER") { throw "config do gctse pendente no modo $modo" }
-            # De dentro da pasta do telao: o .exe se ancora na pasta dele
-            # quando empacotado, entao um caminho relativo de fora nao resolve.
-            Push-Location TELAO
             $saida = .\telao.exe -c telao.yaml validar 2>&1 | Out-String
-            $codigo = $LASTEXITCODE
-            Pop-Location
             Write-Host $saida
-            if ($codigo -ne 0) { throw "telao validar falhou no modo $modo" }
-            if ($saida -match "FALTA PREENCHER") { throw "config do telao pendente no modo $modo" }
+            if ($LASTEXITCODE -ne 0) { throw "validar falhou no modo $modo" }
+            if ($saida -match "FALTA PREENCHER") { throw "config pendente no modo $modo" }
           }
-          $env:GCTSE_MODO = $null
           $env:TELAO_MODO = $null
-          Write-Host "As duas configs sobem nos dois modos, sem edicao: OK"
+          Write-Host "A config sobe nos dois modos, sem edicao: OK"
+
           Write-Host "=== Raiz do pacote (o que a pessoa ve ao extrair) ==="
           Get-ChildItem | Where-Object { $_.Name -ne "_internal" } |
             Select-Object Mode, Length, Name | Format-Table -AutoSize
-          foreach ($f in @("GC-SIMULADO.bat","GC-PRODUCAO.bat","ENSAIO.bat",
-                           "LEIA-ME.txt","config.yaml","TELAO\telao.exe")) {
+          foreach ($f in @("TELAO-SIMULADO.bat","TELAO-PRODUCAO.bat","TELAO-TELA.bat",
+                           "TELAO-VERTICAL.bat","TELAO-MESA.bat","TELAO-ENSAIO.bat",
+                           "LEIA-ME.txt","telao.yaml","telao.exe")) {
             if (-not (Test-Path $f)) { throw "faltou $f no pacote" }
           }
-          # Varredura final: nenhum arquivo entregue pode carregar chapa de
-          # ensaio. E a garantia que o pacote so mostra o que vier do TSE.
+          # Nenhum arquivo entregue pode carregar chapa de ensaio: e a garantia
+          # de que o pacote so mostra o que vier do TSE.
           $suspeitos = Get-ChildItem -Recurse -File -Include *.json,*.csv,*.xml,*.svg |
             Where-Object { $_.FullName -notmatch "_internal" } |
             Select-String -Pattern "CANDIDATO ENSAIO|GOVERNO ENSAIO|SENADO ENSAIO" -List
           if ($suspeitos) { throw "dado ficticio no pacote: $($suspeitos.Path -join ', ')" }
           Write-Host "Pacote sem dado inventado: OK"
-          # E nada de pasta sobrando: quem extrai tem de encontrar so o que foi
-          # explicado no LEIA-ME. Pasta de nome estranho na raiz vira pergunta
-          # no dia do teste, que e quando ninguem tem tempo de responder.
-          $previstas = @("docs","logs","MAPA-CASTALIA","TARJAS","TELAO","_internal")
+          # E nada de pasta sobrando na raiz.
+          $previstas = @("docs","logs","telao","telao-vertical","_internal")
           $sobrando = Get-ChildItem -Directory |
             Where-Object { $previstas -notcontains $_.Name }
           if ($sobrando) { throw "pasta inesperada no pacote: $($sobrando.Name -join ', ')" }
@@ -193,21 +138,22 @@ jobs:
       - name: Publicar o zip como artefato
         uses: actions/upload-artifact@v4
         with:
-          name: gctse-windows
-          path: dist/gctse
+          name: telao-windows
+          path: dist/telao
           retention-days: 90
 
       - name: Publicar Release (somente em tag)
         if: startsWith(github.ref, 'refs/tags/')
         shell: pwsh
-        run: Compress-Archive -Path dist\gctse\* -DestinationPath gctse-windows.zip
+        run: Compress-Archive -Path dist\telao\* -DestinationPath telao-windows.zip
 
       - uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: gctse-windows.zip
+          files: telao-windows.zip
           body: |
-            Executavel Windows autocontido. Nao precisa de Python instalado.
+            Telas de apuracao do TSE, executavel Windows autocontido.
+            Nao precisa de Python instalado.
 
-            Baixe o zip, extraia numa pasta e rode `1-validar.bat`.
-            Passo a passo em `docs/PRIMEIRO-USO.md`.
+            Baixe o zip, extraia numa pasta e rode `telao.exe validar`.
+            Passo a passo em `LEIA-ME.txt`.

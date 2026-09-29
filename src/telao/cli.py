@@ -21,10 +21,10 @@ import sys
 import threading
 from pathlib import Path
 
-from gctse.tse.cliente import ClienteTSE
-from gctse.tse.descoberta import listar_eleicoes
-from gctse.tse.endpoints import Endpoints
-from gctse.util.log import configurar
+from .tse.cliente import ClienteTSE
+from .tse.descoberta import listar_eleicoes
+from .tse.endpoints import Endpoints
+from .util.log import configurar
 
 from . import __version__
 from .coleta import Coletor, rodar

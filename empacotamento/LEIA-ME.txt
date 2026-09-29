@@ -1,113 +1,109 @@
 ===========================================================================
- gctse - Apuracao TSE para o GC
+ TELAO - telas de apuracao do TSE
 ===========================================================================
+
+Duas telas, alimentadas direto do TSE, sem ninguem digitar nada:
+
+  TELA CHEIA  1920x1080, para o switcher. Seis telas, voce escolhe qual
+              vai ao ar.
+  MONITOR     1080x1920, para o monitor vertical de cena. Roda sozinho,
+              trocando de informacao a cada 10 segundos.
+
+Nao ha nada de gerador de caracteres aqui. Este pacote so desenha telas.
+
+---------------------------------------------------------------------------
 
 O QUE FAZER, NA ORDEM
 
- 1. Copie esta pasta inteira para a maquina do GC. Ex.: C:\gctse
+ 1. Copie esta pasta inteira para o PC que vai coletar. Ex.: C:\TELAO
     Nao instala nada. Para desinstalar, apague a pasta.
 
- 2. Abra a pasta TARJAS. Os arquivos ja estao la, EM BRANCO: todos os
-    campos existem, zerados, com travessao no lugar dos nomes. Nao ha
-    um unico dado inventado neste pacote - o que aparecer na tela veio
-    do TSE. Aponte o Castalia para eles e monte as cenas:
-
-        TARJAS\tarja-presidente.json    presidente, com foto
-        TARJAS\tarja-governador.json    governador
-        TARJAS\tarja-senador.json       senador
-        TARJAS\tarja-rodizio.json       rodizio dos 10 estados
-
-    ESTE E O CAMINHO DEFINITIVO. No teste e na noite da apuracao os mesmos
-    arquivos sao reescritos com o dado real. Voce nunca troca o caminho.
-
- 3. Nao ha nada para preencher. Os codigos do TSE para o 1o turno de
-    4 de outubro de 2026 ja estao no config.yaml:
+ 2. Nao ha nada para preencher. Os codigos do TSE para o 1o turno de
+    4 de outubro de 2026 ja estao no telao.yaml:
 
         pleito 3220
         6257   presidente, senador, deputado federal
         6259   governador, deputado estadual
 
-    Os dois modos usam os MESMOS codigos: nos dias de teste o TSE publica
-    o simulado nos mesmos caminhos, mudando a fase do boletim. E por isso
-    que o teste de terca diz alguma coisa sobre domingo.
+    Para conferir:  telao.exe validar
+    Ele imprime a URL que vai ler; abra no navegador para confirmar.
 
-    Para conferir:  gctse.exe validar
-    Ele imprime a URL de cada alvo; abra uma no navegador.
+ 3. Instale a fonte Barlow Condensed nos PCs de exibicao. Sem ela o
+    desenho cai em Arial Narrow e as medidas mudam.
 
- 4. Use os botoes:
+ 4. Use os atalhos:
 
-        ENSAIO.bat        dados inventados, apuracao completa em 10 min.
-                          Nao usa internet. Para treinar com a equipe.
+        TELAO-PRODUCAO.bat   o DIA 4. So boletim oficial.
+        TELAO-SIMULADO.bat   os DIAS DE TESTE do TSE. Tudo sai carimbado,
+                             e o carimbo nao desliga.
+        TELAO-ENSAIO.bat     treino com dado inventado, sem internet.
 
-        GC-SIMULADO.bat   os DIAS DE TESTE do TSE. Grava nas MESMAS
-                          tarjas, entao a cena nao muda de caminho -
-                          mas TODA tarja sai carimbada, e o carimbo
-                          nao desliga.
+    O modo vem do atalho que voce abre, nao de arquivo: nao existe estado
+    para alguem esquecer de trocar depois. Quem nao escolher cai em
+    producao, que e o lado seguro.
 
-        GC-PRODUCAO.bat   o DIA 4. So boletim oficial. Reinicia sozinho
-                          se cair.
+ 5. NO PC DE EXIBICAO (tela cheia), que so precisa enxergar esta pasta
+    pela rede:
 
-    O modo vem do atalho que voce abre, nao de arquivo: nao existe
-    estado para alguem esquecer de trocar depois. E quem nao escolher
-    cai em producao, que e o lado seguro.
-
- 5. TELAO - telas cheias num segundo PC (programa separado, opcional)
-
-    Na subpasta TELAO\ ha OUTRO programa, com executavel e config
-    proprios. Ele desenha telas inteiras - mapa do Brasil por cor de
-    partido, como cada estado votou, como o Brasil votou, apuracao
-    nacional e por estado - e nao encosta no GC.
-
-    Os dois rodam ao mesmo tempo, sem se atrapalhar.
-
-        TELAO\TELAO-SIMULADO.bat  nos DIAS DE TESTE do TSE.
-                                  Tudo sai carimbado como simulado.
-        TELAO\TELAO-PRODUCAO.bat  no DIA DA ELEICAO. So boletim oficial.
-        TELAO\TELAO-MESA.bat      voce clica na tela que vai ao ar
-        TELAO\TELAO-ENSAIO.bat    treino com dado inventado, sem internet
-
-    No PC de EXIBICAO, que so precisa enxergar esta pasta pela rede:
-
-        TELAO-TELA.bat "\\NOME-DESTE-PC\gctse\TELAO\telao\index.html"
+        TELAO-TELA.bat "\\NOME-DESTE-PC\TELAO\telao\index.html"
 
     A saida de video daquele PC entra no switcher como uma fonte.
+
+ 6. NO MONITOR VERTICAL de cena (1080x1920):
+
+        TELAO-VERTICAL.bat
+
+    Ponha o monitor em RETRATO nas configuracoes do Windows antes:
+    Configuracoes > Sistema > Video > Orientacao: Retrato.
+
+ 7. PARA ESCOLHER a tela que vai ao ar:
+
+        TELAO-MESA.bat
+
+    Uma janelinha com a lista. Clique e a tela entra em cerca de 1s.
     Fechar a mesa NAO tira nada do ar.
 
-    Se voce tem um MONITOR VERTICAL em cena (1080x1920), ha uma tela
-    propria para ele, que roda sozinha trocando de informacao a cada
-    10 segundos - urnas apuradas, brancos e nulos, comparecimento,
-    placar, mapa e os 27 estados:
+---------------------------------------------------------------------------
 
-        TELAO\TELAO-VERTICAL.bat
+AS TELAS
 
-    Ponha o monitor em RETRATO nas configuracoes do Windows antes.
+ Tela cheia (1920x1080):
+   1. LIDERANCA POR ESTADO      mapa pintado pela cor do partido de quem
+                                lidera em cada estado
+   2. COMO CADA ESTADO VOTOU    o mesmo mapa, com a lista das 27 UFs
+   3. COMO O BRASIL VOTOU       validos, brancos, nulos e abstencao
+   4. APURACAO NACIONAL         o contador de urnas, em numero grande
+   5. APURACAO POR ESTADO       mapa pintado pelo percentual apurado
+   6. PLACAR                    os candidatos, com barra e percentual
 
-    O TELAO\telao.yaml ja vem com os codigos do pleito. O que falta
-    ali sao as CORES DOS PARTIDOS, que dependem da arte.
+ Monitor vertical (1080x1920), girando a cada 10s:
+   urnas apuradas, brancos e nulos, comparecimento, placar, mapa e a
+   lista dos 27 estados.
 
-    O roteiro completo dos dias de teste esta em
-    docs\DIAS-DE-TESTE.md - leia antes de terca.
-
- 6. Para acompanhar, abra TARJAS\painel.html no navegador.
-    Ele mostra as pracas, o percentual e quem esta na frente,
-    e se atualiza sozinho.
-
- 7. Opcional: INICIAR-COM-O-WINDOWS.bat faz o sistema subir sozinho,
-    minimizado, quando alguem logar na maquina.
+ANTES DO PRIMEIRO BOLETIM as telas saem INTEIRAS, com os campos vazios:
+zeros e travessoes no lugar dos numeros, mapa em cinza. Nada e inventado -
+e a mesma estrutura que o TSE vai preencher. Da para montar e enquadrar
+tudo hoje.
 
 ---------------------------------------------------------------------------
 
 O QUE PRECISA ESTAR LIBERADO
 
- A maquina precisa alcancar  resultados.tse.jus.br  na porta 443.
+ O PC que coleta precisa alcancar  resultados.tse.jus.br  na porta 443.
  Sem isso nao ha coleta. Peca a TI com antecedencia.
+
+ Os PCs de exibicao NAO precisam de internet - so enxergar a pasta.
 
 O QUE NAO FAZER
 
- * Nao apague a pasta _internal - o gctse.exe nao roda sem ela.
- * Nao rode duas copias gravando na mesma pasta.
+ * Nao apague a pasta _internal - o telao.exe nao roda sem ela.
+ * Nao rode duas copias apontando para o mesmo pleito: o TSE bloqueia o
+   IP por 10 minutos depois de muitos erros 404.
  * Nao deixe a maquina suspender (plano de energia: nunca suspender).
 
 SE DER PROBLEMA
 
- Olhe logs\gctse.log. A documentacao completa esta na pasta docs.
+ Olhe logs\telao.log. Na tela de exibicao, aperte D para ver o rodape de
+ conferencia (hora da ultima troca e quantas falhas houve).
+
+ O roteiro dos dias de teste esta em docs\DIAS-DE-TESTE.md.

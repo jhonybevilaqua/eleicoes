@@ -24,7 +24,7 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
-from gctse.util.arquivos import escrever_texto
+from .util.arquivos import escrever_texto
 
 from .config import Config
 from .telas import Dados, desenhar

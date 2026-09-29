@@ -2,8 +2,6 @@
 # TELAO - telas de apuracao para o switcher (1920x1080) e para o monitor de
 # cena (1080x1920).
 #
-# Este arquivo e SO do telao. O gctse, que alimenta as tarjas do gerador de
-# caracteres, tem a config dele e nao le esta.
 #
 #   ===================================================================
 #    MODO DE OPERACAO - a unica linha que voce troca entre teste e ar

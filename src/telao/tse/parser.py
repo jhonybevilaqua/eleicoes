@@ -7,7 +7,7 @@ cada campo do modelo aponta para uma LISTA de chaves candidatas e usamos a
 primeira que existir. Para ajustar em 2026 basta editar config/mapeamento.yaml
 (ou a secao 'mapeamento' da config) - nenhuma linha de codigo muda.
 
-Use 'gctse inspecionar --url ...' para listar as chaves reais do arquivo
+Use 'telao inspecionar --url ...' para listar as chaves reais do arquivo
 publicado e conferir o mapeamento antes do dia da eleicao.
 """
 
@@ -22,7 +22,7 @@ from ..util.numeros import para_float, para_int
 from ..util.texto import limpar
 from .endpoints import tipo_abrangencia
 
-log = logging.getLogger("gctse.parser")
+log = logging.getLogger("telao.parser")
 
 # Cada entrada: campo do modelo -> chaves aceitas no JSON do TSE, em ordem.
 MAPA_RESUMO: dict[str, list[str]] = {

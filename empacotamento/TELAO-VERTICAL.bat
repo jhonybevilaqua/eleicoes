@@ -12,7 +12,7 @@ rem  operando. Ele gira, e so.
 rem
 rem  Uso:
 rem    TELAO-VERTICAL.bat             pasta local
-rem    TELAO-VERTICAL.bat "\\PC-OPERACAO\gctse\TELAO\telao-vertical\index.html"
+rem    TELAO-VERTICAL.bat "\\PC-OPERACAO\TELAO\telao-vertical\index.html"
 rem
 rem  Na propria tela, so para conferencia no estudio:
 rem    ESPACO    pausa e retoma o giro

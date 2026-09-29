@@ -1,12 +1,8 @@
-"""Mapa do Brasil por UF: SVG pintado e JSON equivalente.
+"""Mapa do Brasil por UF, desenhado em SVG.
 
-Recebe as 27 unidades da federacao como um grupo (igual ao rodizio) e entrega
-duas saidas do mesmo dado:
-
-  <nome>.svg   mapa desenhado, ja pintado, num canvas 1920x1080 - e o arquivo
-               que entra na cena ou vira a base da arte
-  <nome>.json  os mesmos numeros por UF, para o site, a segunda tela e para o
-               GC que prefere ler dado a ler desenho
+Recebe as 27 unidades da federacao e devolve o desenho pronto, pintado. E a
+base de quatro das telas: as duas de mapa em tela cheia e as duas versoes
+reduzidas que aparecem ao lado da lista de estados.
 
 Dois modos, que respondem a perguntas diferentes:
 
@@ -18,8 +14,8 @@ Dois modos, que respondem a perguntas diferentes:
                    responde "quanto ja apurou onde".
 
 O SVG e autocontido: sem fonte externa obrigatoria, sem script, sem imagem
-ligada. Um arquivo que abre no navegador, no Illustrator e no DataSource do GC
-sem depender de nada que possa faltar no dia.
+ligada. Um arquivo que abre no navegador e no Illustrator sem depender de nada
+que possa faltar no dia.
 
 A UF cuja praca ainda nao publicou boletim sai em cinza, com a sigla legivel -
 nunca some do desenho. Mapa com buraco e pior do que mapa com estado cinza: o
@@ -28,10 +24,7 @@ buraco parece erro de arte, o cinza informa que o dado nao chegou.
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
-
-from ..malha_br import (
+from .malha_br import (
     CENTRO,
     CONTORNO,
     CREDITO,
@@ -40,9 +33,8 @@ from ..malha_br import (
     VIEWBOX_ALTURA,
     VIEWBOX_LARGURA,
 )
-from ..modelos import Apuracao
-from ..util.arquivos import escrever_texto
-from ..util.svg import (
+from .modelos import Apuracao
+from .util.svg import (
     CINZA_SEM_DADO,
     COR_FUNDO,
     COR_TEXTO,
@@ -53,7 +45,6 @@ from ..util.svg import (
     mistura as _mistura,
     pct_br as _pct_br,
 )
-from .base import Exporter
 
 # Canvas do SVG: o mesmo 1920x1080 do projeto de video, para a arte entrar 1:1.
 LARGURA = 1920
@@ -98,11 +89,19 @@ def _sigla(praca: str, ap: Apuracao | None) -> str:
 
 
 
-class ExporterMapa(Exporter):
-    tipo = "mapa"
+class Mapa:
+    """O desenho do mapa, do dado ao SVG.
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    Nao guarda estado entre chamadas: recebe as pracas, monta a estrutura e
+    devolve o desenho. Quem decide quando redesenhar e o publicador.
+    """
+
+    def __init__(self, opcoes: dict | None = None, aparencia: dict | None = None):
+        self.opcoes = opcoes or {}
+        # 'aparencia' e o que a config do telao ja usa para as outras telas:
+        # cores de partido, cor padrao, caixa do texto. O mapa le do mesmo
+        # lugar para nao existirem duas paletas no mesmo ar.
+        self.aparencia = aparencia or {}
         self.modo = str(self.opcoes.get("modo", "partido")).lower()
         self.titulo = str(self.opcoes.get("titulo", ""))
         self.rotulo = str(self.opcoes.get("rotulo", "sigla_pct")).lower()
@@ -115,19 +114,13 @@ class ExporterMapa(Exporter):
         self.fundo_transparente = bool(self.opcoes.get("fundo_transparente", False))
         self.painel = bool(self.opcoes.get("painel", True))
         self.paleta_reserva = bool(self.opcoes.get("paleta_reserva", True))
-        self.formatos = [
-            f.strip().lower()
-            for f in (self.opcoes.get("formatos") or ["svg", "json"])
-            if str(f).strip()
-        ]
-        # Tela de exibicao: quanto tempo entre uma releitura e outra do SVG.
-        # Nao precisa ser igual ao intervalo de coleta - o arquivo so muda
-        # quando o boletim muda, e reler um arquivo local nao custa nada.
-        self.tela_intervalo = int(self.opcoes.get("tela_intervalo_segundos", 10))
-
-    # Um mapa nao se desenha com uma praca so.
-    def exportar(self, ap: Apuracao, nome_alvo: str) -> list[Path]:
-        raise NotImplementedError("exporter 'mapa' recebe a lista de UFs, nao um alvo isolado")
+        self.cores_partido = {
+            str(k).strip().upper(): str(v)
+            for k, v in (self.aparencia.get("cores_partido") or {}).items()
+        }
+        self.cor_padrao = str(self.aparencia.get("cor_padrao", "#6b86ab"))
+        self.selo_texto = str(self.opcoes.get("selo_nao_oficial", ""))
+        self.selo_sempre = bool(self.opcoes.get("selo_sempre", False))
 
     # --- leitura dos dados ---
 
@@ -185,8 +178,8 @@ class ExporterMapa(Exporter):
         for estado in com_dado:
             if estado["selo"]:
                 return estado["selo"]
-        if bool(self.cfg_texto.get("selo_sempre")) or not com_dado:
-            return str(self.cfg_texto.get("selo_nao_oficial", "") or "")
+        if self.selo_sempre or not com_dado:
+            return self.selo_texto
         return ""
 
     def _completar_cores(self, estados: dict[str, dict]) -> None:
@@ -250,9 +243,8 @@ class ExporterMapa(Exporter):
         }
 
     def _nacional(self, ap: Apuracao) -> dict:
-        resumo = self.campos_resumo(ap)
         return {
-            "abrangencia": resumo["abrangencia"],
+            "abrangencia": (ap.abrangencia_nome or "").upper(),
             "apuracao_pct": ap.pct_secoes,
             "secoes_totalizadas": ap.secoes_totalizadas,
             "secoes_total": ap.secoes_total,
@@ -282,14 +274,13 @@ class ExporterMapa(Exporter):
             base["cor"] = self.cor_sem_dado
             return base
 
-        resumo = self.campos_resumo(ap)
         base.update(
             {
                 "apuracao_pct": ap.pct_secoes,
                 "secoes_totalizadas": ap.secoes_totalizadas,
                 "secoes_total": ap.secoes_total,
-                "selo": resumo["selo"],
-                "hora_geracao": resumo["hora_geracao"],
+                "selo": self._selo(ap),
+                "hora_geracao": ap.gerado_em.strftime("%H:%M") if ap.gerado_em else "",
                 "lider": self._chapa(ap, 0),
                 "segundo": self._chapa(ap, 1),
                 "diferenca_pct": ap.diferenca_pct,
@@ -320,18 +311,23 @@ class ExporterMapa(Exporter):
             # verdade.
             return None
         cand = ap.candidatos[indice]
-        campos = self.campos_candidato(cand, ap)
-        cores = self.cfg_texto.get("cores_partido") or {}
+        sigla = (cand.partido or "").strip().upper()
         return {
-            "cor_definida": bool(cores.get((cand.partido or "").strip().upper())),
-            "nome": campos["nome"],
-            "partido": campos["partido"],
-            "numero": campos["numero"],
+            "cor_definida": bool(self.cores_partido.get(sigla)),
+            "nome": (cand.nome or "").upper(),
+            "partido": sigla,
+            "numero": cand.numero,
             "votos": cand.votos,
             "percentual": cand.percentual,
             "eleito": cand.eleito,
-            "cor": campos["cor"] or self.cor_sem_dado,
+            "cor": self.cores_partido.get(sigla) or self.cor_padrao,
         }
+
+    def _selo(self, ap: Apuracao) -> str:
+        """Carimbo de fase da praca. Em simulado, sai sempre."""
+        if ap.oficial and not self.selo_sempre:
+            return ""
+        return self.selo_texto
 
     def _cor_estado(self, estado: dict) -> str:
         if self.modo == "apuracao":
@@ -342,131 +338,6 @@ class ExporterMapa(Exporter):
         if not lider:
             return self.cor_sem_dado
         return lider["cor"] or self.cor_sem_dado
-
-    # --- escrita ---
-
-    def exportar_lista(self, itens: list[tuple[int, str, Apuracao | None]], nome: str) -> list[Path]:
-        dados = self.montar(itens)
-        escritos: list[Path] = []
-        if "json" in self.formatos:
-            escritos.append(
-                escrever_texto(
-                    self.destino / f"{nome}.json",
-                    json.dumps(dados, ensure_ascii=False, indent=2),
-                    encoding=self.encoding,
-                    nova_linha=self.nova_linha,
-                )
-            )
-        if "svg" in self.formatos:
-            escritos.append(
-                escrever_texto(
-                    self.destino / f"{nome}.svg",
-                    self.desenhar(dados),
-                    encoding=self.encoding,
-                    nova_linha=self.nova_linha,
-                )
-            )
-        if "tela" in self.formatos:
-            escritos.append(
-                escrever_texto(
-                    self.destino / f"{nome}.html",
-                    self.tela(nome),
-                    encoding="utf-8",
-                    nova_linha="\n",
-                )
-            )
-        return escritos
-
-    # --- tela de exibicao ---
-
-    def tela(self, nome: str) -> str:
-        """Pagina que mostra o mapa em tela cheia e se atualiza sozinha.
-
-        Feita para o PC de exibicao: abre em tela cheia, sem cursor, sem barra
-        de navegacao, e a saida de video desse PC entra no switcher como uma
-        fonte qualquer. Nao ha vinculo para montar no GC - o desenho ja vem
-        pronto.
-
-        Tres decisoes que so aparecem quando isso esta no ar:
-
-        1. DUAS CAMADAS, nao um 'reload'. Recarregar a pagina inteira pisca
-           branco por um quadro, e um quadro branco no ar e um erro visivel.
-           Aqui a imagem nova carrega escondida e so aparece quando esta
-           inteira - a troca e uma dissolvencia, nunca um flash.
-        2. FALHA MANTEM O QUADRO. Se a leitura falhar (arquivo sendo trocado,
-           pasta de rede oscilando), a camada nova simplesmente nao assume: o
-           ultimo mapa bom continua no ar. Tela preta por causa de um soluco de
-           rede seria pior do que um mapa 20 segundos atrasado.
-        3. <img>, nao 'fetch'. O navegador bloqueia fetch em file:// por
-           seguranca, e este arquivo costuma ser aberto de uma pasta
-           compartilhada do PC de operacao. <img> le sem esse bloqueio.
-
-        A hora do boletim ja esta desenhada dentro do mapa, entao a tela nao
-        precisa - e nao deve - escrever nada por cima. Abra com '?debug=1' para
-        ver o estado da atualizacao durante os testes; sem isso, nada aparece.
-        """
-        return f"""<!doctype html>
-<html lang="pt-BR">
-<meta charset="utf-8">
-<title>{_escapar(self.titulo or nome)}</title>
-<style>
-  html,body{{margin:0;height:100%;background:{self.cor_fundo};overflow:hidden;cursor:none}}
-  #palco{{position:fixed;inset:0}}
-  #palco img{{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;
-    opacity:0;transition:opacity .28s linear}}
-  #palco img.ativo{{opacity:1}}
-  #estado{{position:fixed;left:8px;bottom:6px;font:12px ui-monospace,Menlo,monospace;
-    color:#7d8aa0;display:none}}
-  body.debug #estado{{display:block}}
-</style>
-<div id="palco"><img id="camadaA" alt=""><img id="camadaB" alt=""></div>
-<div id="estado"></div>
-<script>
-(function () {{
-  var ARQUIVO = {json.dumps(nome + ".svg")};
-  var INTERVALO = {max(2, self.tela_intervalo)} * 1000;
-
-  var camadas = [document.getElementById("camadaA"), document.getElementById("camadaB")];
-  var atual = 0, trocas = 0, falhas = 0;
-  var estado = document.getElementById("estado");
-  if (location.search.indexOf("debug") >= 0) document.body.classList.add("debug");
-
-  function anotar(texto) {{
-    estado.textContent = texto + "  |  trocas: " + trocas + "  falhas: " + falhas;
-  }}
-
-  function atualizar() {{
-    var proxima = camadas[1 - atual];
-    proxima.onload = function () {{
-      proxima.classList.add("ativo");
-      camadas[atual].classList.remove("ativo");
-      atual = 1 - atual;
-      trocas++;
-      anotar(new Date().toLocaleTimeString("pt-BR"));
-    }};
-    proxima.onerror = function () {{
-      // mantem o que ja esta no ar: melhor um mapa atrasado do que tela preta
-      falhas++;
-      anotar("falha as " + new Date().toLocaleTimeString("pt-BR"));
-    }};
-    // a consulta no fim evita que o navegador sirva a copia em cache
-    proxima.src = ARQUIVO + "?t=" + Date.now();
-  }}
-
-  // clique em qualquer lugar entra em tela cheia, para quem abrir com dois
-  // cliques em vez do atalho em modo quiosque
-  document.addEventListener("click", function () {{
-    if (!document.fullscreenElement && document.documentElement.requestFullscreen) {{
-      document.documentElement.requestFullscreen();
-    }}
-  }});
-
-  atualizar();
-  setInterval(atualizar, INTERVALO);
-}})();
-</script>
-</html>
-"""
 
     # --- desenho ---
 
