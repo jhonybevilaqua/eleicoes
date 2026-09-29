@@ -35,7 +35,7 @@ param(
 # Versao impressa na partida e no painel. Sem carimbo, "qual versao esta
 # rodando ai?" so se responde abrindo arquivo e comparando a olho - e no
 # meio de um teste com janela de horario ninguem faz isso.
-$Versao = "6.5 - 29/09/2026"
+$Versao = "6.6 - 29/09/2026"
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
@@ -105,7 +105,9 @@ function Escrever-Log {
     }
     try {
         if (-not (Test-Path "logs")) { New-Item -ItemType Directory -Path "logs" | Out-Null }
-        Add-Content -Path (Join-Path "logs" ("gctse-{0}.log" -f (Get-Date -Format "yyyy-MM-dd"))) -Value $linha
+        # UTF-8: sem isto o Windows PowerShell 5.1 grava em ANSI e o
+        # DIAGNOSTICO, que le em UTF-8, mostrava "PARAN?" no lugar de PARANA.
+        Add-Content -Path (Join-Path "logs" ("gctse-{0}.log" -f (Get-Date -Format "yyyy-MM-dd"))) -Value $linha -Encoding UTF8
     } catch { }
 }
 
@@ -193,25 +195,7 @@ function Escrever-Arquivo {
     # se ainda assim nao der, perde-se esta gravacao e nao a noite: o
     # proximo ciclo reescreve, porque a impressao so e guardada em caso
     # de sucesso.
-    $tentativas = 0
-    while ($true) {
-        $tentativas++
-        try {
-            Move-Item -Path $temporario -Destination $Caminho -Force -ErrorAction Stop
-            return $true
-        } catch {
-            if ($tentativas -ge 4) {
-                Escrever-Log "nao consegui gravar $Caminho : $($_.Exception.Message)" "AVISO"
-                try { Remove-Item -Path $temporario -Force -ErrorAction SilentlyContinue } catch { }
-                # Falso, e nao excecao: perder ESTA gravacao nao pode levar
-                # junto o resto do ciclo (as outras tarjas, as listas, os
-                # alertas). Quem chama nao guarda a impressao, entao o
-                # proximo ciclo tenta de novo sozinho.
-                return $false
-            }
-            Start-Sleep -Milliseconds (60 * $tentativas)
-        }
-    }
+    return (Promover-Temporario $temporario $Caminho)
 }
 
 function Arquivo-Igual {
@@ -231,6 +215,60 @@ function Arquivo-Igual {
         if (-not $igual) { Escrever-Log "$(Split-Path -Leaf $Caminho) foi alterado por fora da coleta - regravando" "AVISO" }
         return $igual
     } catch { return $true }
+}
+
+function Promover-Temporario {
+    # Poe o .tmp no lugar do arquivo que o GC le.
+    #
+    # Em 29/09 a tarja do presidente ficou SEM GRAVAR das 16:00 as 16:03 e
+    # das 16:28 as 16:34 ("Nao e possivel criar um arquivo ja existente"),
+    # com o LiveBoard mostrando o numero velho. Causa: o Move-Item -Force
+    # APAGA o destino antes de mover; com o LiveBoard (Java) segurando o
+    # arquivo aberto, o Windows deixa o apagado "pendente" e o nome fica
+    # ocupado ate o leitor soltar - minutos.
+    #
+    # Agora: 1) File.Replace, que troca o arquivo RENOMEANDO o antigo (e o
+    # jeito do Windows de substituir arquivo em uso); 2) se o destino nao
+    # existe, File.Move; 3) repete algumas vezes; 4) se ainda nao der,
+    # escreve POR CIMA do arquivo aberto (o leitor Java compartilha
+    # escrita). Nunca apaga o destino.
+    param([string] $Temporario, [string] $Caminho)
+    $tentativas = 0
+    while ($true) {
+        $tentativas++
+        try {
+            if (Test-Path -LiteralPath $Caminho) {
+                [IO.File]::Replace($Temporario, $Caminho, [NullString]::Value, $true)
+            } else {
+                [IO.File]::Move($Temporario, $Caminho)
+            }
+            return $true
+        } catch {
+            $erroTroca = $_.Exception.Message
+            if ($tentativas -lt 6) { Start-Sleep -Milliseconds (80 * $tentativas); continue }
+        }
+        # Plano B: escrever no proprio arquivo aberto, sem apagar nada.
+        try {
+            $bytes = [IO.File]::ReadAllBytes($Temporario)
+            $fluxo = New-Object IO.FileStream($Caminho, [IO.FileMode]::OpenOrCreate, [IO.FileAccess]::Write,
+                                              ([IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete))
+            try {
+                $fluxo.Write($bytes, 0, $bytes.Length)
+                $fluxo.SetLength($bytes.Length)
+                $fluxo.Flush()
+            } finally { $fluxo.Dispose() }
+            try { Remove-Item -LiteralPath $Temporario -Force -ErrorAction SilentlyContinue } catch { }
+            Escrever-Log "$(Split-Path -Leaf $Caminho): arquivo preso pelo leitor ($erroTroca) - gravado por cima" "AVISO"
+            return $true
+        } catch {
+            Escrever-Log "nao consegui gravar $Caminho : $erroTroca / $($_.Exception.Message)" "AVISO"
+            try { Remove-Item -LiteralPath $Temporario -Force -ErrorAction SilentlyContinue } catch { }
+            # Falso, e nao excecao: perder ESTA gravacao nao pode levar junto
+            # o resto do ciclo. Quem chama nao guarda a impressao, entao o
+            # proximo ciclo tenta de novo sozinho.
+            return $false
+        }
+    }
 }
 
 function Tem-Propriedade {
@@ -543,6 +581,15 @@ function Aguardar-Vez {
     if ($script:DesdeUltimaOlhada -ge 5) {
         $script:DesdeUltimaOlhada = 0
         $null = Atender-Troca-De-Praca
+        # Sinal de vida NO MEIO do ciclo. O painel e o diagnostico medem a
+        # idade do coleta.json, que so e regravado quando o ciclo fecha. Na
+        # noite da apuracao, com o TSE lento, um ciclo pode passar de 75 s e
+        # o painel acenderia "A COLETA PAROU" com ela trabalhando - convite
+        # a fechar a janela no meio da apuracao. So atualiza a hora.
+        try {
+            $arqVida = Join-Path $PastaSaida "coleta.json"
+            if (Test-Path -LiteralPath $arqVida) { [IO.File]::SetLastWriteTime($arqVida, (Get-Date)) }
+        } catch { }
     }
 }
 
@@ -686,7 +733,7 @@ function Conferir-Recebimento {
     try {
         $arqL = Join-Path "logs" ("gctse-{0}.log" -f (Get-Date -Format "yyyy-MM-dd"))
         Add-Content -Path $arqL -Value ("{0} ERRO  NAO ESTAMOS RECEBENDO DADOS DO TSE - ultimo: {1} - {2}" -f
-                                        (Get-Date -Format "HH:mm:ss"), $ultimo, $motivo)
+                                        (Get-Date -Format "HH:mm:ss"), $ultimo, $motivo) -Encoding UTF8
     } catch { }
 }
 
@@ -755,7 +802,7 @@ function Obter-Boletim {
             Escrever-Log $linhaF "AVISO"
         } else {
             $script:FalhasCaladas++
-            try { Add-Content -Path (Join-Path "logs" ("gctse-{0}.log" -f (Get-Date -Format "yyyy-MM-dd"))) -Value ("{0} AVISO {1}" -f (Get-Date -Format "HH:mm:ss"), $linhaF) } catch { }
+            try { Add-Content -Path (Join-Path "logs" ("gctse-{0}.log" -f (Get-Date -Format "yyyy-MM-dd"))) -Value ("{0} AVISO {1}" -f (Get-Date -Format "HH:mm:ss"), $linhaF) -Encoding UTF8 } catch { }
         }
         return $null
     }
@@ -918,7 +965,11 @@ function Normalizar-Boletim {
         # 100 antes de a totalizacao fechar, e e so com and=f que o
         # resultado daquela praca esta encerrado de verdade.
         Encerrada   = $(if ("$(Obter-Campo $Bruto @('and') '')".ToLower() -eq "f") { "1" } else { "0" })
-        Oficial     = ($fase -eq "O")
+        # Oficial = tudo que NAO for simulado (S) nem teste (T). Antes era
+        # "so O": se o arquivo oficial de 2026 viesse com outra marca, o
+        # modo AR recusaria TODOS os boletins e a noite passaria com a tarja
+        # vazia. O que precisa ser barrado no ar e o simulado e o teste.
+        Oficial     = ($fase -ne "S" -and $fase -ne "T")
         Praca       = $nome
         PctUrnas    = $pct
         Geracao     = "$(Obter-Campo $Bruto @('dg') '') $(Obter-Campo $Bruto @('hg') '')"
@@ -1098,8 +1149,7 @@ function Copiar-Foto-Para-Nome-Fixo {
         }
         $temporario = "$Destino.tmp"
         Copy-Item -Path $Origem -Destination $temporario -Force
-        Move-Item -Path $temporario -Destination $Destino -Force
-        $script:FotosFixas[$Destino] = $Origem
+        if (Promover-Temporario $temporario $Destino) { $script:FotosFixas[$Destino] = $Origem }
     } catch {
         Escrever-Log "nao consegui copiar a foto $Origem : $($_.Exception.Message)" "AVISO"
     }
@@ -1516,6 +1566,8 @@ function Escrever-Alertas {
     $null = Escrever-Arquivo (Join-Path $PastaSaida $cfg.alertas.arquivo) ($corpo | ConvertTo-Json -Depth 6)
 }
 
+$script:FaseAvisada = @{}
+
 function Buscar-Praca {
     # Le uma praca/cargo do TSE (ou do simulador), guarda em cache e acende o
     # alerta se o numero mudou. Uma praca por ciclo, no maximo.
@@ -1541,7 +1593,17 @@ function Buscar-Praca {
         return $null
     }
     if ($null -ne $bruto) { $b = Normalizar-Boletim $bruto $Nome }
-    if ($null -ne $b -and (-not $b.Oficial) -and $Modo -eq "AR") { return $null }
+    if ($null -ne $b -and (-not $b.Oficial) -and $Modo -eq "AR") {
+        if (-not $script:FaseAvisada.ContainsKey("rejeitada-$($b.Fase)")) {
+            $script:FaseAvisada["rejeitada-$($b.Fase)"] = $true
+            Escrever-Log "boletim de fase '$($b.Fase)' (simulado/teste) no ambiente oficial - NAO vai ao ar" "ERRO"
+        }
+        return $null
+    }
+    if ($null -ne $b -and $Modo -eq "AR" -and $b.Fase -ne "O" -and -not $script:FaseAvisada.ContainsKey("rara-$($b.Fase)")) {
+        $script:FaseAvisada["rara-$($b.Fase)"] = $true
+        Escrever-Log "o TSE marcou a fase como '$($b.Fase)' (esperado O no oficial, S no simulado) - aceito, confira" "AVISO"
+    }
 
     # ANTI-REGRESSAO. O TSE serve de CDN com varios pontos de presenca, e um
     # deles pode devolver copia velha. No ar isso aparece como a apuracao

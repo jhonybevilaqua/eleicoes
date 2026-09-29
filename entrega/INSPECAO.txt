@@ -1,5 +1,56 @@
 ===========================================================================
- LAUDO DE INSPECAO - gctse 6.5
+ LAUDO DE INSPECAO - gctse 6.6
+ 29/09/2026 - revisao completa pedida antes do dia 04/10
+===========================================================================
+
+ DEFEITO 1: TARJA DO PRESIDENTE SEM GRAVAR POR MINUTOS (achado no log)
+
+   29/09, 16:00-16:03 e 16:28-16:34: 29 falhas seguidas, "Nao e possivel
+   criar um arquivo ja existente". O presidente no ar ficou parado nesse
+   tempo - o segundo trecho foi justo o fechamento da apuracao.
+   Causa: o Move-Item -Force APAGA o destino antes de mover; com o
+   LiveBoard (Java) segurando o arquivo aberto, o apagado fica "pendente"
+   e o nome ocupado ate o leitor soltar.
+   Agora: File.Replace (troca renomeando, o jeito do Windows de
+   substituir arquivo em uso) e, se ainda falhar, grava por cima do
+   arquivo aberto. Nunca apaga o destino. Vale tambem para a foto fixa.
+
+ DEFEITO 2: TARJA VAZIA A NOITE TODA SE A FASE DO OFICIAL NAO FOR "O"
+
+   No modo oficial, so boletim com fase "O" era aceito. Nao ha arquivo
+   oficial de 2026 para confirmar a marca; se viesse outra, TODOS os
+   boletins seriam recusados. Agora recusa so S (simulado) e T (teste) -
+   com ERRO na janela - e aceita o resto, avisando se nao for "O".
+
+ DEFEITO 3: "A COLETA PAROU" FALSO COM O TSE LENTO
+
+   O sinal de vida (coleta.json) so era gravado no fim do ciclo. Com o
+   TSE lento (2 s por arquivo) a 6.5 ficou 107 s sem sinal e o painel
+   acenderia "A COLETA PAROU" com ela trabalhando. Agora o sinal e
+   renovado durante o ciclo: maximo de 37 s no mesmo teste.
+
+ DEFEITO 4: LOG EM ANSI
+
+   O log saia em ANSI no Windows PowerShell 5.1 e o DIAGNOSTICO, que le
+   em UTF-8, mostrava "PARAN?". Agora o log e UTF-8.
+
+ ACHADO PELOS TESTES ANTES DE SAIR: na reescrita da gravacao, a funcao
+ Arquivo-Igual (da 6.5) foi apagada por engano e o ciclo quebrava no
+ fim. O teste de regressao pegou. Entrou um teste novo: nenhuma funcao
+ chamada sem existir. Rodado contra a copia quebrada, acusa.
+
+ VERIFICADO NA 6.6
+
+   Gravacao: substituicao com leitor aberto, plano B (maior/menor),
+   arquivo novo                                                      4 / 0 OK
+   Fase no oficial: S recusado com ERRO; vazio e X aceitos com aviso  OK
+   TSE lento: sinal de vida 37 s (6.5: 107 s)                         OK
+   Pacote do dia: coleta, validador 36/0, diagnostico, fotos, painel,
+   sobrescrita por fora, diagnostico de outro modo, 404, TSE lento  16 / 0 OK
+   Regressao completa                                            27 / 0 OK
+
+===========================================================================
+ LAUDO ANTERIOR - gctse 6.5
  29/09/2026 - log e DIAGNOSTICO do ultimo simulado; pacote do dia 04/10
 ===========================================================================
 

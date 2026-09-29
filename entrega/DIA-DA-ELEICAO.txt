@@ -1,6 +1,6 @@
 ===========================================================================
  DIA DA ELEICAO - 04/10/2026 (1o turno) - passo a passo
- gctse 6.5 - pasta D:\ELEICOES\GCTSE
+ gctse 6.6 - pasta D:\ELEICOES\GCTSE
 ===========================================================================
 
  Codigos do TSE ja no config.json (pagina oficial do TSE):
@@ -47,7 +47,7 @@
     TSE avisa que muitos 404 podem bloquear o IP por um tempo. O sistema ja
     espaca as tentativas, mas horas de janela aberta sao centenas de 404
     sem necessidade.
-    A janela deve dizer: gctse versao 6.5 ... modo AR
+    A janela deve dizer: gctse versao 6.6 ... modo AR
 
  3. Abra o PAINEL.bat e o navegador em http://localhost:8099
 
