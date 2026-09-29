@@ -2,6 +2,7 @@
 
   telao validar      confere a configuracao antes do ar
   telao descobrir    lista os pleitos publicados pelo TSE (codigos p/ config)
+  telao inspecionar  baixa um boletim e mostra as chaves que ele REALMENTE tem
   telao rodar        no ar: coleta o TSE e reescreve as telas
   telao ensaio       o mesmo, com dados ficticios - nao toca o TSE
   telao exemplo      gera as telas uma vez, para a arte e o teste de cena
@@ -13,6 +14,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import os
 import re
@@ -22,7 +24,7 @@ import threading
 from pathlib import Path
 
 from .tse.cliente import ClienteTSE
-from .tse.descoberta import listar_eleicoes
+from .tse.descoberta import inspecionar, listar_eleicoes
 from .tse.endpoints import Endpoints
 from .util.log import configurar
 
@@ -216,6 +218,33 @@ def cmd_descobrir(args) -> int:
     print()
     print("Cada modo tem os seus - preencha os dois agora e trocar de teste")
     print("para o ar vira um atalho, em vez de editar config no domingo.")
+    return 0
+
+
+def cmd_inspecionar(args) -> int:
+    """Mostra as chaves reais de um arquivo do TSE.
+
+    E a ferramenta do risco numero um dos dias de teste: o TSE ja renomeou
+    abreviacoes entre pleitos, e quando isso acontece o nome do candidato
+    chega vazio na tela sem nenhum erro aparecer. Aqui da para ver, em
+    segundos, o que o arquivo traz de verdade - e a correcao e uma linha na
+    secao 'mapeamento' da config.
+    """
+    cfg = _cfg(args)
+    _log(cfg, args)
+    endpoints = Endpoints(cfg.tse)
+    url = args.url or endpoints.resultado(args.abrangencia, args.cargo or cfg.cargo)
+    print(f"Lendo {url}\n")
+    cliente = ClienteTSE(timeout=float(cfg.coleta.get("timeout_segundos", 8)))
+    try:
+        resumo = inspecionar(cliente, url)
+    finally:
+        cliente.fechar()
+    print(json.dumps(resumo, ensure_ascii=False, indent=2))
+    if "erro" in resumo:
+        return 1
+    print("\nSe algum nome vier vazio na tela, compare estas chaves com as que")
+    print("o parser procura e ajuste a secao 'mapeamento' da config.")
     return 0
 
 
@@ -431,6 +460,12 @@ def construir_parser() -> argparse.ArgumentParser:
     p_no_ar.add_argument("--listar", action="store_true", help="so lista, nao troca")
     p_no_ar.add_argument("--pasta", help="pasta do telao (padrao: a da config)")
     p_no_ar.set_defaults(func=cmd_no_ar)
+
+    p_insp = sub.add_parser("inspecionar", help="mostra as chaves reais de um boletim do TSE")
+    p_insp.add_argument("--url", help="URL completa (sobrepoe abrangencia/cargo)")
+    p_insp.add_argument("--abrangencia", default="br", help="'br' ou a sigla da UF")
+    p_insp.add_argument("--cargo", type=int, help="padrao: o cargo da config")
+    p_insp.set_defaults(func=cmd_inspecionar)
 
     p_modo = sub.add_parser("modo", help="mostra ou troca entre Simulado e Producao")
     p_modo.add_argument("novo", nargs="?", help="simulado | producao (vazio so mostra)")

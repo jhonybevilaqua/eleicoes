@@ -35,12 +35,12 @@ Padrão usado nos últimos pleitos, e o que está configurado por padrão:
 | `cargo` | `0001` | 4 dígitos |
 | `eleicao` | `000619` | 6 dígitos |
 
-`dados-simplificados` traz o placar (é o que o GC precisa). `dados` traz o
-arquivo completo, bem maior; use só se precisar de detalhe por candidato que
-não vem no simplificado (`coleta.usar_dados_completos: true`).
+`dados-simplificados` traz o placar — é o que as telas usam. `dados` traz o
+arquivo completo, bem maior; só faz sentido se algum dia for preciso detalhe
+por candidato que não vem no simplificado.
 
-Se o TSE mudar o layout dos caminhos em 2026, ajuste `tse.padroes` no
-`config.yaml` — o código não precisa mudar.
+Se o TSE mudar o layout dos caminhos, ajuste `tse.padroes` no `telao.yaml` —
+o código não precisa mudar.
 
 ## Códigos de cargo
 
@@ -81,7 +81,7 @@ lista as chaves que ele de fato tem:
 telao inspecionar --abrangencia br --cargo 1
 ```
 
-Qualquer diferença se corrige na seção `mapeamento` do `config.yaml`, que entra
+Qualquer diferença se corrige na seção `mapeamento` do `telao.yaml`, que entra
 na frente das chaves padrão:
 
 ```yaml
@@ -94,61 +94,44 @@ mapeamento:
 ## Fase: a diferença entre simulado e oficial
 
 O campo de fase indica se o boletim é oficial (`O`) ou simulado (`S`). O TSE
-publica simulados nos dias que antecedem o pleito, nos mesmos caminhos. Um
-sistema que ignora a fase coloca resultado fictício no ar com cara de
-resultado real.
+publica simulados nos dias que antecedem o pleito, **nos mesmos caminhos**. Um
+sistema que ignora a fase coloca resultado fictício no ar com cara de resultado
+real.
 
-Por isso `seguranca.bloquear_nao_oficial: true` é o padrão, e o campo `selo`
-fica disponível em todos os exporters para o template estampar
-“PARCIAL — NÃO OFICIAL” quando for o caso. **Não desligue essa trava em
-produção.** Para ensaiar, use `telao ensaio`, que usa o simulador interno e
-nunca toca o TSE.
+Quem decide o que fazer com isso é o **modo**, não a configuração:
+
+| | Fase `S` | Selo |
+|---|---|---|
+| `TELAO-PRODUCAO.bat` | descartada | só em boletim não oficial |
+| `TELAO-SIMULADO.bat` | aceita | **sempre**, mesmo em fase `O` |
+
+Não há linha de configuração que mude isso — `seguranca.bloquear_nao_oficial`
+é sobrescrito pelo modo de propósito. Era o caminho por onde um simulado podia
+ir ao ar como resultado: bastava alguém desligar a trava num teste e esquecer
+de religar.
+
+Para ensaiar sem tocar o TSE, `telao ensaio` usa o simulador interno.
 
 ## Números em pt-BR
 
 Tudo vem como texto: votos com ponto de milhar (`"12.345.678"`) e percentuais
-com vírgula decimal (`"49,10"`). O parser converte via
-`util/numeros.py`; os exporters devolvem já formatado para o ar
-(`12.345.678`, `49,10%`) e também em forma numérica (`votos_num`,
-`percentual_num`) para quem precisa calcular ou desenhar barra.
+com vírgula decimal (`"49,10"`). O parser converte via `util/numeros.py`, e as
+telas recebem tanto o número formatado quanto o valor bruto — o formatado para
+escrever, o bruto para calcular a barra.
 
-## Validar contra dado real, antes de 2026
+## Checklist para os dias de teste
 
-Os arquivos dos pleitos anteriores continuam publicados. Isso permite provar a
-cadeia inteira — URL, parser, mapeamento, exporters, vínculo da cena no
-LiveBoard — contra dado **real** do TSE, sem esperar 2026. O resultado de 2022
-é conhecido e imutável, então qualquer divergência é erro nosso, não do dado.
+1. **`telao validar`** → confere a configuração e imprime a URL que vai ler.
+   Abra essa URL no navegador. JSON significa cadeia fechada; 404 significa
+   que o TSE ainda não publicou aquele arquivo.
+2. **`telao descobrir`** → lista os pleitos publicados. Só é preciso se o TSE
+   mudar os códigos; os de 4 de outubro de 2026 já estão na configuração.
+3. **`telao inspecionar`** → baixa um boletim real e mostra as chaves que ele
+   de fato tem. **É o passo do risco número um:** se o TSE renomear uma
+   abreviação, o nome do candidato chega vazio na tela sem nenhum erro
+   aparecer. Rode no nacional e numa UF.
+4. **`TELAO-SIMULADO.bat`** durante a janela de simulado do TSE. Tudo sai
+   carimbado, e o carimbo não desliga.
 
-```bash
-telao descobrir
-telao inspecionar --abrangencia br --cargo 1
-telao uma-vez
-```
-
-Rode da rede da emissora. Confira em `dados/validacao-2022/gc/presidente-br.json`
-o 2º turno de 2022: Lula 60.345.999 (50,90%) e Bolsonaro 58.206.354 (49,10%).
-Se bater, a cadeia está correta ponta a ponta.
-
-Isso **não** valida os códigos e as abreviações de 2026 — o TSE já renomeou
-campos entre pleitos. O checklist abaixo continua obrigatório. Mas reduz o
-trabalho do dia D a confirmar dois códigos e conferir nomes de campo, em vez de
-descobrir a integração inteira sob pressão.
-
-Se algum arquivo der 404, rode `descobrir` para ver os códigos válidos — pode
-ser que o TSE tenha mudado o caminho ou retirado o pleito antigo do ar.
-
-## Checklist para 2026
-
-Semanas antes do pleito, quando o TSE publicar a configuração:
-
-1. `telao descobrir` → anote o código do pleito e da eleição.
-2. Preencha `tse.ciclo`, `tse.pleito`, `tse.eleicao` no `config.yaml`.
-3. `telao validar` → confira a URL montada.
-4. `telao inspecionar` no nacional e numa UF → confira as
-   chaves e ajuste `mapeamento` se preciso.
-5. `telao amostrar` → grave as amostras em `dados/amostras/` para poder
-   reproduzir o dia offline (`coleta.fonte: arquivo`).
-6. Na janela de simulado do TSE, rode com
-   `seguranca.bloquear_nao_oficial: false` em uma pasta de saída **de teste**
-   para validar a ponta a ponta com dado real do TSE. Devolva a trava para
-   `true` antes do dia.
+O roteiro completo, com o que conferir em cada dia e em que ordem, está em
+[`DIAS-DE-TESTE.md`](DIAS-DE-TESTE.md).

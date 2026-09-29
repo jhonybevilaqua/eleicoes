@@ -172,3 +172,18 @@ def test_estado_com_zero_voto_apurado_fica_cinza(tmp_path):
     estados = _mapa().montar(itens)["estados"]
     assert estados["AC"]["lider"] is None
     assert estados["AC"]["cor"] == "#6b7688"
+
+
+def test_sem_cor_padrao_a_legenda_nao_fica_preta(tmp_path):
+    """Cor vazia vira fill="" - quadrado preto ao lado de estado cinza.
+
+    A moldura das telas passa string vazia quando a config nao define
+    'cor_padrao', que e o estado do pacote ate a arte fechar as cores.
+    """
+    mapa = Mapa(opcoes={}, aparencia={"cores_partido": {}, "cor_padrao": ""})
+    dados = mapa.montar(_itens())
+    for estado in dados["estados"].values():
+        assert estado["cor"], estado["sigla"]
+        if estado["lider"]:
+            assert estado["lider"]["cor"]
+    assert 'fill=""' not in mapa.desenhar(dados)

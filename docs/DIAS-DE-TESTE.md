@@ -154,7 +154,7 @@ não foi tocado.
 - **Praça sem boletim fica cinza com a sigla legível**, nunca buraco no mapa —
   e praça com boletim mas zero voto apurado também fica cinza, em vez de
   pintar a cor de quem por acaso está no topo de uma lista zerada.
-- **O pacote não traz nenhum dado inventado.** As tarjas e as telas nascem em
-  branco: campos zerados, travessão no lugar dos nomes. Se uma delas for ao ar
+- **O pacote não traz nenhum dado inventado.** As telas nascem em branco:
+  campos zerados, travessão no lugar dos nomes. Se uma delas for ao ar
   por engano, o que aparece é um placar vazio, não um resultado falso.
 - **Falha de leitura mantém a última tela boa no ar**, nunca tela preta.

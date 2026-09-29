@@ -118,7 +118,10 @@ class Mapa:
             str(k).strip().upper(): str(v)
             for k, v in (self.aparencia.get("cores_partido") or {}).items()
         }
-        self.cor_padrao = str(self.aparencia.get("cor_padrao", "#6b86ab"))
+        # O 'or' importa: a moldura das telas passa string vazia quando a
+        # config nao define cor padrao, e vazio aqui viraria fill="" - quadrado
+        # preto na legenda, ao lado de estados cinza.
+        self.cor_padrao = str(self.aparencia.get("cor_padrao") or "") or self.cor_sem_dado
         self.selo_texto = str(self.opcoes.get("selo_nao_oficial", ""))
         self.selo_sempre = bool(self.opcoes.get("selo_sempre", False))
 
@@ -320,7 +323,7 @@ class Mapa:
             "votos": cand.votos,
             "percentual": cand.percentual,
             "eleito": cand.eleito,
-            "cor": self.cores_partido.get(sigla) or self.cor_padrao,
+            "cor": self.cores_partido.get(sigla) or self.cor_padrao or self.cor_sem_dado,
         }
 
     def _selo(self, ap: Apuracao) -> str:
