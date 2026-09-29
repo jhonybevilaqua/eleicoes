@@ -142,6 +142,17 @@ function Ler-Modo {
     return "ambos"
 }
 
+function Etiqueta-Eleito {
+    # Mostra no painel o mesmo ELEITO que vai para a tarja (campo
+    # candN_eleito, texto "ELEITO" ou vazio). Sem isto o operador so via o
+    # eleito olhando o LiveBoard.
+    param($Tarja, [int] $N)
+    if ($null -eq $Tarja -or -not (Tem-Propriedade $Tarja "cand${N}_eleito")) { return "" }
+    $v = "$($Tarja."cand${N}_eleito")"
+    if (-not $v -or $v -eq "0") { return "" }
+    return "<span class='eleito'>ELEITO</span>"
+}
+
 function Tem-Propriedade {
     param($Objeto, [string] $Nome)
     if ($null -eq $Objeto) { return $false }
@@ -274,6 +285,7 @@ function Montar-Pagina {
                     $corpo += "<div class='cand'><span class='pos'>$k&ordm;</span>" +
                               "<span class='nome'>$(Html-Seguro $nm)</span>" +
                               "<span class='part'>$(Html-Seguro $d."cand${k}_partido")</span>" +
+                              (Etiqueta-Eleito $d $k) +
                               "<span class='pct'>$(Html-Seguro $d."cand${k}_percentual")</span></div>"
                 }
             } elseif ($null -ne $d) {
@@ -313,6 +325,7 @@ function Montar-Pagina {
             $linhas += "<div class='cand'><span class='pos'>$i&ordm;</span>" +
                        "<span class='nome'>$(Html-Seguro $pres."cand${i}_nome")</span>" +
                        "<span class='part'>$(Html-Seguro $pres."cand${i}_partido")</span>" +
+                       (Etiqueta-Eleito $pres $i) +
                        "<span class='pct'>$(Html-Seguro $pres."cand${i}_percentual")</span></div>"
         }
         $selo = ""
@@ -336,6 +349,7 @@ function Montar-Pagina {
             $linhas += "<div class='cand'><span class='pos'>$i&ordm;</span>" +
                        "<span class='nome'>$(Html-Seguro $d."cand${i}_nome")</span>" +
                        "<span class='part'>$(Html-Seguro $d."cand${i}_partido")</span>" +
+                       (Etiqueta-Eleito $d $i) +
                        "<span class='pct'>$(Html-Seguro $d."cand${i}_percentual")</span></div>"
         }
         if (-not $linhas) { $linhas = "<p class='nada'>sem candidato ainda</p>" }
@@ -560,6 +574,8 @@ h2::after{content:"";flex:1;height:1px;background:var(--fio)}
 .card.vazio{color:var(--tinta3);background:var(--papel2);box-shadow:none}
 .card h3{margin:0 0 11px;font-size:10.5px;text-transform:uppercase;letter-spacing:.12em;
   color:var(--tinta3);font-weight:700;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.eleito{background:#0b7a3b;color:#fff;border-radius:4px;padding:1px 6px;font-size:11px;
+  font-weight:800;letter-spacing:.04em;margin-left:6px}
 .selo{background:var(--ambar-claro);color:var(--ambar);border:1px solid var(--ambar-borda);
   font-size:9.5px;padding:2px 7px;border-radius:999px;letter-spacing:.06em}
 .badge{background:var(--ambar);color:#fff;font-size:10px;padding:3px 9px;border-radius:999px;

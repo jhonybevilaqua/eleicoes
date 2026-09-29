@@ -1,0 +1,83 @@
+===========================================================================
+ DIA DA ELEICAO - 04/10/2026 (1o turno) - passo a passo
+ gctse 6.4 - pasta D:\ELEICOES\GCTSE
+===========================================================================
+
+ Codigos do TSE ja no config.json (pagina oficial do TSE):
+   https://resultados.tse.jus.br/oficial - pleito 3220
+   6257 = Eleicao Geral Federal ........ Presidente
+   6259 = Eleicoes Gerais Estaduais .... Governador e Senador
+ Nao precisa mexer em nada no config.json.
+
+---------------------------------------------------------------------------
+ ANTES - sexta 02/10 ou sabado 03/10
+---------------------------------------------------------------------------
+
+ 1. Duplo clique em DIAGNOSTICO-OFICIAL.bat e envie o DIAGNOSTICO.txt.
+    O esperado:
+      - OFICIAL RESPONDE (a maquina alcanca o TSE)
+      - tarjas VAZIAS / "nada foi conferido": NORMAL. O TSE so publica os
+        boletins no dia. O que importa aqui e o item 1.
+
+ 2. No LiveBoard, confira que o DataSource aponta para
+      D:\ELEICOES\GCTSE\TARJAS\tarja-*.json
+    e nao para uma copia em outra pasta.
+
+ 3. No painel, deixe o modo em 2 CLIQUES (previa + COLOCAR NO AR).
+
+---------------------------------------------------------------------------
+ NO DIA - 04/10
+---------------------------------------------------------------------------
+
+ 1. Feche todas as janelas pretas antigas.
+
+ 2. Abra o INICIAR.bat   (NAO o TESTE.bat - o TESTE le o simulado)
+    A janela deve dizer: gctse versao 6.4 ... modo AR
+
+ 3. Abra o PAINEL.bat e o navegador em http://localhost:8099
+
+ 4. Ate o TSE publicar (em geral depois das 17h):
+      - janela: quadro VERMELHO "NAO ESTAMOS RECEBENDO DADOS DO TSE"
+      - painel: faixa vermelha com a mesma frase
+      - tarjas vazias
+    Isso e NORMAL antes da divulgacao. A coleta segue tentando sozinha.
+
+ 5. Quando o TSE publicar:
+      - janela: "VOLTAMOS A RECEBER DADOS DO TSE" (verde) e as linhas
+        "NO ARQUIVO ..." com os numeros de cada tarja
+      - painel: a faixa vermelha some e o placar de numeros novos sobe
+    A tarja no ar recebe o dado em ate ~1 minuto; os outros estados, em
+    poucos minutos.
+
+ 6. Durante a apuracao:
+      - escolha o estado no painel (previa -> COLOCAR NO AR)
+      - CONGELAR AS TARJAS quando o apresentador for ler os numeros;
+        DESCONGELAR depois
+      - pode clicar na janela preta: da 6.0 em diante ela nao congela
+
+---------------------------------------------------------------------------
+ ELEITO
+---------------------------------------------------------------------------
+
+   Campo cand1_eleito / cand2_eleito: texto "ELEITO" ou vazio.
+   Tambem aparece a etiqueta verde ELEITO no painel, ao lado do nome.
+
+   So acende quando o TSE escreve "Eleito" na situacao do candidato:
+     - Presidente e Governador SEM maioria: vai a 2o turno -> fica VAZIO
+       (a janela avisa: "... situacao '2o turno' - NAO mostro ELEITO")
+     - Senador: duas vagas -> os DOIS primeiros podem acender juntos
+   Quem declara eleito e o TSE. Sem o TSE declarar, nada acende.
+
+---------------------------------------------------------------------------
+ SE ALGO PARECER ERRADO
+---------------------------------------------------------------------------
+
+   Tarja com numero diferente do painel ...... vinculo da cena / DataSource
+   Faixa vermelha "A COLETA PAROU" ........... janela do INICIAR fechada:
+                                               reabra
+   Faixa vermelha "NAO ESTAMOS RECEBENDO" .... rode DIAGNOSTICO-OFICIAL.bat
+                                               e envie o DIAGNOSTICO.txt
+   Duvida sobre o TSE ........................ formulario do TSE:
+                                               https://30308800.tse.jus.br/
+                                               Descricao: "Resultados -
+                                               Divulgacao"

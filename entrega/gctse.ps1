@@ -35,7 +35,7 @@ param(
 # Versao impressa na partida e no painel. Sem carimbo, "qual versao esta
 # rodando ai?" so se responde abrindo arquivo e comparando a olho - e no
 # meio de um teste com janela de horario ninguem faz isso.
-$Versao = "6.3 - 29/09/2026"
+$Versao = "6.4 - 29/09/2026"
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
@@ -1932,9 +1932,18 @@ function Descobrir-Codigos {
         return $null
     }
 
-    $encontrado = $null
+    # UM pleito so. Antes o laco corria TODOS os pleitos e o mapa cargo ->
+    # eleicao era sobrescrito por quem viesse depois: se o ele-c.json do dia
+    # 04/10 listar tambem o pleito do 2o turno (com Presidente e
+    # Governador), o mapa sairia com o pleito 3220 e as eleicoes do 2o turno
+    # misturados. E o pleito escolhido era o PRIMEIRO da lista, qualquer que
+    # fosse. Agora: separa os pleitos que tem eleicao geral, prefere o que
+    # esta no config.json (o que o TSE publicou) e so monta o mapa com as
+    # eleicoes DELE.
+    $candidatos = @()
     foreach ($pleito in $bruto.pl) {
         if (-not (Tem-Propriedade $pleito "e")) { continue }
+        $gerais = @()
         foreach ($eleicao in $pleito.e) {
             $cargos = @()
             if (Tem-Propriedade $eleicao "abr") {
@@ -1943,39 +1952,46 @@ function Descobrir-Codigos {
                     foreach ($cargo in $a.cp) { $cargos += "$(Obter-Campo $cargo @('cd') '')" }
                 }
             }
-            $geral = ($cargos -contains "1") -or ($cargos -contains "3") -or ($cargos -contains "5")
-            if (-not $geral) { continue }
-            if ($null -eq $encontrado) {
-                # O CICLO vem da DATA do pleito, e nao do campo "c" do
-                # arquivo. Motivo concreto: em 22/09/2026 o ele-c.json do
-                # ambiente oficial ainda trazia c="ele2024" enquanto ja
-                # listava pleitos de 2026 - "c" e o ciclo corrente do
-                # ambiente, nao o da eleicao que se procura. Confiar nele
-                # montaria .../ele2024/... na noite da apuracao e daria 404
-                # nas 55 pracas. A data nao mente: 06/10/2024 -> ele2024,
-                # 04/10/2026 -> ele2026, que e o que o TSE de fato publica.
-                $cicloDerivado = "$(Obter-Campo $bruto @('c') '')"
-                $dataPleito = "$(Obter-Campo $pleito @('dt') '')"
-                if ($dataPleito -match '(\d{4})\s*$') { $cicloDerivado = "ele$($Matches[1])" }
-                $encontrado = @{
-                    # Era "$ciclo", que nao existe aqui: sem diferenciar
-                    # maiuscula, o PowerShell achava o CONTADOR de ciclos
-                    # ($script:Ciclo = 1) e o caminho virava .../1/21270/...
-                    # - 404 a noite inteira justo quando o TSE troca o codigo
-                    # do simulado entre janelas. Achado e corrigido na 5.7.
-                    ciclo   = $cicloDerivado
-                    pleito  = "$(Obter-Campo $pleito @('cd') '')"
-                    eleicao = "$(Obter-Campo $eleicao @('cd') '')"
-                    cargos  = @{}
-                    nomes   = @()
-                }
+            if (($cargos -contains "1") -or ($cargos -contains "3") -or ($cargos -contains "5")) {
+                $gerais += @{ eleicao = $eleicao; cargos = $cargos }
             }
-            foreach ($num in @("1", "3", "5")) {
-                if ($cargos -contains $num) { $encontrado.cargos[$num] = "$(Obter-Campo $eleicao @('cd') '')" }
-            }
-            $encontrado.nomes += "$(Obter-Campo $eleicao @('cd') '') = " +
-                             (Decodificar-Entidades "$(Obter-Campo $eleicao @('nm') '')")
         }
+        if ($gerais.Count -gt 0) { $candidatos += @{ pleito = $pleito; gerais = $gerais } }
+    }
+    if ($candidatos.Count -eq 0) { return $null }
+    $escolhido = $candidatos[0]
+    foreach ($cand in $candidatos) {
+        if ("$(Obter-Campo $cand.pleito @('cd') '')" -eq "$($cfg.tse.pleito)") { $escolhido = $cand; break }
+    }
+    if ($candidatos.Count -gt 1) {
+        $lista = ($candidatos | ForEach-Object { "$(Obter-Campo $_.pleito @('cd') '')" }) -join ", "
+        Escrever-Log "o TSE lista $($candidatos.Count) pleitos com eleicao geral ($lista) - uso o $(Obter-Campo $escolhido.pleito @('cd') '')" "AVISO"
+    }
+
+    $pleito = $escolhido.pleito
+    # O CICLO vem da DATA do pleito, e nao do campo "c" do arquivo. Motivo
+    # concreto: em 22/09/2026 o ele-c.json do ambiente oficial ainda trazia
+    # c="ele2024" enquanto ja listava pleitos de 2026 - "c" e o ciclo
+    # corrente do ambiente, nao o da eleicao que se procura. A data nao
+    # mente: 06/10/2024 -> ele2024, 04/10/2026 -> ele2026.
+    # (Na 5.7 corrigido: o campo recebia "$ciclo", que nao existia aqui, e
+    # o PowerShell achava o contador de ciclos - caminho .../1/21270/...)
+    $cicloDerivado = "$(Obter-Campo $bruto @('c') '')"
+    $dataPleito = "$(Obter-Campo $pleito @('dt') '')"
+    if ($dataPleito -match '(\d{4})\s*$') { $cicloDerivado = "ele$($Matches[1])" }
+    $encontrado = @{
+        ciclo   = $cicloDerivado
+        pleito  = "$(Obter-Campo $pleito @('cd') '')"
+        eleicao = "$(Obter-Campo $escolhido.gerais[0].eleicao @('cd') '')"
+        cargos  = @{}
+        nomes   = @()
+    }
+    foreach ($g in $escolhido.gerais) {
+        foreach ($num in @("1", "3", "5")) {
+            if ($g.cargos -contains $num) { $encontrado.cargos[$num] = "$(Obter-Campo $g.eleicao @('cd') '')" }
+        }
+        $encontrado.nomes += "$(Obter-Campo $g.eleicao @('cd') '') = " +
+                         (Decodificar-Entidades "$(Obter-Campo $g.eleicao @('nm') '')")
     }
     return $encontrado
 }
@@ -2023,6 +2039,18 @@ function Garantir-Codigos {
     return $true
 }
 
+function Codigos-Conferem {
+    # O que importa e o pleito e, cargo por cargo, a eleicao que a coleta
+    # vai pedir. Comparar so "pleito/primeira eleicao" acusava codigo velho
+    # a toa se o TSE listasse a Estadual antes da Federal.
+    param($Encontrado)
+    if ("$($Encontrado.pleito)" -ne "$($cfg.tse.pleito)") { return $false }
+    foreach ($num in @("1", "3", "5")) {
+        if ($Encontrado.cargos.ContainsKey($num) -and "$(Obter-Eleicao ([int] $num))" -ne "$($Encontrado.cargos[$num])") { return $false }
+    }
+    return $true
+}
+
 function Adotar-Codigos {
     # Passa a usar, so em memoria, os codigos que o TSE publica agora.
     param($Encontrado, [string] $Antes)
@@ -2063,7 +2091,7 @@ function Conferir-Codigo-No-TSE {
     Escrever-Log "o TSE respondeu $codigo para o codigo $antes do config - conferindo o codigo publicado" "AVISO"
     $encontrado = Descobrir-Codigos $cfg.tse.base_url
     if ($null -eq $encontrado) { return }
-    if ("$($encontrado.pleito)/$($encontrado.eleicao)" -ne $antes) {
+    if (-not (Codigos-Conferem $encontrado)) {
         Adotar-Codigos $encontrado $antes
     } else {
         Escrever-Log "o codigo $antes e o que o TSE publica; o boletim so ainda nao saiu" "AVISO"
@@ -3448,7 +3476,7 @@ do {
             # noite com o certo em vez de esperar alguem perceber.
             $antes = "$($cfg.tse.pleito)/$($cfg.tse.eleicao)"
             $encontrado = Descobrir-Codigos $cfg.tse.base_url
-            if ($null -ne $encontrado -and "$($encontrado.pleito)/$($encontrado.eleicao)" -ne $antes) {
+            if ($null -ne $encontrado -and -not (Codigos-Conferem $encontrado)) {
                 Adotar-Codigos $encontrado $antes
             } else {
                 Write-Host ""

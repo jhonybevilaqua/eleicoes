@@ -1,5 +1,44 @@
 ===========================================================================
- LAUDO DE INSPECAO - gctse 6.3
+ LAUDO DE INSPECAO - gctse 6.4
+ 29/09/2026 - fim dos simulados, preparacao para 04/10
+===========================================================================
+
+ SIMULADO DE 29/09: tudo funcionou na maquina do GC - tarja do presidente
+ com foto, nome, partido, percentual e urnas certos; painel acompanhando.
+
+ DEFEITO QUE PODIA APARECER NO DIA 04/10: CODIGO TROCADO PELO 2o TURNO
+
+   Com o boletim ainda nao publicado (404 de manha), a coleta consulta a
+   lista de eleicoes do TSE. Ela pegava o PRIMEIRO pleito com eleicao
+   geral e ainda misturava o mapa cargo -> eleicao de todos os pleitos da
+   lista. Se o TSE listar o pleito do 2o turno antes do 3220, a 6.3
+   trocava para ele. Reproduzido: "o codigo do config estava velho:
+   3220/6257 virou 3221/6260".
+
+   Agora: um pleito so, com preferencia pelo que esta no config.json
+   (3220), e o mapa montado so com as eleicoes dele. A comparacao passou
+   a ser pleito + eleicao por cargo (antes, "pleito/primeira eleicao"
+   acusava codigo velho a toa se a Estadual viesse antes da Federal).
+   Mesmo cenario na 6.4: "o TSE lista 2 pleitos com eleicao geral
+   (3221, 3220) - uso o 3220" e "o codigo 3220/6257 e o que o TSE
+   publica; o boletim so ainda nao saiu".
+
+ PAINEL: ETIQUETA ELEITO
+
+   Etiqueta verde ELEITO ao lado do candidato (previa, no ar e
+   presidente), lida do mesmo campo que vai para a tarja.
+
+ NOVO: DIA-DA-ELEICAO.txt - passo a passo de 02/10 a 04/10.
+
+ VERIFICADO NA 6.4
+
+   2o turno listado antes do 3220, boletim com 404: fica no 3220      OK
+   6.3 no mesmo cenario: trocava para 3221/6260                reproduzido
+   Painel: ELEITO nos dois senadores e no presidente eleitos          OK
+   Regressao completa                                            25 / 0 OK
+
+===========================================================================
+ LAUDO ANTERIOR - gctse 6.3
  29/09/2026 - "no json principal, converter para ELEITO"
 ===========================================================================
 
