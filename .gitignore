@@ -26,3 +26,6 @@ dist/
 
 # o PDF das tarjas e gerado, mas vai versionado para circular sem build
 !tarjas/*.pdf
+
+# gctse GRAFICOS: cores atribuidas na maquina
+graficos/cores-atribuidas-*.json

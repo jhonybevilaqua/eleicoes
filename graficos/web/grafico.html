@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>gctse grafico</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0b1220; overflow: hidden; }
+  #tela { width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; }
+  #tela svg { width: 100%; height: 100%; display: block; }
+  /* Botao so aparece com o mouse em cima: a captura no ar sai limpa. */
+  #png { position: fixed; top: 12px; right: 12px; padding: 8px 14px; border: 0; border-radius: 6px;
+         background: #2f8fdd; color: #fff; font: 700 14px 'Segoe UI', Arial, sans-serif; cursor: pointer;
+         opacity: 0; transition: opacity .2s; }
+  body.mouse #png { opacity: 1; }
+</style>
+</head>
+<body>
+<div id="tela"></div>
+<button id="png" title="Tecla P">Salvar PNG</button>
+<script charset="utf-8" src="mapa-brasil.js"></script>
+<script charset="utf-8" src="graficos.js"></script>
+<script charset="utf-8" src="dados.js"></script>
+<script>
+(function () {
+  var q = new URLSearchParams(location.search);
+  var id = q.get("g") || "presidente-h";
+  var tela = document.getElementById("tela");
+  var ultimo = "";
+
+  function desenhar() {
+    var d = window.GCTSE_DADOS || {};
+    var chave = JSON.stringify([d.modo, d.br, d.ufs, d.cor_slot, d.cores]);
+    if (chave === ultimo) return;       // so redesenha quando o dado mudou
+    ultimo = chave;
+    var s = window.GCTSE_GRAFICOS.desenhar(id);
+    if (!s) { tela.textContent = "grafico desconhecido: " + id; return; }
+    tela.innerHTML = s;
+    window.GCTSE_GRAFICOS.ajustarSelos(tela);
+  }
+
+  // Le dados.js de novo a cada 3 s. Funciona abrindo o arquivo direto
+  // (file://), sem servidor: o navegador carrega script local.
+  function recarregar() {
+    var sc = document.createElement("script");
+    sc.charset = "utf-8";
+    sc.src = "dados.js?t=" + Date.now();
+    sc.onload = function () { sc.remove(); desenhar(); };
+    sc.onerror = function () { sc.remove(); };
+    document.head.appendChild(sc);
+  }
+
+  function salvarPNG() {
+    var el = tela.querySelector("svg");
+    if (!el) return;
+    var W = +el.getAttribute("width"), H = +el.getAttribute("height");
+    var escala = W > H ? 1920 / W : 1080 / W;       // 1920x1080 ou 1080x1920
+    var img = new Image();
+    img.onload = function () {
+      var c = document.createElement("canvas");
+      c.width = Math.round(W * escala); c.height = Math.round(H * escala);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      c.toBlob(function (b) {
+        var a = document.createElement("a"), agora = new Date();
+        var hh = ("0" + agora.getHours()).slice(-2) + ("0" + agora.getMinutes()).slice(-2);
+        a.href = URL.createObjectURL(b); a.download = id + "-" + hh + ".png";
+        document.body.appendChild(a); a.click(); a.remove();
+      }, "image/png");
+    };
+    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(new XMLSerializer().serializeToString(el));
+  }
+
+  var timer = null;
+  document.addEventListener("mousemove", function () {
+    document.body.classList.add("mouse");
+    clearTimeout(timer); timer = setTimeout(function () { document.body.classList.remove("mouse"); }, 2000);
+  });
+  document.getElementById("png").addEventListener("click", salvarPNG);
+  document.addEventListener("keydown", function (e) { if (e.key === "p" || e.key === "P") salvarPNG(); });
+
+  desenhar();
+  setInterval(recarregar, 3000);
+})();
+</script>
+</body>
+</html>

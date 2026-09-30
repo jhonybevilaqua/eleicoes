@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>gctse GRAFICOS</title>
+<style>
+  :root { --fundo: #0b1220; --cartao: #131c2c; --texto: #fff; --apagado: #8ea3bd; --verm: #d03b3b; --verde: #0ca30c; }
+  body { margin: 0; background: var(--fundo); color: var(--texto); font: 15px 'Segoe UI', Arial, sans-serif; }
+  header { padding: 18px 24px 8px; display: flex; gap: 16px; align-items: baseline; flex-wrap: wrap; }
+  h1 { margin: 0; font-size: 22px; letter-spacing: .5px; }
+  #situacao { padding: 10px 24px; margin: 8px 24px; border-radius: 6px; font-weight: 700; }
+  .ok { background: #10301a; color: #7ee07e; } .ruim { background: #3a1212; color: #ffb3b3; } .teste { background: #3a2a0a; color: #ffd27a; }
+  main { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 16px; padding: 16px 24px 32px; }
+  .cartao { background: var(--cartao); border-radius: 8px; padding: 10px; }
+  .cartao h2 { margin: 0 0 8px; font-size: 15px; }
+  .cartao .f { color: var(--apagado); font-weight: 400; }
+  .quadro { position: relative; width: 100%; overflow: hidden; background: var(--fundo); border-radius: 4px; }
+  .quadro iframe { position: absolute; top: 0; left: 0; border: 0; transform-origin: 0 0; pointer-events: none; }
+  .acoes { display: flex; gap: 8px; margin-top: 8px; }
+  .acoes a { flex: 1; text-align: center; padding: 7px; border-radius: 5px; background: #2f8fdd; color: #fff; text-decoration: none; font-weight: 700; }
+  .acoes a.sec { background: #283548; }
+  small.cam { display: block; color: var(--apagado); margin-top: 6px; word-break: break-all; font-size: 12px; }
+  p.aj { color: var(--apagado); margin: 0 24px; }
+</style>
+</head>
+<body>
+<header><h1>gctse GRÁFICOS — Presidente</h1><span id="versao" style="color:var(--apagado)"></span></header>
+<div id="situacao">carregando…</div>
+<p class="aj">Abra o gráfico e aperte <b>F11</b> para tela cheia. <b>P</b> (ou o botão que aparece com o mouse) salva o PNG em 1920×1080 / 1080×1920.
+No switcher, use o caminho de cada gráfico como <b>fonte de navegador</b> (1280×720 ou 540×960).</p>
+<main id="lista"></main>
+<script charset="utf-8" src="mapa-brasil.js"></script>
+<script charset="utf-8" src="graficos.js"></script>
+<script charset="utf-8" src="dados.js"></script>
+<script>
+(function () {
+  var lista = document.getElementById("lista");
+  var base = location.href.replace(/index\.html.*$/, "");
+  window.GCTSE_GRAFICOS.lista.forEach(function (g) {
+    var W = g.f === "h" ? 1280 : 540, H = g.f === "h" ? 720 : 960;
+    var url = "grafico.html?g=" + g.id;
+    var el = document.createElement("div");
+    el.className = "cartao";
+    el.innerHTML = '<h2>' + g.nome + ' <span class="f">' + (g.f === "h" ? "horizontal 1280×720" : "vertical 540×960") + '</span></h2>' +
+      '<div class="quadro" style="aspect-ratio:' + W + '/' + H + (g.f === "v" ? ';max-width:55%' : '') + '"><iframe src="' + url +
+      '" width="' + W + '" height="' + H + '" loading="lazy"></iframe></div>' +
+      '<div class="acoes"><a href="' + url + '" target="_blank">Abrir</a></div>' +
+      '<small class="cam">' + base + url + '</small>';
+    lista.appendChild(el);
+    var q = el.querySelector(".quadro"), f = el.querySelector("iframe");
+    function escala() { f.style.transform = "scale(" + (q.clientWidth / W) + ")"; }
+    new ResizeObserver(escala).observe(q); escala();
+  });
+
+  // Situacao da coleta: idade do dados.js e se o TSE esta respondendo.
+  function situacao() {
+    var d = window.GCTSE_DADOS || {}, el = document.getElementById("situacao");
+    document.getElementById("versao").textContent = d.versao ? "versão " + d.versao : "";
+    if (!d.gravado_em) { el.className = "ruim"; el.textContent = "A COLETA NÃO RODOU AINDA — abra o GRAFICOS.bat"; return; }
+    var idade = Math.round((Date.now() - new Date(d.gravado_em).getTime()) / 1000);
+    var br = d.br && d.br.tem ? d.br : null;
+    var txt = (br ? "Brasil: " + String(br.secoes && br.secoes.pct != null ? br.secoes.pct.toFixed(2).replace(".", ",") : "—") + "% das urnas · boletim " + br.hora : "Brasil: aguardando o primeiro boletim");
+    if (idade > 90) { el.className = "ruim"; el.textContent = "A COLETA PAROU há " + idade + " s — a janela do GRAFICOS.bat fechou? Os gráficos estão parados no último dado."; return; }
+    if (d.recebendo_tse === false) { el.className = "ruim"; el.textContent = "NÃO ESTAMOS RECEBENDO DADOS DO TSE (último: " + (d.ultimo_tse || "nenhum") + "). " + txt; return; }
+    el.className = d.modo === "SIMULADO" ? "teste" : "ok";
+    el.textContent = (d.modo === "SIMULADO" ? "SIMULADO DO TSE — NÃO É RESULTADO. " : "Coleta OFICIAL funcionando. ") + txt;
+  }
+  function recarregar() {
+    var sc = document.createElement("script");
+    sc.charset = "utf-8"; sc.src = "dados.js?t=" + Date.now();
+    sc.onload = function () { sc.remove(); situacao(); };
+    sc.onerror = function () { sc.remove(); };
+    document.head.appendChild(sc);
+  }
+  situacao(); setInterval(recarregar, 3000);
+})();
+</script>
+</body>
+</html>

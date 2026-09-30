@@ -1,0 +1,13 @@
+{
+  "_comentario": "gctse GRAFICOS - Presidente, Brasil e 27 estados. Codigos da pagina oficial do TSE: pleito 3220, 6257 = Eleicao Geral Federal (Presidente).",
+  "tse": {
+    "base_url": "https://resultados.tse.jus.br/oficial",
+    "ciclo": "ele2026",
+    "eleicao_presidente": "6257",
+    "base_url_simulado": "https://resultados-sim.tse.jus.br/simulado/simulado2026",
+    "eleicao_presidente_simulado": "21270"
+  },
+  "intervalo_segundos": 20,
+  "_comentario_cores": "Cor de cada candidato nos graficos e no mapa. Chave = numero de urna OU sigla do partido, valor = #rrggbb. Vazio: cada candidato recebe uma cor fixa da paleta pela ordem do numero (nao muda durante a noite).",
+  "cores": {}
+}

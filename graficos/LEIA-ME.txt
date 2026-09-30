@@ -1,0 +1,90 @@
+===========================================================================
+ gctse GRAFICOS 1.0 - apuracao de PRESIDENTE em graficos
+ Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
+===========================================================================
+
+ O QUE FAZ
+
+   Le do TSE o boletim de Presidente do Brasil e dos 27 estados, a cada
+   20 segundos, e mantem 10 graficos atualizados sozinhos:
+
+   HORIZONTAIS 1280x720 (TV)          VERTICAIS 540x960 (redes/tela vertical)
+     Presidente - Brasil                Urnas apuradas
+     Como o Brasil votou                Brancos e nulos
+     Apuracao nacional                  Presidente
+     Como cada estado votou             Comparecimento
+     Lideranca por estado               Lideranca por estado
+
+   Nao instala nada. Nao precisa de internet alem do TSE (o mapa e os
+   graficos estao dentro da pasta).
+
+---------------------------------------------------------------------------
+ COMO USAR
+---------------------------------------------------------------------------
+
+ 1. Copie a pasta GCTSE-GRAFICOS para o outro computador. Ex.: D:\GRAFICOS
+
+ 2. Duplo clique em GRAFICOS.bat e deixe a janela ABERTA.
+    (No dia 04/10, perto das 16h45 - o TSE so publica depois das 17h.)
+
+ 3. Duplo clique em ABRIR-GRAFICOS.bat. Abre a pagina do operador, com a
+    situacao da coleta no alto e a previa dos 10 graficos.
+
+ 4. Para cada grafico:
+      - Chrome em tela cheia: clique em "Abrir" e aperte F11
+      - no switcher (vMix/OBS): fonte de NAVEGADOR apontando para o
+        caminho que aparece embaixo de cada previa, no tamanho indicado
+        (1280x720 ou 540x960)
+      - imagem para redes: com o grafico aberto, aperte P (ou o botao
+        "Salvar PNG", que aparece ao mexer o mouse). Sai em 1920x1080 ou
+        1080x1920, na pasta Downloads.
+
+    Os graficos se atualizam sozinhos a cada 3 segundos. O botao so
+    aparece com o mouse em cima: a captura no ar sai limpa.
+
+---------------------------------------------------------------------------
+ O QUE APARECE NO GRAFICO
+---------------------------------------------------------------------------
+
+   Selo no alto:  PARCIAL ................ apuracao em andamento
+                  TOTALIZACAO FINAL ...... o TSE fechou o Brasil
+                  SIMULADO - NAO OFICIAL . so no TESTE-GRAFICOS.bat
+
+   ELEITO / 2o TURNO: so quando o TSE escreve isso na situacao do
+   candidato. Quem declara e o TSE, nao o sistema.
+
+   Sem dado do TSE, o grafico mostra "aguardando o primeiro boletim" e
+   zeros - nunca numero inventado. Sem resposta do TSE por mais de 60 s,
+   a janela preta mostra o quadro vermelho "NAO ESTAMOS RECEBENDO DADOS DO
+   TSE" e a pagina do operador fica vermelha; os graficos ficam no ultimo
+   dado real recebido.
+
+   Cores: cada candidato tem UMA cor a noite toda (nao muda quando troca
+   de posicao). As 3 primeiras cores vao para os primeiros que aparecem na
+   frente - sao as que continuam distinguiveis no mapa, inclusive para
+   daltonicos. A atribuicao fica gravada em cores-atribuidas-oficial.json.
+   Para usar a cor do partido: config-graficos.json, "cores":
+        "cores": { "13": "#c0392b", "PSDB": "#1f5fbf" }
+   (numero de urna ou sigla do partido -> cor)
+
+---------------------------------------------------------------------------
+ ANTES DO DIA - TESTE COM O SIMULADO DO TSE
+---------------------------------------------------------------------------
+
+   TESTE-GRAFICOS.bat le o ambiente de SIMULADO do TSE (enquanto ele
+   estiver no ar) e mostra os graficos com dados de teste, marcados
+   "SIMULADO - NAO OFICIAL". Serve para conferir a maquina, a rede e o
+   switcher. Feche a janela dele antes de abrir o GRAFICOS.bat.
+
+   A janela escreve os campos que o TSE mandou nos blocos de totais
+   ("campos do bloco 'v' ..."). Se algum grafico de brancos/nulos ou de
+   comparecimento ficar com "—", envie o arquivo logs\graficos-*.log.
+
+---------------------------------------------------------------------------
+ CREDITOS
+---------------------------------------------------------------------------
+
+   Dados: TSE - Divulgacao de Resultados (resultados.tse.jus.br).
+   Mapa: @svg-maps/brazil, de Victor Cazanave, licenca CC BY 4.0
+   (web\MAPA-LICENCA-CC-BY-4.0.md). O credito aparece nos graficos com
+   mapa e deve permanecer.
