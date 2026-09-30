@@ -29,3 +29,6 @@ dist/
 
 # gctse GRAFICOS: cores atribuidas na maquina
 graficos/cores-atribuidas-*.json
+
+# gctse GRAFICOS: perfis do navegador da apresentacao
+graficos/navegador-*/

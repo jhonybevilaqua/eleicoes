@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 1.0 - apuracao de PRESIDENTE em graficos
+ gctse GRAFICOS 1.1 - apuracao de PRESIDENTE em graficos
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -39,8 +39,55 @@
         "Salvar PNG", que aparece ao mexer o mouse). Sai em 1920x1080 ou
         1080x1920, na pasta Downloads.
 
-    Os graficos se atualizam sozinhos a cada 3 segundos. O botao so
+    Os graficos se atualizam sozinhos a cada 3 segundos.
+
+    Para passar os graficos sozinhos a cada 15 s em tela cheia, veja
+    APRESENTACAO abaixo. O botao so
     aparece com o mouse em cima: a captura no ar sai limpa.
+
+---------------------------------------------------------------------------
+ APRESENTACAO - TROCA AUTOMATICA A CADA 15 SEGUNDOS
+---------------------------------------------------------------------------
+
+   Com o GRAFICOS.bat aberto:
+
+   APRESENTACAO-HORIZONTAL.bat  -> tela cheia 1920x1080, passa pelos
+                                   5 graficos horizontais
+   APRESENTACAO-VERTICAL.bat    -> tela cheia 1080x1920, passa pelos
+                                   5 graficos verticais
+
+   Abrem no Chrome (ou no Edge, se nao tiver Chrome) em tela cheia, sem
+   barra nem mouse. Os numeros continuam se atualizando sozinhos durante
+   a apresentacao, sem esperar a troca.
+
+   Teclas:  seta direita / esquerda .. proximo / anterior
+            espaco ................... pausa / continua
+            Alt+F4 ................... fecha a apresentacao
+
+   MONITOR VERTICAL
+     - Windows em "Retrato" (Configuracoes > Sistema > Tela > Orientacao):
+       a tela fica 1080x1920 e nao precisa mudar nada.
+     - Monitor virado, mas o Windows ainda em "Paisagem": em
+       web\apresentacao-config.js coloque  girar_vertical: 90
+       (ou -90 se a imagem ficar de cabeca para baixo).
+
+   MAIS DE UM MONITOR NO MESMO COMPUTADOR
+     Edite o .bat (Bloco de Notas) e mude MONITOR_X / MONITOR_Y para um
+     ponto dentro do monitor desejado. Ex.: monitor a direita de um
+     1920x1080 principal = MONITOR_X=1920, MONITOR_Y=0.
+
+   AJUSTES (web\apresentacao-config.js, Bloco de Notas)
+     tempo_segundos ...... tempo de cada grafico (padrao 15)
+     horizontal/vertical . ordem dos graficos; apague a linha para tirar
+     transicao_segundos .. fusao entre graficos (0 = corte seco)
+     barra_progresso ..... true = barrinha do tempo embaixo
+   Depois de salvar, feche (Alt+F4) e abra de novo o .bat.
+
+   Deixe o Windows sem desligar a tela nem dormir (Energia: "Nunca").
+
+   No switcher (vMix/OBS) tambem da para usar a apresentacao como fonte
+   de navegador: web\apresentacao-horizontal.html (1920x1080) ou
+   web\apresentacao-vertical.html (1080x1920).
 
 ---------------------------------------------------------------------------
  O QUE APARECE NO GRAFICO

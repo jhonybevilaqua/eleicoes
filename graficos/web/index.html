@@ -21,6 +21,9 @@
   .acoes a.sec { background: #283548; }
   small.cam { display: block; color: var(--apagado); margin-top: 6px; word-break: break-all; font-size: 12px; }
   p.aj { color: var(--apagado); margin: 0 24px; }
+  .apres { margin: 12px 24px 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .apres a { padding: 7px 12px; border-radius: 5px; background: #2f8fdd; color: #fff; text-decoration: none; font-weight: 700; }
+  .apres span { color: var(--apagado); font-size: 13px; }
 </style>
 </head>
 <body>
@@ -28,6 +31,10 @@
 <div id="situacao">carregando…</div>
 <p class="aj">Abra o gráfico e aperte <b>F11</b> para tela cheia. <b>P</b> (ou o botão que aparece com o mouse) salva o PNG em 1920×1080 / 1080×1920.
 No switcher, use o caminho de cada gráfico como <b>fonte de navegador</b> (1280×720 ou 540×960).</p>
+<div class="apres"><b>Apresentação (troca a cada 15 s):</b>
+  <a href="apresentacao-horizontal.html" target="_blank">Horizontal 1920×1080</a>
+  <a href="apresentacao-vertical.html" target="_blank">Vertical 1080×1920</a>
+  <span>tela cheia sozinha: APRESENTACAO-HORIZONTAL.bat / APRESENTACAO-VERTICAL.bat · setas trocam, espaço pausa</span></div>
 <main id="lista"></main>
 <script charset="utf-8" src="mapa-brasil.js"></script>
 <script charset="utf-8" src="graficos.js"></script>
