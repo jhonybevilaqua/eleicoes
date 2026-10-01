@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 1.2 - apuracao de PRESIDENTE em graficos
+ gctse GRAFICOS 1.3 - apuracao de PRESIDENTE em graficos
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -49,7 +49,7 @@
  APRESENTACAO - TROCA AUTOMATICA A CADA 15 SEGUNDOS
 ---------------------------------------------------------------------------
 
-   Com o GRAFICOS.bat aberto:
+   Um duplo clique por maquina:
 
    APRESENTACAO-HORIZONTAL.bat  -> tela cheia 1920x1080, passa pelos
                                    5 graficos horizontais
@@ -60,9 +60,17 @@
    barra nem mouse. Os numeros continuam se atualizando sozinhos durante
    a apresentacao, sem esperar a troca.
 
+   - Se a coleta (GRAFICOS.bat) nao estiver rodando NESTA maquina, o
+     atalho abre ela tambem. Cada computador precisa da sua coleta.
+   - Fica uma janela preta "gctse APRESENTACAO ... deixe esta janela
+     aberta": ela VIGIA a apresentacao. Se o navegador fechar ou cair,
+     reabre sozinho em 10 s.
+   - Para encerrar DE VEZ: Alt+F4 na apresentacao e, na janela preta,
+     aperte S (antes de 10 s). Ou feche a janela preta primeiro.
+
    Teclas:  seta direita / esquerda .. proximo / anterior
             espaco ................... pausa / continua
-            Alt+F4 ................... fecha a apresentacao
+            Alt+F4 ................... fecha (reabre em 10 s - ver acima)
 
    MONITOR VERTICAL
      - Windows em "Retrato" (Configuracoes > Sistema > Tela > Orientacao):
@@ -83,11 +91,25 @@
      barra_progresso ..... true = barrinha do tempo embaixo
    Depois de salvar, feche (Alt+F4) e abra de novo o .bat.
 
-   Deixe o Windows sem desligar a tela nem dormir (Energia: "Nunca").
+   Antes do dia, rode o PREPARAR-WINDOWS.bat em cada maquina (ver abaixo).
 
    No switcher (vMix/OBS) tambem da para usar a apresentacao como fonte
    de navegador: web\apresentacao-horizontal.html (1920x1080) ou
    web\apresentacao-vertical.html (1080x1920).
+
+---------------------------------------------------------------------------
+ PREPARAR O WINDOWS (uma vez em cada maquina que vai ao ar)
+---------------------------------------------------------------------------
+
+   PREPARAR-WINDOWS.bat, opcao P:
+     - tela nunca desliga, computador nunca suspende/hiberna
+     - protecao de tela desligada
+     - notificacoes do Windows desligadas (nao aparecem por cima do ar)
+     - abre a tela do Windows Update: clique em "Pausar" (na mao)
+   Os valores de antes ficam em windows-antes.json. Depois da eleicao,
+   PREPARAR-WINDOWS.bat, opcao D, volta tudo como estava.
+   Se aparecer "NAO consegui mudar", faca na mao em Configuracoes >
+   Sistema > Energia e > Notificacoes.
 
 ---------------------------------------------------------------------------
  O QUE APARECE NO GRAFICO
@@ -119,6 +141,10 @@
    Para usar a cor do partido: config-graficos.json, "cores":
         "cores": { "13": "#c0392b", "PSDB": "#1f5fbf" }
    (numero de urna ou sigla do partido -> cor)
+   A pagina do operador (ABRIR-GRAFICOS.bat) mostra o quadro "Cores dos
+   candidatos": numero, nome, partido e a cor de cada um, e se a cor veio
+   do config ou e automatica. Depois de mudar o config, feche e abra de
+   novo o GRAFICOS.bat.
 
 ---------------------------------------------------------------------------
  ANTES DO DIA - TESTE COM O SIMULADO DO TSE

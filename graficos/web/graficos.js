@@ -409,6 +409,8 @@
     ],
     desenhar: function (id) { return G[id] ? G[id]() : null; },
     ajustarSelos: ajustarSelos,
-    dados: D
+    dados: D,
+    cor: cor,
+    candidatos: function () { var d = D(); return d.br && d.br.tem ? candidatos(d.br) : []; }
   };
 })();

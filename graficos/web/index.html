@@ -24,6 +24,12 @@
   .apres { margin: 12px 24px 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   .apres a { padding: 7px 12px; border-radius: 5px; background: #2f8fdd; color: #fff; text-decoration: none; font-weight: 700; }
   .apres span { color: var(--apagado); font-size: 13px; }
+  #cores { margin: 14px 24px 0; background: var(--cartao); border-radius: 8px; padding: 10px 14px; }
+  #cores h2 { margin: 0 0 8px; font-size: 15px; } #cores .f, #cores p.f { color: var(--apagado); font-weight: 400; font-size: 13px; margin: 8px 0 0; }
+  #tabcores { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+  #tabcores div { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+  #tabcores i { display: inline-block; width: 26px; height: 16px; border-radius: 3px; }
+  #tabcores small { color: var(--apagado); }
 </style>
 </head>
 <body>
@@ -35,6 +41,9 @@ No switcher, use o caminho de cada gráfico como <b>fonte de navegador</b> (1280
   <a href="apresentacao-horizontal.html" target="_blank">Horizontal 1920×1080</a>
   <a href="apresentacao-vertical.html" target="_blank">Vertical 1080×1920</a>
   <span>tela cheia sozinha: APRESENTACAO-HORIZONTAL.bat / APRESENTACAO-VERTICAL.bat · setas trocam, espaço pausa</span></div>
+<section id="cores"><h2>Cores dos candidatos <span class="f">(só aqui na página do operador)</span></h2>
+  <div id="tabcores"></div>
+  <p class="f">Para usar a cor do partido: <b>config-graficos.json</b>, em <b>"cores"</b>, número de urna → cor. Ex.: <code>"cores": { "13": "#d03b3b" }</code>. Salve e reabra o GRAFICOS.bat.</p></section>
 <main id="lista"></main>
 <script charset="utf-8" src="mapa-brasil.js"></script>
 <script charset="utf-8" src="graficos.js"></script>
@@ -73,14 +82,23 @@ No switcher, use o caminho de cada gráfico como <b>fonte de navegador</b> (1280
     el.className = d.modo === "SIMULADO" ? "teste" : "ok";
     el.textContent = (d.modo === "SIMULADO" ? "SIMULADO DO TSE — NÃO É RESULTADO. " : "Coleta OFICIAL funcionando. ") + txt;
   }
+  function esc(x) { return String(x == null ? "" : x).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+  function cores() {
+    var G = window.GCTSE_GRAFICOS, cs = G.candidatos(), d = G.dados(), cfg = d.cores || {}, o = "";
+    cs.forEach(function (c) {
+      var fonte = cfg[c.numero] ? "config (número)" : (cfg[c.partido] ? "config (partido)" : "automática");
+      o += '<div><i style="background:' + esc(G.cor(c)) + '"></i><b>' + esc(c.numero) + '</b> ' + esc(c.nome) + ' <small>' + esc(c.partido) + ' · ' + esc(G.cor(c)) + ' · ' + fonte + '</small></div>';
+    });
+    document.getElementById("tabcores").innerHTML = o || '<span class="f">aparece quando chegar o primeiro boletim do Brasil</span>';
+  }
   function recarregar() {
     var sc = document.createElement("script");
     sc.charset = "utf-8"; sc.src = "dados.js?t=" + Date.now();
-    sc.onload = function () { sc.remove(); situacao(); };
+    sc.onload = function () { sc.remove(); situacao(); cores(); };
     sc.onerror = function () { sc.remove(); };
     document.head.appendChild(sc);
   }
-  situacao(); setInterval(recarregar, 3000);
+  situacao(); cores(); setInterval(recarregar, 3000);
 })();
 </script>
 </body>
