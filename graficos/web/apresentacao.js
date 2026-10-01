@@ -41,7 +41,7 @@
   var atual = 0, visivel = 0, chaveDados = "", pausado = false, timer = null;
 
   function chave() {
-    var d = window.GCTSE_DADOS || {};
+    var d = window.GCTSE_GRAFICOS.dados();
     return JSON.stringify([d.modo, d.br, d.ufs, d.cor_slot, d.cores]);
   }
   function desenharEm(camada, id) {

@@ -31,4 +31,4 @@ exit /b
 
 rem Perfil proprio: abre uma janela nova em tela cheia mesmo com o
 rem navegador ja aberto. Para sair da tela cheia: Alt+F4.
-start "" "%NAV%" --user-data-dir="%PERFIL%" --kiosk --edge-kiosk-type=fullscreen --no-first-run --no-default-browser-check --disable-translate --disable-features=Translate --window-position=%MONITOR_X%,%MONITOR_Y% "%PAGINA%"
+start "" "%NAV%" --user-data-dir="%PERFIL%" --kiosk --edge-kiosk-type=fullscreen --no-first-run --hide-crash-restore-bubble --disable-session-crashed-bubble --no-default-browser-check --disable-translate --disable-features=Translate --window-position=%MONITOR_X%,%MONITOR_Y% "%PAGINA%"

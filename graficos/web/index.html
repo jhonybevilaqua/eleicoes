@@ -68,6 +68,7 @@ No switcher, use o caminho de cada gráfico como <b>fonte de navegador</b> (1280
     var br = d.br && d.br.tem ? d.br : null;
     var txt = (br ? "Brasil: " + String(br.secoes && br.secoes.pct != null ? br.secoes.pct.toFixed(2).replace(".", ",") : "—") + "% das urnas · boletim " + br.hora : "Brasil: aguardando o primeiro boletim");
     if (idade > 90) { el.className = "ruim"; el.textContent = "A COLETA PAROU há " + idade + " s — a janela do GRAFICOS.bat fechou? Os gráficos estão parados no último dado."; return; }
+    if (d.recebendo_tse === false && d.tse_nao_publicou) { el.className = "teste"; el.textContent = "O TSE RESPONDE, MAS AINDA NÃO PUBLICOU O BOLETIM (404) — normal antes das 17h. Se continuar depois das 17h10, avise. " + txt; return; }
     if (d.recebendo_tse === false) { el.className = "ruim"; el.textContent = "NÃO ESTAMOS RECEBENDO DADOS DO TSE (último: " + (d.ultimo_tse || "nenhum") + "). " + txt; return; }
     el.className = d.modo === "SIMULADO" ? "teste" : "ok";
     el.textContent = (d.modo === "SIMULADO" ? "SIMULADO DO TSE — NÃO É RESULTADO. " : "Coleta OFICIAL funcionando. ") + txt;

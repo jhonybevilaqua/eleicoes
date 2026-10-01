@@ -27,7 +27,18 @@
   function corta(t, n) { t = String(t || ""); return t.length > n ? t.slice(0, n - 1) + "…" : t; }
 
   // ----------------------------------------------------------------- dados
-  function D() { return window.GCTSE_DADOS || { modo: "OFICIAL", br: { tem: false }, ufs: {} }; }
+  // O Windows PowerShell 5.1 as vezes grava lista como {"value":[...],"Count":n}:
+  // aceita os dois jeitos.
+  function comoLista(x) { return Array.isArray(x) ? x : (x && Array.isArray(x.value) ? x.value : []); }
+  function normalizar(d) {
+    if (!d || d.__ok) return d;
+    [d.br].concat(Object.keys(d.ufs || {}).map(function (k) { return d.ufs[k]; })).forEach(function (a) {
+      if (a && a.tem) a.candidatos = comoLista(a.candidatos);
+    });
+    d.__ok = true;
+    return d;
+  }
+  function D() { return normalizar(window.GCTSE_DADOS) || { modo: "OFICIAL", br: { tem: false }, ufs: {} }; }
   function br() { var b = D().br; return (b && b.tem) ? b : null; }
   function uf(u) { var x = (D().ufs || {})[u]; return (x && x.tem) ? x : null; }
   function candidatos(b) { return (b && b.candidatos) ? b.candidatos : []; }
@@ -397,6 +408,7 @@
       { id: "lideranca-v", nome: "Liderança por estado", f: "v" }
     ],
     desenhar: function (id) { return G[id] ? G[id]() : null; },
-    ajustarSelos: ajustarSelos
+    ajustarSelos: ajustarSelos,
+    dados: D
   };
 })();

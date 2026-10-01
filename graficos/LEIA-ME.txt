@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 1.1 - apuracao de PRESIDENTE em graficos
+ gctse GRAFICOS 1.2 - apuracao de PRESIDENTE em graficos
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -105,6 +105,12 @@
    a janela preta mostra o quadro vermelho "NAO ESTAMOS RECEBENDO DADOS DO
    TSE" e a pagina do operador fica vermelha; os graficos ficam no ultimo
    dado real recebido.
+
+   Antes das 17h o TSE responde "ainda nao publicado" (404): a pagina do
+   operador fica AMARELA com "O TSE RESPONDE, MAS AINDA NAO PUBLICOU" -
+   e normal. Nesse periodo so o arquivo do Brasil e consultado (1 vez por
+   minuto); os 27 estados entram sozinhos quando o Brasil sair. Se passar
+   das 17h10 assim, avise.
 
    Cores: cada candidato tem UMA cor a noite toda (nao muda quando troca
    de posicao). As 3 primeiras cores vao para os primeiros que aparecem na

@@ -28,7 +28,7 @@
   var ultimo = "";
 
   function desenhar() {
-    var d = window.GCTSE_DADOS || {};
+    var d = window.GCTSE_GRAFICOS.dados();
     var chave = JSON.stringify([d.modo, d.br, d.ufs, d.cor_slot, d.cores]);
     if (chave === ultimo) return;       // so redesenha quando o dado mudou
     ultimo = chave;

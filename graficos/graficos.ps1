@@ -21,7 +21,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "1.0 - 30/09/2026"
+$Versao = "1.2 - 01/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -277,9 +277,10 @@ function Montar-Url {
 
 # ------------------------------------------------ recebendo do TSE? (alarme)
 
-$script:Inicio = Get-Date
+$script:AbertoEm = Get-Date   # (nao confundir com $inicio do ciclo: PowerShell ignora maiusculas)
 $script:UltimaResposta = $null
 $script:UltimoErro = ""
+$script:ErroFoi404 = $false   # o ultimo erro foi "ainda nao publicado"?
 $script:Alarme = $false
 $script:UltimoQuadro = [datetime]::MinValue
 
@@ -289,7 +290,7 @@ function Registrar-Resposta {
 }
 
 function Segundos-Sem-Tse {
-    $desde = $script:Inicio
+    $desde = $script:AbertoEm
     if ($null -ne $script:UltimaResposta) { $desde = $script:UltimaResposta }
     return [int] ((Get-Date) - $desde).TotalSeconds
 }
@@ -306,7 +307,10 @@ function Conferir-Recebimento {
     Write-Host ("  {0,-70}" -f "ATENCAO: NAO ESTAMOS RECEBENDO DADOS DO TSE") @cor
     Write-Host ("  {0,-70}" -f "ultimo dado recebido: $ultimo") @cor
     Write-Host ("  {0,-70}" -f "Os graficos ficam no ultimo dado REAL recebido (ou vazios).") @cor
-    if ($script:UltimoErro) { Write-Host "  ultimo erro: $($script:UltimoErro)" -ForegroundColor Yellow }
+    if ($script:ErroFoi404) {
+        Write-Host "  O TSE RESPONDEU, mas o boletim ainda nao foi publicado (404)." -ForegroundColor Yellow
+        Write-Host "  Normal antes da 1a divulgacao (17h). Depois das 17h10, avise." -ForegroundColor Yellow
+    } elseif ($script:UltimoErro) { Write-Host "  ultimo erro: $($script:UltimoErro)" -ForegroundColor Yellow }
     Write-Host ""
     Escrever-Log "NAO ESTAMOS RECEBENDO DADOS DO TSE - ultimo: $ultimo" "ERRO"
 }
@@ -340,14 +344,18 @@ function Obter-Boletim {
             return "SEM-MUDANCA"
         }
         if ($codigo -eq 404) {
-            # O TSE avisa que muitos 404 podem bloquear o IP: espaca.
+            # O TSE avisa que muitos 404 podem bloquear o IP: espaca (1, 2,
+            # 3 ciclos). Teto de 3 ciclos = no maximo ~1 min de atraso
+            # quando o boletim aparece.
             $vezes = 1
             if ($script:Ausentes.ContainsKey($Url)) { $vezes = $script:Ausentes[$Url].vezes + 1 }
-            $espera = [math]::Min([math]::Pow(2, $vezes - 1), 10)
+            $espera = [math]::Min($vezes, 3)
             $script:Ausentes[$Url] = @{ vezes = $vezes; pularAte = $script:NumCiclo + [int] $espera }
             $script:UltimoErro = "HTTP 404 (ainda nao publicado) em $Url"
+            $script:ErroFoi404 = $true
             return $null
         }
+        $script:ErroFoi404 = $false
         if ($codigo -gt 0) { $script:UltimoErro = "HTTP $codigo em $Url" } else { $script:UltimoErro = "$($_.Exception.Message)" }
         return $null
     }
@@ -586,6 +594,7 @@ function Gravar-Dados {
         modo          = $Modo
         gravado_em    = (Get-Date).ToString("yyyy-MM-ddTHH:mm:ss")
         recebendo_tse = (-not $script:Alarme)
+        tse_nao_publicou = ($script:Alarme -and $script:ErroFoi404)
         ultimo_tse    = $ult
         cores         = $(if (Tem-Propriedade $cfg "cores") { $cfg.cores } else { [pscustomobject]@{} })
         cor_slot      = [pscustomobject] $script:Slots
@@ -615,11 +624,15 @@ do {
     try {
         Ler-Abrangencia "br"
         Gravar-Dados                       # o Brasil vai para a tela antes dos estados
-        foreach ($u in $UFs) { Ler-Abrangencia $u }
+        # Estados so depois que o Brasil saiu: antes das 17h seriam 27
+        # pedidos com 404 por ciclo (o TSE avisa que 404 em excesso bloqueia
+        # o IP). Antes, so o Brasil e consultado.
+        if ($script:Cache.ContainsKey("br")) { foreach ($u in $UFs) { Ler-Abrangencia $u } }
         Conferir-Recebimento
         Gravar-Dados
         $comDado = @($UFs | Where-Object { $script:Cache.ContainsKey($_) }).Count
         $txt = "Brasil: sem boletim"
+        if ($script:ErroFoi404) { $txt = "Brasil: TSE ainda nao publicou (normal antes das 17h)" }
         if ($script:Cache.ContainsKey("br")) {
             $b = $script:Cache["br"]
             $l = ""
@@ -627,7 +640,10 @@ do {
             $txt = "Brasil: urnas $($b.secoes.pct)%$l"
         }
         $situ = "TSE: recebendo"
-        if ($script:Alarme) { $situ = "TSE: SEM RESPOSTA ha $(Segundos-Sem-Tse) s" }
+        if ($script:Alarme) {
+            $situ = "TSE: SEM RESPOSTA ha $(Segundos-Sem-Tse) s"
+            if ($script:ErroFoi404) { $situ = "TSE: responde, mas sem boletim ha $(Segundos-Sem-Tse) s" }
+        }
         Escrever-Log "$txt | estados com boletim: $comDado de 27 | $situ" $(if ($script:Alarme) { "ERRO" } else { "INFO" })
     } catch {
         Escrever-Log "erro no ciclo: $($_.Exception.Message)" "ERRO"
