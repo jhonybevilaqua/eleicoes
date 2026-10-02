@@ -21,7 +21,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "1.3 - 01/10/2026"
+$Versao = "1.4 - 02/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -592,6 +592,7 @@ function Gravar-Dados {
     $dados = [ordered]@{
         versao        = $Versao
         modo          = $Modo
+        pid           = $PID
         gravado_em    = (Get-Date).ToString("yyyy-MM-ddTHH:mm:ss")
         recebendo_tse = (-not $script:Alarme)
         tse_nao_publicou = ($script:Alarme -and $script:ErroFoi404)
@@ -609,6 +610,24 @@ function Gravar-Dados {
     [void] (Promover-Temporario $tmp $destino)
 }
 
+# ------------------------------------------------- um coletor por pasta
+# OFICIAL e TESTE gravam o mesmo web\dados.js. Se os dois estiverem abertos,
+# a tela fica trocando entre oficial e simulado (visto em 02/10: monitores
+# parados com "SIMULADO" porque o TESTE ficou aberto). Regra: o OFICIAL
+# sempre ganha - o TESTE ve que o oficial esta gravando e se encerra.
+
+function Outro-Coletor-Oficial {
+    $arq = Join-Path $PastaWeb "dados.js"
+    if (-not (Test-Path $arq)) { return $false }
+    try {
+        if (((Get-Date) - (Get-Item $arq).LastWriteTime).TotalSeconds -gt 60) { return $false }
+        $txt = [IO.File]::ReadAllText($arq)
+        $m = [regex]::Match($txt, '"modo":"(\w+)".*?"pid":(\d+)')
+        if (-not $m.Success) { return $false }
+        return ($m.Groups[1].Value -eq "OFICIAL" -and [int] $m.Groups[2].Value -ne $PID)
+    } catch { return $false }
+}
+
 # ---------------------------------------------------------------- execucao
 
 Escrever-Log "gctse GRAFICOS versao $Versao" "OK"
@@ -616,11 +635,19 @@ Escrever-Log "modo $Modo | intervalo ${Intervalo}s | Presidente: Brasil + 27 est
 Escrever-Log "caminho: $(Montar-Url 'br')"
 if ($Modo -eq "SIMULADO") { Escrever-Log "SIMULADO do TSE: os graficos saem com 'SIMULADO - NAO OFICIAL'. Nao use no ar." "AVISO" }
 Escrever-Log "Abra no Chrome: $(Join-Path $PastaWeb 'index.html')"
+if ($Modo -eq "SIMULADO" -and (Outro-Coletor-Oficial)) {
+    Escrever-Log "a coleta OFICIAL (GRAFICOS.bat) ja esta rodando nesta pasta - o TESTE nao abre para nao misturar." "ERRO"
+    exit 2
+}
 Gravar-Dados
 
 do {
     $inicio = Get-Date
     $script:NumCiclo++
+    if ($Modo -eq "SIMULADO" -and (Outro-Coletor-Oficial)) {
+        Escrever-Log "a coleta OFICIAL (GRAFICOS.bat) abriu nesta pasta - o TESTE se encerra aqui." "AVISO"
+        break
+    }
     try {
         Ler-Abrangencia "br"
         Gravar-Dados                       # o Brasil vai para a tela antes dos estados

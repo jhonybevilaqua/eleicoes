@@ -61,6 +61,10 @@
     var d = D(), b = br();
     if (d.modo === "SIMULADO") return { texto: "SIMULADO — NÃO OFICIAL", cor: C.vermelho };
     if (b && b.andamento === "f") return { texto: "TOTALIZAÇÃO FINAL", cor: C.verde };
+    // Antes da 1a urna (arquivo do TSE ja publicado com tudo zerado, ou
+    // nenhum arquivo ainda): selo neutro, nada de vermelho.
+    var pct = b && b.secoes ? b.secoes.pct : null;
+    if (!b || !(pct > 0)) return { texto: "AGUARDANDO APURAÇÃO", cor: C.trilho };
     return { texto: "PARCIAL", cor: C.vermelho };
   }
   function subtitulo() {

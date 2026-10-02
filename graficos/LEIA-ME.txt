@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 1.3 - apuracao de PRESIDENTE em graficos
+ gctse GRAFICOS 1.4 - apuracao de PRESIDENTE em graficos
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -64,7 +64,11 @@
      atalho abre ela tambem. Cada computador precisa da sua coleta.
    - Fica uma janela preta "gctse APRESENTACAO ... deixe esta janela
      aberta": ela VIGIA a apresentacao. Se o navegador fechar ou cair,
-     reabre sozinho em 10 s.
+     reabre sozinho em 10 s. A cada minuto ela escreve o que os monitores
+     estao recebendo, ex.: "dados OFICIAL ok (ha 5 s) - Brasil: 13
+     candidatos, urnas 0%". Vermelho ali = olhe a janela do GRAFICOS.bat.
+   - A apresentacao e sempre do OFICIAL: se o TESTE estiver gravando, o
+     atalho abre o GRAFICOS.bat e o TESTE se encerra.
    - Para encerrar DE VEZ: Alt+F4 na apresentacao e, na janela preta,
      aperte S (antes de 10 s). Ou feche a janela preta primeiro.
 
@@ -115,7 +119,8 @@
  O QUE APARECE NO GRAFICO
 ---------------------------------------------------------------------------
 
-   Selo no alto:  PARCIAL ................ apuracao em andamento
+   Selo no alto:  AGUARDANDO APURACAO .... antes da 1a urna (cinza)
+                  PARCIAL ................ apuracao em andamento
                   TOTALIZACAO FINAL ...... o TSE fechou o Brasil
                   SIMULADO - NAO OFICIAL . so no TESTE-GRAFICOS.bat
 
@@ -153,7 +158,12 @@
    TESTE-GRAFICOS.bat le o ambiente de SIMULADO do TSE (enquanto ele
    estiver no ar) e mostra os graficos com dados de teste, marcados
    "SIMULADO - NAO OFICIAL". Serve para conferir a maquina, a rede e o
-   switcher. Feche a janela dele antes de abrir o GRAFICOS.bat.
+   switcher.
+
+   O OFICIAL sempre ganha: se o GRAFICOS.bat (ou um APRESENTACAO-*.bat)
+   abrir com o TESTE aberto, o TESTE se encerra sozinho, e o TESTE nao
+   abre se o oficial ja estiver rodando. Selo "SIMULADO - NAO OFICIAL"
+   na tela = quem esta gravando e o TESTE.
 
    A janela escreve os campos que o TSE mandou nos blocos de totais
    ("campos do bloco 'v' ..."). Se algum grafico de brancos/nulos ou de

@@ -105,15 +105,55 @@ function Achar-Apresentacao {
 # -------------------------------------------------------------- coleta (TSE)
 
 $Dados = Join-Path $Raiz "web\dados.js"
-$idade = 99999
-if (Test-Path $Dados) { $idade = ((Get-Date) - (Get-Item $Dados).LastWriteTime).TotalSeconds }
-if ($idade -gt 60) {
-    Escrever-Log "a coleta (GRAFICOS.bat) nao esta rodando nesta maquina: abrindo agora." "Yellow"
-    Start-Process -FilePath (Join-Path $Raiz "GRAFICOS.bat") -WorkingDirectory $Raiz
-    Start-Sleep -Seconds 5
-} else {
-    Escrever-Log "coleta rodando (dados gravados ha $([int] $idade) s)." "Green"
+
+function Ler-Situacao {
+    # Resumo do web\dados.js: modo, idade, candidatos e urnas do Brasil.
+    $r = [pscustomobject]@{ existe = $false; idade = 99999; modo = ""; candidatos = 0; urnas = ""; hora = "" }
+    if (-not (Test-Path $Dados)) { return $r }
+    try {
+        $r.existe = $true
+        $r.idade = [int] ((Get-Date) - (Get-Item $Dados).LastWriteTime).TotalSeconds
+        $txt = [IO.File]::ReadAllText($Dados)
+        $m = [regex]::Match($txt, '"modo":"(\w+)"')
+        if ($m.Success) { $r.modo = $m.Groups[1].Value }
+        $i = $txt.IndexOf("{"); $f = $txt.LastIndexOf("}")
+        if ($i -ge 0 -and $f -gt $i) {
+            $d = $txt.Substring($i, $f - $i + 1) | ConvertFrom-Json
+            if ($d.br -and $d.br.tem) {
+                $lista = $d.br.candidatos
+                if ($lista -and ($lista.PSObject.Properties.Name -contains "value")) { $lista = $lista.value }
+                $r.candidatos = @($lista).Count
+                if ($d.br.secoes -and $null -ne $d.br.secoes.pct) { $r.urnas = "$($d.br.secoes.pct)" }
+                $r.hora = "$($d.br.hora)"
+            }
+        }
+    } catch { }
+    return $r
 }
+
+function Mostrar-Situacao {
+    $s = Ler-Situacao
+    if (-not $s.existe) { Escrever-Log "dados: web\dados.js nao existe" "Red"; return }
+    if ($s.idade -gt 90) { Escrever-Log "dados PARADOS ha $($s.idade) s - a janela do GRAFICOS.bat fechou?" "Red"; return }
+    if ($s.modo -ne "OFICIAL") { Escrever-Log "dados do $($s.modo) - NAO e o oficial" "Red"; return }
+    if ($s.candidatos -eq 0) { Escrever-Log "dados OFICIAL ok (gravados ha $($s.idade) s) - TSE ainda sem boletim do Brasil" "Green"; return }
+    Escrever-Log "dados OFICIAL ok (ha $($s.idade) s) - Brasil: $($s.candidatos) candidatos, urnas $($s.urnas)%, boletim $($s.hora)" "Green"
+}
+
+# A apresentacao e SEMPRE do oficial: se a coleta nao esta rodando aqui, ou
+# se quem esta gravando e o TESTE (simulado), abre o GRAFICOS.bat - o TESTE
+# ve o oficial e se encerra sozinho.
+$sit = Ler-Situacao
+if ($sit.idade -gt 60 -or $sit.modo -ne "OFICIAL") {
+    if ($sit.idade -le 60 -and $sit.modo) {
+        Escrever-Log "quem esta gravando os dados e o $($sit.modo) (TESTE-GRAFICOS aberto): abrindo a coleta OFICIAL." "Yellow"
+    } else {
+        Escrever-Log "a coleta (GRAFICOS.bat) nao esta rodando nesta maquina: abrindo agora." "Yellow"
+    }
+    Start-Process -FilePath (Join-Path $Raiz "GRAFICOS.bat") -WorkingDirectory $Raiz
+    Start-Sleep -Seconds 8
+}
+Mostrar-Situacao
 
 # ------------------------------------------------------------------- vigia
 
@@ -134,8 +174,12 @@ while ($true) {
         Start-Process -FilePath $Navegador -ArgumentList $Argumentos | Out-Null
         for ($i = 0; $i -lt 20 -and $null -eq $id; $i++) { Start-Sleep -Milliseconds 500; $id = Achar-Apresentacao }
     }
-    if ($null -ne $id) {
-        try { Wait-Process -Id $id -ErrorAction Stop } catch { }
+    # Enquanto a apresentacao esta aberta: a cada minuto escreve aqui o que
+    # os monitores estao recebendo (para conferir sem sair da tela cheia).
+    $proxSituacao = (Get-Date).AddSeconds(60)
+    while ($null -ne $id -and (Get-Process -Id $id -ErrorAction SilentlyContinue)) {
+        Start-Sleep -Seconds 2
+        if ((Get-Date) -ge $proxSituacao) { Mostrar-Situacao; $proxSituacao = (Get-Date).AddSeconds(60) }
     }
     $durou = [int] ((Get-Date) - $inicioAberta).TotalSeconds
 
