@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 1.5 - apuracao de PRESIDENTE em graficos
+ gctse GRAFICOS 1.6 - apuracao de PRESIDENTE em graficos
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -157,11 +157,13 @@
    GIRO-ESTADOS-HORIZONTAL.bat -> tela cheia 1920x1080
    GIRO-ESTADOS-VERTICAL.bat   -> tela cheia 1080x1920
 
-   Um estado por vez: 1o e 2o de GOVERNADOR e os 2 primeiros de SENADOR
-   (2 vagas em 2026), com a faixa:
-     ELEITO / ELEITOS (verde) ... quando o TSE escreve "Eleito"
-     2o TURNO (azul) ............ quando o TSE escreve "2o turno"
-     EM APURACAO / AGUARDANDO ... enquanto nao ha resultado
+   Um estado por vez, GOVERNADOR e SENADOR lado a lado, so o resultado:
+     ELEITO / ELEITOS (verde) ...... o nome em destaque, partido e %
+     VAO AO 2o TURNO (azul) ........ os dois nomes, partido e %
+     sem resultado ainda ........... 1o e 2o com % e barra, selo
+                                     EM APURACAO ou AGUARDANDO
+   ELEITO e 2o TURNO so quando o TSE escreve isso na situacao do
+   candidato (Senado 2026: 2 vagas, os dois aparecem como ELEITOS).
 
    O atalho abre sozinho o ESTADOS.bat (a coleta de Governador e Senador
    dos 27 estados, separada da de Presidente). Deixe a janela dele aberta.
@@ -174,7 +176,7 @@
      ENTER ............................... liga/desliga o giro automatico
      Alt+F4 .................................................... fecha
 
-   Ordem dos estados, tempo do giro automatico e quantos candidatos:
+   Ordem dos estados e tempo do giro automatico:
    web\giro-config.js (Bloco de Notas). Depois de salvar, F5 na tela.
 
 ---------------------------------------------------------------------------

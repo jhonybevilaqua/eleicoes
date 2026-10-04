@@ -29,10 +29,6 @@
       .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
   function pct(v) { return (v == null || isNaN(v)) ? "—" : Number(v).toFixed(2).replace(".", ",") + "%"; }
-  function inteiro(v) {
-    if (v == null || isNaN(v)) return "—";
-    return Math.round(v).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  }
   function t(x, y, txt, o) {
     o = o || {};
     return '<text x="' + x + '" y="' + y + '" font-size="' + (o.s || 16) + '"' +
@@ -85,81 +81,76 @@
   }
 
   // ---------------------------------------------------------- um cargo (bloco)
-  // Faixa de situacao + lista dos primeiros colocados.
-  function bloco(x, y, w, h, titulo, c, qtd, vagas, compacto) {
-    var o = r(x, y, w, h, C.painel, 8);
-    var px = x + 28, pw = w - 56;
-    o += t(px, y + 46, titulo, { s: compacto ? 22 : 26, b: true, ls: compacto ? 1 : 2 });
-    o += t(x + w - 28, y + 46, c ? (compacto ? "urnas " : "urnas apuradas ") + pct(c.urnas_pct) : "", { s: compacto ? 15 : 17, c: C.apagado, a: "end" });
-
-    // Faixa: ELEITO (verde) / 2o TURNO (azul) / em apuracao (cinza)
-    var st = situacao(c), fy = y + 66, fh = 64, cor = C.trilho, l1 = "", l2 = "";
-    if (st.tipo === "eleito") {
-      cor = C.verde;
-      l1 = st.lista.length > 1 ? "ELEITOS" : "ELEITO";
-      l2 = st.lista.map(function (k) { return k.nome; }).join("  e  ");
-    } else if (st.tipo === "segundo") {
-      cor = C.destaque;
-      l1 = "2º TURNO";
-      l2 = st.lista.map(function (k) { return k.nome; }).join("  ×  ");
-    } else {
-      l1 = st.texto;
-      l2 = vagas > 1 && c ? vagas + " vagas" : "";
-    }
-    o += r(px, fy, pw, fh, cor, 6);
-    o += t(px + 18, fy + 26, l1, { s: 17, b: true, ls: 2 });
-    o += t(px + 18, fy + 52, l2, { s: 22, b: true, max: pw - 36 });
-
-    // Candidatos: com poucos (2), tudo cresce para ocupar o painel.
-    var cs = c ? c.candidatos.slice(0, qtd) : [];
-    var top = cs.length && cs[0].pct > 0 ? cs[0].pct : 100;
-    var ly = fy + fh + 30, passo = Math.min(160, (y + h - ly - 10) / Math.max(qtd, 1));
-    var f = Math.max(1, Math.min(1.55, passo / 92));
-    if (!cs.length) o += t(px, ly + 30, "aguardando boletim do TSE", { s: 20, c: C.apagado });
-    cs.forEach(function (k, i) {
-      var yy = ly + i * passo, corBarra = k.eleito ? C.verde : (k.segundo_turno ? C.destaque : C.neutro);
-      var etq = k.eleito ? "ELEITO" : (k.segundo_turno ? "2º TURNO" : "");
-      var ew = Math.round((etq === "ELEITO" ? 70 : 84) * f), eh = Math.round(20 * f);
-      o += t(px, yy + 24 * f, k.nome, { s: Math.round(22 * f), b: true, max: pw - 150 * f });
-      o += t(px, yy + 47 * f, k.partido + (k.numero ? "  ·  " + k.numero : ""), { s: Math.round(15 * f), c: C.apagado, max: pw - 160 * f - (etq ? ew + 16 : 0) });
-      o += t(px + pw, yy + 28 * f, pct(k.pct), { s: Math.round(26 * f), b: true, a: "end" });
-      o += t(px + pw, yy + 49 * f, inteiro(k.votos) + " votos", { s: Math.round(14 * f), c: C.apagado, a: "end" });
-      if (etq) {
-        var ex = px + pw - 150 * f - ew;
-        o += r(ex, yy + 33 * f, ew, eh, corBarra, 3) +
-          t(ex + ew / 2, yy + 33 * f + eh * 0.74, etq, { s: Math.round(12 * f), b: true, a: "middle" });
-      }
-      o += barra(px, yy + 60 * f, pw, Math.round(8 * f), (k.pct || 0) / top * 0.98, corBarra);
+  // Layout "so o resultado": com ELEITO ou 2o TURNO definido pelo TSE, so os
+  // nomes em destaque. Sem resultado ainda, os 2 primeiros com percentual e
+  // barra. k = escala (1 na horizontal; menor no painel da vertical).
+  function rotulo(sit) {
+    if (sit.tipo === "eleito") return sit.lista.length > 1 ? "ELEITOS" : "ELEITO";
+    if (sit.tipo === "segundo") return "2º TURNO";
+    return sit.texto;
+  }
+  function chip(xd, y, sit, k) {
+    var txt = sit.tipo === "vazio" ? "AGUARDANDO" : rotulo(sit), w = (txt.length * 13 + 30) * k, h = 34 * k;
+    var cor = sit.tipo === "eleito" ? C.verde : (sit.tipo === "segundo" ? C.destaque : C.trilho);
+    return r(xd - w, y - 25 * k, w, h, cor, 4) + t(xd - w / 2, y - 1 * k, txt, { s: Math.round(18 * k), b: true, a: "middle", ls: 1 });
+  }
+  function emApuracao(x, y, w, h, titulo, c, sit, k) {
+    var o = r(x, y, w, h, C.painel, 8), px = x + 32 * k, pw = w - 64 * k;
+    o += t(px, y + 52 * k, titulo, { s: Math.round(28 * k), b: true, ls: 2 });
+    o += chip(x + w - 32 * k, y + 52 * k, sit, k);
+    var cs = c ? c.candidatos.slice(0, 2) : [];
+    if (!cs.length) return o + t(px, y + 140 * k, "aguardando boletim do TSE", { s: Math.round(22 * k), c: C.apagado });
+    var top = cs[0].pct > 0 ? cs[0].pct : 100, ly = y + 110 * k, passo = Math.min(170 * k, (y + h - ly - 10) / 2);
+    cs.forEach(function (cd, i) {
+      var yy = ly + i * passo;
+      o += t(px, yy + 40 * k, cd.nome, { s: Math.round(36 * k), b: true, max: pw - 215 * k });
+      o += t(px, yy + 74 * k, cd.partido, { s: Math.round(22 * k), c: C.apagado, max: pw - 215 * k });
+      o += t(px + pw, yy + 52 * k, pct(cd.pct), { s: Math.round(46 * k), b: true, a: "end" });
+      o += barra(px, yy + 94 * k, pw, Math.round(12 * k), (cd.pct || 0) / top * 0.98, C.neutro);
+    });
+    return o;
+  }
+  function bloco(x, y, w, h, titulo, c, k) {
+    var sit = situacao(c);
+    if (sit.tipo !== "eleito" && sit.tipo !== "segundo") return emApuracao(x, y, w, h, titulo, c, sit, k);
+    var eleito = sit.tipo === "eleito", cor = eleito ? C.verde : C.destaque;
+    var o = r(x, y, w, h, C.painel, 8) + r(x, y, w, 8, cor, 4), px = x + 32 * k, pw = w - 64 * k;
+    o += t(px, y + 54 * k, titulo, { s: Math.round(28 * k), b: true, ls: 2 });
+    o += t(px, y + 104 * k, eleito ? rotulo(sit) : "VÃO AO 2º TURNO",
+      { s: Math.round(26 * k), b: true, ls: 3, c: eleito ? "#3fd13f" : "#5fb0f0" });
+    var lst = sit.lista.slice(0, 2), passo = (lst.length > 1 ? 150 : 200) * k;
+    lst.forEach(function (cd, i) {
+      var yy = y + 130 * k + i * passo;
+      o += t(px, yy + 56 * k, cd.nome, { s: Math.round((lst.length > 1 ? 44 : 54) * k), b: true, max: pw });
+      o += t(px, yy + 96 * k, cd.partido + "   " + pct(cd.pct), { s: Math.round(28 * k), c: C.apagado, max: pw });
     });
     return o;
   }
 
   // ------------------------------------------------------------------ telas
   function telaH(u) {
-    var W = 1280, H = 720, cfg = window.GCTSE_GIRO || {};
-    var s = selo(u), o = r(0, 0, W, H, C.fundo);
-    o += t(73, 44, "GOVERNADOR E SENADOR", { s: 18, b: true, ls: 3, c: C.apagado });
-    o += t(73, 90, NOMES[u] || u.toUpperCase(), { s: 44, b: true, ls: 1, max: W - 73 - 380 });
-    o += t(73, 118, hora(u), { s: 18, c: C.apagado });
-    o += '<g data-selo="1" data-x="' + (W - 73) + '">' + r(W - 340, 52, 267, 34, s.cor, 3) +
-      t(W - 81, 76, s.texto, { s: 19, b: true, a: "end" }) + "</g>";
+    var W = 1280, H = 720, s = selo(u), o = r(0, 0, W, H, C.fundo);
     var g = cargo(u, "gov"), se = cargo(u, "sen");
-    o += bloco(73, 146, 551, 528, "GOVERNADOR", g, cfg.candidatos_governador || 2, 1);
-    o += bloco(656, 146, 551, 528, "SENADOR", se, cfg.candidatos_senador || 2, se ? se.vagas : 1);
-    o += t(73, 702, "Fonte: TSE — Divulgação de Resultados", { s: 12, c: C.apagado2 });
+    o += t(73, 76, NOMES[u] || u.toUpperCase(), { s: 52, b: true, ls: 1, max: W - 73 - 380 });
+    o += t(73, 112, "urnas apuradas  ·  governador " + (g ? pct(g.urnas_pct) : "—") +
+      "  ·  senador " + (se ? pct(se.urnas_pct) : "—"), { s: 20, c: C.apagado });
+    o += '<g data-selo="1" data-x="' + (W - 73) + '">' + r(W - 340, 44, 267, 36, s.cor, 3) +
+      t(W - 81, 70, s.texto, { s: 20, b: true, a: "end" }) + "</g>";
+    o += bloco(73, 146, 551, 528, "GOVERNADOR", g, 1);
+    o += bloco(656, 146, 551, 528, "SENADOR", se, 1);
+    o += t(73, 702, "Fonte: TSE — " + hora(u), { s: 13, c: C.apagado2 });
     return svg(W, H, o);
   }
   function telaV(u) {
-    var W = 540, H = 960, cfg = window.GCTSE_GIRO || {};
-    var s = selo(u), o = r(0, 0, W, H, C.fundo);
-    o += t(30, 42, "GOVERNADOR E SENADOR", { s: 15, b: true, ls: 2, c: C.apagado });
-    o += t(30, 82, NOMES[u] || u.toUpperCase(), { s: 34, b: true, max: W - 60 });
-    o += t(30, 106, hora(u), { s: 14, c: C.apagado });
-    o += r(30, 118, W - 60, 26, s.cor, 2) + t(W / 2, 137, s.texto, { s: 15, b: true, a: "middle" });
+    var W = 540, H = 960, s = selo(u), o = r(0, 0, W, H, C.fundo);
     var g = cargo(u, "gov"), se = cargo(u, "sen");
-    o += bloco(30, 156, W - 60, 382, "GOVERNADOR", g, Math.min(cfg.candidatos_governador || 2, 3), 1, true);
-    o += bloco(30, 550, W - 60, 382, "SENADOR", se, Math.min(cfg.candidatos_senador || 2, 3), se ? se.vagas : 1, true);
-    o += t(30, 950, "Fonte: TSE", { s: 11, c: C.apagado2 });
+    o += t(30, 66, NOMES[u] || u.toUpperCase(), { s: 38, b: true, max: W - 60 });
+    o += t(30, 94, "urnas  ·  gov " + (g ? pct(g.urnas_pct) : "—") + "  ·  sen " + (se ? pct(se.urnas_pct) : "—"),
+      { s: 15, c: C.apagado, max: W - 60 });
+    o += r(30, 108, W - 60, 28, s.cor, 2) + t(W / 2, 128, s.texto, { s: 16, b: true, a: "middle" });
+    o += bloco(30, 150, W - 60, 380, "GOVERNADOR", g, 0.78);
+    o += bloco(30, 546, W - 60, 380, "SENADOR", se, 0.78);
+    o += t(30, 950, "Fonte: TSE — " + hora(u), { s: 11, c: C.apagado2 });
     return svg(W, H, o);
   }
   function svg(W, H, corpo) {
