@@ -21,7 +21,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "2.7 - 04/10/2026"
+$Versao = "2.8 - 04/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -426,8 +426,11 @@ function Resumir-Boletim {
                         $marcaE = "$(Obter-Campo $c @('e') '')".ToLower()
                         # ELEITO so com a palavra do TSE (mesma regra do gctse 6.x):
                         # no simulado, e=s veio tambem para quem ia ao 2o turno.
-                        $eleito = $false
-                        if ($st) { $eleito = ($st -match '^Eleito') } elseif ($marcaE -eq "s") { $eleito = $true }
+                        # "Eleito", "Eleita", "Matematicamente eleito", "Eleito por QP"
+                        # ou so a marca e=s; nunca "Nao eleito" nem quem vai ao 2o turno.
+                        $naoEleito = ($st -match 'n\S{1,2}o\s+eleit')
+                        $vaiTurno = ($st -match 'turno')
+                        $eleito = (-not $naoEleito) -and (-not $vaiTurno) -and (($st -match 'eleit') -or ($marcaE -eq "s"))
                         $cands += [pscustomobject]@{
                             numero  = "$(Obter-Campo $c @('n') '')"
                             sqcand  = "$(Obter-Campo $c @('sqcand') '')"
@@ -436,7 +439,7 @@ function Resumir-Boletim {
                             votos   = Converter-Inteiro (Obter-Campo $c @('vap') 0)
                             pct     = Converter-Decimal (Obter-Campo $c @('pvap') 0)
                             eleito  = $eleito
-                            segundo_turno = ($st -match 'turno')
+                            segundo_turno = $vaiTurno
                             destinacao = Decodificar-Entidades "$(Obter-Campo $c @('dvt') '')"
                         }
                     }
