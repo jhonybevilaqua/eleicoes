@@ -21,7 +21,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "2.11 - 04/10/2026"
+$Versao = "2.12 - 04/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -426,11 +426,14 @@ function Resumir-Boletim {
                         $marcaE = "$(Obter-Campo $c @('e') '')".ToLower()
                         # ELEITO so com a palavra do TSE (mesma regra do gctse 6.x):
                         # no simulado, e=s veio tambem para quem ia ao 2o turno.
-                        # "Eleito", "Eleita", "Matematicamente eleito", "Eleito por QP"
-                        # ou so a marca e=s; nunca "Nao eleito" nem quem vai ao 2o turno.
+                        # Com o texto "st", so ele decide: "Eleito", "Eleita",
+                        # "Matematicamente eleito", "Eleito por QP" (nunca "Nao eleito"
+                        # nem 2o turno). A marca e=s so vale sem "st" - no simulado
+                        # veio e=s para os DOIS primeiros de cargo de uma vaga.
                         $naoEleito = ($st -match 'n\S{1,2}o\s+eleit')
                         $vaiTurno = ($st -match 'turno')
-                        $eleito = (-not $naoEleito) -and (-not $vaiTurno) -and (($st -match 'eleit') -or ($marcaE -eq "s"))
+                        if ($st) { $eleito = (-not $naoEleito) -and (-not $vaiTurno) -and ($st -match 'eleit') }
+                        else { $eleito = ($marcaE -eq "s") }
                         $cands += [pscustomobject]@{
                             numero  = "$(Obter-Campo $c @('n') '')"
                             sqcand  = "$(Obter-Campo $c @('sqcand') '')"
