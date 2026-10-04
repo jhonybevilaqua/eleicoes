@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 2.8 - apuracao de PRESIDENTE em graficos
+ gctse GRAFICOS 2.9 - apuracao de PRESIDENTE em graficos
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -120,6 +120,14 @@
    extrair ou criar pasta). Na mao, so UMA vez em cada OBS: escolher o
    canal da DeckLink. Passo a passo: OBS-DECKLINK.txt (ABRIR-OBS.bat
    reabre um OBS fechado; ENDERECOS-OBS.bat = plano B na mao).
+
+---------------------------------------------------------------------------
+ VER-ELEITO.bat - estado eleito no site do TSE mas sem ELEITO na tela?
+---------------------------------------------------------------------------
+
+   Pergunta a sigla e mostra, para Governador e Senador: o que o TSE
+   manda (e=, st=) e o que a tela recebeu (versao do coletor e eleito=).
+   Grava VER-ELEITO.txt para mandar ao suporte.
 
 ---------------------------------------------------------------------------
  PREPARAR O WINDOWS (uma vez em cada maquina que vai ao ar)
