@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 1.7 - apuracao de PRESIDENTE em graficos
+ gctse GRAFICOS 1.8 - apuracao de PRESIDENTE em graficos
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -204,8 +204,14 @@
    Foto que o TSE nao tiver simplesmente nao aparece (a tela fica como
    sem foto). Se as 3 primeiras falharem, as fotos se desligam sozinhas
    (o TSE avisa que muitos erros 404 podem bloquear o IP).
-   Para desligar de proposito: web\giro-config.js, fotos_do_tse: false
-   (giro) - e o computador precisa de internet para as fotos.
+   LIGAR / DESLIGAR AS FOTOS: web\fotos-config.js (Bloco de Notas)
+        window.GCTSE_FOTOS_DO_TSE = true;    com fotos
+        window.GCTSE_FOTOS_DO_TSE = false;   sem fotos (nenhum pedido de
+                                             foto ao TSE)
+   Depois de mudar, feche e abra de novo a tela (ou F5).
+   O PNG (tecla P) sai sempre sem fotos: o navegador nao deixa colocar
+   imagem de outro site dentro do PNG.
+   As fotos precisam de internet para o site do TSE (como os dados).
 
 ---------------------------------------------------------------------------
  CREDITOS

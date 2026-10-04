@@ -18,6 +18,7 @@
 <div id="tela"></div>
 <button id="png" title="Tecla P">Salvar PNG</button>
 <script charset="utf-8" src="mapa-brasil.js"></script>
+<script charset="utf-8" src="fotos-config.js"></script>
 <script charset="utf-8" src="graficos.js"></script>
 <script charset="utf-8" src="dados.js"></script>
 <script>
@@ -50,8 +51,16 @@
   }
 
   function salvarPNG() {
-    var el = tela.querySelector("svg");
-    if (!el) return;
+    // Desenha de novo SEM fotos, fora da tela: foto de outro site nao entra
+    // no PNG (sairia uma caixa cinza no lugar).
+    var tmp = document.createElement("div");
+    tmp.style.cssText = "position:absolute;left:-99999px;top:0";
+    document.body.appendChild(tmp);
+    window.__gctseSemFotos = true;
+    try { tmp.innerHTML = window.GCTSE_GRAFICOS.desenhar(id) || ""; window.GCTSE_GRAFICOS.ajustarSelos(tmp); }
+    finally { window.__gctseSemFotos = false; }
+    var el = tmp.querySelector("svg");
+    if (!el) { tmp.remove(); return; }
     var W = +el.getAttribute("width"), H = +el.getAttribute("height");
     var escala = W > H ? 1920 / W : 1080 / W;       // 1920x1080 ou 1080x1920
     var img = new Image();
@@ -66,7 +75,9 @@
         document.body.appendChild(a); a.click(); a.remove();
       }, "image/png");
     };
-    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(new XMLSerializer().serializeToString(el));
+    var dado = new XMLSerializer().serializeToString(el);
+    tmp.remove();
+    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(dado);
   }
 
   var timer = null;

@@ -96,7 +96,7 @@
     }
   };
   function urlFoto(u, cd) {
-    if ((window.GCTSE_GIRO || {}).fotos_do_tse === false) return "";
+    if (window.GCTSE_FOTOS_DO_TSE !== true) return "";   // chave em web\fotos-config.js
     var tse = D().tse;
     if (!tse || !tse.base || !cd || !cd.sqcand) return "";
     if (FOTO.falhas >= 3 && FOTO.acertos === 0) return "";

@@ -136,8 +136,11 @@
     FOTO.timer = setTimeout(function () { if (window.__gctseRedesenhar) window.__gctseRedesenhar(); }, 300);
   };
   function urlFoto(c) {
-    var d = D(), tse = d.tse;
-    if (d.fotos_do_tse === false || !tse || !tse.base || !c || !c.sqcand) return "";
+    var tse = D().tse;
+    // Chave unica em web\fotos-config.js (sem ela: sem fotos). O PNG sai sem
+    // fotos: o navegador nao deixa embutir imagem de outro site no PNG.
+    if (window.GCTSE_FOTOS_DO_TSE !== true || window.__gctseSemFotos) return "";
+    if (!tse || !tse.base || !c || !c.sqcand) return "";
     if (FOTO.falhas >= 3 && FOTO.acertos === 0) return "";
     var url = tse.base + "/" + tse.ciclo + "/" + tse.eleicao + "/fotos/br/" + c.sqcand + ".jpeg";
     return FOTO.falhou[url] ? "" : url;
