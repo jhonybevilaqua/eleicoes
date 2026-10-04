@@ -340,7 +340,7 @@ $RotuloEleito = "ELEITO"
 if (Tem-Propriedade $cfg.texto "rotulo_eleito") { $RotuloEleito = "$($cfg.texto.rotulo_eleito)" }
 # 6.7: 2o turno sai no MESMO campo do selo (cand1_eleito / cand1_eleito_rotulo),
 # sem campo novo (ver a REGRA das colunas). Vazio no config = nunca mostra.
-$RotuloSegundoTurno = "2" + [char] 0xBA + " TURNO"
+$RotuloSegundoTurno = "SEGUNDO TURNO"
 if (Tem-Propriedade $cfg.texto "rotulo_segundo_turno") { $RotuloSegundoTurno = "$($cfg.texto.rotulo_segundo_turno)" }
 $PastaFotos = ""
 if (Tem-Propriedade $cfg.texto "pasta_fotos") { $PastaFotos = "$($cfg.texto.pasta_fotos)" }
