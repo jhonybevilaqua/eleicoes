@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 2.2 - apuracao de PRESIDENTE em graficos
+ gctse GRAFICOS 2.3 - apuracao de PRESIDENTE em graficos
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -109,6 +109,12 @@
    Windows) com duas colunas: SAIDA HORIZONTAL e SAIDA VERTICAL.
    Clicou numa tela = vai NA HORA para aquela saida; previa ao vivo;
    controles do giro (27 siglas) e do resumo (7 telas).
+   "escolher as telas do rodizio" (em cada saida): marca quais telas
+   entram na Apresentacao automatica - graficos do Presidente, telas do
+   Resumo e Governador + Senador de qualquer estado - e quantos segundos
+   cada uma fica. "voltar ao padrao" = lista do apresentacao-config.js.
+   Fotos dos candidatos a Governador e Senador (giro e Resumo, tela do
+   estado) vem direto do TSE, como no Presidente (so no pacote COM-FOTOS).
    Cada saida chega a DeckLink por um OBS de "ponte" que o proprio
    GERENCIADOR.bat monta e abre, a partir do OBS instalado (nada de
    extrair ou criar pasta). Na mao, so UMA vez em cada OBS: escolher o

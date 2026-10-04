@@ -42,9 +42,15 @@
 
   // A posicao do giro/resumo vai na URL: a tela ja abre no estado / na tela
   // certa (e a previa do gerenciador mostra exatamente o mesmo).
-  function endereco(tela, acao) {
+  function endereco(tela, acao, rodizio, tempo) {
     acao = acao || "";
-    if (tela === "apresentacao") return "apresentacao-" + sufixo + ".html";
+    if (tela === "apresentacao") {
+      // telas e tempo escolhidos no gerenciador (vazio = apresentacao-config.js)
+      var p = [];
+      if (rodizio) p.push("lista=" + encodeURIComponent(rodizio));
+      if (tempo >= 3) p.push("tempo=" + tempo);
+      return "apresentacao-" + sufixo + ".html" + (p.length ? "?" + p.join("&") : "");
+    }
     if (tela === "giro") return "giro-estados-" + sufixo + ".html" + (acao.indexOf("uf:") === 0 ? "?uf=" + encodeURIComponent(acao.slice(3)) : "");
     if (tela === "resumo") return "resumo-" + sufixo + ".html" + (acao.indexOf("tela:") === 0 ? "?tela=" + encodeURIComponent(acao.slice(5)) : "");
     if (/^[a-z0-9-]+$/.test(tela)) return "grafico.html?g=" + encodeURIComponent(tela);
@@ -52,8 +58,8 @@
   }
 
   // Carrega a tela nova no quadro escondido e so entao troca (sem piscar).
-  function trocar(tela, acao) {
-    var url = endereco(tela, acao);
+  function trocar(tela, acao, rodizio, tempo) {
+    var url = endereco(tela, acao, rodizio, tempo);
     if (!url) return;
     var prox = quadros[visivel === 0 ? 1 : 0];
     prox.onload = function () {
@@ -87,7 +93,7 @@
       if (typeof e.girar_v === "number") girar(e.girar_v);
       var s = e[saida];
       if (!s) return;
-      if (s.seq !== seqAtual) { seqAtual = s.seq; aseqAtual = s.aseq; trocar(s.tela, s.acao); return; }
+      if (s.seq !== seqAtual) { seqAtual = s.seq; aseqAtual = s.aseq; trocar(s.tela, s.acao, s.rodizio, s.tempo); return; }
       if (s.aseq !== aseqAtual) { aseqAtual = s.aseq; if (s.acao) comando(s.acao); }
     }).catch(function () { /* gerenciador fechado: fica no que esta no ar */ });
   }

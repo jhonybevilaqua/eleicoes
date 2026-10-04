@@ -18,12 +18,19 @@
   if (girar === 270) girar = -90;
   var comBarra = q.get("barra") != null ? q.get("barra") === "1" : !!cfg.barra_progresso;
 
-  // Lista de graficos: so ids que existem e sao do formato certo.
-  var conhecidos = {};
+  // Lista de telas: so ids que existem e sao do formato certo. Alem dos
+  // graficos do Presidente, o GERENCIADOR pode por no rodizio:
+  //   resumo:<tela>  uma tela do Resumo (resumo.js)
+  //   estado:<uf>    Governador e Senador de um estado (giro.js)
+  var conhecidos = {}, RES = window.GCTSE_RESUMO, GIRO = window.GCTSE_GIRO_TELA;
   window.GCTSE_GRAFICOS.lista.forEach(function (g) { conhecidos[g.id] = g.f; });
+  function valido(id) {
+    if (id.indexOf("resumo:") === 0) return !!(RES && RES.telas.some(function (x) { return x.id === id.slice(7); }));
+    if (id.indexOf("estado:") === 0) return !!(GIRO && GIRO.nomes[id.slice(7)]);
+    return conhecidos[id] === formato;
+  }
   var pedidos = q.get("lista") ? q.get("lista").split(",") : (formato === "v" ? cfg.vertical : cfg.horizontal);
-  var ids = (pedidos || []).map(function (s) { return String(s).trim(); })
-    .filter(function (id) { return conhecidos[id] === formato; });
+  var ids = (pedidos || []).map(function (s) { return String(s).trim(); }).filter(valido);
   if (!ids.length) ids = window.GCTSE_GRAFICOS.lista.filter(function (g) { return g.f === formato; }).map(function (g) { return g.id; });
 
   // Palco: do tamanho da tela; girado quando o monitor vertical
@@ -41,10 +48,21 @@
   var atual = 0, visivel = 0, chaveDados = "", pausado = false, timer = null;
 
   function chave() {
-    var d = window.GCTSE_GRAFICOS.dados();
-    return JSON.stringify([d.modo, d.br, d.ufs, d.cor_slot, d.cores]);
+    var d = window.GCTSE_GRAFICOS.dados(), e = window.GCTSE_ESTADOS || {};
+    return JSON.stringify([d.modo, d.br, d.ufs, d.cor_slot, d.cores, e.ufs, e.ref2022]);
   }
   function desenharEm(camada, id) {
+    if (id.indexOf("resumo:") === 0) {
+      var tl = RES.telas.filter(function (x) { return x.id === id.slice(7); })[0];
+      camada.innerHTML = tl.f(formato === "v");
+      RES.ajustar(camada);
+      return;
+    }
+    if (id.indexOf("estado:") === 0) {
+      camada.innerHTML = formato === "v" ? GIRO.telaV(id.slice(7)) : GIRO.telaH(id.slice(7));
+      GIRO.ajustar(camada);
+      return;
+    }
     var s = window.GCTSE_GRAFICOS.desenhar(id);
     camada.innerHTML = s || "";
     window.GCTSE_GRAFICOS.ajustarSelos(camada);
@@ -75,10 +93,10 @@
 
   // Dado novo: redesenha o grafico que esta no ar, sem piscar e sem
   // mexer no tempo dele.
-  function recarregar() {
+  function recarregar(arq) {
     var sc = document.createElement("script");
     sc.charset = "utf-8";
-    sc.src = "dados.js?t=" + Date.now();
+    sc.src = arq + "?t=" + Date.now();
     sc.onload = function () {
       sc.remove();
       if (chave() !== chaveDados) { chaveDados = chave(); desenharEm(camadas[visivel], ids[atual]); }
@@ -110,5 +128,7 @@
   window.__gctseRedesenhar = function () { desenharEm(camadas[visivel], ids[atual]); };   // foto que falhou: refaz sem ela
   mostrar(0);
   agendar();
-  setInterval(recarregar, 3000);
+  // estados.js so quando ha tela de estado/resumo no rodizio
+  var usaEstados = ids.some(function (id) { return id.indexOf(":") > 0; });
+  setInterval(function () { recarregar("dados.js"); if (usaEstados) recarregar("estados.js"); }, 3000);
 })();

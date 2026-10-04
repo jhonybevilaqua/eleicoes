@@ -47,6 +47,21 @@
   .controle .uf button.ativo, .controle .tl button.ativo, .girar button.ativo { background: var(--azul); border-color: var(--azul-borda); color: #fff; }
   button.auto.ligado, button.auto.ligado:hover { background: var(--verde); border-color: var(--verde-borda); color: #fff; }
   .dica { color: var(--apagado); font-size: 12px; margin-top: 6px; }
+  .rodizio { margin-top: 8px; }
+  .rodizio .rod-linha { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .rodizio .rod-resumo { color: var(--apagado); font-size: 13px; }
+  .rod-painel { margin-top: 8px; padding: 10px; border: 1px solid var(--linha); border-radius: 6px; }
+  .rod-painel[hidden] { display: none; }
+  .rod-painel .opcoes { display: flex; flex-wrap: wrap; gap: 6px; }
+  .rod-painel label { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--bt-borda);
+                      border-radius: 6px; background: var(--bt); cursor: pointer; font-size: 14px; font-weight: 600; user-select: none; }
+  .rod-painel label.marcado { background: var(--azul); border-color: var(--azul-borda); color: #fff; }
+  .rod-painel .uf label { width: 52px; justify-content: center; padding: 6px 0; }
+  .rod-painel input[type=checkbox] { display: none; }
+  .rod-painel input[type=number] { width: 70px; padding: 6px; font: 600 14px 'Segoe UI', Arial, sans-serif; border: 1px solid var(--bt-borda);
+                                   border-radius: 6px; background: var(--cartao); color: var(--texto); }
+  .rod-painel .acoes { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+  .rod-painel .msg { font-size: 13px; font-weight: 700; }
 </style>
 <script>try { if (localStorage.getItem("gctse-tema") === "escuro") document.documentElement.className = "escuro"; } catch (e) { }</script>
 </head>
@@ -58,6 +73,7 @@
 <main id="colunas"></main>
 
 <script charset="utf-8" src="giro-config.js"></script>
+<script charset="utf-8" src="apresentacao-config.js"></script>
 <script charset="utf-8" src="graficos.js"></script>
 <script charset="utf-8" src="dados.js"></script>
 <script charset="utf-8" src="estados.js"></script>
@@ -69,14 +85,35 @@
   var ordem = (cfg.ordem || NOMES_UF).map(function (u) { return String(u).toLowerCase(); }).filter(function (u) { return NOMES_UF.indexOf(u) >= 0; });
   var RESUMO = ["Mapa dos governadores", "Governadores por partido", "Senado por partido", "Presidente por região",
                 "Comparecimento", "Estado em destaque", "2026 × 2022"];
+  var RESUMO_IDS = ["mapa-governadores", "governadores-partido", "senado-partido", "presidente-regiao",
+                    "comparecimento", "estado", "comparativo-2022"];
+  var cfgA = window.GCTSE_APRESENTACAO || {};
   var SAIDAS = [
     { id: "h", nome: "SAÍDA HORIZONTAL", sub: "OBS SAIDA-HORIZONTAL → canal da DeckLink escolhido nele · 1920×1080", W: 1920, H: 1080, f: "h" },
     { id: "v", nome: "SAÍDA VERTICAL", sub: "OBS SAIDA-VERTICAL → canal da DeckLink escolhido nele · tela 1080×1920 girada no quadro 1920×1080", W: 1080, H: 1920, f: "v" }
   ];
   var estado = null, autoTimer = { h: null, v: null };
 
-  function nomeTela(id) {
-    if (id === "apresentacao") return "Apresentação automática (troca a cada 15 s)";
+  // ------------------------------------------------ rodizio da apresentacao
+  // Vazio no gerenciador = as telas do apresentacao-config.js.
+  function graficosDe(S) { return window.GCTSE_GRAFICOS.lista.filter(function (g) { return g.f === S.f; }); }
+  function padraoRodizio(S) {
+    var ok = graficosDe(S).map(function (g) { return g.id; });
+    var l = ((S.f === "v" ? cfgA.vertical : cfgA.horizontal) || []).filter(function (id) { return ok.indexOf(id) >= 0; });
+    return l.length ? l : ok;
+  }
+  function rodizioAtual(S) {
+    var r = estado && estado[S.id] ? estado[S.id].rodizio : "";
+    return r ? String(r).split(",") : padraoRodizio(S);
+  }
+  function tempoAtual(S) {
+    var t = estado && estado[S.id] ? estado[S.id].tempo : 0;
+    if (t >= 3) return t;
+    t = parseFloat(cfgA.tempo_segundos);
+    return t >= 3 ? t : 15;
+  }
+  function nomeTela(id, S) {
+    if (id === "apresentacao") return "Apresentação automática (" + rodizioAtual(S).length + " telas, " + tempoAtual(S) + " s cada)";
     if (id === "giro") return "Giro dos estados";
     if (id === "resumo") return "Resumo (7 telas)";
     var g = window.GCTSE_GRAFICOS.lista.filter(function (x) { return x.id === id; })[0];
@@ -131,6 +168,7 @@
       g.appendChild(bx); col.appendChild(g);
     }
     grupo("AUTOMÁTICO", [["apresentacao", "▶ Apresentação automática"]]);
+    col.appendChild(painelRodizio(S));
     grupo("GRÁFICOS (fica fixo no ar)", window.GCTSE_GRAFICOS.lista.filter(function (g) { return g.f === S.f; }).map(function (g) { return [g.id, g.nome]; }));
     grupo("FECHAMENTO (controle aqui embaixo)", [["giro", "Giro dos estados", "uf:" + (ordem.indexOf(String(cfg.estado_destaque || "pr")) >= 0 ? String(cfg.estado_destaque || "pr") : ordem[0])],
                                                  ["resumo", "Resumo (7 telas)", "tela:1"]]);
@@ -158,12 +196,78 @@
     new ResizeObserver(escala).observe(q); escala();
   });
 
+  // Painel "escolher as telas do rodizio": graficos do Presidente, telas do
+  // Resumo e Governador + Senador de cada estado (tela do giro).
+  function painelRodizio(S) {
+    var box = document.createElement("div"); box.className = "rodizio";
+    box.innerHTML = '<div class="rod-linha"><button type="button" class="abrir">⚙ escolher as telas do rodízio</button>' +
+      '<span class="rod-resumo"></span></div><div class="rod-painel" hidden></div>';
+    var painel = box.querySelector(".rod-painel"), abrir = box.querySelector(".abrir");
+    var itens = [];
+    function secao(titulo, lista, classe) {
+      var g = document.createElement("div"); g.innerHTML = '<div class="grupo">' + titulo + '</div>';
+      var ops = document.createElement("div"); ops.className = "opcoes " + (classe || "");
+      lista.forEach(function (it) {
+        var lb = document.createElement("label"), cb = document.createElement("input");
+        cb.type = "checkbox"; cb.value = it[0];
+        cb.onchange = function () { lb.classList.toggle("marcado", cb.checked); msg(""); };
+        lb.appendChild(cb); lb.appendChild(document.createTextNode(it[1]));
+        ops.appendChild(lb); itens.push(cb);
+      });
+      g.appendChild(ops); painel.appendChild(g);
+    }
+    // graficos: na ordem do apresentacao-config.js, depois os outros
+    var gs = graficosDe(S), pad = padraoRodizio(S);
+    gs.sort(function (a, b) {
+      var ia = pad.indexOf(a.id), ib = pad.indexOf(b.id);
+      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+    });
+    secao("PRESIDENTE", gs.map(function (g) { return [g.id, g.nome]; }));
+    secao("RESUMO", RESUMO_IDS.map(function (id, i) { return ["resumo:" + id, RESUMO[i]]; }));
+    secao("GOVERNADOR E SENADOR — tela do estado", ordem.map(function (u) { return ["estado:" + u, u.toUpperCase()]; }), "uf");
+    var ac = document.createElement("div"); ac.className = "acoes";
+    ac.innerHTML = '<span>segundos por tela</span><input type="number" min="3" max="300" step="1" class="tempo">' +
+      '<button type="button" class="aplicar">✔ aplicar no rodízio</button><button type="button" class="padrao">voltar ao padrão</button>' +
+      '<button type="button" class="nenhuma">desmarcar todas</button><span class="msg"></span>';
+    painel.appendChild(ac);
+    var tempo = ac.querySelector(".tempo"), m = ac.querySelector(".msg");
+    function msg(txt, ruim) { m.textContent = txt; m.style.color = ruim ? "var(--verm)" : "var(--ok-t)"; }
+    function carregar() {
+      var sel = rodizioAtual(S);
+      itens.forEach(function (cb) { cb.checked = sel.indexOf(cb.value) >= 0; cb.parentNode.classList.toggle("marcado", cb.checked); });
+      tempo.value = tempoAtual(S); msg("");
+    }
+    abrir.onclick = function () {
+      painel.hidden = !painel.hidden;
+      abrir.textContent = painel.hidden ? "⚙ escolher as telas do rodízio" : "✕ fechar a escolha";
+      if (!painel.hidden) carregar();
+    };
+    ac.querySelector(".nenhuma").onclick = function () { itens.forEach(function (cb) { cb.checked = false; cb.parentNode.classList.remove("marcado"); }); msg(""); };
+    ac.querySelector(".aplicar").onclick = function () {
+      var sel = itens.filter(function (cb) { return cb.checked; }).map(function (cb) { return cb.value; });
+      var tp = Math.round(parseFloat(tempo.value));
+      if (!sel.length) { msg("marque ao menos uma tela", true); return; }
+      if (!(tp >= 3 && tp <= 300)) { msg("segundos: de 3 a 300", true); return; }
+      pedir("/rodizio?saida=" + S.id + "&telas=" + encodeURIComponent(sel.join(",")) + "&tempo=" + tp)
+        .then(function () { msg("✔ aplicado: " + sel.length + " telas, " + tp + " s cada"); })
+        .catch(function () { msg("não aplicou — o GERENCIADOR está aberto?", true); });
+    };
+    ac.querySelector(".padrao").onclick = function () {
+      pedir("/rodizio?saida=" + S.id + "&telas=&tempo=0")
+        .then(function () { carregar(); msg("✔ voltou ao padrão (apresentacao-config.js)"); })
+        .catch(function () { msg("não aplicou — o GERENCIADOR está aberto?", true); });
+    };
+    return box;
+  }
+
   // ---------------------------------------------------------------- pintar
   function pintar() {
     if (!estado) return;
     SAIDAS.forEach(function (S) {
       var e = estado[S.id], col = document.getElementById("col-" + S.id), pos = posicao(S.id);
-      var txt = nomeTela(e.tela);
+      var txt = nomeTela(e.tela, S);
+      col.querySelector(".rod-resumo").textContent = "No rodízio: " + rodizioAtual(S).length + " telas · " + tempoAtual(S) + " s cada" +
+        (e.rodizio ? "" : " (padrão)");
       if (e.tela === "giro" && pos.uf) txt += " — " + pos.uf.toUpperCase();
       if (e.tela === "resumo" && pos.tela) txt += " — " + pos.tela + ". " + RESUMO[pos.tela - 1];
       col.querySelector(".noar .tela").textContent = txt + (e.quando ? "  (desde " + e.quando + ")" : "");

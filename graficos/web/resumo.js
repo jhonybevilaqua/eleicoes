@@ -283,6 +283,32 @@
     var u = String((window.GCTSE_GIRO || {}).estado_destaque || "pr").toLowerCase();
     return NOMES[u] ? u : "pr";
   }
+  // --------------------------------------------------- foto oficial do TSE
+  // Igual ao giro: {base}/{ciclo}/{eleicao}/fotos/{uf}/{sqcand}.jpeg, direto
+  // do TSE. Foto que falhar some (a tela e refeita sem ela) e nao e pedida
+  // de novo; 3 falhas sem nenhum acerto desligam as fotos.
+  var FOTO = { falhou: {}, falhas: 0, acertos: 0 };
+  window.__gctseFotoR = function (img, ok) {
+    var url = img.getAttribute("href");
+    if (ok) { FOTO.acertos++; return; }
+    if (!FOTO.falhou[url]) { FOTO.falhou[url] = true; FOTO.falhas++; }
+    var g = img.parentNode; if (g && g.parentNode) g.parentNode.removeChild(g);
+    var refazer = (window.GCTSE_RESUMO_CONTROLE && window.GCTSE_RESUMO_CONTROLE.redesenhar) || window.__gctseRedesenhar;
+    if (refazer) { clearTimeout(FOTO.timer); FOTO.timer = setTimeout(refazer, 300); }
+  };
+  function urlFoto(u, k) {
+    if (window.GCTSE_FOTOS_DO_TSE !== true) return "";   // chave em web\fotos-config.js
+    var tse = E().tse;
+    if (!tse || !tse.base || !k || !k.sqcand) return "";
+    if (FOTO.falhas >= 3 && FOTO.acertos === 0) return "";
+    var url = tse.base + "/" + tse.ciclo + "/" + tse.eleicao + "/fotos/" + u + "/" + k.sqcand + ".jpeg";
+    return FOTO.falhou[url] ? "" : url;
+  }
+  function foto(url, x, y, w, h) {
+    return '<g>' + r(x, y, w, h, C.trilho, 3) + '<image href="' + esc(url) + '" x="' + x + '" y="' + y + '" width="' + w +
+      '" height="' + h + '" preserveAspectRatio="xMidYMid slice" onload="__gctseFotoR(this,true)" onerror="__gctseFotoR(this,false)"/></g>';
+  }
+
   function painelCargo(x, y, w, h, titulo, urnas, faixa, linhas, v) {
     var o = r(x, y, w, h, C.painel, 8), px = x + (v ? 22 : 24), pw = w - (v ? 44 : 48);
     if (faixa) o += r(x, y, w, 6, faixa.cor, 3);
@@ -293,11 +319,16 @@
     if (!linhas.length) o += t(px, ly + 30, "aguardando boletim do TSE", { s: v ? 15 : 18, c: C.apagado });
     var top = linhas.length && linhas[0].pct > 0 ? linhas[0].pct : 100;
     linhas.forEach(function (L, i) {
-      var yy = ly + i * passo;
-      o += t(px, yy + (v ? 26 : 34), L.nome, { s: v ? 22 : 28, b: true, max: pw });
-      o += t(px, yy + (v ? 48 : 62), L.partido, { s: v ? 13 : 16, c: C.apagado, max: pw - 120 });
+      var yy = ly + i * passo, dx = 0;
+      if (L.foto) {
+        var fh = v ? 58 : 76, fw = fh * 3 / 4;
+        o += foto(L.foto, px, yy + (v ? 6 : 8), fw, fh);
+        dx = fw + (v ? 12 : 14);
+      }
+      o += t(px + dx, yy + (v ? 26 : 34), L.nome, { s: v ? 22 : 28, b: true, max: pw - dx });
+      o += t(px + dx, yy + (v ? 48 : 62), L.partido, { s: v ? 13 : 16, c: C.apagado, max: pw - dx - 120 });
       o += t(px + pw, yy + (v ? 48 : 62), pct(L.pct), { s: v ? 20 : 26, b: true, a: "end" });
-      o += barra(px, yy + (v ? 56 : 74), pw, v ? 8 : 10, (L.pct || 0) / top * 0.98, L.cor);
+      o += barra(px + dx, yy + (v ? 56 : 74), pw - dx, v ? 8 : 10, (L.pct || 0) / top * 0.98, L.cor);
     });
     return o;
   }
@@ -311,10 +342,10 @@
     if (s === "andamento") return { texto: "EM APURAÇÃO", cor: C.neutro, corTexto: C.apagado };
     return { texto: "AGUARDANDO", cor: C.trilho, corTexto: C.apagado };
   }
-  function linhasCargo(c, n) {
+  function linhasCargo(c, n, u) {
     if (!c) return [];
     return c.candidatos.slice(0, n).map(function (k) {
-      return { nome: k.nome, partido: k.partido + (k.eleito ? "  ·  ELEITO" : k.segundo_turno ? "  ·  2º TURNO" : ""),
+      return { foto: u ? urlFoto(u, k) : "", nome: k.nome, partido: k.partido + (k.eleito ? "  ·  ELEITO" : k.segundo_turno ? "  ·  2º TURNO" : ""),
         pct: k.pct, cor: k.eleito ? C.verde : k.segundo_turno ? C.azul : C.neutro };
     });
   }
@@ -328,12 +359,12 @@
     var up = p && p.secoes ? p.secoes.pct : null;
     if (!v) {
       o += painelCargo(73, 146, 365, 528, "PRESIDENTE", up, null, lp, false);
-      o += painelCargo(454, 146, 365, 528, "GOVERNADOR", g ? g.urnas_pct : null, faixaCargo(g), linhasCargo(g, 2), false);
-      o += painelCargo(835, 146, 365, 528, "SENADO", se ? se.urnas_pct : null, faixaCargo(se), linhasCargo(se, 2), false);
+      o += painelCargo(454, 146, 365, 528, "GOVERNADOR", g ? g.urnas_pct : null, faixaCargo(g), linhasCargo(g, 2, u), false);
+      o += painelCargo(835, 146, 365, 528, "SENADO", se ? se.urnas_pct : null, faixaCargo(se), linhasCargo(se, 2, u), false);
     } else {
       o += painelCargo(30, 146, W - 60, 248, "PRESIDENTE", up, null, lp, true);
-      o += painelCargo(30, 404, W - 60, 248, "GOVERNADOR", g ? g.urnas_pct : null, faixaCargo(g), linhasCargo(g, 2), true);
-      o += painelCargo(30, 662, W - 60, 268, "SENADO", se ? se.urnas_pct : null, faixaCargo(se), linhasCargo(se, 2), true);
+      o += painelCargo(30, 404, W - 60, 248, "GOVERNADOR", g ? g.urnas_pct : null, faixaCargo(g), linhasCargo(g, 2, u), true);
+      o += painelCargo(30, 662, W - 60, 268, "SENADO", se ? se.urnas_pct : null, faixaCargo(se), linhasCargo(se, 2, u), true);
     }
     o += rodape(v, W, H, "Fonte: TSE");
     return svg(W, H, o);

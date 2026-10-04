@@ -69,6 +69,7 @@
   // Comandos vindos do GERENCIADOR (sem aviso na tela: a saida esta no ar).
   window.GCTSE_RESUMO_CONTROLE = {
     atual: function () { return telas[atual].id; }, proximo: proximo, anterior: anterior,
+    redesenhar: function () { desenharEm(camadas[visivel], atual); },
     irPara: function (n) { n = parseInt(n, 10); if (n >= 1 && n <= telas.length) { mostrar(n - 1); reagendar(); } },
     alternarAuto: function () { auto = !auto; reagendar(); return auto; }
   };

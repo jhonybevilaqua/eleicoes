@@ -7,6 +7,9 @@ window.GCTSE_APRESENTACAO = {
   tempo_segundos: 15,
 
   // Ordem dos graficos em cada formato. Para tirar um, apague a linha.
+  // Tambem valem "resumo:estado" (uma tela do Resumo) e "estado:pr"
+  // (Governador e Senador de um estado). No GERENCIADOR, o botao
+  // "escolher as telas do rodizio" troca esta lista sem editar arquivo.
   horizontal: [
     "presidente-h",     // Presidente - Brasil
     "votos-h",          // Como o Brasil votou

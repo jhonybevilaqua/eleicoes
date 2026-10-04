@@ -70,8 +70,8 @@ if ($Porta -le 0) { $Porta = $PortaCfg }
 $ArqEstado = Join-Path $Raiz "gerenciador-estado.json"
 function Estado-Padrao {
     return [ordered]@{
-        h = [ordered]@{ tela = "apresentacao"; seq = 1; acao = ""; aseq = 0; quando = "" }
-        v = [ordered]@{ tela = "apresentacao"; seq = 1; acao = ""; aseq = 0; quando = "" }
+        h = [ordered]@{ tela = "apresentacao"; seq = 1; acao = ""; aseq = 0; quando = ""; rodizio = ""; tempo = 0 }
+        v = [ordered]@{ tela = "apresentacao"; seq = 1; acao = ""; aseq = 0; quando = ""; rodizio = ""; tempo = 0 }
         girar_v = $GirarPadrao
         obs = [ordered]@{ h = ""; v = "" }
     }
@@ -86,6 +86,10 @@ if (Test-Path $ArqEstado) {
                 $script:Estado[$s].tela = "$($x.tela)"
                 $script:Estado[$s].seq = [int] $x.seq + 1
                 if ("$($x.acao)" -match '^[a-z0-9:-]{1,30}$') { $script:Estado[$s].acao = "$($x.acao)" }
+                foreach ($p in $x.PSObject.Properties) {
+                    if ($p.Name -eq "rodizio" -and "$($p.Value)" -match '^[a-z0-9:,-]{0,800}$') { $script:Estado[$s].rodizio = "$($p.Value)" }
+                    if ($p.Name -eq "tempo" -and "$($p.Value)" -match '^\d{1,3}$' -and [int] $p.Value -ge 3 -and [int] $p.Value -le 300) { $script:Estado[$s].tempo = [int] $p.Value }
+                }
             }
         }
         foreach ($p in $lido.PSObject.Properties) {
@@ -194,6 +198,26 @@ while ($ouvinte.IsListening) {
         if ($caminho -eq "/estado") {
             Checar-Obs
             Responder-Json $ctx $script:Estado
+        }
+        elseif ($caminho -eq "/rodizio") {
+            # Telas da apresentacao automatica de uma saida (vazio = as do
+            # apresentacao-config.js) e segundos por tela (0 = do config).
+            $s = "$($req.QueryString['saida'])"; $telas = "$($req.QueryString['telas'])"; $tempo = "$($req.QueryString['tempo'])"
+            $tempoOk = ($tempo -eq "" -or $tempo -eq "0" -or ($tempo -match '^\d{1,3}$' -and [int] $tempo -ge 3 -and [int] $tempo -le 300))
+            if (($s -eq "h" -or $s -eq "v") -and $telas -match '^[a-z0-9:,-]{0,800}$' -and $tempoOk) {
+                $script:Estado[$s].rodizio = $telas
+                $script:Estado[$s].tempo = $(if ($tempo -eq "") { 0 } else { [int] $tempo })
+                # apresentacao no ar: recomeca ja com as telas novas
+                if ($script:Estado[$s].tela -eq "apresentacao") {
+                    $script:Estado[$s].seq = [int] $script:Estado[$s].seq + 1
+                    $script:Estado[$s].quando = (Get-Date -Format "HH:mm:ss")
+                }
+                Salvar-Estado
+                Escrever-Log ("rodizio - saida {0}: {1} ({2} s)" -f $(if ($s -eq "h") { "HORIZONTAL" } else { "VERTICAL" }), $(if ($telas) { $telas } else { "padrao" }), $script:Estado[$s].tempo) "Green"
+                Responder-Json $ctx $script:Estado
+            } else {
+                Responder $ctx 400 "text/plain; charset=utf-8" ([Text.Encoding]::UTF8.GetBytes("pedido invalido"))
+            }
         }
         elseif ($caminho -eq "/girar") {
             # Como a tela VERTICAL vai girada na saida do OBS.

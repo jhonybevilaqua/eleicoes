@@ -91,9 +91,9 @@
     if (ok) { FOTO.acertos++; return; }
     if (!FOTO.falhou[url]) { FOTO.falhou[url] = true; FOTO.falhas++; }
     var g = img.parentNode; if (g && g.parentNode) g.parentNode.removeChild(g);
-    if (window.GCTSE_GIRO_CONTROLE && window.GCTSE_GIRO_CONTROLE.redesenhar) {
-      clearTimeout(FOTO.timer); FOTO.timer = setTimeout(window.GCTSE_GIRO_CONTROLE.redesenhar, 300);
-    }
+    // refaz a tela sem a foto (giro ou apresentacao, a que estiver aberta)
+    var refazer = (window.GCTSE_GIRO_CONTROLE && window.GCTSE_GIRO_CONTROLE.redesenhar) || window.__gctseRedesenhar;
+    if (refazer) { clearTimeout(FOTO.timer); FOTO.timer = setTimeout(refazer, 300); }
   };
   function urlFoto(u, cd) {
     if (window.GCTSE_FOTOS_DO_TSE !== true) return "";   // chave em web\fotos-config.js
@@ -122,7 +122,7 @@
     var cor = sit.tipo === "eleito" ? C.verde : (sit.tipo === "segundo" ? C.destaque : C.trilho);
     return r(xd - w, y - 25 * k, w, h, cor, 4) + t(xd - w / 2, y - 1 * k, txt, { s: Math.round(18 * k), b: true, a: "middle", ls: 1 });
   }
-  function emApuracao(x, y, w, h, titulo, c, sit, k) {
+  function emApuracao(x, y, w, h, titulo, c, sit, k, u) {
     var o = r(x, y, w, h, C.painel, 8), px = x + 32 * k, pw = w - 64 * k;
     o += t(px, y + 52 * k, titulo, { s: Math.round(28 * k), b: true, ls: 2 });
     o += chip(x + w - 32 * k, y + 52 * k, sit, k);
@@ -130,17 +130,22 @@
     if (!cs.length) return o + t(px, y + 140 * k, "aguardando boletim do TSE", { s: Math.round(22 * k), c: C.apagado });
     var top = cs[0].pct > 0 ? cs[0].pct : 100, ly = y + 110 * k, passo = Math.min(170 * k, (y + h - ly - 10) / 2);
     cs.forEach(function (cd, i) {
-      var yy = ly + i * passo;
-      o += t(px, yy + 40 * k, cd.nome, { s: Math.round(36 * k), b: true, max: pw - 215 * k });
-      o += t(px, yy + 74 * k, cd.partido, { s: Math.round(22 * k), c: C.apagado, max: pw - 215 * k });
+      var yy = ly + i * passo, url = urlFoto(u, cd), dx = 0;
+      if (url) {
+        var fh = 94 * k, fw = fh * 3 / 4;
+        o += foto(url, px, yy + 12 * k, fw, fh);
+        dx = fw + 18 * k;
+      }
+      o += t(px + dx, yy + 40 * k, cd.nome, { s: Math.round(36 * k), b: true, max: pw - dx - 215 * k });
+      o += t(px + dx, yy + 74 * k, cd.partido, { s: Math.round(22 * k), c: C.apagado, max: pw - dx - 215 * k });
       o += t(px + pw, yy + 52 * k, pct(cd.pct), { s: Math.round(46 * k), b: true, a: "end" });
-      o += barra(px, yy + 94 * k, pw, Math.round(12 * k), (cd.pct || 0) / top * 0.98, C.neutro);
+      o += barra(px + dx, yy + 94 * k, pw - dx, Math.round(12 * k), (cd.pct || 0) / top * 0.98, C.neutro);
     });
     return o;
   }
   function bloco(x, y, w, h, titulo, c, k, u) {
     var sit = situacao(c);
-    if (sit.tipo !== "eleito" && sit.tipo !== "segundo") return emApuracao(x, y, w, h, titulo, c, sit, k);
+    if (sit.tipo !== "eleito" && sit.tipo !== "segundo") return emApuracao(x, y, w, h, titulo, c, sit, k, u);
     var eleito = sit.tipo === "eleito", cor = eleito ? C.verde : C.destaque;
     var o = r(x, y, w, h, C.painel, 8) + r(x, y, w, 8, cor, 4), px = x + 32 * k, pw = w - 64 * k;
     o += t(px, y + 54 * k, titulo, { s: Math.round(28 * k), b: true, ls: 2 });
