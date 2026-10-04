@@ -14,6 +14,9 @@
   if (!(transicao >= 0)) transicao = 0.5;
 
   var CHAVE = "gctse-resumo-" + (vertical ? "v" : "h"), atual = 0;
+  // ?uf=sc: estado da tela "Estado em destaque" (vem do GERENCIADOR)
+  var ufPedida = q.get("uf");
+  if (ufPedida && R.definirUf(ufPedida) && q.get("tela") == null) q.set("tela", "estado");
   var pedida = q.get("tela");
   if (pedida == null) { try { pedida = localStorage.getItem(CHAVE); } catch (e) { } }
   telas.forEach(function (tl, i) { if (tl.id === pedida || String(i + 1) === pedida) atual = i; });
@@ -70,6 +73,11 @@
   window.GCTSE_RESUMO_CONTROLE = {
     atual: function () { return telas[atual].id; }, proximo: proximo, anterior: anterior,
     redesenhar: function () { desenharEm(camadas[visivel], atual); },
+    // Estado em destaque = este estado, e vai para essa tela
+    estado: function (uf) {
+      if (!R.definirUf(uf)) return;
+      telas.forEach(function (tl, i) { if (tl.id === "estado") { mostrar(i); reagendar(); } });
+    },
     irPara: function (n) { n = parseInt(n, 10); if (n >= 1 && n <= telas.length) { mostrar(n - 1); reagendar(); } },
     alternarAuto: function () { auto = !auto; reagendar(); return auto; }
   };

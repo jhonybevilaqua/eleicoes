@@ -288,7 +288,11 @@
     pa: "PARÁ", pb: "PARAÍBA", pr: "PARANÁ", pe: "PERNAMBUCO", pi: "PIAUÍ", rj: "RIO DE JANEIRO", rn: "RIO GRANDE DO NORTE",
     rs: "RIO GRANDE DO SUL", ro: "RONDÔNIA", rr: "RORAIMA", sc: "SANTA CATARINA", sp: "SÃO PAULO", se: "SERGIPE", to: "TOCANTINS"
   };
+  // Estado da tela 6: o escolhido no GERENCIADOR (definirUf), senao o
+  // estado_destaque do giro-config.js.
+  var UF_ESCOLHIDA = null;
   function ufDestaque() {
+    if (UF_ESCOLHIDA && NOMES[UF_ESCOLHIDA]) return UF_ESCOLHIDA;
     var u = String((window.GCTSE_GIRO || {}).estado_destaque || "pr").toLowerCase();
     return NOMES[u] ? u : "pr";
   }
@@ -452,6 +456,8 @@
   }
 
   window.GCTSE_RESUMO = {
+    definirUf: function (u) { u = String(u == null ? "" : u).toLowerCase(); if (!NOMES[u]) return false; UF_ESCOLHIDA = u; return true; },
+    ufAtual: function () { return ufDestaque(); },
     telas: [
       { id: "mapa-governadores", f: mapaGov },
       { id: "governadores-partido", f: govPartido },

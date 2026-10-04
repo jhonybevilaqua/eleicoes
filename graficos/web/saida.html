@@ -52,7 +52,10 @@
       return "apresentacao-" + sufixo + ".html" + (p.length ? "?" + p.join("&") : "");
     }
     if (tela === "giro") return "giro-estados-" + sufixo + ".html" + (acao.indexOf("uf:") === 0 ? "?uf=" + encodeURIComponent(acao.slice(3)) : "");
-    if (tela === "resumo") return "resumo-" + sufixo + ".html" + (acao.indexOf("tela:") === 0 ? "?tela=" + encodeURIComponent(acao.slice(5)) : "");
+    if (tela === "resumo") {
+      if (acao.indexOf("estado:") === 0) return "resumo-" + sufixo + ".html?tela=estado&uf=" + encodeURIComponent(acao.slice(7));
+      return "resumo-" + sufixo + ".html" + (acao.indexOf("tela:") === 0 ? "?tela=" + encodeURIComponent(acao.slice(5)) : "");
+    }
     if (/^[a-z0-9-]+$/.test(tela)) return "grafico.html?g=" + encodeURIComponent(tela);
     return null;
   }
@@ -84,6 +87,7 @@
     if (acao === "proximo") c.proximo();
     else if (acao === "anterior") c.anterior();
     else if (acao === "auto" && c.alternarAuto) c.alternarAuto();
+    else if (acao.indexOf("estado:") === 0 && c.estado) c.estado(acao.slice(7));
     else if (acao.indexOf("uf:") === 0 && c.irPara) c.irPara(acao.slice(3));
     else if (acao.indexOf("tela:") === 0 && c.irPara) c.irPara(acao.slice(5));
   }
