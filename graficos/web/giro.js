@@ -175,13 +175,24 @@
     return o;
   }
 
+  // Linha pequena do cabecalho: urnas apuradas e comparecimento do estado
+  // (Governador; Senador se o de Governador ainda nao veio).
+  function linhaUrnas(g, se, curto) {
+    var c = g || se;
+    if (!c) return curto ? "aguardando o TSE" : "urnas apuradas —";
+    var o = (curto ? "urnas " : "urnas apuradas ") + pct(c.urnas_pct);
+    if (g && se && se.urnas_pct != null && Math.abs((se.urnas_pct || 0) - (g.urnas_pct || 0)) > 0.005)
+      o = (curto ? "urnas gov " : "urnas apuradas  ·  governador ") + pct(g.urnas_pct) + (curto ? " · sen " : "  ·  senador ") + pct(se.urnas_pct);
+    if (c.comparec_pct != null) o += (curto ? "  ·  comparec. " : "  ·  comparecimento ") + pct(c.comparec_pct);
+    return o;
+  }
+
   // ------------------------------------------------------------------ telas
   function telaH(u) {
     var W = 1280, H = 720, s = selo(u), o = r(0, 0, W, H, C.fundo);
     var g = cargo(u, "gov"), se = cargo(u, "sen");
     o += t(73, 76, NOMES[u] || u.toUpperCase(), { s: 52, b: true, ls: 1, max: W - 73 - 380 });
-    o += t(73, 112, "urnas apuradas  ·  governador " + (g ? pct(g.urnas_pct) : "—") +
-      "  ·  senador " + (se ? pct(se.urnas_pct) : "—"), { s: 20, c: C.apagado });
+    o += t(73, 112, linhaUrnas(g, se, false), { s: 20, c: C.apagado, max: W - 73 - 380 });
     o += '<g data-selo="1" data-x="' + (W - 73) + '">' + r(W - 340, 44, 267, 36, s.cor, 3) +
       t(W - 81, 70, s.texto, { s: 20, b: true, a: "end" }) + "</g>";
     o += bloco(73, 146, 551, 528, "GOVERNADOR", g, 1, u);
@@ -193,8 +204,7 @@
     var W = 540, H = 960, s = selo(u), o = r(0, 0, W, H, C.fundo);
     var g = cargo(u, "gov"), se = cargo(u, "sen");
     o += t(30, 66, NOMES[u] || u.toUpperCase(), { s: 38, b: true, max: W - 60 });
-    o += t(30, 94, "urnas  ·  gov " + (g ? pct(g.urnas_pct) : "—") + "  ·  sen " + (se ? pct(se.urnas_pct) : "—"),
-      { s: 15, c: C.apagado, max: W - 60 });
+    o += t(30, 94, linhaUrnas(g, se, true), { s: 15, c: C.apagado, max: W - 60 });
     o += r(30, 108, W - 60, 28, s.cor, 2) + t(W / 2, 128, s.texto, { s: 16, b: true, a: "middle" });
     o += bloco(30, 150, W - 60, 380, "GOVERNADOR", g, 0.78, u);
     o += bloco(30, 546, W - 60, 380, "SENADOR", se, 0.78, u);

@@ -17,7 +17,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "2.10 - 04/10/2026"
+$Versao = "2.11 - 04/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -410,6 +410,12 @@ function Resumir-Boletim {
     if (Tem-Propriedade $Bruto "s") { $s = $Bruto.s }
     $pctUrnas = $null
     if ($null -ne $s -and (Tem-Propriedade $s "pst")) { $pctUrnas = Converter-Decimal $s.pst }
+    # Comparecimento do estado (bloco "e" do boletim: pc = % de eleitores que votaram)
+    $pctComparec = $null
+    if (Tem-Propriedade $Bruto "e") {
+        $eleitorado = $Bruto.e
+        if ($null -ne $eleitorado -and (Tem-Propriedade $eleitorado "pc")) { $pctComparec = Converter-Decimal $eleitorado.pc }
+    }
     return [pscustomobject]@{
         tem        = $true
         fase       = $fase
@@ -417,6 +423,7 @@ function Resumir-Boletim {
         geracao    = "$(Obter-Campo $Bruto @('dg') '') $(Obter-Campo $Bruto @('hg') '')"
         hora       = "$(Obter-Campo $Bruto @('hg') '')"
         urnas_pct  = $pctUrnas
+        comparec_pct = $pctComparec
         vagas      = $vagas
         candidatos = $cands
     }
