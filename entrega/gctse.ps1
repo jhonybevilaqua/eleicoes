@@ -35,7 +35,7 @@ param(
 # Versao impressa na partida e no painel. Sem carimbo, "qual versao esta
 # rodando ai?" so se responde abrindo arquivo e comparando a olho - e no
 # meio de um teste com janela de horario ninguem faz isso.
-$Versao = "6.6 - 29/09/2026"
+$Versao = "6.7 - 04/10/2026"
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
@@ -338,6 +338,10 @@ $SeloNaoOficial = $cfg.texto.selo_nao_oficial
 $CorPadrao = $cfg.texto.cor_padrao
 $RotuloEleito = "ELEITO"
 if (Tem-Propriedade $cfg.texto "rotulo_eleito") { $RotuloEleito = "$($cfg.texto.rotulo_eleito)" }
+# 6.7: 2o turno sai no MESMO campo do selo (cand1_eleito / cand1_eleito_rotulo),
+# sem campo novo (ver a REGRA das colunas). Vazio no config = nunca mostra.
+$RotuloSegundoTurno = "2" + [char] 0xBA + " TURNO"
+if (Tem-Propriedade $cfg.texto "rotulo_segundo_turno") { $RotuloSegundoTurno = "$($cfg.texto.rotulo_segundo_turno)" }
 $PastaFotos = ""
 if (Tem-Propriedade $cfg.texto "pasta_fotos") { $PastaFotos = "$($cfg.texto.pasta_fotos)" }
 if ($PastaFotos -and -not [IO.Path]::IsPathRooted($PastaFotos)) {
@@ -873,12 +877,18 @@ function Montar-Candidato {
     # ("Eleito", "Nao eleito", "2o turno"...); quando ele vem, manda ele. A
     # marca "e" sozinha so vale quando o "st" nao vem. Selo de ELEITO errado
     # no ar e pior do que selo nenhum.
+    # 6.7: aceita tambem "Eleita" e "Matematicamente eleito" (nunca "Nao
+    # eleito" nem 2o turno); "turno" no st marca o 2o turno.
     $eleito = "0"
+    $segundoTurno = "0"
     $situacaoTse = Decodificar-Entidades "$(Obter-Campo $C @('st') '')"
     $marcaE = "$(Obter-Campo $C @('e') '')".ToLower()
     if ($situacaoTse) {
-        if ($situacaoTse -match "^Eleito") { $eleito = "1" }
-        elseif ($marcaE -eq "s") {
+        $stNaoEleito = ($situacaoTse -match 'n\S{1,2}o\s+eleit')
+        $stTurno = ($situacaoTse -match 'turno')
+        if ($stTurno) { $segundoTurno = "1" }
+        if ((-not $stNaoEleito) -and (-not $stTurno) -and ($situacaoTse -match 'eleit')) { $eleito = "1" }
+        elseif ($marcaE -eq "s" -and -not $stTurno) {
             $chaveS = "$(Obter-Campo $C @('nmu','nm') '')|$situacaoTse"
             if (-not $script:SituacoesAvisadas.ContainsKey($chaveS)) {
                 $script:SituacoesAvisadas[$chaveS] = $true
@@ -906,8 +916,67 @@ function Montar-Candidato {
         Votos      = $votos
         Percentual = $perc
         Eleito     = $eleito
+        SegundoTurno = $segundoTurno
+        Calculado  = $false
+        Valido     = ("$situacao" -eq "" -or "$situacao" -match '^V')
         Situacao   = "$situacao"
         SituacaoTse = "$situacaoTse"
+    }
+}
+
+function Calcular-Definicao {
+    # 6.7: ELEITO / 2o TURNO MATEMATICAMENTE DEFINIDOS, com os numeros do
+    # proprio boletim, so quando o TSE ainda nao escreveu a situacao.
+    # Pior caso para quem lidera: TODOS os eleitores das secoes ainda nao
+    # totalizadas (e.esnt) votam contra ele.
+    #   Presidente/Governador: ELEITO se votos do 1o > metade de (votos de
+    #     todos os candidatos + faltam). 2o TURNO se ninguem passa de 50%
+    #     dos validos nem com todos os que faltam E o 3o nao alcanca o 2o.
+    #   Senador (nv vagas): ELEITO se votos > (nv+1)-esimo + faltam.
+    param($Bruto, $Candidatos)
+    $lista = @($Candidatos)
+    if ($lista.Count -eq 0) { return }
+    if (@($lista | Where-Object { $_.Eleito -eq "1" -or $_.SegundoTurno -eq "1" }).Count -gt 0) { return }
+    $blocoE = Obter-Campo $Bruto @("e")
+    if ($null -eq $blocoE) { return }
+    $faltam = $null
+    if (Tem-Propriedade $blocoE "esnt") { $faltam = [double] (Converter-Inteiro $blocoE.esnt) }
+    elseif ((Tem-Propriedade $blocoE "te") -and (Tem-Propriedade $blocoE "est")) {
+        $faltam = [double] ((Converter-Inteiro $blocoE.te) - (Converter-Inteiro $blocoE.est))
+    }
+    if ($null -eq $faltam -or $faltam -lt 0) { return }
+    $cd = 0; $nv = 1
+    if (Tem-Propriedade $Bruto "carg") {
+        $primeiroCargo = @($Bruto.carg)[0]
+        $cd = Converter-Inteiro (Obter-Campo $primeiroCargo @("cd") 0)
+        $nv = Converter-Inteiro (Obter-Campo $primeiroCargo @("nv") 1)
+        if ($nv -lt 1) { $nv = 1 }
+    }
+    $soma = 0.0; $somaValidos = 0.0
+    foreach ($k in $lista) { $soma += [double] $k.Votos; if ($k.Valido) { $somaValidos += [double] $k.Votos } }
+    if ($cd -eq 1 -or $cd -eq 3) {
+        $lider = $lista[0]
+        if ($lider.Valido -and $lider.Votos -gt 0 -and (2.0 * $lider.Votos) -gt ($soma + $faltam)) {
+            $lider.Eleito = "1"; $lider.Calculado = $true
+        } elseif ($lista.Count -ge 2) {
+            $maior = 0.0
+            foreach ($k in $lista) { if ($k.Valido -and [double] $k.Votos -gt $maior) { $maior = [double] $k.Votos } }
+            $terceiro = 0.0
+            if ($lista.Count -ge 3) { $terceiro = [double] $lista[2].Votos }
+            $vice = $lista[1]
+            if (((2.0 * ($maior + $faltam)) -le ($somaValidos + $faltam)) -and $lider.Valido -and $vice.Valido -and
+                ([double] $vice.Votos -gt ($terceiro + $faltam))) {
+                $lider.SegundoTurno = "1"; $lider.Calculado = $true
+                $vice.SegundoTurno = "1"; $vice.Calculado = $true
+            }
+        }
+    } elseif ($cd -eq 5) {
+        $desafiante = 0.0
+        if ($lista.Count -gt $nv) { $desafiante = [double] $lista[$nv].Votos }
+        for ($i = 0; $i -lt [math]::Min($nv, $lista.Count); $i++) {
+            $k = $lista[$i]
+            if ($k.Valido -and $k.Votos -gt 0 -and [double] $k.Votos -gt ($desafiante + $faltam)) { $k.Eleito = "1"; $k.Calculado = $true }
+        }
     }
 }
 
@@ -952,6 +1021,7 @@ function Normalizar-Boletim {
         }
     }
     $candidatos = @($candidatos | Sort-Object -Property @{Expression = "Votos"; Descending = $true}, Numero)
+    Calcular-Definicao $Bruto $candidatos
 
     $fase = "$(Obter-Campo $Bruto @('f') '')".ToUpper()
     $nome = "$(Obter-Campo $Bruto @('nmabr') $Praca)"
@@ -1269,7 +1339,10 @@ function Montar-Tarja {
             # quando o TSE declara, e nada quando nao. Mudou so o VALOR - o
             # nome do campo e o mesmo desde a 5.8, entao a posicao que o
             # Castalia guarda nao muda (ver a REGRA la em cima).
-            $saida[$p + "eleito"] = $(if ($c.Eleito -eq "1") { $RotuloEleito } else { "" })
+            $seloCand = ""
+            if ($c.Eleito -eq "1") { $seloCand = $RotuloEleito }
+            elseif ((Tem-Propriedade $c "SegundoTurno") -and $c.SegundoTurno -eq "1") { $seloCand = $RotuloSegundoTurno }
+            $saida[$p + "eleito"] = $seloCand
             # Campo de TEXTO para o selo: a cena vincula um objeto de texto
             # aqui e ele aparece sozinho quando o TSE declara o eleito. Quem
             # preferir um grafico pronto liga um Shape no campo "eleito" (100/0).
@@ -1279,9 +1352,7 @@ function Montar-Tarja {
             # Nome proprio: $selo la em cima e o "PARCIAL - NAO OFICIAL".
             # Reaproveitar a mesma variavel para duas coisas diferentes na
             # mesma funcao e como este arquivo ja quebrou antes.
-            $seloEleito = ""
-            if ($c.Eleito -eq "1") { $seloEleito = $RotuloEleito }
-            $extras[$p + "eleito_rotulo"] = $seloEleito
+            $extras[$p + "eleito_rotulo"] = $seloCand
             $situacao = ""
             if (Tem-Propriedade $c "Situacao") { $situacao = "$($c.Situacao)" }
             $extras[$p + "situacao"] = $situacao
@@ -1756,7 +1827,7 @@ function Mostrar-No-Ar {
         foreach ($i in 1, 2) {
             if ("$($Tarja["cand${i}_visivel"])" -eq "1") {
                 $parte = "{0}o {1} {2}" -f $i, $Tarja["cand${i}_nome"], $Tarja["cand${i}_percentual"]
-                if ("$($Tarja["cand${i}_eleito"])") { $parte += " ELEITO" }
+                if ("$($Tarja["cand${i}_eleito"])") { $parte += " " + $Tarja["cand${i}_eleito"] }
                 $partes += $parte
             }
         }
