@@ -60,13 +60,31 @@
     return null;
   }
 
+  // Quadro com a tela de verdade? (pagina de erro do navegador = nao)
+  function quadroOk(f) {
+    try {
+      var d = f.contentWindow.document;
+      // nossas telas sempre tem #palco (apresentacao, giro, resumo) ou #tela (grafico)
+      return !!(d && d.readyState === "complete" && (d.getElementById("palco") || d.getElementById("tela")));
+    } catch (e) { return false; }
+  }
+  var pedidoAtual = null, tentarDeNovo = null;
+
   // Carrega a tela nova no quadro escondido e so entao troca (sem piscar).
+  // Se a tela nao carregar (gerenciador reiniciando, por exemplo), tenta de
+  // novo em 3 s e mantem no ar a que estava.
   function trocar(tela, acao, rodizio, tempo) {
     var url = endereco(tela, acao, rodizio, tempo);
     if (!url) return;
+    pedidoAtual = [tela, acao, rodizio, tempo];
+    clearTimeout(tentarDeNovo);
     var prox = quadros[visivel === 0 ? 1 : 0];
     prox.onload = function () {
       prox.onload = null;
+      if (!quadroOk(prox)) {
+        tentarDeNovo = setTimeout(function () { if (pedidoAtual) trocar.apply(null, pedidoAtual); }, 3000);
+        return;
+      }
       prox.classList.add("on");
       if (visivel >= 0) quadros[visivel].classList.remove("on");
       var antigo = visivel >= 0 ? quadros[visivel] : null;
@@ -103,6 +121,11 @@
   }
   ler();
   setInterval(ler, 700);
+  // Vigia: se a tela no ar sumir (pagina de erro, quadro vazio), recarrega.
+  setInterval(function () {
+    if (!pedidoAtual) return;
+    if (visivel < 0 || !quadroOk(quadros[visivel])) trocar.apply(null, pedidoAtual);
+  }, 10000);
 })();
 </script>
 </body>

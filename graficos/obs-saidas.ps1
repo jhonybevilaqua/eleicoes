@@ -171,8 +171,14 @@ SysTrayWhenStarted=false
         if (-not (Test-Path $arq)) { Gravar-Texto $arq $basicoIni }
     }
 
+    # Perfil e cena: so na 1a vez. Depois, o que foi ajustado no OBS (FPS
+    # igual ao modo da DeckLink, fonte, filtros) fica como esta.
+    $arqPerfil = Join-Path $cfgDir ("basic\profiles\{0}\basic.ini" -f $S.nome)
+    $arqCena = Join-Path $cfgDir ("basic\scenes\{0}.json" -f $S.nome)
+    if ((Test-Path $arqPerfil) -and (Test-Path $arqCena)) { return }
+
     # Perfil: video 1920x1080 no FPS da mesa, audio 48 kHz.
-    Gravar-Texto (Join-Path $cfgDir ("basic\profiles\{0}\basic.ini" -f $S.nome)) @"
+    if (-not (Test-Path $arqPerfil)) { Gravar-Texto $arqPerfil @"
 [General]
 Name=$($S.nome)
 
@@ -194,7 +200,7 @@ ChannelSetup=Stereo
 
 [Output]
 Mode=Simple
-"@
+"@ }
 
     # Cena: uma fonte Navegador em tela cheia, travada, muda (sem audio
     # do Windows: a colecao nao tem "Audio do desktop" nem "Mic").
@@ -231,7 +237,7 @@ Mode=Simple
         current_transition = "Fade"; transition_duration = 300
         preview_locked = $false; scaling_enabled = $false; modules = @{}
     }
-    Gravar-Texto (Join-Path $cfgDir ("basic\scenes\{0}.json" -f $S.nome)) ($colecao | ConvertTo-Json -Depth 10)
+    if (-not (Test-Path $arqCena)) { Gravar-Texto $arqCena ($colecao | ConvertTo-Json -Depth 10) }
 }
 
 function Exe-Obs($S) { return (Join-Path $S.pasta "bin\64bit\obs64.exe") }

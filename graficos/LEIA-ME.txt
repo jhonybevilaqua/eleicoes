@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 2.9 - apuracao de PRESIDENTE em graficos
+ gctse GRAFICOS 2.10 - apuracao de PRESIDENTE em graficos
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
