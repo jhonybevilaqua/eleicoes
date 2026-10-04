@@ -34,7 +34,16 @@
     return '<text x="' + x + '" y="' + y + '" font-size="' + (o.s || 16) + '"' +
       (o.b ? ' font-weight="700"' : "") + ' fill="' + (o.c || C.texto) + '"' +
       (o.a ? ' text-anchor="' + o.a + '"' : "") + (o.ls ? ' letter-spacing="' + o.ls + '"' : "") +
-      (o.max ? ' data-max="' + o.max + '"' : "") + ">" + esc(txt) + "</text>";
+      (o.max ? ' data-max="' + o.max + '"' : "") + (o.max && o.nome ? ' data-curto="' + esc(curto(txt)) + '"' : "") +
+      ">" + esc(txt) + "</text>";
+  }
+  // Nome que nao cabe: primeiro e segundo nome ("DR. FERNANDO", "JOSE DA
+  // SILVA" com o "DA" junto); so depois encolhe a letra.
+  function curto(n) {
+    var p = String(n == null ? "" : n).trim().split(/\s+/);
+    if (p.length <= 2) return "";
+    var k = ["DA", "DE", "DO", "DAS", "DOS", "E"].indexOf(p[1].toUpperCase()) >= 0 ? 3 : 2;
+    return k >= p.length ? "" : p.slice(0, k).join(" ");
   }
   function r(x, y, w, h, c, rx) {
     return '<rect x="' + x + '" y="' + y + '" width="' + Math.max(0, w) + '" height="' + h + '" fill="' + c + '"' +
@@ -136,10 +145,11 @@
         o += foto(url, px, yy + 12 * k, fw, fh);
         dx = fw + 18 * k;
       }
-      o += t(px + dx, yy + 40 * k, cd.nome, { s: Math.round(36 * k), b: true, max: pw - dx - 215 * k });
-      o += t(px + dx, yy + 74 * k, cd.partido, { s: Math.round(22 * k), c: C.apagado, max: pw - dx - 215 * k });
-      o += t(px + pw, yy + 52 * k, pct(cd.pct), { s: Math.round(46 * k), b: true, a: "end" });
-      o += barra(px + dx, yy + 94 * k, pw - dx, Math.round(12 * k), (cd.pct || 0) / top * 0.98, C.neutro);
+      // nome na linha inteira; partido e percentual na linha de baixo
+      o += t(px + dx, yy + 40 * k, cd.nome, { s: Math.round(36 * k), b: true, max: pw - dx, nome: true });
+      o += t(px + dx, yy + 82 * k, cd.partido, { s: Math.round(22 * k), c: C.apagado, max: pw - dx - 200 * k });
+      o += t(px + pw, yy + 84 * k, pct(cd.pct), { s: Math.round(40 * k), b: true, a: "end" });
+      o += barra(px + dx, yy + 98 * k, pw - dx, Math.round(12 * k), (cd.pct || 0) / top * 0.98, C.neutro);
     });
     return o;
   }
@@ -159,7 +169,7 @@
         o += foto(url, px, yy + 14 * k, fw, fh);
         dx = fw + 20 * k;
       }
-      o += t(px + dx, yy + 56 * k, cd.nome, { s: Math.round((lst.length > 1 ? 44 : 54) * k), b: true, max: pw - dx });
+      o += t(px + dx, yy + 56 * k, cd.nome, { s: Math.round((lst.length > 1 ? 44 : 54) * k), b: true, max: pw - dx, nome: true });
       o += t(px + dx, yy + 96 * k, cd.partido + "   " + pct(cd.pct), { s: Math.round(28 * k), c: C.apagado, max: pw - dx });
     });
     return o;
@@ -202,9 +212,11 @@
     for (var j = 0; j < ms.length; j++) {
       var max = parseFloat(ms[j].getAttribute("data-max")), lg = ms[j].getComputedTextLength();
       if (lg <= max) continue;
+      var cur = ms[j].getAttribute("data-curto");
+      if (cur) { ms[j].textContent = cur; lg = ms[j].getComputedTextLength(); if (lg <= max) continue; }
       // Encolhe ate 70% do tamanho; se ainda nao couber, corta com "…"
       // (nome ilegivel no ar e pior que nome cortado).
-      var fs0 = parseFloat(ms[j].getAttribute("font-size")), fs = Math.max(Math.floor(fs0 * max / lg), Math.ceil(fs0 * 0.7));
+      var fs0 = parseFloat(ms[j].getAttribute("font-size")), fs = Math.max(Math.floor(fs0 * max / lg), Math.ceil(fs0 * (cur != null ? 0.6 : 0.7)));
       ms[j].setAttribute("font-size", fs);
       var txt = ms[j].textContent;
       while (ms[j].getComputedTextLength() > max && txt.length > 4) {

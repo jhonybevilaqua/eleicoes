@@ -35,7 +35,16 @@
     return '<text x="' + x + '" y="' + y + '" font-size="' + (o.s || 16) + '"' +
       (o.b ? ' font-weight="700"' : "") + ' fill="' + (o.c || C.texto) + '"' +
       (o.a ? ' text-anchor="' + o.a + '"' : "") + (o.ls ? ' letter-spacing="' + o.ls + '"' : "") +
-      (o.max ? ' data-max="' + o.max + '"' : "") + ">" + esc(txt) + "</text>";
+      (o.max ? ' data-max="' + o.max + '"' : "") + (o.max && o.nome ? ' data-curto="' + esc(curto(txt)) + '"' : "") +
+      ">" + esc(txt) + "</text>";
+  }
+  // Nome que nao cabe: primeiro e segundo nome ("DR. FERNANDO", "JOSE DA
+  // SILVA" com o "DA" junto); so depois encolhe a letra.
+  function curto(n) {
+    var p = String(n == null ? "" : n).trim().split(/\s+/);
+    if (p.length <= 2) return "";
+    var k = ["DA", "DE", "DO", "DAS", "DOS", "E"].indexOf(p[1].toUpperCase()) >= 0 ? 3 : 2;
+    return k >= p.length ? "" : p.slice(0, k).join(" ");
   }
   function r(x, y, w, h, c, rx) {
     return '<rect x="' + x + '" y="' + y + '" width="' + Math.max(0, w) + '" height="' + h + '" fill="' + c + '"' +
@@ -338,7 +347,7 @@
         o += foto(L.foto, px, yy + (v ? 6 : 8), fw, fh);
         dx = fw + (v ? 12 : 14);
       }
-      o += t(px + dx, yy + (v ? 26 : 34), L.nome, { s: v ? 22 : 28, b: true, max: pw - dx });
+      o += t(px + dx, yy + (v ? 26 : 34), L.nome, { s: v ? 22 : 28, b: true, max: pw - dx, nome: true });
       o += t(px + dx, yy + (v ? 48 : 62), L.partido, { s: v ? 13 : 16, c: C.apagado, max: pw - dx - 120 });
       o += t(px + pw, yy + (v ? 48 : 62), pct(L.pct), { s: v ? 20 : 26, b: true, a: "end" });
       o += barra(px + dx, yy + (v ? 56 : 74), pw - dx, v ? 8 : 10, (L.pct || 0) / top * 0.98, L.cor);
@@ -426,7 +435,9 @@
     for (var j = 0; j < ms.length; j++) {
       var max = parseFloat(ms[j].getAttribute("data-max")), lg = ms[j].getComputedTextLength();
       if (lg <= max) continue;
-      var fs0 = parseFloat(ms[j].getAttribute("font-size")), fs = Math.max(Math.floor(fs0 * max / lg), Math.ceil(fs0 * 0.7));
+      var cur = ms[j].getAttribute("data-curto");
+      if (cur) { ms[j].textContent = cur; lg = ms[j].getComputedTextLength(); if (lg <= max) continue; }
+      var fs0 = parseFloat(ms[j].getAttribute("font-size")), fs = Math.max(Math.floor(fs0 * max / lg), Math.ceil(fs0 * (cur != null ? 0.6 : 0.7)));
       ms[j].setAttribute("font-size", fs);
       var txt = ms[j].textContent;
       while (ms[j].getComputedTextLength() > max && txt.length > 4) { txt = txt.slice(0, -1); ms[j].textContent = txt.replace(/\s+$/, "") + "…"; }
