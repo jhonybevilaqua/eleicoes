@@ -21,7 +21,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "1.6 - 04/10/2026"
+$Versao = "1.7 - 04/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -430,6 +430,7 @@ function Resumir-Boletim {
                         if ($st) { $eleito = ($st -match '^Eleito') } elseif ($marcaE -eq "s") { $eleito = $true }
                         $cands += [pscustomobject]@{
                             numero  = "$(Obter-Campo $c @('n') '')"
+                            sqcand  = "$(Obter-Campo $c @('sqcand') '')"
                             nome    = Decodificar-Entidades "$(Obter-Campo $c @('nmu','nm') '')"
                             partido = $sigla
                             votos   = Converter-Inteiro (Obter-Campo $c @('vap') 0)
@@ -599,6 +600,8 @@ function Gravar-Dados {
         ultimo_tse    = $ult
         cores         = $(if (Tem-Propriedade $cfg "cores") { $cfg.cores } else { [pscustomobject]@{} })
         cor_slot      = [pscustomobject] $script:Slots
+        # Foto oficial: {base}/{ciclo}/{eleicao}/fotos/br/{sqcand}.jpeg
+        tse           = [pscustomobject]@{ base = $Base; ciclo = $Ciclo; eleicao = $Eleicao }
         br            = $br
         ufs           = $porEstado
     }

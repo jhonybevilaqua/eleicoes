@@ -17,7 +17,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "1.6 - 04/10/2026"
+$Versao = "1.7 - 04/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -388,6 +388,7 @@ function Resumir-Boletim {
                         if ($st) { $eleito = ($st -match '^Eleito') } elseif ($marcaE -eq "s") { $eleito = $true }
                         $cands += [pscustomobject]@{
                             numero  = "$(Obter-Campo $c @('n') '')"
+                            sqcand  = "$(Obter-Campo $c @('sqcand') '')"
                             nome    = Decodificar-Entidades "$(Obter-Campo $c @('nmu','nm') '')"
                             partido = $sigla
                             votos   = Converter-Inteiro (Obter-Campo $c @('vap') 0)
@@ -488,6 +489,9 @@ function Gravar-Dados {
         recebendo_tse = (-not $script:Alarme)
         tse_nao_publicou = ($script:Alarme -and $script:ErroFoi404)
         ultimo_tse    = $ult
+        # Para a tela montar o endereco da foto oficial do TSE:
+        # {base}/{ciclo}/{eleicao}/fotos/{uf}/{sqcand}.jpeg
+        tse           = [pscustomobject]@{ base = $Base; ciclo = $Ciclo; eleicao = $Eleicao }
         ufs           = $porEstado
     }
     $json = $dados | ConvertTo-Json -Depth 8 -Compress

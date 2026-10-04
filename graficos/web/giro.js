@@ -80,6 +80,34 @@
     return h ? "atualizado às " + h + " (horário do TSE)" : "aguardando o primeiro boletim";
   }
 
+  // --------------------------------------------------- foto oficial do TSE
+  // Direto do TSE, sem pasta: {base}/{ciclo}/{eleicao}/fotos/{uf}/{sqcand}.jpeg.
+  // Foto que o TSE nao tiver some e nao e pedida de novo. Se as 3 primeiras
+  // falharem sem nenhum acerto, as fotos desligam (404 em excesso pode
+  // bloquear o IP, avisa o TSE).
+  var FOTO = { falhou: {}, falhas: 0, acertos: 0 };
+  window.__gctseFoto = function (img, ok) {
+    var url = img.getAttribute("href");
+    if (ok) { FOTO.acertos++; return; }
+    if (!FOTO.falhou[url]) { FOTO.falhou[url] = true; FOTO.falhas++; }
+    var g = img.parentNode; if (g && g.parentNode) g.parentNode.removeChild(g);
+    if (window.GCTSE_GIRO_CONTROLE && window.GCTSE_GIRO_CONTROLE.redesenhar) {
+      clearTimeout(FOTO.timer); FOTO.timer = setTimeout(window.GCTSE_GIRO_CONTROLE.redesenhar, 300);
+    }
+  };
+  function urlFoto(u, cd) {
+    if ((window.GCTSE_GIRO || {}).fotos_do_tse === false) return "";
+    var tse = D().tse;
+    if (!tse || !tse.base || !cd || !cd.sqcand) return "";
+    if (FOTO.falhas >= 3 && FOTO.acertos === 0) return "";
+    var url = tse.base + "/" + tse.ciclo + "/" + tse.eleicao + "/fotos/" + u + "/" + cd.sqcand + ".jpeg";
+    return FOTO.falhou[url] ? "" : url;
+  }
+  function foto(url, x, y, w, h) {
+    return '<g>' + r(x, y, w, h, C.trilho, 4) + '<image href="' + esc(url) + '" x="' + x + '" y="' + y + '" width="' + w +
+      '" height="' + h + '" preserveAspectRatio="xMidYMid slice" onload="__gctseFoto(this,true)" onerror="__gctseFoto(this,false)"/></g>';
+  }
+
   // ---------------------------------------------------------- um cargo (bloco)
   // Layout "so o resultado": com ELEITO ou 2o TURNO definido pelo TSE, so os
   // nomes em destaque. Sem resultado ainda, os 2 primeiros com percentual e
@@ -110,7 +138,7 @@
     });
     return o;
   }
-  function bloco(x, y, w, h, titulo, c, k) {
+  function bloco(x, y, w, h, titulo, c, k, u) {
     var sit = situacao(c);
     if (sit.tipo !== "eleito" && sit.tipo !== "segundo") return emApuracao(x, y, w, h, titulo, c, sit, k);
     var eleito = sit.tipo === "eleito", cor = eleito ? C.verde : C.destaque;
@@ -120,9 +148,14 @@
       { s: Math.round(26 * k), b: true, ls: 3, c: eleito ? "#3fd13f" : "#5fb0f0" });
     var lst = sit.lista.slice(0, 2), passo = (lst.length > 1 ? 150 : 200) * k;
     lst.forEach(function (cd, i) {
-      var yy = y + 130 * k + i * passo;
-      o += t(px, yy + 56 * k, cd.nome, { s: Math.round((lst.length > 1 ? 44 : 54) * k), b: true, max: pw });
-      o += t(px, yy + 96 * k, cd.partido + "   " + pct(cd.pct), { s: Math.round(28 * k), c: C.apagado, max: pw });
+      var yy = y + 130 * k + i * passo, url = urlFoto(u, cd), dx = 0;
+      if (url) {
+        var fw = (lst.length > 1 ? 84 : 120) * k, fh = fw * 4 / 3;
+        o += foto(url, px, yy + 14 * k, fw, fh);
+        dx = fw + 20 * k;
+      }
+      o += t(px + dx, yy + 56 * k, cd.nome, { s: Math.round((lst.length > 1 ? 44 : 54) * k), b: true, max: pw - dx });
+      o += t(px + dx, yy + 96 * k, cd.partido + "   " + pct(cd.pct), { s: Math.round(28 * k), c: C.apagado, max: pw - dx });
     });
     return o;
   }
@@ -136,8 +169,8 @@
       "  ·  senador " + (se ? pct(se.urnas_pct) : "—"), { s: 20, c: C.apagado });
     o += '<g data-selo="1" data-x="' + (W - 73) + '">' + r(W - 340, 44, 267, 36, s.cor, 3) +
       t(W - 81, 70, s.texto, { s: 20, b: true, a: "end" }) + "</g>";
-    o += bloco(73, 146, 551, 528, "GOVERNADOR", g, 1);
-    o += bloco(656, 146, 551, 528, "SENADOR", se, 1);
+    o += bloco(73, 146, 551, 528, "GOVERNADOR", g, 1, u);
+    o += bloco(656, 146, 551, 528, "SENADOR", se, 1, u);
     o += t(73, 702, "Fonte: TSE — " + hora(u), { s: 13, c: C.apagado2 });
     return svg(W, H, o);
   }
@@ -148,8 +181,8 @@
     o += t(30, 94, "urnas  ·  gov " + (g ? pct(g.urnas_pct) : "—") + "  ·  sen " + (se ? pct(se.urnas_pct) : "—"),
       { s: 15, c: C.apagado, max: W - 60 });
     o += r(30, 108, W - 60, 28, s.cor, 2) + t(W / 2, 128, s.texto, { s: 16, b: true, a: "middle" });
-    o += bloco(30, 150, W - 60, 380, "GOVERNADOR", g, 0.78);
-    o += bloco(30, 546, W - 60, 380, "SENADOR", se, 0.78);
+    o += bloco(30, 150, W - 60, 380, "GOVERNADOR", g, 0.78, u);
+    o += bloco(30, 546, W - 60, 380, "SENADOR", se, 0.78, u);
     o += t(30, 950, "Fonte: TSE — " + hora(u), { s: 11, c: C.apagado2 });
     return svg(W, H, o);
   }

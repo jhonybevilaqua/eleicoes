@@ -107,6 +107,7 @@
   manterTelaLigada();
 
   document.title = "gctse APRESENTACAO " + (formato === "v" ? "VERTICAL" : "HORIZONTAL");
+  window.__gctseRedesenhar = function () { desenharEm(camadas[visivel], ids[atual]); };   // foto que falhou: refaz sem ela
   mostrar(0);
   agendar();
   setInterval(recarregar, 3000);

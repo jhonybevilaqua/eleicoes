@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 1.6 - apuracao de PRESIDENTE em graficos
+ gctse GRAFICOS 1.7 - apuracao de PRESIDENTE em graficos
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -178,6 +178,34 @@
 
    Ordem dos estados e tempo do giro automatico:
    web\giro-config.js (Bloco de Notas). Depois de salvar, F5 na tela.
+
+---------------------------------------------------------------------------
+ RESUMO - 5 TELAS DE FECHAMENTO
+---------------------------------------------------------------------------
+
+   RESUMO-HORIZONTAL.bat (1920x1080) / RESUMO-VERTICAL.bat (1080x1920)
+     1  Mapa dos governadores: eleito (verde), 2o turno (azul),
+        em apuracao (cinza-azul), aguardando (escuro) + placar
+     2  Governadores por partido (so quem o TSE declarou ELEITO)
+     3  Senado - eleitos por partido (de 54 vagas)
+     4  Presidente por regiao (soma dos estados, sem o exterior)
+     5  Comparecimento por estado
+   Abre sozinho o GRAFICOS.bat e o ESTADOS.bat se nao estiverem rodando.
+   Troca: seta / clique / roda / passador; teclas 1 a 5 vao direto;
+   ENTER liga o giro automatico; Alt+F4 fecha.
+
+---------------------------------------------------------------------------
+ FOTOS DOS CANDIDATOS - DIRETO DO TSE
+---------------------------------------------------------------------------
+
+   Presidente (graficos e apresentacao) e o giro dos estados (ELEITO e
+   2o TURNO) mostram a foto oficial que o TSE publica, pelo endereco do
+   proprio TSE. Nao precisa de pasta de fotos.
+   Foto que o TSE nao tiver simplesmente nao aparece (a tela fica como
+   sem foto). Se as 3 primeiras falharem, as fotos se desligam sozinhas
+   (o TSE avisa que muitos erros 404 podem bloquear o IP).
+   Para desligar de proposito: web\giro-config.js, fotos_do_tse: false
+   (giro) - e o computador precisa de internet para as fotos.
 
 ---------------------------------------------------------------------------
  CREDITOS

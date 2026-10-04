@@ -96,5 +96,8 @@
 
   mostrar(atual);
   setInterval(recarregar, 3000);
-  window.GCTSE_GIRO_CONTROLE = { atual: function () { return ordem[atual]; }, proximo: proximo, anterior: anterior };
+  window.GCTSE_GIRO_CONTROLE = {
+    atual: function () { return ordem[atual]; }, proximo: proximo, anterior: anterior,
+    redesenhar: function () { desenharEm(camadas[visivel], ordem[atual]); }
+  };
 })();

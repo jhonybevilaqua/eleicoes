@@ -1,0 +1,304 @@
+// gctse GRAFICOS - RESUMO: 5 telas de fechamento, trocadas na mao.
+//   1 Mapa dos governadores      2 Governadores eleitos por partido
+//   3 Senado: eleitos/partido    4 Presidente por regiao
+//   5 Comparecimento por estado
+// Dados: web\estados.js (ESTADOS.bat) e web\dados.js (GRAFICOS.bat).
+// So soma e conta o que o TSE mandou; ELEITO e 2o TURNO so com a palavra do TSE.
+(function () {
+  "use strict";
+
+  var C = {
+    fundo: "#0b1220", texto: "#ffffff", apagado: "#8ea3bd", apagado2: "#6b7f99",
+    trilho: "#283548", painel: "#121b2b", vermelho: "#d03b3b", verde: "#0ca30c",
+    azul: "#2f8fdd", neutro: "#4d6282", vazio: "#283548"
+  };
+  var FONTE = "'Segoe UI', 'DejaVu Sans', Arial, sans-serif";
+  var UFS = ["ac", "al", "ap", "am", "ba", "ce", "df", "es", "go", "ma", "mt", "ms", "mg", "pa",
+             "pb", "pr", "pe", "pi", "rj", "rn", "rs", "ro", "rr", "sc", "sp", "se", "to"];
+  var REGIOES = [
+    { nome: "NORTE", ufs: ["ac", "am", "ap", "pa", "ro", "rr", "to"] },
+    { nome: "NORDESTE", ufs: ["al", "ba", "ce", "ma", "pb", "pe", "pi", "rn", "se"] },
+    { nome: "CENTRO-OESTE", ufs: ["df", "go", "ms", "mt"] },
+    { nome: "SUDESTE", ufs: ["es", "mg", "rj", "sp"] },
+    { nome: "SUL", ufs: ["pr", "rs", "sc"] }
+  ];
+
+  // ------------------------------------------------------------- utilidades
+  function esc(x) {
+    return String(x == null ? "" : x).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  function pct(v) { return (v == null || isNaN(v)) ? "—" : Number(v).toFixed(2).replace(".", ",") + "%"; }
+  function t(x, y, txt, o) {
+    o = o || {};
+    return '<text x="' + x + '" y="' + y + '" font-size="' + (o.s || 16) + '"' +
+      (o.b ? ' font-weight="700"' : "") + ' fill="' + (o.c || C.texto) + '"' +
+      (o.a ? ' text-anchor="' + o.a + '"' : "") + (o.ls ? ' letter-spacing="' + o.ls + '"' : "") +
+      (o.max ? ' data-max="' + o.max + '"' : "") + ">" + esc(txt) + "</text>";
+  }
+  function r(x, y, w, h, c, rx) {
+    return '<rect x="' + x + '" y="' + y + '" width="' + Math.max(0, w) + '" height="' + h + '" fill="' + c + '"' +
+      (rx ? ' rx="' + rx + '"' : "") + "/>";
+  }
+  function barra(x, y, w, h, frac, c) {
+    frac = Math.max(0, Math.min(1, frac || 0));
+    return r(x, y, w, h, C.trilho, 4) + (frac > 0 ? r(x, y, Math.max(8, w * frac), h, c, 4) : "");
+  }
+  function lista(x) { return Array.isArray(x) ? x : (x && Array.isArray(x.value) ? x.value : []); }
+  function svg(W, H, corpo) {
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + " " + H + '" width="' + W + '" height="' + H +
+      '" font-family="' + FONTE + '">' + r(0, 0, W, H, C.fundo) + corpo + "</svg>";
+  }
+
+  // ------------------------------------------------------------------ dados
+  function E() { return window.GCTSE_ESTADOS || { ufs: {} }; }
+  function P() { return window.GCTSE_DADOS || { ufs: {} }; }
+  function cargo(u, qual) {
+    var e = (E().ufs || {})[u], c = e && e[qual];
+    if (!c || !c.tem) return null;
+    c.candidatos = lista(c.candidatos);
+    return c;
+  }
+  function situacao(c) {
+    if (!c) return "vazio";
+    if (c.candidatos.some(function (x) { return x.eleito; })) return "eleito";
+    if (c.candidatos.some(function (x) { return x.segundo_turno; })) return "segundo";
+    return c.urnas_pct > 0 ? "andamento" : "vazio";
+  }
+  function presUf(u) {
+    var x = (P().ufs || {})[u];
+    if (!x || !x.tem) return null;
+    x.candidatos = lista(x.candidatos);
+    return x;
+  }
+
+  // Selo das telas de Governador/Senador e das de Presidente.
+  function seloEstados() {
+    var fim = true, algum = false;
+    UFS.forEach(function (u) {
+      ["gov", "sen"].forEach(function (q) {
+        var c = cargo(u, q);
+        if (!c || c.andamento !== "f") fim = false;
+        if (c && c.urnas_pct > 0) algum = true;
+      });
+    });
+    if (fim) return { texto: "TOTALIZAÇÃO FINAL", cor: C.verde };
+    return algum ? { texto: "PARCIAL", cor: C.vermelho } : { texto: "AGUARDANDO APURAÇÃO", cor: C.trilho };
+  }
+  function seloPresidente() {
+    var b = P().br;
+    if (b && b.tem && b.andamento === "f") return { texto: "TOTALIZAÇÃO FINAL", cor: C.verde };
+    var p = b && b.tem && b.secoes ? b.secoes.pct : 0;
+    return p > 0 ? { texto: "PARCIAL", cor: C.vermelho } : { texto: "AGUARDANDO APURAÇÃO", cor: C.trilho };
+  }
+
+  // Cabecalho: titulo grande, linha de apoio e selo.
+  function cab(v, W, titulo, sub, s) {
+    if (!v) {
+      return t(73, 74, titulo, { s: 44, b: true, ls: 1, max: W - 73 - 380 }) + t(73, 108, sub, { s: 20, c: C.apagado, max: W - 146 }) +
+        '<g data-selo="1" data-x="' + (W - 73) + '">' + r(W - 340, 44, 267, 36, s.cor, 3) +
+        t(W - 81, 70, s.texto, { s: 20, b: true, a: "end" }) + "</g>";
+    }
+    return t(30, 62, titulo, { s: 32, b: true, max: W - 60 }) + t(30, 88, sub, { s: 15, c: C.apagado, max: W - 60 }) +
+      r(30, 102, W - 60, 28, s.cor, 2) + t(W / 2, 122, s.texto, { s: 16, b: true, a: "middle" });
+  }
+  function rodape(v, W, H, txt) { return t(v ? 30 : 73, H - (v ? 12 : 18), txt, { s: v ? 11 : 13, c: C.apagado2 }); }
+
+  // =============================================== 1. MAPA DOS GOVERNADORES
+  function corSit(s) { return s === "eleito" ? C.verde : s === "segundo" ? C.azul : s === "andamento" ? C.neutro : C.vazio; }
+  function mapaGov(v) {
+    var W = v ? 540 : 1280, H = v ? 960 : 720, M = window.MAPA_BRASIL, o = "";
+    var cont = { eleito: 0, segundo: 0, andamento: 0, vazio: 0 }, seg = [];
+    UFS.forEach(function (u) { var s = situacao(cargo(u, "gov")); cont[s]++; if (s === "segundo") seg.push(u.toUpperCase()); });
+    o += cab(v, W, "GOVERNADORES", "situação em cada estado", seloEstados());
+    var esc0 = v ? 0.78 : 0.86, mx = v ? 31 : 60, my = v ? 146 : 132;
+    o += '<g transform="translate(' + mx + " " + my + ") scale(" + esc0 + ')">';
+    var k, e;
+    for (k in M.estados) {
+      e = M.estados[k];
+      o += '<path d="' + e.path + '" fill="' + corSit(situacao(cargo(k, "gov"))) + '" stroke="' + C.fundo +
+        '" stroke-width="' + (1.4 / esc0).toFixed(2) + '" stroke-linejoin="round"/>';
+    }
+    var contorno = ' stroke="' + C.fundo + '" stroke-width="' + (3 / esc0).toFixed(2) + '" paint-order="stroke" stroke-linejoin="round"';
+    for (k in M.estados) {
+      if (["rn", "pb", "pe", "al", "se", "df", "es", "rj"].indexOf(k) >= 0) continue;
+      e = M.estados[k];
+      o += '<text x="' + e.cx + '" y="' + (e.cy + 5) + '" font-size="' + (14 / esc0 * (v ? 0.9 : 1)).toFixed(1) +
+        '" font-weight="700" fill="#fff" text-anchor="middle"' + contorno + ">" + k.toUpperCase() + "</text>";
+    }
+    o += "</g>";
+    // placar
+    var itens = [["eleito", "ELEITOS NO 1º TURNO"], ["segundo", "VÃO AO 2º TURNO"], ["andamento", "EM APURAÇÃO"], ["vazio", "AGUARDANDO"]];
+    if (!v) {
+      var px = 690, py = 190;
+      itens.forEach(function (it, i) {
+        var yy = py + i * 104;
+        o += r(px, yy, 22, 22, corSit(it[0]), 3) + t(px + 40, yy + 20, it[1], { s: 20, b: true, ls: 1, c: C.apagado });
+        o += t(px + 40, yy + 78, String(cont[it[0]]), { s: 54, b: true });
+        o += t(px + 40 + String(cont[it[0]]).length * 34 + 20, yy + 78, cont[it[0]] === 1 ? "estado" : "estados", { s: 22, c: C.apagado });
+      });
+      if (seg.length) o += t(px, 640, "2º turno: " + seg.join(", "), { s: 20, b: true, c: "#5fb0f0", max: 1207 - px });
+    } else {
+      itens.forEach(function (it, i) {
+        var cx = 30 + (i % 2) * 245, yy = 680 + Math.floor(i / 2) * 110;
+        o += r(cx, yy, 18, 18, corSit(it[0]), 3) + t(cx + 28, yy + 15, it[1], { s: 13, b: true, c: C.apagado, max: 205 });
+        o += t(cx + 28, yy + 70, String(cont[it[0]]), { s: 46, b: true });
+      });
+      if (seg.length) o += t(30, 918, "2º turno: " + seg.join(", "), { s: 15, b: true, c: "#5fb0f0", max: W - 60 });
+    }
+    o += rodape(v, W, H, "Fonte: TSE · Malha: @svg-maps/brazil (Victor Cazanave), CC BY 4.0");
+    return svg(W, H, o);
+  }
+
+  // ===================================== 2 e 3. ELEITOS POR PARTIDO (barras)
+  function porPartido(qual) {
+    var conta = {};
+    UFS.forEach(function (u) {
+      var c = cargo(u, qual);
+      if (!c) return;
+      c.candidatos.forEach(function (k) {
+        if (!k.eleito) return;
+        var p = k.partido || "?";
+        if (!conta[p]) conta[p] = { partido: p, n: 0, ufs: [] };
+        conta[p].n++; conta[p].ufs.push(u.toUpperCase());
+      });
+    });
+    return Object.keys(conta).map(function (p) { return conta[p]; })
+      .sort(function (a, b) { return b.n - a.n || a.partido.localeCompare(b.partido); });
+  }
+  function barrasPartido(v, titulo, sub, linhas, rodapeTxt, extra) {
+    var W = v ? 540 : 1280, H = v ? 960 : 720, o = cab(v, W, titulo, sub, seloEstados());
+    var x0 = v ? 30 : 73, x1 = v ? W - 30 : 1207, y0 = v ? 160 : 150, alt = v ? 740 : (extra ? 470 : 510);
+    if (!linhas.length) {
+      o += t(x0, y0 + 60, "nenhum eleito ainda — o TSE ainda não declarou", { s: v ? 18 : 24, c: C.apagado });
+    } else {
+      var max = linhas[0].n, n = Math.min(linhas.length, v ? 12 : 10), passo = Math.min(v ? 70 : 80, alt / n);
+      var colP = v ? 150 : 210, colN = 70, bw = x1 - x0 - colP - colN;
+      for (var i = 0; i < n; i++) {
+        var L = linhas[i], yy = y0 + i * passo;
+        o += t(x0, yy + passo * 0.5, L.partido, { s: v ? 18 : 24, b: true, max: colP - 14 });
+        o += t(x0, yy + passo * 0.5 + (v ? 18 : 22), L.ufs.join(", "), { s: v ? 11 : 14, c: C.apagado, max: colP - 14 });
+        o += barra(x0 + colP, yy + passo * 0.5 - (v ? 14 : 18), bw, v ? 18 : 24, L.n / max * 0.98, C.verde);
+        o += t(x1, yy + passo * 0.5, String(L.n), { s: v ? 24 : 32, b: true, a: "end" });
+      }
+      if (linhas.length > n) o += t(x0, y0 + n * passo + 10, "+ " + (linhas.length - n) + " partido(s)", { s: 14, c: C.apagado });
+    }
+    if (extra) o += t(x0, v ? 920 : 676, extra, { s: v ? 15 : 20, b: true, c: "#5fb0f0", max: x1 - x0 });
+    o += rodape(v, W, H, rodapeTxt);
+    return svg(W, H, o);
+  }
+  function govPartido(v) {
+    var L = porPartido("gov"), total = L.reduce(function (a, b) { return a + b.n; }, 0), seg = [];
+    UFS.forEach(function (u) { if (situacao(cargo(u, "gov")) === "segundo") seg.push(u.toUpperCase()); });
+    return barrasPartido(v, "GOVERNADORES POR PARTIDO", total + " de 27 estados com governador eleito no 1º turno", L,
+      "Fonte: TSE — conta só quem o TSE declarou ELEITO", seg.length ? "2º turno em " + seg.length + " estado(s): " + seg.join(", ") : "");
+  }
+  function senPartido(v) {
+    var L = porPartido("sen"), total = L.reduce(function (a, b) { return a + b.n; }, 0);
+    return barrasPartido(v, "SENADO — ELEITOS POR PARTIDO", total + " de 54 vagas definidas (2 por estado)", L,
+      "Fonte: TSE — conta só quem o TSE declarou ELEITO", "");
+  }
+
+  // ====================================================== 4. PRESIDENTE POR REGIAO
+  function corCand(c) {
+    try { return window.GCTSE_GRAFICOS.cor(c); } catch (e) { return C.neutro; }
+  }
+  function regiao(R) {
+    var soma = {}, ref = {}, tot = 0, sec = 0, secT = 0, com = 0;
+    R.ufs.forEach(function (u) {
+      var x = presUf(u);
+      if (!x) return;
+      com++;
+      if (x.secoes) { sec += x.secoes.totalizadas || 0; secT += x.secoes.total || 0; }
+      x.candidatos.forEach(function (k) {
+        soma[k.numero] = (soma[k.numero] || 0) + (k.votos || 0); ref[k.numero] = k; tot += k.votos || 0;
+      });
+    });
+    var cs = Object.keys(soma).map(function (n) { return { c: ref[n], votos: soma[n], pct: tot > 0 ? soma[n] / tot * 100 : 0 }; })
+      .sort(function (a, b) { return b.votos - a.votos; });
+    return { nome: R.nome, cs: cs, urnas: secT > 0 ? sec / secT * 100 : null, com: com, n: R.ufs.length };
+  }
+  function presRegiao(v) {
+    var W = v ? 540 : 1280, H = v ? 960 : 720;
+    var o = cab(v, W, "PRESIDENTE POR REGIÃO", "1º e 2º colocados em cada região", seloPresidente());
+    var x0 = v ? 30 : 73, x1 = v ? W - 30 : 1207, y0 = v ? 150 : 140, passo = v ? 156 : 104;
+    REGIOES.forEach(function (R, i) {
+      var g = regiao(R), yy = y0 + i * passo;
+      o += r(x0, yy, x1 - x0, passo - 10, C.painel, 6);
+      var lx = x0 + 20, colR = v ? 0 : 250;
+      o += t(lx, yy + (v ? 30 : 40), g.nome, { s: v ? 18 : 24, b: true, ls: 1 });
+      o += t(lx, yy + (v ? 50 : 66), "urnas " + pct(g.urnas), { s: v ? 13 : 16, c: C.apagado });
+      var cx0 = v ? lx : x0 + colR, cw = x1 - 20 - cx0;
+      var top = g.cs.length && g.cs[0].pct > 0 ? g.cs[0].pct : 100;
+      if (!g.cs.length || !(g.cs[0].votos > 0)) {
+        o += t(cx0, yy + (v ? 92 : 52), "aguardando votos", { s: v ? 16 : 20, c: C.apagado });
+        return;
+      }
+      g.cs.slice(0, 2).forEach(function (k, j) {
+        var ly = yy + (v ? 64 : 16) + j * (v ? 40 : 40);
+        o += t(cx0, ly + 18, k.c.nome, { s: v ? 16 : 20, b: true, max: cw * 0.45 });
+        o += t(x1 - 20, ly + 18, pct(k.pct), { s: v ? 18 : 22, b: true, a: "end" });
+        o += barra(cx0 + cw * 0.47, ly + 6, cw * 0.53 - 100, v ? 10 : 14, k.pct / top * 0.98, corCand(k.c));
+      });
+    });
+    o += rodape(v, W, H, "Fonte: TSE — soma dos votos dos estados de cada região (sem o exterior)");
+    return svg(W, H, o);
+  }
+
+  // =================================================== 5. COMPARECIMENTO POR UF
+  function comparecimento(v) {
+    var W = v ? 540 : 1280, H = v ? 960 : 720;
+    var o = cab(v, W, "COMPARECIMENTO POR ESTADO", "% dos eleitores que votaram, nas urnas já apuradas", seloPresidente());
+    var L = [];
+    UFS.forEach(function (u) {
+      var x = presUf(u);
+      if (x && x.eleitorado && x.eleitorado.pct_comparec > 0) L.push({ u: u, p: x.eleitorado.pct_comparec });
+    });
+    L.sort(function (a, b) { return b.p - a.p; });
+    if (!L.length) {
+      o += t(v ? 30 : 73, v ? 220 : 210, "aguardando os primeiros boletins dos estados", { s: v ? 18 : 24, c: C.apagado });
+      return svg(W, H, o + rodape(v, W, H, "Fonte: TSE"));
+    }
+    var cols = v ? 1 : 2, porCol = Math.ceil(L.length / cols), y0 = v ? 150 : 140;
+    var passo = Math.min(v ? 29 : 37, (H - y0 - 40) / porCol), cw = v ? W - 60 : 540;
+    L.forEach(function (it, i) {
+      var c = Math.floor(i / porCol), x = (v ? 30 : 73) + c * (cw + 54), yy = y0 + (i % porCol) * passo;
+      o += t(x, yy + passo * 0.62, it.u.toUpperCase(), { s: v ? 14 : 18, b: true });
+      o += barra(x + 48, yy + passo * 0.25, cw - 48 - 90, passo * 0.45, it.p / 100, C.azul);
+      o += t(x + cw, yy + passo * 0.62, pct(it.p), { s: v ? 14 : 18, b: true, a: "end" });
+    });
+    o += rodape(v, W, H, "Fonte: TSE — comparecimento sobre o eleitorado das seções já totalizadas");
+    return svg(W, H, o);
+  }
+
+  // -------------------------------------------------------------- ajustes
+  function ajustar(raiz) {
+    var ms = raiz.querySelectorAll("text[data-max]");
+    for (var j = 0; j < ms.length; j++) {
+      var max = parseFloat(ms[j].getAttribute("data-max")), lg = ms[j].getComputedTextLength();
+      if (lg <= max) continue;
+      var fs0 = parseFloat(ms[j].getAttribute("font-size")), fs = Math.max(Math.floor(fs0 * max / lg), Math.ceil(fs0 * 0.7));
+      ms[j].setAttribute("font-size", fs);
+      var txt = ms[j].textContent;
+      while (ms[j].getComputedTextLength() > max && txt.length > 4) { txt = txt.slice(0, -1); ms[j].textContent = txt.replace(/\s+$/, "") + "…"; }
+    }
+    var gs = raiz.querySelectorAll("g[data-selo]");
+    for (var i = 0; i < gs.length; i++) {
+      var tx = gs[i].querySelector("text"), rc = gs[i].querySelector("rect");
+      var w = tx.getComputedTextLength() + 18, xd = parseFloat(gs[i].getAttribute("data-x"));
+      rc.setAttribute("x", (xd - w).toFixed(1)); rc.setAttribute("width", w.toFixed(1));
+      tx.setAttribute("x", (xd - 9).toFixed(1));
+    }
+  }
+
+  window.GCTSE_RESUMO = {
+    telas: [
+      { id: "mapa-governadores", f: mapaGov },
+      { id: "governadores-partido", f: govPartido },
+      { id: "senado-partido", f: senPartido },
+      { id: "presidente-regiao", f: presRegiao },
+      { id: "comparecimento", f: comparecimento }
+    ],
+    ajustar: ajustar
+  };
+})();

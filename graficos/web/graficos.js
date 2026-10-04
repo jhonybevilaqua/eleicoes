@@ -124,6 +124,29 @@
     return "";
   }
 
+  // Foto oficial do TSE (sem pasta). Some se o TSE nao tiver; 3 falhas sem
+  // nenhum acerto desligam as fotos (404 em excesso pode bloquear o IP).
+  var FOTO = { falhou: {}, falhas: 0, acertos: 0 };
+  window.__gctseFotoP = function (img, ok) {
+    var url = img.getAttribute("href");
+    if (ok) { FOTO.acertos++; return; }
+    if (!FOTO.falhou[url]) { FOTO.falhou[url] = true; FOTO.falhas++; }
+    var g = img.parentNode; if (g && g.parentNode) g.parentNode.removeChild(g);
+    clearTimeout(FOTO.timer);
+    FOTO.timer = setTimeout(function () { if (window.__gctseRedesenhar) window.__gctseRedesenhar(); }, 300);
+  };
+  function urlFoto(c) {
+    var d = D(), tse = d.tse;
+    if (d.fotos_do_tse === false || !tse || !tse.base || !c || !c.sqcand) return "";
+    if (FOTO.falhas >= 3 && FOTO.acertos === 0) return "";
+    var url = tse.base + "/" + tse.ciclo + "/" + tse.eleicao + "/fotos/br/" + c.sqcand + ".jpeg";
+    return FOTO.falhou[url] ? "" : url;
+  }
+  function foto(url, x, y, w, h) {
+    return "<g>" + r(x, y, w, h, C.trilho, 3) + '<image href="' + esc(url) + '" x="' + x + '" y="' + y + '" width="' + w +
+      '" height="' + h + '" preserveAspectRatio="xMidYMid slice" onload="__gctseFotoP(this,true)" onerror="__gctseFotoP(this,false)"/></g>';
+  }
+
   // Rosca: arcos proporcionais com 2px de separacao entre as fatias.
   function rosca(cx, cy, raio, esp, fatias) {
     var total = 0, i, out = '<circle cx="' + cx + '" cy="' + cy + '" r="' + raio + '" fill="none" stroke="' + C.trilho +
@@ -207,10 +230,11 @@
   G["presidente-h"] = function () {
     var W = 1280, H = 720, b = br(), cs = candidatos(b), o = cabecalhoH(W, "PRESIDENTE — BRASIL", subtitulo());
     for (var i = 0; i < 6; i++) {
-      var c = cs[i], cy = 152 + i * 84.4;
+      var c = cs[i], cy = 152 + i * 84.4, url = urlFoto(c), dx = 0;
       o += r(73, cy - 20, 6, 42, c ? cor(c) : C.outros, 1);
-      o += t(93, cy + 3, c ? corta(c.nome, 22) : "—", { s: 26, b: true, max: 320 });
-      o += t(93, cy + 29, c ? corta(c.partido, 30) : "—", { s: 15, c: C.apagado });
+      if (url) { o += foto(url, 87, cy - 30, 54, 72); dx = 64; }
+      o += t(93 + dx, cy + 3, c ? corta(c.nome, 22) : "—", { s: 26, b: true, max: 320 - dx });
+      o += t(93 + dx, cy + 29, c ? corta(c.partido, 30) : "—", { s: 15, c: C.apagado, max: 320 - dx });
       o += etiqueta(427, cy - 20, c);
       o += barra(427, cy - 13, 600, 30, c ? c.pct / 100 : 0, c ? cor(c) : C.outros);
       o += t(1027, cy + 39, c ? inteiro(c.votos) : "0", { s: 15, c: C.apagado, a: "end" });
@@ -339,10 +363,11 @@
   G["presidente-v"] = function () {
     var W = 540, H = 960, b = br(), cs = candidatos(b), o = cabecalhoV(W, "PRESIDENTE", subtitulo());
     for (var i = 0; i < 5; i++) {
-      var c = cs[i], y = 212 + i * 134;
+      var c = cs[i], y = 212 + i * 134, url = urlFoto(c), dx = 0;
       o += r(35, y - 18, 5, 34, c ? cor(c) : C.outros, 1);
-      o += t(51, y + 6, c ? corta(c.nome, 16) : "—", { s: 26, b: true, max: 300 });
-      o += t(51, y + 30, c ? corta(c.partido, 22) : "—", { s: 14, c: C.apagado });
+      if (url) { o += foto(url, 47, y - 24, 45, 60); dx = 55; }
+      o += t(51 + dx, y + 6, c ? corta(c.nome, 16) : "—", { s: 26, b: true, max: 300 - dx });
+      o += t(51 + dx, y + 30, c ? corta(c.partido, 22) : "—", { s: 14, c: C.apagado, max: 300 - dx });
       o += t(505, y + 12, c ? pct(c.pct) : "0,00%", { s: 32, b: true, a: "end" });
       o += barra(35, y + 44, 470, 12, c ? c.pct / 100 : 0, c ? cor(c) : C.outros);
       o += t(35, y + 74, c ? inteiro(c.votos) : "0", { s: 15, c: C.apagado });
