@@ -304,6 +304,19 @@
     var url = tse.base + "/" + tse.ciclo + "/" + tse.eleicao + "/fotos/" + u + "/" + k.sqcand + ".jpeg";
     return FOTO.falhou[url] ? "" : url;
   }
+  // Presidente: mesma foto dos graficos do Presidente (dados.js, pasta
+  // fotos/br), pelo sqcand do boletim nacional.
+  function urlFotoP(k) {
+    if (window.GCTSE_FOTOS_DO_TSE !== true) return "";
+    var tse = P().tse, br = P().br;
+    if (!tse || !tse.base || !k) return "";
+    if (FOTO.falhas >= 3 && FOTO.acertos === 0) return "";
+    var sq = k.sqcand;
+    lista(br && br.candidatos).forEach(function (n) { if (n.numero === k.numero && n.sqcand) sq = n.sqcand; });
+    if (!sq) return "";
+    var url = tse.base + "/" + tse.ciclo + "/" + tse.eleicao + "/fotos/br/" + sq + ".jpeg";
+    return FOTO.falhou[url] ? "" : url;
+  }
   function foto(url, x, y, w, h) {
     return '<g>' + r(x, y, w, h, C.trilho, 3) + '<image href="' + esc(url) + '" x="' + x + '" y="' + y + '" width="' + w +
       '" height="' + h + '" preserveAspectRatio="xMidYMid slice" onload="__gctseFotoR(this,true)" onerror="__gctseFotoR(this,false)"/></g>';
@@ -354,7 +367,7 @@
     var g = cargo(u, "gov"), se = cargo(u, "sen"), p = presUf(u);
     var o = cab(v, W, NOMES[u], "Presidente, Governador e Senado no estado", seloEstados());
     var lp = p ? p.candidatos.slice(0, v ? 2 : 3).map(function (k) {
-      return { nome: k.nome, partido: k.partido + "  ·  % dos válidos", pct: k.pct, cor: corCand(k) };
+      return { foto: urlFotoP(k), nome: k.nome, partido: k.partido + "  ·  % dos válidos", pct: k.pct, cor: corCand(k) };
     }) : [];
     var up = p && p.secoes ? p.secoes.pct : null;
     if (!v) {
