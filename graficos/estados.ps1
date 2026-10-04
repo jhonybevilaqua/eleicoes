@@ -17,7 +17,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "2.13 - 04/10/2026"
+$Versao = "2.14 - 04/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -433,6 +433,24 @@ function Resumir-Boletim {
             $lider = $cands[0]
             if ($lider.valido -and $lider.votos -gt 0 -and (2.0 * $lider.votos) -gt ($somaVotos + $faltam)) {
                 $lider.eleito = $true; $lider.calculado = $true
+            } elseif ($cands.Count -ge 2) {
+                # 2o TURNO definido: (1) ninguem passa de 50% nem com TODOS os que
+                # faltam (so votos validos na conta, o caso mais dificil para
+                # afirmar 2o turno) e (2) o 3o nao alcanca o 2o nem com todos
+                # os que faltam - os dois finalistas estao garantidos.
+                $somaValidos = 0.0
+                foreach ($k in $cands) { if ($k.valido) { $somaValidos += [double] $k.votos } }
+                $maior = 0.0
+                foreach ($k in $cands) { if ($k.valido -and [double] $k.votos -gt $maior) { $maior = [double] $k.votos } }
+                $semMaioria = (2.0 * ($maior + $faltam)) -le ($somaValidos + $faltam)
+                $terceiro = 0.0
+                if ($cands.Count -ge 3) { $terceiro = [double] $cands[2].votos }
+                $segundo = $cands[1]
+                $finalistas = $lider.valido -and $segundo.valido -and [double] $segundo.votos -gt ($terceiro + $faltam)
+                if ($semMaioria -and $finalistas) {
+                    $lider.segundo_turno = $true; $lider.calculado = $true
+                    $segundo.segundo_turno = $true; $segundo.calculado = $true
+                }
             }
         } else {
             $desafiante = 0.0

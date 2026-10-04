@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 2.13 - apuracao de PRESIDENTE em graficos
+ gctse GRAFICOS 2.14 - apuracao de PRESIDENTE em graficos
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -128,8 +128,10 @@
    ELEITO aparece quando o TSE escreve (Eleito / Matematicamente eleito)
    OU quando a conta com os numeros do TSE ja garante: Governador com mais
    da metade dos votos mesmo se TODOS os eleitores que faltam votarem no
-   adversario; Senador que nem o 1o fora das vagas alcanca. Se o TSE
-   escreveu a situacao (ex.: 2o turno), vale o TSE.
+   adversario; Senador que nem o 1o fora das vagas alcanca.
+   2o TURNO de Governador pela conta: ninguem passa de 50% nem com todos
+   os que faltam E o 3o nao alcanca o 2o. Se o TSE escreveu a situacao,
+   vale o TSE.
 
    Pergunta a sigla e mostra, para Governador e Senador: o que o TSE
    manda (e=, st=) e o que a tela recebeu (versao do coletor e eleito=).

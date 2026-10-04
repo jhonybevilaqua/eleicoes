@@ -32,7 +32,10 @@ try {
         L ("  {0}: urnas {1}%  andamento={2}" -f $q, $c.urnas_pct, $c.andamento)
         $cs = @($c.candidatos); if ($cs.Count -eq 1 -and $cs[0].PSObject.Properties["value"]) { $cs = @($cs[0].value) }
         foreach ($k in ($cs | Select-Object -First 4)) {
-            $calc = ""; if ($k.PSObject.Properties["calculado"] -and $k.calculado) { $calc = "  (matematicamente eleito pela conta)" }
+            $calc = ""
+            if ($k.PSObject.Properties["calculado"] -and $k.calculado) {
+                if ($k.segundo_turno) { $calc = "  (2o turno definido pela conta)" } else { $calc = "  (matematicamente eleito pela conta)" }
+            }
             L ("     {0,-28} {1,6}%  eleito={2,-5} 2turno={3,-5} situacao='{4}'{5}" -f $k.nome, $k.pct, $k.eleito, $k.segundo_turno, $k.situacao, $calc)
         }
     }
