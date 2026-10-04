@@ -35,3 +35,7 @@ graficos/navegador-*/
 
 # gctse GRAFICOS: backup local do PREPARAR-WINDOWS
 graficos/windows-antes.json
+
+# gctse GRAFICOS: arquivos gerados na maquina
+graficos/gerenciador-estado.json
+graficos/ENDERECOS-OBS.txt

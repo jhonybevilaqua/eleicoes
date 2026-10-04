@@ -16,7 +16,7 @@
   var CHAVE = "gctse-resumo-" + (vertical ? "v" : "h"), atual = 0;
   var pedida = q.get("tela");
   if (pedida == null) { try { pedida = localStorage.getItem(CHAVE); } catch (e) { } }
-  telas.forEach(function (tl, i) { if (tl.id === pedida) atual = i; });
+  telas.forEach(function (tl, i) { if (tl.id === pedida || String(i + 1) === pedida) atual = i; });
 
   var camadas = [document.getElementById("c0"), document.getElementById("c1")];
   camadas.forEach(function (c) { c.style.transition = "opacity " + transicao + "s ease-in-out"; });
@@ -66,5 +66,10 @@
 
   mostrar(atual);
   setInterval(function () { recarregar("estados.js"); recarregar("dados.js"); }, 3000);
-  window.GCTSE_RESUMO_CONTROLE = { atual: function () { return telas[atual].id; }, proximo: proximo };
+  // Comandos vindos do GERENCIADOR (sem aviso na tela: a saida esta no ar).
+  window.GCTSE_RESUMO_CONTROLE = {
+    atual: function () { return telas[atual].id; }, proximo: proximo, anterior: anterior,
+    irPara: function (n) { n = parseInt(n, 10); if (n >= 1 && n <= telas.length) { mostrar(n - 1); reagendar(); } },
+    alternarAuto: function () { auto = !auto; reagendar(); return auto; }
+  };
 })();

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>gctse GERENCIADOR</title>
+<style>
+  :root { --fundo: #0b1220; --cartao: #131c2c; --linha: #22304a; --texto: #fff; --apagado: #8ea3bd; --azul: #2f8fdd; --verde: #0ca30c; --verm: #d03b3b; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fundo); color: var(--texto); font: 15px 'Segoe UI', Arial, sans-serif; }
+  header { display: flex; align-items: baseline; gap: 16px; padding: 14px 20px 6px; flex-wrap: wrap; }
+  h1 { margin: 0; font-size: 21px; }
+  header a { color: #7fb8ff; font-size: 14px; }
+  #status { display: flex; gap: 10px; padding: 4px 20px 10px; flex-wrap: wrap; }
+  .st { padding: 6px 12px; border-radius: 5px; font-weight: 700; font-size: 13px; }
+  .ok { background: #10301a; color: #7ee07e; } .ruim { background: #3a1212; color: #ffb3b3; } .neutro { background: #1b2433; color: var(--apagado); }
+  main { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 0 20px 20px; }
+  @media (max-width: 1100px) { main { grid-template-columns: 1fr; } }
+  .col { background: var(--cartao); border-radius: 8px; padding: 14px; }
+  .col h2 { margin: 0; font-size: 18px; letter-spacing: 1px; }
+  .col .sub { color: var(--apagado); font-size: 13px; margin: 2px 0 10px; }
+  .noar { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .noar b { background: var(--verm); padding: 3px 10px; border-radius: 4px; font-size: 13px; letter-spacing: 1px; }
+  .noar span { font-size: 17px; font-weight: 700; }
+  .previa { position: relative; background: #000; border-radius: 6px; overflow: hidden; margin-bottom: 12px; }
+  .previa iframe { position: absolute; top: 0; left: 0; border: 0; transform-origin: 0 0; pointer-events: none; }
+  .grupo { color: var(--apagado); font-size: 12px; font-weight: 700; letter-spacing: 1px; margin: 10px 0 6px; }
+  .botoes { display: flex; flex-wrap: wrap; gap: 6px; }
+  button { background: #22314a; color: #fff; border: 1px solid #2c3f5e; border-radius: 6px; padding: 9px 12px; font: 600 14px 'Segoe UI', Arial, sans-serif; cursor: pointer; }
+  button:hover { background: #2b3e5d; }
+  button.ativo { background: var(--verm); border-color: #ff7a7a; }
+  .controle { margin-top: 12px; padding: 10px; border: 1px solid var(--linha); border-radius: 6px; display: none; }
+  .controle.on { display: block; }
+  .controle .linha { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
+  .controle .uf button { width: 52px; padding: 7px 0; }
+  .controle .uf button.ativo, .controle .tl button.ativo { background: var(--azul); border-color: #7fb8ff; }
+  button.auto.ligado { background: var(--verde); border-color: #6be06b; }
+  .dica { color: var(--apagado); font-size: 12px; margin-top: 6px; }
+</style>
+</head>
+<body>
+<header><h1>gctse — GERENCIADOR DAS SAÍDAS</h1>
+  <a href="index.html" target="_blank">situação completa, avisos de virada e cores ↗</a></header>
+<div id="status"><span class="st neutro" id="stP">Presidente: …</span><span class="st neutro" id="stE">Estados: …</span><span class="st neutro" id="stG">Gerenciador: …</span></div>
+<main id="colunas"></main>
+
+<script charset="utf-8" src="giro-config.js"></script>
+<script charset="utf-8" src="graficos.js"></script>
+<script charset="utf-8" src="dados.js"></script>
+<script charset="utf-8" src="estados.js"></script>
+<script>
+(function () {
+  "use strict";
+  var cfg = window.GCTSE_GIRO || {};
+  var NOMES_UF = ["ac","al","ap","am","ba","ce","df","es","go","ma","mt","ms","mg","pa","pb","pr","pe","pi","rj","rn","rs","ro","rr","sc","sp","se","to"];
+  var ordem = (cfg.ordem || NOMES_UF).map(function (u) { return String(u).toLowerCase(); }).filter(function (u) { return NOMES_UF.indexOf(u) >= 0; });
+  var RESUMO = ["Mapa dos governadores", "Governadores por partido", "Senado por partido", "Presidente por região",
+                "Comparecimento", "Estado em destaque", "2026 × 2022"];
+  var SAIDAS = [
+    { id: "h", nome: "SAÍDA HORIZONTAL", sub: "OBS da saída 1 → canal da DeckLink escolhido no OBS · 1920×1080", W: 1920, H: 1080, f: "h" },
+    { id: "v", nome: "SAÍDA VERTICAL", sub: "OBS da saída 2 → canal da DeckLink escolhido no OBS · 1080×1920 (girada no OBS)", W: 1080, H: 1920, f: "v" }
+  ];
+  var estado = null, autoTimer = { h: null, v: null };
+
+  function nomeTela(id) {
+    if (id === "apresentacao") return "Apresentação automática (troca a cada 15 s)";
+    if (id === "giro") return "Giro dos estados";
+    if (id === "resumo") return "Resumo (7 telas)";
+    var g = window.GCTSE_GRAFICOS.lista.filter(function (x) { return x.id === id; })[0];
+    return g ? g.nome : id;
+  }
+  function botao(txt, fn, extra) { var b = document.createElement("button"); b.textContent = txt; b.onclick = fn; if (extra) b.dataset.k = extra; return b; }
+  function pedir(url) { return fetch(url + (url.indexOf("?") < 0 ? "?" : "&") + "t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (e) { estado = e; pintar(); }); }
+  function definir(s, tela, acao) { pararAuto(s); return pedir("/definir?saida=" + s + "&tela=" + encodeURIComponent(tela) + (acao ? "&acao=" + encodeURIComponent(acao) : "")); }
+  function comandar(s, acao) { return pedir("/comando?saida=" + s + "&acao=" + encodeURIComponent(acao)); }
+
+  // Posicao atual do giro / resumo (o gerenciador manda sempre a posicao exata).
+  function posicao(s) {
+    var a = estado && estado[s] ? estado[s].acao || "" : "";
+    if (a.indexOf("uf:") === 0) return { uf: a.slice(3) };
+    if (a.indexOf("tela:") === 0) return { tela: parseInt(a.slice(5), 10) };
+    return {};
+  }
+  function passo(s, d) {
+    var e = estado[s];
+    if (e.tela === "giro") {
+      var i = ordem.indexOf(posicao(s).uf); if (i < 0) i = 0; else i = (i + d + ordem.length) % ordem.length;
+      return comandar(s, "uf:" + ordem[i]);
+    }
+    if (e.tela === "resumo") {
+      var n = posicao(s).tela || 1; n = ((n - 1 + d + RESUMO.length) % RESUMO.length) + 1;
+      return comandar(s, "tela:" + n);
+    }
+  }
+  function pararAuto(s) { clearInterval(autoTimer[s]); autoTimer[s] = null; }
+  function alternarAuto(s) {
+    if (autoTimer[s]) { pararAuto(s); pintar(); return; }
+    var seg = parseFloat(cfg.tempo_auto_segundos); if (!(seg >= 3)) seg = 10;
+    autoTimer[s] = setInterval(function () { passo(s, 1); }, seg * 1000);
+    pintar();
+  }
+
+  // ----------------------------------------------------------- montar a pagina
+  var cols = document.getElementById("colunas");
+  SAIDAS.forEach(function (S) {
+    var col = document.createElement("section"); col.className = "col"; col.id = "col-" + S.id;
+    col.innerHTML = '<h2>' + S.nome + '</h2><div class="sub">' + S.sub + '</div>' +
+      '<div class="noar"><b>NO AR</b><span class="tela">…</span></div>' +
+      '<div class="previa" style="aspect-ratio:' + S.W + '/' + S.H + (S.f === "v" ? ';max-width:42%' : '') + '">' +
+      '<iframe src="saida.html?saida=' + S.id + '" width="' + S.W + '" height="' + S.H + '"></iframe></div>';
+    function grupo(titulo, itens) {
+      var g = document.createElement("div"); g.innerHTML = '<div class="grupo">' + titulo + '</div>';
+      var bx = document.createElement("div"); bx.className = "botoes";
+      itens.forEach(function (it) { bx.appendChild(botao(it[1], function () { definir(S.id, it[0], it[2]); }, it[0])); });
+      g.appendChild(bx); col.appendChild(g);
+    }
+    grupo("AUTOMÁTICO", [["apresentacao", "▶ Apresentação automática"]]);
+    grupo("GRÁFICOS (fica fixo no ar)", window.GCTSE_GRAFICOS.lista.filter(function (g) { return g.f === S.f; }).map(function (g) { return [g.id, g.nome]; }));
+    grupo("FECHAMENTO (controle aqui embaixo)", [["giro", "Giro dos estados", "uf:" + (ordem.indexOf(String(cfg.estado_destaque || "pr")) >= 0 ? String(cfg.estado_destaque || "pr") : ordem[0])],
+                                                 ["resumo", "Resumo (7 telas)", "tela:1"]]);
+    // controles do giro / resumo
+    var ctl = document.createElement("div"); ctl.className = "controle";
+    var l1 = document.createElement("div"); l1.className = "linha";
+    l1.appendChild(botao("◀ anterior", function () { pararAuto(S.id); passo(S.id, -1); }));
+    l1.appendChild(botao("próximo ▶", function () { pararAuto(S.id); passo(S.id, 1); }));
+    var ba = botao("giro automático", function () { alternarAuto(S.id); }); ba.className = "auto"; l1.appendChild(ba);
+    ctl.appendChild(l1);
+    var ufs = document.createElement("div"); ufs.className = "linha uf";
+    ordem.forEach(function (u) { ufs.appendChild(botao(u.toUpperCase(), function () { pararAuto(S.id); comandar(S.id, "uf:" + u); }, "uf:" + u)); });
+    ctl.appendChild(ufs);
+    var tls = document.createElement("div"); tls.className = "linha tl";
+    RESUMO.forEach(function (n, i) { tls.appendChild(botao((i + 1) + " · " + n, function () { pararAuto(S.id); comandar(S.id, "tela:" + (i + 1)); }, "tela:" + (i + 1))); });
+    ctl.appendChild(tls);
+    var dica = document.createElement("div"); dica.className = "dica";
+    dica.textContent = "O giro automático troca a cada " + (cfg.tempo_auto_segundos || 10) + " s enquanto esta página estiver aberta.";
+    ctl.appendChild(dica);
+    col.appendChild(ctl);
+    cols.appendChild(col);
+    var q = col.querySelector(".previa"), f = q.querySelector("iframe");
+    function escala() { f.style.transform = "scale(" + (q.clientWidth / S.W) + ")"; }
+    new ResizeObserver(escala).observe(q); escala();
+  });
+
+  // ---------------------------------------------------------------- pintar
+  function pintar() {
+    if (!estado) return;
+    SAIDAS.forEach(function (S) {
+      var e = estado[S.id], col = document.getElementById("col-" + S.id), pos = posicao(S.id);
+      var txt = nomeTela(e.tela);
+      if (e.tela === "giro" && pos.uf) txt += " — " + pos.uf.toUpperCase();
+      if (e.tela === "resumo" && pos.tela) txt += " — " + pos.tela + ". " + RESUMO[pos.tela - 1];
+      col.querySelector(".noar .tela").textContent = txt + (e.quando ? "  (desde " + e.quando + ")" : "");
+      col.querySelectorAll(".botoes button").forEach(function (b) { b.classList.toggle("ativo", b.dataset.k === e.tela); });
+      var ctl = col.querySelector(".controle");
+      ctl.classList.toggle("on", e.tela === "giro" || e.tela === "resumo");
+      ctl.querySelector(".uf").style.display = e.tela === "giro" ? "flex" : "none";
+      ctl.querySelector(".tl").style.display = e.tela === "resumo" ? "flex" : "none";
+      ctl.querySelectorAll(".uf button, .tl button").forEach(function (b) { b.classList.toggle("ativo", b.dataset.k === e.acao); });
+      ctl.querySelector(".auto").classList.toggle("ligado", !!autoTimer[S.id]);
+      ctl.querySelector(".auto").textContent = autoTimer[S.id] ? "giro automático: LIGADO" : "giro automático";
+    });
+  }
+
+  // --------------------------------------------------------- situacao
+  function idade(g) { return g ? Math.round((Date.now() - new Date(g).getTime()) / 1000) : null; }
+  function situacao() {
+    var d = window.GCTSE_DADOS || {}, e = window.GCTSE_ESTADOS || {};
+    var p = document.getElementById("stP"), s = document.getElementById("stE"), ip = idade(d.gravado_em), ie = idade(e.gravado_em);
+    if (ip == null) { p.className = "st ruim"; p.textContent = "Presidente: coleta não rodou (abra o GRAFICOS.bat)"; }
+    else if (ip > 90) { p.className = "st ruim"; p.textContent = "Presidente: COLETA PAROU há " + ip + " s"; }
+    else if (d.recebendo_tse === false) { p.className = "st ruim"; p.textContent = d.tse_nao_publicou ? "Presidente: TSE ainda não publicou" : "Presidente: SEM RESPOSTA DO TSE"; }
+    else { p.className = "st ok"; p.textContent = "Presidente: OK" + (d.br && d.br.tem && d.br.secoes ? " · " + String(d.br.secoes.pct).replace(".", ",") + "% das urnas" : ""); }
+    if (ie == null) { s.className = "st neutro"; s.textContent = "Estados: coleta não aberta (só para giro/resumo)"; }
+    else if (ie > 120) { s.className = "st ruim"; s.textContent = "Estados: COLETA PAROU há " + ie + " s"; }
+    else if (e.recebendo_tse === false) { s.className = "st ruim"; s.textContent = "Estados: SEM RESPOSTA DO TSE"; }
+    else { s.className = "st ok"; s.textContent = "Estados: OK"; }
+  }
+  function recarregar(arq) {
+    var sc = document.createElement("script"); sc.charset = "utf-8"; sc.src = arq + "?t=" + Date.now();
+    sc.onload = function () { sc.remove(); situacao(); }; sc.onerror = function () { sc.remove(); };
+    document.head.appendChild(sc);
+  }
+  function lerEstado() {
+    var g = document.getElementById("stG");
+    fetch("/estado?t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.json(); })
+      .then(function (e) { estado = e; pintar(); g.className = "st ok"; g.textContent = "Gerenciador: no ar"; })
+      .catch(function () { g.className = "st ruim"; g.textContent = "Gerenciador: SEM CONEXÃO — a janela do GERENCIADOR fechou?"; });
+  }
+  situacao(); lerEstado();
+  setInterval(lerEstado, 1500);
+  setInterval(function () { recarregar("dados.js"); recarregar("estados.js"); }, 3000);
+})();
+</script>
+</body>
+</html>

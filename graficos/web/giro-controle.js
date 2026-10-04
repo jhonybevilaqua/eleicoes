@@ -96,8 +96,11 @@
 
   mostrar(atual);
   setInterval(recarregar, 3000);
+  // Comandos vindos do GERENCIADOR (sem aviso na tela: a saida esta no ar).
   window.GCTSE_GIRO_CONTROLE = {
     atual: function () { return ordem[atual]; }, proximo: proximo, anterior: anterior,
-    redesenhar: function () { desenharEm(camadas[visivel], ordem[atual]); }
+    redesenhar: function () { desenharEm(camadas[visivel], ordem[atual]); },
+    irPara: function (uf) { var i = ordem.indexOf(String(uf).toLowerCase()); if (i >= 0) { mostrar(i); reagendar(); } },
+    alternarAuto: function () { auto = !auto; reagendar(); return auto; }
   };
 })();

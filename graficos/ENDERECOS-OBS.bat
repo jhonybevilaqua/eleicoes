@@ -1,8 +1,7 @@
 @echo off
-title gctse - enderecos das telas para o OBS
+title gctse - enderecos para o OBS
 cd /d "%~dp0"
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$web = Join-Path (Get-Location) 'web'; $itens = @(@('SAIDA 1 - HORIZONTAL (fonte Navegador 1920 x 1080)', ''), @('  Apresentacao', 'apresentacao-horizontal.html'), @('  Giro dos estados', 'giro-estados-horizontal.html'), @('  Resumo (7 telas)', 'resumo-horizontal.html'), @('', ''), @('SAIDA 2 - VERTICAL (fonte Navegador 1080 x 1920, girada 90 graus no OBS)', ''), @('  Apresentacao', 'apresentacao-vertical.html'), @('  Giro dos estados', 'giro-estados-vertical.html'), @('  Resumo (7 telas)', 'resumo-vertical.html'), @('', ''), @('GERENCIAMENTO - abrir no Chrome, no monitor do Windows', ''), @('  Pagina do operador', 'index.html')); $linhas = foreach ($x in $itens) { if ($x[1]) { $c = ((Join-Path $web $x[1]) -replace '\\', '/').TrimStart('/'); $u = 'file:///' + ((($c.Split('/')) | ForEach-Object { if ($_ -match '^[A-Za-z]:$') { $_ } else { [uri]::EscapeDataString($_) } }) -join '/'); '{0,-22} {1}' -f $x[0], $u } else { $x[0] } }; $linhas | Set-Content -Encoding UTF8 'ENDERECOS-OBS.txt'; $linhas"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$p = 8098; try { $c = Get-Content 'config-graficos.json' -Raw -Encoding UTF8 | ConvertFrom-Json; foreach ($x in $c.PSObject.Properties) { if ($x.Name -eq 'porta_gerenciador' -and [int] $x.Value -gt 0) { $p = [int] $x.Value } } } catch { }; $l = @('Cada OBS tem UMA fonte Navegador (desmarque Arquivo local), com o endereco:', '', ('  OBS da SAIDA HORIZONTAL:  http://localhost:{0}/saida.html?saida=h   (largura 1920, altura 1080)' -f $p), ('  OBS da SAIDA VERTICAL:    http://localhost:{0}/saida.html?saida=v   (largura 1080, altura 1920, girar 90 graus)' -f $p), '', ('Tela de gerenciamento (Chrome, monitor do Windows): http://localhost:{0}/gerenciador.html' -f $p), '', 'O GERENCIADOR.bat precisa estar aberto.'); $l | Set-Content -Encoding UTF8 'ENDERECOS-OBS.txt'; $l"
 echo.
-echo Os enderecos tambem foram gravados em ENDERECOS-OBS.txt (para copiar e colar no OBS).
-echo Passo a passo completo: OBS-DECKLINK.txt
+echo Os enderecos tambem foram gravados em ENDERECOS-OBS.txt. Passo a passo: OBS-DECKLINK.txt
 pause

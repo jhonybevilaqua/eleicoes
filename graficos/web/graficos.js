@@ -490,6 +490,85 @@
     return svg(W, H, o + RODAPE_V());
   };
 
+  // MAPA DA ABSTENCAO: cada estado pela % de eleitores que nao votaram.
+  // Faixas FIXAS (a cor de um estado so muda se o numero dele mudar de
+  // faixa); um so tom, do claro (pouca) ao forte (muita abstencao).
+  var FAIXAS_ABST = [
+    { ate: 15, cor: "#f3d9a8", rot: "até 15%" }, { ate: 18, cor: "#e9b45c", rot: "15 a 18%" },
+    { ate: 21, cor: "#d68f27", rot: "18 a 21%" }, { ate: 24, cor: "#a8641a", rot: "21 a 24%" },
+    { ate: 999, cor: "#6e3b0e", rot: "acima de 24%" }
+  ];
+  function corAbst(p) {
+    if (p == null || !(p > 0)) return C.semDado;
+    for (var i = 0; i < FAIXAS_ABST.length; i++) if (p <= FAIXAS_ABST[i].ate) return FAIXAS_ABST[i].cor;
+    return FAIXAS_ABST[FAIXAS_ABST.length - 1].cor;
+  }
+  function abstUf(k) { var x = uf(k); return x && x.eleitorado && x.eleitorado.pct_abstencao > 0 ? x.eleitorado.pct_abstencao : null; }
+  function mapaAbst(x, y, escala, fonte) {
+    var M = window.MAPA_BRASIL, out = '<g transform="translate(' + x + " " + y + ") scale(" + escala + ')">', k, e;
+    for (k in M.estados) {
+      e = M.estados[k];
+      out += '<path d="' + e.path + '" fill="' + corAbst(abstUf(k)) + '" stroke="' + C.fundo +
+        '" stroke-width="' + (1.2 / escala).toFixed(2) + '" stroke-linejoin="round"/>';
+    }
+    var contorno = ' stroke="' + C.fundo + '" stroke-width="' + (3 / escala).toFixed(2) + '" paint-order="stroke" stroke-linejoin="round"';
+    for (k in M.estados) {
+      if (PEQUENOS.indexOf(k) >= 0) continue;
+      e = M.estados[k];
+      out += '<text x="' + e.cx + '" y="' + (e.cy + 5) + '" font-size="' + (fonte / escala).toFixed(1) +
+        '" font-weight="700" fill="#fff" text-anchor="middle"' + contorno + ">" + k.toUpperCase() + "</text>";
+    }
+    return out + "</g>";
+  }
+  function rankingAbst() {
+    var L = [];
+    for (var k in (window.MAPA_BRASIL || {}).estados) { var p = abstUf(k); if (p != null) L.push({ u: k.toUpperCase(), p: p }); }
+    return L.sort(function (a, b) { return b.p - a.p; });
+  }
+  function legendaAbst(x, y, passo, s) {
+    var o = "";
+    FAIXAS_ABST.forEach(function (f, i) {
+      o += r(x, y + i * passo - s, s + 4, s + 4, f.cor, 3) + t(x + s + 16, y + i * passo, f.rot, { s: s, c: C.apagado });
+    });
+    return o;
+  }
+  G["abstencao-mapa-h"] = function () {
+    var W = 1280, H = 720, b = br(), e = b ? b.eleitorado : null, L = rankingAbst();
+    var o = cabecalhoH(W, "MAPA DA ABSTENÇÃO", "% de eleitores que não foram votar, por estado");
+    o += mapaAbst(60, 118, 0.86, 15);
+    var px = 700;
+    o += t(px, 160, "BRASIL", { s: 20, b: true, c: C.apagado, ls: 2 });
+    o += t(px, 228, e ? pct(e.pct_abstencao) : "0,00%", { s: 72, b: true });
+    if (L.length) {
+      o += t(px, 290, "MAIOR ABSTENÇÃO", { s: 16, b: true, c: C.apagado, ls: 2 });
+      L.slice(0, 3).forEach(function (it, i) { o += t(px, 322 + i * 30, it.u + "  " + pct(it.p), { s: 22, b: true }); });
+      o += t(px + 260, 290, "MENOR ABSTENÇÃO", { s: 16, b: true, c: C.apagado, ls: 2 });
+      L.slice(-3).reverse().forEach(function (it, i) { o += t(px + 260, 322 + i * 30, it.u + "  " + pct(it.p), { s: 22, b: true }); });
+    } else {
+      o += t(px, 300, "aguardando os boletins dos estados", { s: 20, c: C.apagado });
+    }
+    o += legendaAbst(px, 470, 34, 18);
+    o += t(73, 690, "Fonte: TSE — Divulgação de Resultados · urnas já apuradas", { s: 14, c: C.apagado2 });
+    return svg(W, H, o);
+  };
+  G["abstencao-mapa-v"] = function () {
+    var W = 540, H = 960, b = br(), e = b ? b.eleitorado : null, L = rankingAbst();
+    var o = cabecalhoV(W, "MAPA DA ABSTENÇÃO", "% de eleitores que não foram votar");
+    o += mapaAbst(35, 170, 0.767, 13);
+    o += t(35, 700, "BRASIL", { s: 16, b: true, c: C.apagado, ls: 2 }) + t(35, 752, e ? pct(e.pct_abstencao) : "0,00%", { s: 52, b: true });
+    if (L.length) {
+      o += t(280, 700, "MAIOR", { s: 14, b: true, c: C.apagado, ls: 2 });
+      L.slice(0, 2).forEach(function (it, i) { o += t(280, 726 + i * 26, it.u + "  " + pct(it.p), { s: 18, b: true }); });
+      o += t(410, 700, "MENOR", { s: 14, b: true, c: C.apagado, ls: 2 });
+      L.slice(-2).reverse().forEach(function (it, i) { o += t(410, 726 + i * 26, it.u + "  " + pct(it.p), { s: 18, b: true }); });
+    }
+    FAIXAS_ABST.forEach(function (f, i) {
+      var cx = 35 + (i % 3) * 160, cy = 812 + Math.floor(i / 3) * 34;
+      o += r(cx, cy - 15, 20, 20, f.cor, 3) + t(cx + 30, cy, f.rot, { s: 15, c: C.apagado });
+    });
+    return svg(W, H, o + RODAPE_V());
+  };
+
   window.GCTSE_GRAFICOS = {
     lista: [
       { id: "presidente-h", nome: "Presidente — Brasil", f: "h" },
@@ -498,12 +577,14 @@
       { id: "estados-h", nome: "Como cada estado votou", f: "h" },
       { id: "lideranca-h", nome: "Liderança por estado", f: "h" },
       { id: "abstencao-h", nome: "Abstenção, brancos e nulos", f: "h" },
+      { id: "abstencao-mapa-h", nome: "Mapa da abstenção", f: "h" },
       { id: "urnas-v", nome: "Urnas apuradas", f: "v" },
       { id: "votos-v", nome: "Brancos e nulos", f: "v" },
       { id: "presidente-v", nome: "Presidente", f: "v" },
       { id: "comparecimento-v", nome: "Comparecimento", f: "v" },
       { id: "lideranca-v", nome: "Liderança por estado", f: "v" },
-      { id: "abstencao-v", nome: "Abstenção, brancos e nulos", f: "v" }
+      { id: "abstencao-v", nome: "Abstenção, brancos e nulos", f: "v" },
+      { id: "abstencao-mapa-v", nome: "Mapa da abstenção", f: "v" }
     ],
     desenhar: function (id) { return G[id] ? G[id]() : null; },
     ajustarSelos: ajustarSelos,
