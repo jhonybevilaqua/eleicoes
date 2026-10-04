@@ -10,8 +10,8 @@
 
   var C = {
     fundo: "#0b1220", texto: "#ffffff", apagado: "#8ea3bd", apagado2: "#6b7f99",
-    trilho: "#283548", painel: "#121b2b", vermelho: "#d03b3b", verde: "#0ca30c",
-    destaque: "#2f8fdd", neutro: "#4d6282"
+    trilho: "#283548", painel: "#121b2b", vermelho: "#d03b3b", verde: "#16b216",
+    destaque: "#2b84ff", neutro: "#7398cf"
   };
   var FONTE = "'Segoe UI', 'DejaVu Sans', Arial, sans-serif";
   var NOMES = {

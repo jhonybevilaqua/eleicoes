@@ -10,8 +10,8 @@
 
   var C = {
     fundo: "#0b1220", texto: "#ffffff", apagado: "#8ea3bd", apagado2: "#6b7f99",
-    trilho: "#283548", painel: "#121b2b", vermelho: "#d03b3b", verde: "#0ca30c",
-    azul: "#2f8fdd", neutro: "#4d6282", vazio: "#283548"
+    trilho: "#283548", painel: "#121b2b", vermelho: "#d03b3b", verde: "#16b216",
+    azul: "#2b84ff", neutro: "#7398cf", vazio: "#283548"
   };
   var FONTE = "'Segoe UI', 'DejaVu Sans', Arial, sans-serif";
   var UFS = ["ac", "al", "ap", "am", "ba", "ce", "df", "es", "go", "ma", "mt", "ms", "mg", "pa",

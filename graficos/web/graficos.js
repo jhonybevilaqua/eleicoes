@@ -5,12 +5,12 @@
 
   // Paleta categorica validada contra o fundo #0b1220 (8 cores; as 3
   // primeiras passam tambem comparando todas contra todas - as do mapa).
-  var PALETA = ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300", "#9085e9", "#e66767"];
+  var PALETA = ["#2b84ff", "#ef5b16", "#00aa76", "#c98400", "#e8478a", "#159c15", "#9078ff", "#f05252"];
   var C = {
     fundo: "#0b1220", texto: "#ffffff", apagado: "#8ea3bd", apagado2: "#6b7f99",
-    trilho: "#283548", linha: "#1f2b3c", vermelho: "#d03b3b", verde: "#0ca30c",
-    destaque: "#2f8fdd", validos: "#4d6282", brancos: "#dfe6f2", nulos: "#e8964a",
-    abstencao: "#6b7688", comparec: "#3987e5", semDado: "#6b7688", outros: "#6b7688"
+    trilho: "#283548", linha: "#1f2b3c", vermelho: "#d03b3b", verde: "#16b216",
+    destaque: "#2b84ff", validos: "#7398cf", brancos: "#dfe6f2", nulos: "#e8964a",
+    abstencao: "#7f8ca3", comparec: "#2b84ff", semDado: "#6b7688", outros: "#7f8ca3"
   };
   var FONTE = "'Segoe UI', 'DejaVu Sans', Arial, sans-serif";
 
@@ -492,11 +492,12 @@
 
   // MAPA DA ABSTENCAO: cada estado pela % de eleitores que nao votaram.
   // Faixas FIXAS (a cor de um estado so muda se o numero dele mudar de
-  // faixa); um so tom, do claro (pouca) ao forte (muita abstencao).
+  // faixa); um so tom. No fundo escuro, mais abstencao = mais claro e
+  // forte (o tom mais escuro ainda aparece contra o azul do fundo).
   var FAIXAS_ABST = [
-    { ate: 15, cor: "#f3d9a8", rot: "até 15%" }, { ate: 18, cor: "#e9b45c", rot: "15 a 18%" },
-    { ate: 21, cor: "#d68f27", rot: "18 a 21%" }, { ate: 24, cor: "#a8641a", rot: "21 a 24%" },
-    { ate: 999, cor: "#6e3b0e", rot: "acima de 24%" }
+    { ate: 15, cor: "#8a5516", rot: "até 15%" }, { ate: 18, cor: "#b8741c", rot: "15 a 18%" },
+    { ate: 21, cor: "#d9922a", rot: "18 a 21%" }, { ate: 24, cor: "#f0b44e", rot: "21 a 24%" },
+    { ate: 999, cor: "#ffd98c", rot: "acima de 24%" }
   ];
   function corAbst(p) {
     if (p == null || !(p > 0)) return C.semDado;
