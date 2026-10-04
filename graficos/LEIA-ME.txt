@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 1.8 - apuracao de PRESIDENTE em graficos
+ gctse GRAFICOS 1.9 - apuracao de PRESIDENTE em graficos
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -219,5 +219,5 @@
 
    Dados: TSE - Divulgacao de Resultados (resultados.tse.jus.br).
    Mapa: @svg-maps/brazil, de Victor Cazanave, licenca CC BY 4.0
-   (web\MAPA-LICENCA-CC-BY-4.0.md). O credito aparece nos graficos com
-   mapa e deve permanecer.
+   (web\MAPA-LICENCA-CC-BY-4.0.md). Nas telas aparece so "Fonte: TSE";
+   o credito do mapa fica registrado aqui e no arquivo de licenca.

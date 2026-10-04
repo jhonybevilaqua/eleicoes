@@ -146,7 +146,7 @@
       });
       if (seg.length) o += t(30, 918, "2º turno: " + seg.join(", "), { s: 15, b: true, c: "#5fb0f0", max: W - 60 });
     }
-    o += rodape(v, W, H, "Fonte: TSE · Malha: @svg-maps/brazil (Victor Cazanave), CC BY 4.0");
+    o += rodape(v, W, H, "Fonte: TSE");
     return svg(W, H, o);
   }
 

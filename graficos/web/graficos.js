@@ -301,7 +301,6 @@
       }
     }
     o += t(73, 690, "Fonte: TSE — Divulgação de Resultados", { s: 14, c: C.apagado2 });
-    o += t(1207, 690, "Malha: @svg-maps/brazil (Victor Cazanave), CC BY 4.0", { s: 12, c: C.apagado2, a: "end" });
     return svg(W, H, o);
   };
 
@@ -326,7 +325,7 @@
     o += mapa(75, 112, 0.81, { fonte: 16, sub: true, chamadas: true });
     o += t(807, 147, "ESTADOS POR PARTIDO", { s: 18, b: true, c: C.apagado, ls: 2 });
     o += listaPartidos(807, 190, 400, 58, 7);
-    o += t(73, 700, "Malha: @svg-maps/brazil (Victor Cazanave), CC BY 4.0", { s: 12, c: C.apagado2 });
+    o += t(73, 690, "Fonte: TSE — Divulgação de Resultados", { s: 14, c: C.apagado2 });
     return svg(W, H, o);
   };
 
@@ -401,7 +400,6 @@
     o += mapa(35, 175, 0.767, { fonte: 13, semPequenos: true });
     o += t(35, 722, "ESTADOS POR PARTIDO", { s: 16, c: C.apagado, ls: 2 });
     o += listaPartidos(35, 762, 470, 48, 3);
-    o += t(505, 932, "Malha: @svg-maps/brazil (Victor Cazanave), CC BY 4.0", { s: 10, c: C.apagado2, a: "end" });
     return svg(W, H, o + RODAPE_V());
   };
 
