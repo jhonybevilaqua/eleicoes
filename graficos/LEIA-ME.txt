@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 2.0 - apuracao de PRESIDENTE em graficos
+ gctse GRAFICOS 2.0.1 - apuracao de PRESIDENTE em graficos
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -100,6 +100,15 @@
    No switcher (vMix/OBS) tambem da para usar a apresentacao como fonte
    de navegador: web\apresentacao-horizontal.html (1920x1080) ou
    web\apresentacao-vertical.html (1080x1920).
+
+---------------------------------------------------------------------------
+ SAIDAS SDI DA DECKLINK (maquina sem monitor nas saidas)
+---------------------------------------------------------------------------
+
+   A DeckLink nao e monitor do Windows. Para levar as telas as saidas
+   SDI (ex.: maquina do NEO Express): OBS Studio, um por saida. Passo a
+   passo em OBS-DECKLINK.txt; ENDERECOS-OBS.bat da os enderecos das telas;
+   ABRIR-OBS-SAIDA1.bat / ABRIR-OBS-SAIDA2.bat abrem cada OBS.
 
 ---------------------------------------------------------------------------
  PREPARAR O WINDOWS (uma vez em cada maquina que vai ao ar)
