@@ -3,7 +3,7 @@ title gctse GERENCIADOR - deixe esta janela aberta
 rem Tela de gerenciamento das saidas (DeckLink via OBS):
 rem   - abre a coleta de Presidente (GRAFICOS.bat) e a dos estados
 rem     (ESTADOS.bat) se nao estiverem rodando
-rem   - abre os dois OBS (saida 1 e saida 2), se instalados
+rem   - abre os dois OBS (saida horizontal e vertical), sozinho
 rem   - liga o servidor do gerenciador (esta janela) e abre a pagina
 rem     http://localhost:8098/gerenciador.html
 cd /d "%~dp0"
@@ -20,9 +20,10 @@ echo Abrindo a coleta dos estados - ESTADOS.bat
 start "gctse ESTADOS" "%~dp0ESTADOS.bat"
 
 :servidor
-rem Os dois OBS (um por saida da DeckLink), se instalados - ver OBS-DECKLINK.txt.
-rem Abrem 6 s DEPOIS do servidor: OBS aberto antes dele mostraria erro na fonte.
-start "gctse abrindo OBS" /min cmd /c "timeout /t 6 /nobreak >nul & call "%~dp0ABRIR-OBS-SAIDA1.bat" auto & call "%~dp0ABRIR-OBS-SAIDA2.bat" auto"
+rem Os dois OBS (um por saida da DeckLink), automatico - ver OBS-DECKLINK.txt:
+rem usa o OBS instalado, monta as copias e a configuracao na 1a vez e abre
+rem os dois quando o servidor responder.
+start "gctse OBS das saidas" powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0obs-saidas.ps1" -Auto
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0gerenciador.ps1" -AbrirPagina
 :loop
 echo.

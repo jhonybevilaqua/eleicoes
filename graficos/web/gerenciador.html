@@ -4,43 +4,57 @@
 <meta charset="utf-8">
 <title>gctse GERENCIADOR</title>
 <style>
-  :root { --fundo: #0b1220; --cartao: #131c2c; --linha: #22304a; --texto: #fff; --apagado: #8ea3bd; --azul: #2f8fdd; --verde: #0ca30c; --verm: #d03b3b; }
+  /* Tema CLARO (padrao). O botao "tema escuro" no alto troca e fica lembrado. */
+  :root { --fundo: #eef2f7; --cartao: #ffffff; --linha: #d3dbe6; --texto: #14202e; --apagado: #5a6b80; --link: #1f6fc0;
+          --bt: #f4f7fb; --bt-borda: #c3cedb; --bt-texto: #14202e; --bt-hover: #e3eaf3;
+          --azul: #1f6fc0; --azul-borda: #1a5a9c; --verde: #128a12; --verde-borda: #0c6b0c; --verm: #c62828; --verm-borda: #9e1f1f;
+          --ok-f: #e2f4e2; --ok-t: #11621a; --ruim-f: #fde4e4; --ruim-t: #9e1f1f; --neutro-f: #e8edf3; --neutro-t: #5a6b80;
+          --sombra: 0 1px 3px rgba(20, 32, 46, .12); }
+  :root.escuro { --fundo: #0b1220; --cartao: #131c2c; --linha: #22304a; --texto: #fff; --apagado: #8ea3bd; --link: #7fb8ff;
+          --bt: #22314a; --bt-borda: #2c3f5e; --bt-texto: #fff; --bt-hover: #2b3e5d;
+          --azul: #2f8fdd; --azul-borda: #7fb8ff; --verde: #0ca30c; --verde-borda: #6be06b; --verm: #d03b3b; --verm-borda: #ff7a7a;
+          --ok-f: #10301a; --ok-t: #7ee07e; --ruim-f: #3a1212; --ruim-t: #ffb3b3; --neutro-f: #1b2433; --neutro-t: #8ea3bd;
+          --sombra: none; }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--fundo); color: var(--texto); font: 15px 'Segoe UI', Arial, sans-serif; }
   header { display: flex; align-items: baseline; gap: 16px; padding: 14px 20px 6px; flex-wrap: wrap; }
   h1 { margin: 0; font-size: 21px; }
-  header a { color: #7fb8ff; font-size: 14px; }
+  header a { color: var(--link); font-size: 14px; }
+  header .tema { margin-left: auto; padding: 5px 10px; font-size: 13px; }
   #status { display: flex; gap: 10px; padding: 4px 20px 10px; flex-wrap: wrap; }
   .st { padding: 6px 12px; border-radius: 5px; font-weight: 700; font-size: 13px; }
-  .ok { background: #10301a; color: #7ee07e; } .ruim { background: #3a1212; color: #ffb3b3; } .neutro { background: #1b2433; color: var(--apagado); }
+  .st[hidden] { display: none; }
+  .ok { background: var(--ok-f); color: var(--ok-t); } .ruim { background: var(--ruim-f); color: var(--ruim-t); } .neutro { background: var(--neutro-f); color: var(--neutro-t); }
   main { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 0 20px 20px; }
   @media (max-width: 1100px) { main { grid-template-columns: 1fr; } }
-  .col { background: var(--cartao); border-radius: 8px; padding: 14px; }
+  .col { background: var(--cartao); border: 1px solid var(--linha); border-radius: 8px; padding: 14px; box-shadow: var(--sombra); }
   .col h2 { margin: 0; font-size: 18px; letter-spacing: 1px; }
   .col .sub { color: var(--apagado); font-size: 13px; margin: 2px 0 10px; }
   .noar { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-  .noar b { background: var(--verm); padding: 3px 10px; border-radius: 4px; font-size: 13px; letter-spacing: 1px; }
+  .noar b { background: var(--verm); color: #fff; padding: 3px 10px; border-radius: 4px; font-size: 13px; letter-spacing: 1px; }
   .noar span { font-size: 17px; font-weight: 700; }
   .previa { position: relative; background: #000; border-radius: 6px; overflow: hidden; margin-bottom: 12px; }
   .previa iframe { position: absolute; top: 0; left: 0; border: 0; transform-origin: 0 0; pointer-events: none; }
   .grupo { color: var(--apagado); font-size: 12px; font-weight: 700; letter-spacing: 1px; margin: 10px 0 6px; }
   .botoes { display: flex; flex-wrap: wrap; gap: 6px; }
-  button { background: #22314a; color: #fff; border: 1px solid #2c3f5e; border-radius: 6px; padding: 9px 12px; font: 600 14px 'Segoe UI', Arial, sans-serif; cursor: pointer; }
-  button:hover { background: #2b3e5d; }
-  button.ativo { background: var(--verm); border-color: #ff7a7a; }
+  button { background: var(--bt); color: var(--bt-texto); border: 1px solid var(--bt-borda); border-radius: 6px; padding: 9px 12px; font: 600 14px 'Segoe UI', Arial, sans-serif; cursor: pointer; }
+  button:hover { background: var(--bt-hover); }
+  button.ativo, button.ativo:hover { background: var(--verm); border-color: var(--verm-borda); color: #fff; }
   .controle { margin-top: 12px; padding: 10px; border: 1px solid var(--linha); border-radius: 6px; display: none; }
   .controle.on { display: block; }
   .controle .linha { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
   .controle .uf button { width: 52px; padding: 7px 0; }
-  .controle .uf button.ativo, .controle .tl button.ativo { background: var(--azul); border-color: #7fb8ff; }
-  button.auto.ligado { background: var(--verde); border-color: #6be06b; }
+  .controle .uf button.ativo, .controle .tl button.ativo, .girar button.ativo { background: var(--azul); border-color: var(--azul-borda); color: #fff; }
+  button.auto.ligado, button.auto.ligado:hover { background: var(--verde); border-color: var(--verde-borda); color: #fff; }
   .dica { color: var(--apagado); font-size: 12px; margin-top: 6px; }
 </style>
+<script>try { if (localStorage.getItem("gctse-tema") === "escuro") document.documentElement.className = "escuro"; } catch (e) { }</script>
 </head>
 <body>
 <header><h1>gctse — GERENCIADOR DAS SAÍDAS</h1>
-  <a href="index.html" target="_blank">situação completa, avisos de virada e cores ↗</a></header>
-<div id="status"><span class="st neutro" id="stP">Presidente: …</span><span class="st neutro" id="stE">Estados: …</span><span class="st neutro" id="stG">Gerenciador: …</span></div>
+  <a href="index.html" target="_blank">situação completa, avisos de virada e cores ↗</a>
+  <button class="tema" id="tema" type="button">tema escuro</button></header>
+<div id="status"><span class="st neutro" id="stP">Presidente: …</span><span class="st neutro" id="stE">Estados: …</span><span class="st neutro" id="stG">Gerenciador: …</span><span class="st neutro" id="stOh" hidden></span><span class="st neutro" id="stOv" hidden></span></div>
 <main id="colunas"></main>
 
 <script charset="utf-8" src="giro-config.js"></script>
@@ -56,8 +70,8 @@
   var RESUMO = ["Mapa dos governadores", "Governadores por partido", "Senado por partido", "Presidente por região",
                 "Comparecimento", "Estado em destaque", "2026 × 2022"];
   var SAIDAS = [
-    { id: "h", nome: "SAÍDA HORIZONTAL", sub: "OBS da saída 1 → canal da DeckLink escolhido no OBS · 1920×1080", W: 1920, H: 1080, f: "h" },
-    { id: "v", nome: "SAÍDA VERTICAL", sub: "OBS da saída 2 → canal da DeckLink escolhido no OBS · 1080×1920 (girada no OBS)", W: 1080, H: 1920, f: "v" }
+    { id: "h", nome: "SAÍDA HORIZONTAL", sub: "OBS SAIDA-HORIZONTAL → canal da DeckLink escolhido nele · 1920×1080", W: 1920, H: 1080, f: "h" },
+    { id: "v", nome: "SAÍDA VERTICAL", sub: "OBS SAIDA-VERTICAL → canal da DeckLink escolhido nele · tela 1080×1920 girada no quadro 1920×1080", W: 1080, H: 1920, f: "v" }
   ];
   var estado = null, autoTimer = { h: null, v: null };
 
@@ -106,7 +120,10 @@
     col.innerHTML = '<h2>' + S.nome + '</h2><div class="sub">' + S.sub + '</div>' +
       '<div class="noar"><b>NO AR</b><span class="tela">…</span></div>' +
       '<div class="previa" style="aspect-ratio:' + S.W + '/' + S.H + (S.f === "v" ? ';max-width:42%' : '') + '">' +
-      '<iframe src="saida.html?saida=' + S.id + '" width="' + S.W + '" height="' + S.H + '"></iframe></div>';
+      '<iframe src="saida.html?saida=' + S.id + '" width="' + S.W + '" height="' + S.H + '"></iframe></div>' +
+      (S.id === "v" ? '<div class="grupo">GIRO DA TELA NA SAÍDA SDI (monitor em pé)</div><div class="botoes girar">' +
+        '<button data-g="90">↻ 90° horário</button><button data-g="-90">↺ 90° anti-horário</button><button data-g="0">sem girar</button></div>' +
+        '<div class="dica">Imagem de cabeça para baixo no monitor em pé? Clique no outro sentido.</div>' : '');
     function grupo(titulo, itens) {
       var g = document.createElement("div"); g.innerHTML = '<div class="grupo">' + titulo + '</div>';
       var bx = document.createElement("div"); bx.className = "botoes";
@@ -135,6 +152,7 @@
     ctl.appendChild(dica);
     col.appendChild(ctl);
     cols.appendChild(col);
+    col.querySelectorAll(".girar button").forEach(function (b) { b.onclick = function () { pedir("/girar?graus=" + b.dataset.g); }; });
     var q = col.querySelector(".previa"), f = q.querySelector("iframe");
     function escala() { f.style.transform = "scale(" + (q.clientWidth / S.W) + ")"; }
     new ResizeObserver(escala).observe(q); escala();
@@ -149,7 +167,8 @@
       if (e.tela === "giro" && pos.uf) txt += " — " + pos.uf.toUpperCase();
       if (e.tela === "resumo" && pos.tela) txt += " — " + pos.tela + ". " + RESUMO[pos.tela - 1];
       col.querySelector(".noar .tela").textContent = txt + (e.quando ? "  (desde " + e.quando + ")" : "");
-      col.querySelectorAll(".botoes button").forEach(function (b) { b.classList.toggle("ativo", b.dataset.k === e.tela); });
+      col.querySelectorAll(".botoes button[data-k]").forEach(function (b) { b.classList.toggle("ativo", b.dataset.k === e.tela); });
+      col.querySelectorAll(".girar button").forEach(function (b) { b.classList.toggle("ativo", String(estado.girar_v) === b.dataset.g); });
       var ctl = col.querySelector(".controle");
       ctl.classList.toggle("on", e.tela === "giro" || e.tela === "resumo");
       ctl.querySelector(".uf").style.display = e.tela === "giro" ? "flex" : "none";
@@ -179,12 +198,32 @@
     sc.onload = function () { sc.remove(); situacao(); }; sc.onerror = function () { sc.remove(); };
     document.head.appendChild(sc);
   }
+  // Situacao dos dois OBS automaticos (obs-saidas.ps1).
+  function situacaoObs() {
+    var o = (estado && estado.obs) || {};
+    [["h", "stOh", "OBS HORIZONTAL"], ["v", "stOv", "OBS VERTICAL"]].forEach(function (x) {
+      var el = document.getElementById(x[1]), st = o[x[0]] || "";
+      el.hidden = !st;
+      if (st === "ok") { el.className = "st ok"; el.textContent = x[2] + ": no ar"; }
+      else if (st === "sem-decklink") { el.className = "st ruim"; el.textContent = x[2] + ": escolher o canal (Ferramentas › Saída DeckLink)"; }
+      else if (st === "fechado") { el.className = "st ruim"; el.textContent = x[2] + ": FECHADO — ABRIR-OBS.bat"; }
+    });
+  }
   function lerEstado() {
     var g = document.getElementById("stG");
     fetch("/estado?t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.json(); })
-      .then(function (e) { estado = e; pintar(); g.className = "st ok"; g.textContent = "Gerenciador: no ar"; })
+      .then(function (e) { estado = e; pintar(); g.className = "st ok"; g.textContent = "Gerenciador: no ar"; situacaoObs(); })
       .catch(function () { g.className = "st ruim"; g.textContent = "Gerenciador: SEM CONEXÃO — a janela do GERENCIADOR fechou?"; });
   }
+  var bTema = document.getElementById("tema");
+  function nomeTema() { bTema.textContent = document.documentElement.className === "escuro" ? "tema claro" : "tema escuro"; }
+  bTema.onclick = function () {
+    var esc = document.documentElement.className !== "escuro";
+    document.documentElement.className = esc ? "escuro" : "";
+    try { localStorage.setItem("gctse-tema", esc ? "escuro" : "claro"); } catch (e) { }
+    nomeTema();
+  };
+  nomeTema();
   situacao(); lerEstado();
   setInterval(lerEstado, 1500);
   setInterval(function () { recarregar("dados.js"); recarregar("estados.js"); }, 3000);

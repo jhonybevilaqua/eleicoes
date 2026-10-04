@@ -8,6 +8,9 @@
   },
   "intervalo_segundos": 20,
   "intervalo_estados_segundos": 30,
+  "_comentario_obs": "OBS automatico das saidas DeckLink (GERENCIADOR.bat). obs_fps: 29.97 = 1080i59.94 | 59.94 = 1080p59.94. girar_saida_vertical: 90 ou -90 (o sentido tambem troca por botao no gerenciador).",
+  "obs_fps": "29.97",
+  "girar_saida_vertical": 90,
   "_comentario_cores": "Cor de cada candidato nos graficos e no mapa. Chave = numero de urna OU sigla do partido, valor = #rrggbb. Vazio: cada candidato recebe uma cor fixa da paleta pela ordem do numero (nao muda durante a noite).",
   "cores": {}
 }

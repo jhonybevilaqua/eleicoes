@@ -5,22 +5,39 @@
 <title>SAIDA</title>
 <style>
   html, body { margin: 0; width: 100%; height: 100%; background: #0b1220; overflow: hidden; cursor: none; }
-  iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; opacity: 0; transition: opacity .4s ease-in-out; pointer-events: none; }
+  #palco { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+  /* OBS da saida vertical (?obs=1): fonte 1920x1080; a tela em pe
+     (1080x1920) vai girada dentro dela - o OBS nao precisa girar nada. */
+  #palco.em-pe { left: 50%; top: 50%; width: 100vh; height: 100vw; }
+  #palco.g90 { transform: translate(-50%, -50%) rotate(90deg); }
+  #palco.gm90 { transform: translate(-50%, -50%) rotate(-90deg); }
+  #palco.g0 { transform: translate(-50%, -50%) scale(0.5625); }
+  iframe { position: absolute; left: 0; top: 0; width: 100%; height: 100%; border: 0; opacity: 0; transition: opacity .4s ease-in-out; pointer-events: none; }
   iframe.on { opacity: 1; }
 </style>
 </head>
 <body>
-<iframe id="f0" title="saida"></iframe><iframe id="f1" title="saida"></iframe>
+<div id="palco"><iframe id="f0" title="saida"></iframe><iframe id="f1" title="saida"></iframe></div>
 <script>
 // Saida de uma DeckLink (pelo OBS): mostra o que o operador escolheu no
 // GERENCIADOR. ?saida=h (horizontal, fonte 1920x1080) ou ?saida=v (vertical,
-// fonte 1080x1920). Le /estado do gerenciador a cada 0,7 s.
+// fonte 1080x1920; no OBS automatico: ?saida=v&obs=1, fonte 1920x1080 ja
+// girada). Le /estado do gerenciador a cada 0,7 s.
 (function () {
   "use strict";
   var q = new URLSearchParams(location.search);
   var saida = q.get("saida") === "v" ? "v" : "h";
   var sufixo = saida === "v" ? "vertical" : "horizontal";
   var quadros = [document.getElementById("f0"), document.getElementById("f1")];
+  var palco = document.getElementById("palco"), noObs = saida === "v" && q.get("obs") === "1", giro = null;
+
+  // Saida vertical no OBS: gira conforme o botao do gerenciador.
+  function girar(g) {
+    if (!noObs || g === giro) return;
+    giro = g;
+    palco.className = "em-pe " + (g === -90 ? "gm90" : g === 0 ? "g0" : "g90");
+  }
+  if (noObs) girar(90);
   var visivel = -1, seqAtual = null, aseqAtual = null, telaAtual = "";
 
   // A posicao do giro/resumo vai na URL: a tela ja abre no estado / na tela
@@ -67,6 +84,7 @@
 
   function ler() {
     fetch("/estado?t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (e) {
+      if (typeof e.girar_v === "number") girar(e.girar_v);
       var s = e[saida];
       if (!s) return;
       if (s.seq !== seqAtual) { seqAtual = s.seq; aseqAtual = s.aseq; trocar(s.tela, s.acao); return; }

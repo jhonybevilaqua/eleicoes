@@ -48,13 +48,18 @@ function Escrever-Log {
     } catch { }
 }
 
-if ($Porta -le 0) {
-    $Porta = 8098
-    try {
-        $cfg = Get-Content "config-graficos.json" -Raw -Encoding UTF8 | ConvertFrom-Json
-        foreach ($p in $cfg.PSObject.Properties) { if ($p.Name -eq "porta_gerenciador" -and [int] $p.Value -gt 0) { $Porta = [int] $p.Value } }
-    } catch { }
-}
+$PortaCfg = 8098
+# Saida VERTICAL no OBS: a tela em pe vai girada dentro do quadro 1920x1080
+# (90 = horario, -90 = anti-horario, 0 = sem girar). Trocavel na pagina.
+$GirarPadrao = 90
+try {
+    $cfg = Get-Content "config-graficos.json" -Raw -Encoding UTF8 | ConvertFrom-Json
+    foreach ($p in $cfg.PSObject.Properties) {
+        if ($p.Name -eq "porta_gerenciador" -and [int] $p.Value -gt 0) { $PortaCfg = [int] $p.Value }
+        if ($p.Name -eq "girar_saida_vertical" -and @(90, -90, 0) -contains [int] $p.Value) { $GirarPadrao = [int] $p.Value }
+    }
+} catch { }
+if ($Porta -le 0) { $Porta = $PortaCfg }
 
 # ------------------------------------------------------- o que esta no ar
 # h = saida horizontal, v = saida vertical. tela = o que mostrar; seq muda a
@@ -67,6 +72,8 @@ function Estado-Padrao {
     return [ordered]@{
         h = [ordered]@{ tela = "apresentacao"; seq = 1; acao = ""; aseq = 0; quando = "" }
         v = [ordered]@{ tela = "apresentacao"; seq = 1; acao = ""; aseq = 0; quando = "" }
+        girar_v = $GirarPadrao
+        obs = [ordered]@{ h = ""; v = "" }
     }
 }
 $script:Estado = Estado-Padrao
@@ -81,11 +88,42 @@ if (Test-Path $ArqEstado) {
                 if ("$($x.acao)" -match '^[a-z0-9:-]{1,30}$') { $script:Estado[$s].acao = "$($x.acao)" }
             }
         }
+        foreach ($p in $lido.PSObject.Properties) {
+            if ($p.Name -eq "girar_v" -and @(90, -90, 0) -contains [int] $p.Value) { $script:Estado.girar_v = [int] $p.Value }
+        }
     } catch { $script:Estado = Estado-Padrao }
 }
 function Salvar-Estado {
     try {
         [IO.File]::WriteAllText($ArqEstado, ($script:Estado | ConvertTo-Json -Depth 4), (New-Object System.Text.UTF8Encoding($false)))
+    } catch { }
+}
+
+# Situacao dos dois OBS (obs-saidas.json e gravado pelo obs-saidas.ps1):
+# "" = sem OBS automatico | fechado | sem-decklink (canal nao escolhido) | ok
+$ArqObs = Join-Path $Raiz "obs-saidas.json"
+$script:ObsChecado = [datetime]::MinValue
+function Checar-Obs {
+    if (((Get-Date) - $script:ObsChecado).TotalSeconds -lt 5) { return }
+    $script:ObsChecado = Get-Date
+    try {
+        if (-not (Test-Path $ArqObs)) { return }
+        $info = Get-Content $ArqObs -Raw -Encoding UTF8 | ConvertFrom-Json
+        $abertos = @()
+        foreach ($pr in @(Get-Process -Name obs64 -ErrorAction SilentlyContinue)) { try { if ($pr.Path) { $abertos += $pr.Path } } catch { } }
+        foreach ($s in @("h", "v")) {
+            $x = $null
+            foreach ($p in $info.PSObject.Properties) { if ($p.Name -eq $s) { $x = $p.Value } }
+            if ($null -eq $x -or -not $x.instalado) { $script:Estado.obs[$s] = ""; continue }
+            $exe = "$($x.exe)"
+            $aberto = @($abertos | Where-Object { [string]::Equals($_, $exe, [StringComparison]::OrdinalIgnoreCase) }).Count -gt 0
+            $dl = Join-Path (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $exe))) "config\obs-studio\plugin_config\decklink-output-ui\decklinkOutputProps.json"
+            $escolhida = $false
+            try { if (Test-Path $dl) { $escolhida = ((Get-Content $dl -Raw) -match '"auto_start"\s*:\s*true') } } catch { }
+            if (-not $aberto) { $script:Estado.obs[$s] = "fechado" }
+            elseif (-not $escolhida) { $script:Estado.obs[$s] = "sem-decklink" }
+            else { $script:Estado.obs[$s] = "ok" }
+        }
     } catch { }
 }
 
@@ -139,7 +177,7 @@ try {
 
 Escrever-Log "gctse GERENCIADOR no ar: http://localhost:$Porta/gerenciador.html" "Green"
 Escrever-Log "OBS da saida HORIZONTAL: http://localhost:$Porta/saida.html?saida=h  (fonte Navegador 1920x1080)" "Cyan"
-Escrever-Log "OBS da saida VERTICAL:   http://localhost:$Porta/saida.html?saida=v  (fonte Navegador 1080x1920)" "Cyan"
+Escrever-Log "OBS da saida VERTICAL:   http://localhost:$Porta/saida.html?saida=v&obs=1  (fonte Navegador 1920x1080, ja girada)" "Cyan"
 Escrever-Log ("no ar agora: horizontal = {0} | vertical = {1}" -f $script:Estado.h.tela, $script:Estado.v.tela)
 Write-Host ""
 Write-Host "  Deixe esta janela ABERTA: sem ela as saidas param de trocar." -ForegroundColor Yellow
@@ -154,7 +192,20 @@ while ($ouvinte.IsListening) {
         $caminho = $req.Url.AbsolutePath
 
         if ($caminho -eq "/estado") {
+            Checar-Obs
             Responder-Json $ctx $script:Estado
+        }
+        elseif ($caminho -eq "/girar") {
+            # Como a tela VERTICAL vai girada na saida do OBS.
+            $g = "$($req.QueryString['graus'])"
+            if (@("90", "-90", "0") -contains $g) {
+                $script:Estado.girar_v = [int] $g
+                Salvar-Estado
+                Escrever-Log ("saida VERTICAL no OBS: girar {0}" -f $g) "Green"
+                Responder-Json $ctx $script:Estado
+            } else {
+                Responder $ctx 400 "text/plain; charset=utf-8" ([Text.Encoding]::UTF8.GetBytes("pedido invalido"))
+            }
         }
         elseif ($caminho -eq "/definir") {
             # Troca o que vai ao ar numa saida.

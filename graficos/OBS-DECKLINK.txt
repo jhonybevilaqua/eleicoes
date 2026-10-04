@@ -1,98 +1,78 @@
 ===========================================================================
- gctse GRAFICOS - GERENCIADOR + SAIDAS SDI DA DECKLINK (via OBS Studio)
+ gctse GRAFICOS - GERENCIADOR + SAIDAS SDI DA DECKLINK (OBS AUTOMATICO)
 ===========================================================================
 
  COMO FUNCIONA
-   - O operador usa a TELA DE GERENCIAMENTO (Chrome, monitor do Windows):
-     duas colunas, SAIDA HORIZONTAL e SAIDA VERTICAL. Clicou numa tela,
-     ela vai NA HORA para a saida. Previa ao vivo de cada saida.
-   - Cada saida SDI da DeckLink tem um OBS so de "ponte": uma unica
-     fonte que mostra o que o gerenciador mandou. O OBS e configurado
-     UMA vez (incluindo QUAL CANAL da DeckLink) e ninguem mexe mais.
+   - O operador usa a TELA DE GERENCIAMENTO (navegador, monitor do
+     Windows): duas colunas, SAIDA HORIZONTAL e SAIDA VERTICAL. Clicou
+     numa tela, ela vai NA HORA para a saida. Previa ao vivo de cada uma.
+   - Cada saida SDI da DeckLink tem um OBS so de "ponte". O GERENCIADOR.bat
+     monta e abre os dois SOZINHO, a partir do OBS ja instalado na maquina:
 
-   SAIDA HORIZONTAL -> OBS-SAIDA1 -> canal da DeckLink escolhido no OBS
-   SAIDA VERTICAL   -> OBS-SAIDA2 -> canal da DeckLink escolhido no OBS
-                       (girada 90 graus dentro do quadro 1920x1080; o
-                        monitor virado na ponta mostra em pe)
+   SAIDA HORIZONTAL -> OBS "SAIDA-HORIZONTAL" -> canal da DeckLink
+   SAIDA VERTICAL   -> OBS "SAIDA-VERTICAL"   -> canal da DeckLink
+                       (a tela em pe vai girada dentro do quadro 1920x1080;
+                        o monitor virado na ponta mostra em pe)
 
  ANTES DE TUDO
-   - FECHE O NEO EXPRESS (saida da DeckLink so pode ser de um programa
-     por vez).
-   - Formato da mesa (ex.: 1080i 59.94): as duas saidas nesse formato.
+   - FECHE O NEO EXPRESS (a DeckLink so pode ser de um programa por vez).
+   - O OBS Studio precisa estar INSTALADO (o normal, em Arquivos de
+     Programas). Nao precisa extrair nada nem criar pasta.
 
 ---------------------------------------------------------------------------
- 1. INSTALAR O OBS (uma vez)
----------------------------------------------------------------------------
-
-   a) obsproject.com > Download > Windows > versao ZIP.
-   b) Extraia o ZIP DUAS vezes:  D:\OBS-SAIDA1   e   D:\OBS-SAIDA2
-      (dentro de cada uma: bin\64bit\obs64.exe).
-      Outra pasta? Edite a linha set "OBS=..." do ABRIR-OBS-SAIDA1.bat e
-      do ABRIR-OBS-SAIDA2.bat (Bloco de Notas).
-   c) Duplo clique no GERENCIADOR.bat (liga o servidor e a pagina) e
-      depois nos ABRIR-OBS-SAIDA1.bat e ABRIR-OBS-SAIDA2.bat.
-      Assistente de configuracao automatica do OBS: Cancelar.
-
----------------------------------------------------------------------------
- 2. CONFIGURAR O OBS-SAIDA1 (HORIZONTAL) - uma vez
----------------------------------------------------------------------------
-
-   a) Configuracoes > Video: base 1920x1080, saida 1920x1080, FPS = o da
-      mesa (29.97 para 1080i59.94; 59.94 para 1080p59.94).
-   b) Mixer: SILENCIE "Audio do desktop" e "Mic/Aux".
-   c) Fontes > + > Navegador > OK:
-        - DESMARQUE "Arquivo local"
-        - URL:  http://localhost:8098/saida.html?saida=h
-        - Largura 1920, Altura 1080
-        - DESMARQUE "Desligar a fonte quando nao estiver visivel"
-        - OK
-   d) Ferramentas > Saida DeckLink (Decklink Output) > Saida de programa:
-        Dispositivo = O CANAL DA DECKLINK DA SAIDA HORIZONTAL
-        Modo = formato da mesa;  marque "Iniciar automaticamente";
-        INICIAR.
-
----------------------------------------------------------------------------
- 3. CONFIGURAR O OBS-SAIDA2 (VERTICAL) - uma vez
----------------------------------------------------------------------------
-
-   Igual ao passo 2, com:
-   - URL:  http://localhost:8098/saida.html?saida=v
-   - Largura 1080, Altura 1920
-   - depois de criar a fonte: botao direito > Transformar > Girar 90
-     graus no sentido horario; botao direito > Transformar > Ajustar a
-     tela (Ctrl+F). De cabeca para baixo na ponta? Use "anti-horario".
-   - Saida DeckLink: Dispositivo = O CANAL DA DECKLINK DA SAIDA VERTICAL.
-
-   (O ENDERECOS-OBS.bat mostra estes dois enderecos, com a porta certa.)
-
----------------------------------------------------------------------------
- 4. NO DIA - UM DUPLO CLIQUE
+ 1. ABRIR - UM DUPLO CLIQUE
 ---------------------------------------------------------------------------
 
    GERENCIADOR.bat abre tudo:
      - a coleta de Presidente (GRAFICOS.bat) e dos estados (ESTADOS.bat)
      - o servidor do gerenciador (janela preta: deixe ABERTA)
      - a pagina de gerenciamento no navegador
-     - os dois OBS, 6 s depois (se estiverem em D:\OBS-SAIDA1 e 2)
-   O OBS lembra a configuracao e liga a saida DeckLink sozinho
-   ("Iniciar automaticamente").
-
-   O operador so usa a pagina de gerenciamento:
-     - clicar numa tela = vai ao ar naquela saida
-     - "Apresentacao automatica" = troca sozinha a cada 15 s
-     - Giro / Resumo: aparecem os controles (anterior, proximo, as 27
-       siglas, as 7 telas, giro automatico)
-     - no alto: situacao das coletas e do gerenciador
-     - link "situacao completa": avisos de virada e cores
+     - a janela "gctse OBS das saidas", que:
+         * na 1a vez copia o OBS instalado para D:\GCTSE-OBS\horizontal e
+           D:\GCTSE-OBS\vertical (~1 minuto; disco desta pasta)
+         * escreve a configuracao: cena SAIDA, fonte Navegador 1920x1080
+           com o endereco certo (travada), video 1920x1080 29.97, SEM audio
+         * espera o gerenciador responder e abre os dois OBS
+     O titulo de cada janela do OBS diz qual e: "Perfil: SAIDA-HORIZONTAL"
+     ou "Perfil: SAIDA-VERTICAL".
 
 ---------------------------------------------------------------------------
- 5. SE ALGO DER ERRADO
+ 2. ESCOLHER O CANAL DA DECKLINK - UMA VEZ EM CADA OBS
 ---------------------------------------------------------------------------
 
-   Saida mostra pagina de erro ... o OBS abriu antes do gerenciador: no
-                                   OBS, botao direito na fonte >
-                                   Atualizar (ou Propriedades >
-                                   "Atualizar cache da pagina atual")
+   (O OBS nao deixa gravar o canal por fora: e o unico passo na mao.)
+
+   No OBS SAIDA-HORIZONTAL:
+     Ferramentas > Saida DeckLink (Decklink Output) > Saida de programa:
+       Dispositivo = O CANAL DA DECKLINK QUE VAI NA MESA COMO HORIZONTAL
+       Modo        = formato da mesa (ex.: 1080i 59.94)
+       marque "Iniciar automaticamente" > INICIAR > feche a janelinha.
+   No OBS SAIDA-VERTICAL: o mesmo, com o OUTRO canal.
+
+   Pronto. Das proximas vezes o OBS abre minimizado (icone perto do
+   relogio) e liga a saida DeckLink sozinho.
+   No alto do gerenciador: "OBS HORIZONTAL: no ar" / "OBS VERTICAL: no ar".
+
+ TELA VERTICAL DE CABECA PARA BAIXO no monitor em pe?
+   No gerenciador, coluna SAIDA VERTICAL: "GIRO DA TELA NA SAIDA SDI" >
+   clique no outro sentido (90 horario / 90 anti-horario). Fica gravado.
+
+ FORMATO DA MESA DIFERENTE DE 1080i 59.94?
+   config-graficos.json, "obs_fps": "29.97" (1080i59.94) | "59.94"
+   (1080p59.94) | "30" | "60". Feche os dois OBS e abra o ABRIR-OBS.bat.
+
+---------------------------------------------------------------------------
+ 3. SE ALGO DER ERRADO
+---------------------------------------------------------------------------
+
+   "Nao achei o OBS instalado" ... instale o OBS Studio (obsproject.com).
+                                   Instalado em outro lugar? Em
+                                   config-graficos.json:
+                                   "obs_instalado": "E:\\obs-studio"
+   OBS HORIZONTAL/VERTICAL: ...... um OBS foi fechado: ABRIR-OBS.bat
+     FECHADO                       (reabre so o que estiver fechado)
+   Saida mostra pagina de erro ... no OBS, botao direito na fonte GCTSE >
+                                   Atualizar
    Saida SDI sumiu ............... OBS > Ferramentas > Saida DeckLink >
                                    Parar e Iniciar
    OBS nao acha a DeckLink ....... NEO Express aberto? Feche. Conferir no
@@ -104,3 +84,8 @@
                                    saidas voltam no que estava no ar).
    Numeros parados ............... "COLETA PAROU" no alto: janela do
                                    GRAFICOS.bat / ESTADOS.bat fechou.
+
+ PLANO B (sem a automacao do OBS)
+   No OBS que voce ja usa, fonte Navegador 1920x1080 com o endereco do
+   ENDERECOS-OBS.bat - ou abra o endereco no Chrome, F11, e capture a
+   janela. O gerenciador continua trocando as telas do mesmo jeito.

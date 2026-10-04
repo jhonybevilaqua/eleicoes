@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 2.1 - apuracao de PRESIDENTE em graficos
+ gctse GRAFICOS 2.2 - apuracao de PRESIDENTE em graficos
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -109,9 +109,11 @@
    Windows) com duas colunas: SAIDA HORIZONTAL e SAIDA VERTICAL.
    Clicou numa tela = vai NA HORA para aquela saida; previa ao vivo;
    controles do giro (27 siglas) e do resumo (7 telas).
-   Cada saida chega a DeckLink por um OBS de "ponte", configurado uma
-   vez - inclusive QUAL CANAL da DeckLink. Passo a passo: OBS-DECKLINK.txt
-   (ENDERECOS-OBS.bat mostra os enderecos; ABRIR-OBS-SAIDA1/2.bat).
+   Cada saida chega a DeckLink por um OBS de "ponte" que o proprio
+   GERENCIADOR.bat monta e abre, a partir do OBS instalado (nada de
+   extrair ou criar pasta). Na mao, so UMA vez em cada OBS: escolher o
+   canal da DeckLink. Passo a passo: OBS-DECKLINK.txt (ABRIR-OBS.bat
+   reabre um OBS fechado; ENDERECOS-OBS.bat = plano B na mao).
 
 ---------------------------------------------------------------------------
  PREPARAR O WINDOWS (uma vez em cada maquina que vai ao ar)
