@@ -17,7 +17,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "1.9 - 04/10/2026"
+$Versao = "2.0 - 04/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -469,6 +469,69 @@ function Ler-Abrangencia {
     $script:Cache[$chave] = $r
 }
 
+# ------------------------------------------------- 2022, para comparacao
+# Abstencao, brancos, nulos e comparecimento do 1o turno de 2022 (Presidente,
+# Brasil), lidos dos arquivos do PROPRIO TSE - nada digitado a mao. Tenta os
+# dois formatos de endereco 1 vez a cada 10 minutos ate achar; sem 2022 a
+# tela de comparacao diz "indisponivel".
+
+$script:Ref2022 = $null
+$script:Prox2022 = [datetime]::MinValue
+$Ciclo2022 = "ele2022"; $Eleicao2022 = "544"
+if (Tem-Propriedade $cfg "comparar_2022") {
+    if ((Tem-Propriedade $cfg.comparar_2022 "ciclo") -and $cfg.comparar_2022.ciclo) { $Ciclo2022 = "$($cfg.comparar_2022.ciclo)" }
+    if ((Tem-Propriedade $cfg.comparar_2022 "eleicao") -and $cfg.comparar_2022.eleicao) { $Eleicao2022 = "$($cfg.comparar_2022.eleicao)" }
+}
+
+function Campo-2022 {
+    # O arquivo de 2022 pode trazer o campo no topo ou dentro de s/e/v.
+    param($Obj, [string[]] $Nomes)
+    foreach ($n in $Nomes) {
+        if (Tem-Propriedade $Obj $n) {
+            $v = $Obj.$n
+            if (($v -is [string] -or $v -is [ValueType]) -and "$v" -ne "") { return Converter-Decimal $v }
+        }
+        foreach ($bl in @("s", "e", "v")) {
+            if ((Tem-Propriedade $Obj $bl) -and $null -ne $Obj.$bl -and (Tem-Propriedade $Obj.$bl $n)) {
+                $v = $Obj.$bl.$n
+                if ($null -ne $v -and "$v" -ne "") { return Converter-Decimal $v }
+            }
+        }
+    }
+    return $null
+}
+
+function Buscar-2022 {
+    if ($null -ne $script:Ref2022 -or (Get-Date) -lt $script:Prox2022) { return }
+    $script:Prox2022 = (Get-Date).AddMinutes(10)
+    $e6 = "{0:000000}" -f ([int] $Eleicao2022)
+    $urls = @("$Base/$Ciclo2022/$Eleicao2022/dados-simplificados/br/br-c0001-e$e6-r.json",
+              "$Base/$Ciclo2022/$Eleicao2022/dados/br/br-c0001-e$e6-u.json")
+    foreach ($url in $urls) {
+        try {
+            $resp = Invoke-WebRequest -Uri $url -Headers @{ "User-Agent" = "gctse-graficos/1.0"; "Accept" = "application/json,*/*" } -TimeoutSec 15 -UseBasicParsing
+            $obj = (Ler-Texto-Resposta $resp) | ConvertFrom-Json
+        } catch {
+            Fechar-Resposta $_
+            continue
+        }
+        $r = [pscustomobject]@{
+            pct_comparec  = Campo-2022 $obj @("pc")
+            pct_abstencao = Campo-2022 $obj @("pa")
+            pct_brancos   = Campo-2022 $obj @("pvb")
+            pct_nulos     = Campo-2022 $obj @("ptvn", "pvn")
+            urnas_pct     = Campo-2022 $obj @("pst")
+            fonte         = $url
+        }
+        if ($null -ne $r.pct_abstencao -and $null -ne $r.pct_brancos -and $null -ne $r.pct_nulos -and $null -ne $r.pct_comparec) {
+            $script:Ref2022 = $r
+            Escrever-Log ("2022 (TSE) para comparacao: abstencao {0}% | brancos {1}% | nulos {2}% | comparecimento {3}%" -f $r.pct_abstencao, $r.pct_brancos, $r.pct_nulos, $r.pct_comparec) "OK"
+            return
+        }
+    }
+    Escrever-Log "2022 (TSE) para comparacao: ainda nao encontrado - tento de novo em 10 min" "AVISO"
+}
+
 # ------------------------------------------------------------- gravar dados
 
 function Gravar-Dados {
@@ -492,6 +555,7 @@ function Gravar-Dados {
         # Para a tela montar o endereco da foto oficial do TSE:
         # {base}/{ciclo}/{eleicao}/fotos/{uf}/{sqcand}.jpeg
         tse           = [pscustomobject]@{ base = $Base; ciclo = $Ciclo; eleicao = $Eleicao }
+        ref2022       = $script:Ref2022
         ufs           = $porEstado
     }
     $json = $dados | ConvertTo-Json -Depth 8 -Compress
@@ -514,6 +578,7 @@ do {
     $script:NumCiclo++
     try {
         foreach ($u in $UFs) { foreach ($cg in $Cargos) { Ler-Abrangencia $u $cg } }
+        try { Buscar-2022 } catch { Escrever-Log "2022: $($_.Exception.Message)" "AVISO" }
         Conferir-Recebimento
         Gravar-Dados
         $nG = @($UFs | Where-Object { $script:Cache.ContainsKey("$_-3") }).Count

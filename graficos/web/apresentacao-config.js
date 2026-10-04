@@ -12,14 +12,16 @@ window.GCTSE_APRESENTACAO = {
     "votos-h",          // Como o Brasil votou
     "urnas-h",          // Apuracao nacional
     "estados-h",        // Como cada estado votou (mapa)
-    "lideranca-h"       // Lideranca por estado
+    "lideranca-h",      // Lideranca por estado
+    "abstencao-h"       // Abstencao, brancos e nulos
   ],
   vertical: [
     "urnas-v",          // Urnas apuradas
     "votos-v",          // Brancos e nulos
     "presidente-v",     // Presidente
     "comparecimento-v", // Comparecimento
-    "lideranca-v"       // Lideranca por estado
+    "lideranca-v",      // Lideranca por estado
+    "abstencao-v"       // Abstencao, brancos e nulos
   ],
 
   // Monitor VERTICAL: 0 quando o Windows ja esta em "Retrato" (a tela e

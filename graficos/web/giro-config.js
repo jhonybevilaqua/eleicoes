@@ -11,5 +11,8 @@ window.GCTSE_GIRO = {
   tempo_auto_segundos: 10,
 
   // Transicao entre estados (segundos). 0 = corte seco.
-  transicao_segundos: 0.5
+  transicao_segundos: 0.5,
+
+  // RESUMO, tela 6: o estado em destaque (Presidente, Governador e Senado).
+  estado_destaque: "pr"
 };

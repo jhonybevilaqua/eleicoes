@@ -108,7 +108,7 @@
   }
   function cabecalhoV(W, titulo, sub) {
     return r(35, 48, 6, 38, C.destaque) + t(53, 80, titulo, { s: 32, b: true, ls: 1, max: W - 53 - 35 }) +
-      t(53, 106, sub, { s: 16, c: C.apagado }) + seloV(W);
+      t(53, 106, sub, { s: 16, c: C.apagado, max: W - 53 - 35 }) + seloV(W);
   }
   function svg(W, H, corpo) {
     return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + " " + H + '" width="' + W + '" height="' + H +
@@ -230,22 +230,45 @@
   var G = {};
 
   // ===== horizontais 1280x720 ==========================================
+  // Com mais candidatos do que linhas, a ultima vira "OUTROS N CANDIDATOS"
+  // com a soma - assim a tela fecha 100%.
+  function linhasPresidente(cs, n) {
+    if (cs.length <= n) return cs.slice(0, n);
+    var resto = cs.slice(n - 1), soma = { nome: "OUTROS " + resto.length + " CANDIDATOS", partido: "soma dos demais",
+      votos: 0, pct: 0, outros: true };
+    resto.forEach(function (k) { soma.votos += k.votos || 0; soma.pct += k.pct || 0; });
+    return cs.slice(0, n - 1).concat([soma]);
+  }
+  // "FULANO à frente por X pontos (N votos)" - so com votos de verdade.
+  function diferenca(cs) {
+    if (cs.length < 2 || !(cs[0].votos > 0)) return "";
+    return cs[0].nome + " à frente por " + Number(cs[0].pct - cs[1].pct).toFixed(2).replace(".", ",") +
+      " pontos (" + inteiro(cs[0].votos - cs[1].votos) + " votos)";
+  }
+  // Marca dos 50% na barra: quem passa dela vence no 1o turno.
+  function marca50(x, y, w, h) { return r(x + w / 2 - 1.5, y - 4, 3, h + 8, "#ffffff", 0); }
+
   G["presidente-h"] = function () {
-    var W = 1280, H = 720, b = br(), cs = candidatos(b), o = cabecalhoH(W, "PRESIDENTE — BRASIL", subtitulo());
+    var W = 1280, H = 720, b = br(), todos = candidatos(b), cs = linhasPresidente(todos, 6);
+    var o = cabecalhoH(W, "PRESIDENTE — BRASIL", "% dos votos válidos  ·  " + subtitulo());
+    o += t(727, 124, "50% DOS VÁLIDOS", { s: 13, b: true, c: C.apagado, a: "middle", ls: 1 });
     for (var i = 0; i < 6; i++) {
-      var c = cs[i], cy = 152 + i * 84.4, url = urlFoto(c), dx = 0;
+      var c = cs[i], cy = 152 + i * 84.4, url = c && !c.outros ? urlFoto(c) : "", dx = 0;
       o += r(73, cy - 20, 6, 42, c ? cor(c) : C.outros, 1);
       if (url) { o += foto(url, 87, cy - 30, 54, 72); dx = 64; }
-      o += t(93 + dx, cy + 3, c ? corta(c.nome, 22) : "—", { s: 26, b: true, max: 320 - dx });
+      o += t(93 + dx, cy + 3, c ? (c.outros ? c.nome : corta(c.nome, 22)) : "—", { s: 26, b: true, max: 320 - dx });
       o += t(93 + dx, cy + 29, c ? corta(c.partido, 30) : "—", { s: 15, c: C.apagado, max: 320 - dx });
       o += etiqueta(427, cy - 20, c);
-      o += barra(427, cy - 13, 600, 30, c ? c.pct / 100 : 0, c ? cor(c) : C.outros);
+      o += barra(427, cy - 13, 600, 30, c ? c.pct / 100 : 0, c && !c.outros ? cor(c) : C.outros) + marca50(427, cy - 13, 600, 30);
       o += t(1027, cy + 39, c ? inteiro(c.votos) : "0", { s: 15, c: C.apagado, a: "end" });
       o += t(1200, cy + 10, c ? pct(c.pct) : "0,00%", { s: 30, b: true, a: "end" });
     }
     var s = b ? b.secoes : null;
     o += t(73, 690, s ? inteiro(s.totalizadas) + " de " + inteiro(s.total) + " urnas · " + pct(s.pct) : "0 de 0 urnas",
       { s: 14, c: C.apagado2 });
+    var dif = diferenca(todos);
+    if (dif) o += t(1200, 690, dif, { s: 18, b: true, a: "end", max: 760 });
+    o += t(727, 666, "▏ 50% dos válidos = vence no 1º turno", { s: 13, c: C.apagado2, a: "middle" });
     return svg(W, H, o);
   };
 
@@ -363,18 +386,22 @@
   };
 
   G["presidente-v"] = function () {
-    var W = 540, H = 960, b = br(), cs = candidatos(b), o = cabecalhoV(W, "PRESIDENTE", subtitulo());
+    var W = 540, H = 960, b = br(), todos = candidatos(b), cs = linhasPresidente(todos, 5);
+    var o = cabecalhoV(W, "PRESIDENTE", "% dos votos válidos · " + subtitulo());
     for (var i = 0; i < 5; i++) {
-      var c = cs[i], y = 212 + i * 134, url = urlFoto(c), dx = 0;
+      var c = cs[i], y = 212 + i * 134, url = c && !c.outros ? urlFoto(c) : "", dx = 0;
       o += r(35, y - 18, 5, 34, c ? cor(c) : C.outros, 1);
       if (url) { o += foto(url, 47, y - 24, 45, 60); dx = 55; }
-      o += t(51 + dx, y + 6, c ? corta(c.nome, 16) : "—", { s: 26, b: true, max: 300 - dx });
+      o += t(51 + dx, y + 6, c ? (c.outros ? c.nome : corta(c.nome, 16)) : "—", { s: 26, b: true, max: 300 - dx });
       o += t(51 + dx, y + 30, c ? corta(c.partido, 22) : "—", { s: 14, c: C.apagado, max: 300 - dx });
       o += t(505, y + 12, c ? pct(c.pct) : "0,00%", { s: 32, b: true, a: "end" });
-      o += barra(35, y + 44, 470, 12, c ? c.pct / 100 : 0, c ? cor(c) : C.outros);
+      o += barra(35, y + 44, 470, 12, c ? c.pct / 100 : 0, c && !c.outros ? cor(c) : C.outros) + marca50(35, y + 44, 470, 12);
       o += t(35, y + 74, c ? inteiro(c.votos) : "0", { s: 15, c: C.apagado });
       if (c && (c.eleito || c.segundo_turno)) o += etiqueta(505 - (c.eleito ? 74 : 86), y + 78, c);
     }
+    o += t(35, 862, "▏ 50% dos válidos = vence no 1º turno", { s: 13, c: C.apagado2 });
+    var dif = diferenca(todos);
+    if (dif) o += t(35, 892, dif, { s: 16, b: true, max: 470 });
     return svg(W, H, o + RODAPE_V());
   };
 
@@ -424,6 +451,45 @@
     }
   }
 
+  // ABSTENCAO, BRANCOS E NULOS: tres numeros grandes, do boletim do Brasil.
+  function linhasABN() {
+    var b = br(), v = b ? b.votos : null, e = b ? b.eleitorado : null;
+    return [
+      { cor: C.abstencao, antes: "ABSTENÇÃO", valor: e ? pct(e.pct_abstencao) : "0,00%", depois: "",
+        sub: e && e.abstencao != null ? inteiro(e.abstencao) + " eleitores não foram votar" : "" },
+      { cor: C.brancos, antes: "BRANCOS SOMAM", valor: v ? pct(v.pct_brancos) : "0,00%", depois: "DOS VOTOS",
+        sub: v && v.brancos != null ? inteiro(v.brancos) + " votos em branco" : "" },
+      { cor: C.nulos, antes: "NULOS REPRESENTAM", valor: v ? pct(v.pct_nulos) : "0,00%", depois: "DOS VOTOS",
+        sub: v && v.nulos != null ? inteiro(v.nulos) + " votos nulos" : "" }
+    ];
+  }
+  G["abstencao-h"] = function () {
+    var W = 1280, H = 720, o = cabecalhoH(W, "ABSTENÇÃO, BRANCOS E NULOS", subtitulo());
+    linhasABN().forEach(function (L, i) {
+      var y = 150 + i * 172;
+      o += r(73, y, W - 146, 150, C.linha, 8) + r(73, y, 10, 150, L.cor, 3);
+      o += t(113, y + 62, L.antes, { s: 40, b: true, ls: 1, max: 560 });
+      if (L.depois) o += t(113, y + 108, L.depois, { s: 30, b: true, c: C.apagado, ls: 1 });
+      else if (L.sub) o += t(113, y + 108, L.sub, { s: 22, c: C.apagado, max: 560 });
+      o += t(W - 103, y + 104, L.valor, { s: 104, b: true, a: "end" });
+      if (L.depois && L.sub) o += t(W - 103, y + 138, L.sub, { s: 18, c: C.apagado, a: "end" });
+    });
+    o += t(73, 700, "Fonte: TSE — Divulgação de Resultados", { s: 14, c: C.apagado2 });
+    return svg(W, H, o);
+  };
+  G["abstencao-v"] = function () {
+    var W = 540, H = 960, o = cabecalhoV(W, "ABSTENÇÃO, BRANCOS E NULOS", subtitulo());
+    linhasABN().forEach(function (L, i) {
+      var y = 172 + i * 250;
+      o += r(35, y, W - 70, 230, C.linha, 8) + r(35, y, 8, 230, L.cor, 3);
+      o += t(65, y + 50, L.antes, { s: 30, b: true, ls: 1, max: W - 110 });
+      o += t(65, y + 140, L.valor, { s: 88, b: true, max: W - 110 });
+      if (L.depois) o += t(65, y + 180, L.depois, { s: 24, b: true, c: C.apagado, ls: 1 });
+      if (L.sub) o += t(65, y + (L.depois ? 212 : 184), L.sub, { s: 16, c: C.apagado, max: W - 110 });
+    });
+    return svg(W, H, o + RODAPE_V());
+  };
+
   window.GCTSE_GRAFICOS = {
     lista: [
       { id: "presidente-h", nome: "Presidente — Brasil", f: "h" },
@@ -431,11 +497,13 @@
       { id: "urnas-h", nome: "Apuração nacional", f: "h" },
       { id: "estados-h", nome: "Como cada estado votou", f: "h" },
       { id: "lideranca-h", nome: "Liderança por estado", f: "h" },
+      { id: "abstencao-h", nome: "Abstenção, brancos e nulos", f: "h" },
       { id: "urnas-v", nome: "Urnas apuradas", f: "v" },
       { id: "votos-v", nome: "Brancos e nulos", f: "v" },
       { id: "presidente-v", nome: "Presidente", f: "v" },
       { id: "comparecimento-v", nome: "Comparecimento", f: "v" },
-      { id: "lideranca-v", nome: "Liderança por estado", f: "v" }
+      { id: "lideranca-v", nome: "Liderança por estado", f: "v" },
+      { id: "abstencao-v", nome: "Abstenção, brancos e nulos", f: "v" }
     ],
     desenhar: function (id) { return G[id] ? G[id]() : null; },
     ajustarSelos: ajustarSelos,

@@ -1,7 +1,8 @@
 @echo off
 title gctse RESUMO - HORIZONTAL
-rem 5 telas de fechamento: mapa dos governadores, governadores e senado por
-rem partido, Presidente por regiao, comparecimento. Teclas 1 a 5 vao direto.
+rem 7 telas de fechamento: mapa dos governadores, governadores e senado por
+rem partido, Presidente por regiao, comparecimento, Parana, 2026 x 2022.
+rem Teclas 1 a 7 vao direto.
 rem Troca de tela: seta direita/esquerda, clique (botao direito volta),
 rem roda do mouse ou passador de slides.
 rem ENTER liga/desliga o giro automatico. Alt+F4 fecha.

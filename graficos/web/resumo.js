@@ -1,7 +1,8 @@
-// gctse GRAFICOS - RESUMO: 5 telas de fechamento, trocadas na mao.
+// gctse GRAFICOS - RESUMO: 7 telas de fechamento, trocadas na mao.
 //   1 Mapa dos governadores      2 Governadores eleitos por partido
 //   3 Senado: eleitos/partido    4 Presidente por regiao
-//   5 Comparecimento por estado
+//   5 Comparecimento por estado  6 Estado em destaque (Parana)
+//   7 2026 x 2022 (comparecimento, abstencao, brancos, nulos)
 // Dados: web\estados.js (ESTADOS.bat) e web\dados.js (GRAFICOS.bat).
 // So soma e conta o que o TSE mandou; ELEITO e 2o TURNO so com a palavra do TSE.
 (function () {
@@ -271,6 +272,110 @@
     return svg(W, H, o);
   }
 
+  // ============================================ 6. TELA DO ESTADO (PARANA)
+  var NOMES = {
+    ac: "ACRE", al: "ALAGOAS", ap: "AMAPÁ", am: "AMAZONAS", ba: "BAHIA", ce: "CEARÁ", df: "DISTRITO FEDERAL",
+    es: "ESPÍRITO SANTO", go: "GOIÁS", ma: "MARANHÃO", mt: "MATO GROSSO", ms: "MATO GROSSO DO SUL", mg: "MINAS GERAIS",
+    pa: "PARÁ", pb: "PARAÍBA", pr: "PARANÁ", pe: "PERNAMBUCO", pi: "PIAUÍ", rj: "RIO DE JANEIRO", rn: "RIO GRANDE DO NORTE",
+    rs: "RIO GRANDE DO SUL", ro: "RONDÔNIA", rr: "RORAIMA", sc: "SANTA CATARINA", sp: "SÃO PAULO", se: "SERGIPE", to: "TOCANTINS"
+  };
+  function ufDestaque() {
+    var u = String((window.GCTSE_GIRO || {}).estado_destaque || "pr").toLowerCase();
+    return NOMES[u] ? u : "pr";
+  }
+  function painelCargo(x, y, w, h, titulo, urnas, faixa, linhas, v) {
+    var o = r(x, y, w, h, C.painel, 8), px = x + (v ? 22 : 24), pw = w - (v ? 44 : 48);
+    if (faixa) o += r(x, y, w, 6, faixa.cor, 3);
+    o += t(px, y + (v ? 38 : 46), titulo, { s: v ? 20 : 24, b: true, ls: 2 });
+    o += t(x + w - (v ? 22 : 24), y + (v ? 64 : 80), "urnas " + pct(urnas), { s: v ? 13 : 15, c: C.apagado, a: "end" });
+    if (faixa) o += t(px, y + (v ? 64 : 80), faixa.texto, { s: v ? 15 : 18, b: true, ls: 2, c: faixa.corTexto });
+    var ly = y + (v ? 78 : 100), passo = Math.min(v ? 78 : 118, (y + h - ly - 8) / Math.max(1, linhas.length));
+    if (!linhas.length) o += t(px, ly + 30, "aguardando boletim do TSE", { s: v ? 15 : 18, c: C.apagado });
+    var top = linhas.length && linhas[0].pct > 0 ? linhas[0].pct : 100;
+    linhas.forEach(function (L, i) {
+      var yy = ly + i * passo;
+      o += t(px, yy + (v ? 26 : 34), L.nome, { s: v ? 22 : 28, b: true, max: pw });
+      o += t(px, yy + (v ? 48 : 62), L.partido, { s: v ? 13 : 16, c: C.apagado, max: pw - 120 });
+      o += t(px + pw, yy + (v ? 48 : 62), pct(L.pct), { s: v ? 20 : 26, b: true, a: "end" });
+      o += barra(px, yy + (v ? 56 : 74), pw, v ? 8 : 10, (L.pct || 0) / top * 0.98, L.cor);
+    });
+    return o;
+  }
+  function faixaCargo(c) {
+    var s = situacao(c);
+    if (s === "eleito") {
+      var n = c.candidatos.filter(function (k) { return k.eleito; }).length;
+      return { texto: n > 1 ? "ELEITOS" : "ELEITO", cor: C.verde, corTexto: "#3fd13f" };
+    }
+    if (s === "segundo") return { texto: "VAI AO 2º TURNO", cor: C.azul, corTexto: "#5fb0f0" };
+    if (s === "andamento") return { texto: "EM APURAÇÃO", cor: C.neutro, corTexto: C.apagado };
+    return { texto: "AGUARDANDO", cor: C.trilho, corTexto: C.apagado };
+  }
+  function linhasCargo(c, n) {
+    if (!c) return [];
+    return c.candidatos.slice(0, n).map(function (k) {
+      return { nome: k.nome, partido: k.partido + (k.eleito ? "  ·  ELEITO" : k.segundo_turno ? "  ·  2º TURNO" : ""),
+        pct: k.pct, cor: k.eleito ? C.verde : k.segundo_turno ? C.azul : C.neutro };
+    });
+  }
+  function telaEstado(v) {
+    var u = ufDestaque(), W = v ? 540 : 1280, H = v ? 960 : 720;
+    var g = cargo(u, "gov"), se = cargo(u, "sen"), p = presUf(u);
+    var o = cab(v, W, NOMES[u], "Presidente, Governador e Senado no estado", seloEstados());
+    var lp = p ? p.candidatos.slice(0, v ? 2 : 3).map(function (k) {
+      return { nome: k.nome, partido: k.partido + "  ·  % dos válidos", pct: k.pct, cor: corCand(k) };
+    }) : [];
+    var up = p && p.secoes ? p.secoes.pct : null;
+    if (!v) {
+      o += painelCargo(73, 146, 365, 528, "PRESIDENTE", up, null, lp, false);
+      o += painelCargo(454, 146, 365, 528, "GOVERNADOR", g ? g.urnas_pct : null, faixaCargo(g), linhasCargo(g, 2), false);
+      o += painelCargo(835, 146, 365, 528, "SENADO", se ? se.urnas_pct : null, faixaCargo(se), linhasCargo(se, 2), false);
+    } else {
+      o += painelCargo(30, 146, W - 60, 248, "PRESIDENTE", up, null, lp, true);
+      o += painelCargo(30, 404, W - 60, 248, "GOVERNADOR", g ? g.urnas_pct : null, faixaCargo(g), linhasCargo(g, 2), true);
+      o += painelCargo(30, 662, W - 60, 268, "SENADO", se ? se.urnas_pct : null, faixaCargo(se), linhasCargo(se, 2), true);
+    }
+    o += rodape(v, W, H, "Fonte: TSE");
+    return svg(W, H, o);
+  }
+
+  // ===================================================== 7. 2026 x 2022
+  // 2022 vem dos arquivos do PROPRIO TSE (estados.ps1). Sem eles, a tela diz
+  // que nao estao disponiveis - nunca um numero digitado.
+  function comparativo(v) {
+    var W = v ? 540 : 1280, H = v ? 960 : 720, ref = E().ref2022, b = P().br;
+    var o = cab(v, W, "2026 × 2022", "Presidente · Brasil · 1º turno", seloPresidente());
+    var x0 = v ? 30 : 73, x1 = v ? W - 30 : 1207;
+    if (!ref) {
+      o += t(x0, v ? 220 : 220, "Os números de 2022 ainda não foram encontrados", { s: v ? 20 : 30, b: true, max: x1 - x0 });
+      o += t(x0, v ? 252 : 262, "nos arquivos do TSE. A tela completa sozinha quando eles chegarem.", { s: v ? 15 : 20, c: C.apagado, max: x1 - x0 });
+      return svg(W, H, o + rodape(v, W, H, "Fonte: TSE"));
+    }
+    var tem = b && b.tem, e = tem ? b.eleitorado : null, vt = tem ? b.votos : null;
+    var linhas = [
+      ["COMPARECIMENTO", e ? e.pct_comparec : null, ref.pct_comparec],
+      ["ABSTENÇÃO", e ? e.pct_abstencao : null, ref.pct_abstencao],
+      ["BRANCOS", vt ? vt.pct_brancos : null, ref.pct_brancos],
+      ["NULOS", vt ? vt.pct_nulos : null, ref.pct_nulos]
+    ];
+    var urn = tem && b.secoes ? b.secoes.pct : null;
+    var y0 = v ? 150 : 140, passo = v ? 190 : 128;
+    linhas.forEach(function (L, i) {
+      var yy = y0 + i * passo, max = Math.max(L[1] || 0, L[2] || 0) / 0.9 || 1;
+      o += r(x0, yy, x1 - x0, passo - 12, C.painel, 6);
+      var lx = x0 + 20, bx = v ? lx : x0 + 330, bw = (x1 - 20) - bx - (v ? 110 : 130);
+      o += t(lx, yy + (v ? 34 : 50), L[0], { s: v ? 20 : 24, b: true, ls: 1, max: v ? 300 : 290 });
+      [["2026", L[1], C.azul], ["2022", L[2], C.neutro]].forEach(function (q, j) {
+        var ly = yy + (v ? 52 : 26) + j * (v ? 56 : 46);
+        o += t(bx, ly + 18, q[0], { s: v ? 15 : 17, b: true, c: C.apagado });
+        o += barra(bx + 56, ly + 6, bw - 56, v ? 14 : 18, (q[1] || 0) / max, q[2]);
+        o += t(x1 - 20, ly + 20, q[1] == null ? "—" : pct(q[1]), { s: v ? 20 : 24, b: true, a: "end" });
+      });
+    });
+    o += rodape(v, W, H, "Fonte: TSE · 2022: totalização final do 1º turno · 2026: urnas já apuradas (" + pct(urn) + ")");
+    return svg(W, H, o);
+  }
+
   // -------------------------------------------------------------- ajustes
   function ajustar(raiz) {
     var ms = raiz.querySelectorAll("text[data-max]");
@@ -297,7 +402,9 @@
       { id: "governadores-partido", f: govPartido },
       { id: "senado-partido", f: senPartido },
       { id: "presidente-regiao", f: presRegiao },
-      { id: "comparecimento", f: comparecimento }
+      { id: "comparecimento", f: comparecimento },
+      { id: "estado", f: telaEstado },
+      { id: "comparativo-2022", f: comparativo }
     ],
     ajustar: ajustar
   };

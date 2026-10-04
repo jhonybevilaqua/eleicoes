@@ -1,7 +1,7 @@
 // Controle do RESUMO: qual tela esta no ar e como trocar.
 //   seta direita / clique / roda p/ baixo / passador ... proxima tela
 //   seta esquerda / botao direito / roda p/ cima ....... anterior
-//   1 a 5 ... vai direto      Home ... primeira      ENTER ... giro automatico
+//   1 a 7 ... vai direto      Home ... primeira      ENTER ... giro automatico
 (function () {
   "use strict";
   var R = window.GCTSE_RESUMO, cfg = window.GCTSE_GIRO || {};
@@ -22,7 +22,7 @@
   camadas.forEach(function (c) { c.style.transition = "opacity " + transicao + "s ease-in-out"; });
   var visivel = 0, chaveDados = "", auto = false, timer = null;
 
-  function chave() { return JSON.stringify([window.GCTSE_ESTADOS && window.GCTSE_ESTADOS.ufs, window.GCTSE_DADOS && window.GCTSE_DADOS.ufs, window.GCTSE_DADOS && window.GCTSE_DADOS.br]); }
+  function chave() { return JSON.stringify([window.GCTSE_ESTADOS && window.GCTSE_ESTADOS.ufs, window.GCTSE_ESTADOS && window.GCTSE_ESTADOS.ref2022, window.GCTSE_DADOS && window.GCTSE_DADOS.ufs, window.GCTSE_DADOS && window.GCTSE_DADOS.br]); }
   function desenharEm(camada, i) { camada.innerHTML = telas[i].f(vertical); R.ajustar(camada); }
   function mostrar(i) {
     atual = (i + telas.length) % telas.length;

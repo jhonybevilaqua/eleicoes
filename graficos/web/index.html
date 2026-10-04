@@ -8,7 +8,8 @@
   body { margin: 0; background: var(--fundo); color: var(--texto); font: 15px 'Segoe UI', Arial, sans-serif; }
   header { padding: 18px 24px 8px; display: flex; gap: 16px; align-items: baseline; flex-wrap: wrap; }
   h1 { margin: 0; font-size: 22px; letter-spacing: .5px; }
-  #situacao { padding: 10px 24px; margin: 8px 24px; border-radius: 6px; font-weight: 700; }
+  #situacao, #situacaoEstados { padding: 10px 24px; margin: 8px 24px; border-radius: 6px; font-weight: 700; }
+  .neutro { background: #1b2433; color: var(--apagado); }
   .ok { background: #10301a; color: #7ee07e; } .ruim { background: #3a1212; color: #ffb3b3; } .teste { background: #3a2a0a; color: #ffd27a; }
   main { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 16px; padding: 16px 24px 32px; }
   .cartao { background: var(--cartao); border-radius: 8px; padding: 10px; }
@@ -24,6 +25,10 @@
   .apres { margin: 12px 24px 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   .apres a { padding: 7px 12px; border-radius: 5px; background: #2f8fdd; color: #fff; text-decoration: none; font-weight: 700; }
   .apres span { color: var(--apagado); font-size: 13px; }
+  #viradas { margin: 14px 24px 0; background: #2a1d08; border: 1px solid #6b4a10; border-radius: 8px; padding: 10px 14px; }
+  #viradas h2 { margin: 0 0 8px; font-size: 15px; color: #ffd27a; } #viradas .f { color: var(--apagado); font-weight: 400; font-size: 13px; }
+  #viradas button { margin-left: 10px; font-size: 12px; padding: 2px 8px; }
+  #listaViradas div { padding: 3px 0; font-size: 15px; } #listaViradas b { color: #ffd27a; }
   #cores { margin: 14px 24px 0; background: var(--cartao); border-radius: 8px; padding: 10px 14px; }
   #cores h2 { margin: 0 0 8px; font-size: 15px; } #cores .f, #cores p.f { color: var(--apagado); font-weight: 400; font-size: 13px; margin: 8px 0 0; }
   #tabcores { display: flex; flex-wrap: wrap; gap: 6px 18px; }
@@ -35,6 +40,7 @@
 <body>
 <header><h1>gctse GRÁFICOS — Presidente</h1><span id="versao" style="color:var(--apagado)"></span></header>
 <div id="situacao">carregando…</div>
+<div id="situacaoEstados" class="neutro"></div>
 <p class="aj">Abra o gráfico e aperte <b>F11</b> para tela cheia. <b>P</b> (ou o botão que aparece com o mouse) salva o PNG em 1920×1080 / 1080×1920.
 No switcher, use o caminho de cada gráfico como <b>fonte de navegador</b> (1280×720 ou 540×960).</p>
 <div class="apres"><b>Apresentação (troca a cada 15 s):</b>
@@ -45,10 +51,13 @@ No switcher, use o caminho de cada gráfico como <b>fonte de navegador</b> (1280
   <a href="giro-estados-horizontal.html" target="_blank">Horizontal 1920×1080</a>
   <a href="giro-estados-vertical.html" target="_blank">Vertical 1080×1920</a>
   <span>tela cheia sozinha: GIRO-ESTADOS-HORIZONTAL.bat / GIRO-ESTADOS-VERTICAL.bat · setas ou clique trocam o estado</span></div>
-<div class="apres"><b>Resumo (5 telas):</b>
+<div class="apres"><b>Resumo (7 telas):</b>
   <a href="resumo-horizontal.html" target="_blank">Horizontal 1920×1080</a>
   <a href="resumo-vertical.html" target="_blank">Vertical 1080×1920</a>
-  <span>tela cheia sozinha: RESUMO-HORIZONTAL.bat / RESUMO-VERTICAL.bat · teclas 1 a 5</span></div>
+  <span>tela cheia sozinha: RESUMO-HORIZONTAL.bat / RESUMO-VERTICAL.bat · teclas 1 a 7</span></div>
+<section id="viradas"><h2>Avisos de virada <span class="f">(só aqui na página do operador · não vai ao ar)</span>
+  <button id="limparViradas" type="button">limpar</button></h2>
+  <div id="listaViradas"><span class="f">nenhuma virada até agora</span></div></section>
 <section id="cores"><h2>Cores dos candidatos <span class="f">(só aqui na página do operador)</span></h2>
   <div id="tabcores"></div>
   <p class="f">Para usar a cor do partido: <b>config-graficos.json</b>, em <b>"cores"</b>, número de urna → cor. Ex.: <code>"cores": { "13": "#d03b3b" }</code>. Salve e reabra o GRAFICOS.bat.</p></section>
@@ -56,6 +65,7 @@ No switcher, use o caminho de cada gráfico como <b>fonte de navegador</b> (1280
 <script charset="utf-8" src="mapa-brasil.js"></script>
 <script charset="utf-8" src="graficos.js"></script>
 <script charset="utf-8" src="dados.js"></script>
+<script charset="utf-8" src="estados.js"></script>
 <script>
 (function () {
   var lista = document.getElementById("lista");
@@ -99,14 +109,72 @@ No switcher, use o caminho de cada gráfico como <b>fonte de navegador</b> (1280
     });
     document.getElementById("tabcores").innerHTML = o || '<span class="f">aparece quando chegar o primeiro boletim do Brasil</span>';
   }
-  function recarregar() {
+  // Coleta dos estados (Governador e Senador): so precisa no GIRO e no RESUMO.
+  function situacaoEstados() {
+    var e = window.GCTSE_ESTADOS || {}, el = document.getElementById("situacaoEstados");
+    if (!e.gravado_em) { el.className = "neutro"; el.textContent = "Coleta dos estados (ESTADOS.bat) não está aberta nesta máquina — só é preciso para o GIRO e o RESUMO."; return; }
+    var idade = Math.round((Date.now() - new Date(e.gravado_em).getTime()) / 1000), n = 0;
+    Object.keys(e.ufs || {}).forEach(function (u) { if (e.ufs[u].gov && e.ufs[u].gov.tem) n++; });
+    if (idade > 120) { el.className = "ruim"; el.textContent = "COLETA DOS ESTADOS PAROU há " + idade + " s — a janela do ESTADOS.bat fechou?"; return; }
+    if (e.recebendo_tse === false) { el.className = "ruim"; el.textContent = "ESTADOS: NÃO ESTAMOS RECEBENDO DADOS DO TSE (último: " + (e.ultimo_tse || "nenhum") + ")."; return; }
+    el.className = "ok";
+    el.textContent = "Coleta dos estados funcionando: governador e senado de " + n + " de 27 estados" +
+      (e.ref2022 ? " · 2022 para comparação: encontrado" : " · 2022 para comparação: ainda não encontrado no TSE");
+  }
+
+  // ------------------------------------------------ avisos de virada
+  // Lider de Presidente (Brasil e estados) e de Governador; no Senado, quem
+  // ocupa as 2 vagas. So avisa quando muda alguem que ja tinha votos. Fica
+  // guardado neste computador (sobrevive a F5).
+  var LIDER = {}, AVISOS = [];
+  try { LIDER = JSON.parse(localStorage.getItem("gctse-lideres") || "{}"); AVISOS = JSON.parse(localStorage.getItem("gctse-viradas") || "[]"); } catch (e) { }
+  function comoLista(x) { return Array.isArray(x) ? x : (x && Array.isArray(x.value) ? x.value : []); }
+  function frente(b, n) {
+    if (!b || !b.tem) return null;
+    var cs = comoLista(b.candidatos).filter(function (k) { return k.votos > 0; });
+    return cs.length >= n ? cs.slice(0, n) : null;
+  }
+  function conferir(sigla, cargo, b, n) {
+    var f = frente(b, n);
+    if (!f) return;
+    var chave = sigla + "|" + cargo, agora = f.map(function (k) { return k.numero; }).sort().join(","), antes = LIDER[chave];
+    if (antes && antes.nums !== agora) {
+      var entrou = f.filter(function (k) { return antes.nums.split(",").indexOf(k.numero) < 0; });
+      var saiu = antes.nomes.filter(function (_, i) { return f.map(function (k) { return k.numero; }).indexOf(antes.nums.split(",")[i]) < 0; });
+      var hora = String(b.hora || "").slice(0, 5);
+      var txt = n === 1 ? "<b>VIROU</b> — " + sigla + " " + cargo + ": " + esc(f[0].nome) + " (" + esc(f[0].partido) + ") passou " + esc(antes.nomes[0])
+        : "<b>MUDOU AS 2 VAGAS</b> — " + sigla + " " + cargo + ": entrou " + esc(entrou.map(function (k) { return k.nome; }).join(", ")) +
+          (saiu.length ? ", saiu " + esc(saiu.join(", ")) : "");
+      AVISOS.unshift({ h: hora, t: txt });
+      AVISOS = AVISOS.slice(0, 40);
+    }
+    var nomesOrd = f.slice().sort(function (a, b2) { return String(a.numero).localeCompare(String(b2.numero)); }).map(function (k) { return k.nome; });
+    LIDER[chave] = { nums: agora, nomes: n === 1 ? [f[0].nome] : nomesOrd };
+  }
+  function viradas() {
+    var d = window.GCTSE_DADOS || {}, e = window.GCTSE_ESTADOS || {};
+    conferir("BRASIL", "Presidente", d.br, 1);
+    Object.keys(d.ufs || {}).forEach(function (u) { conferir(u.toUpperCase(), "Presidente", d.ufs[u], 1); });
+    Object.keys(e.ufs || {}).forEach(function (u) {
+      conferir(u.toUpperCase(), "Governador", e.ufs[u].gov, 1);
+      conferir(u.toUpperCase(), "Senado", e.ufs[u].sen, 2);
+    });
+    try { localStorage.setItem("gctse-lideres", JSON.stringify(LIDER)); localStorage.setItem("gctse-viradas", JSON.stringify(AVISOS)); } catch (x) { }
+    document.getElementById("listaViradas").innerHTML = AVISOS.length
+      ? AVISOS.map(function (a) { return "<div>" + (a.h ? a.h + " · " : "") + a.t + "</div>"; }).join("")
+      : '<span class="f">nenhuma virada até agora</span>';
+  }
+  document.getElementById("limparViradas").addEventListener("click", function () { AVISOS = []; viradas(); });
+
+  function recarregar(arq) {
     var sc = document.createElement("script");
-    sc.charset = "utf-8"; sc.src = "dados.js?t=" + Date.now();
-    sc.onload = function () { sc.remove(); situacao(); cores(); };
+    sc.charset = "utf-8"; sc.src = arq + "?t=" + Date.now();
+    sc.onload = function () { sc.remove(); situacao(); situacaoEstados(); cores(); viradas(); };
     sc.onerror = function () { sc.remove(); };
     document.head.appendChild(sc);
   }
-  situacao(); cores(); setInterval(recarregar, 3000);
+  situacao(); situacaoEstados(); cores(); viradas();
+  setInterval(function () { recarregar("dados.js"); recarregar("estados.js"); }, 3000);
 })();
 </script>
 </body>

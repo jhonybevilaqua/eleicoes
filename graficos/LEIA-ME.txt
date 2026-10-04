@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 1.9 - apuracao de PRESIDENTE em graficos
+ gctse GRAFICOS 2.0 - apuracao de PRESIDENTE em graficos
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -151,6 +151,30 @@
    novo o GRAFICOS.bat.
 
 ---------------------------------------------------------------------------
+ PRESIDENTE - LEITURA NA TELA
+---------------------------------------------------------------------------
+
+   - "% dos votos validos": o percentual e sobre os validos (regra do
+     TSE; brancos e nulos ficam de fora).
+   - Marca branca nos 50% de cada barra: quem passa dela vence no 1o
+     turno.
+   - Mais candidatos do que linhas: a ultima linha vira "OUTROS N
+     CANDIDATOS" com a soma (a tela fecha 100%).
+   - Embaixo: "FULANO a frente por X pontos (N votos)".
+   - Tela nova "Abstencao, brancos e nulos" (horizontal e vertical),
+     tambem na apresentacao.
+
+---------------------------------------------------------------------------
+ PAGINA DO OPERADOR (ABRIR-GRAFICOS.bat) - NAO VAI AO AR
+---------------------------------------------------------------------------
+
+   - Situacao das duas coletas (Presidente e estados).
+   - AVISOS DE VIRADA: quando muda o 1o colocado de Presidente (Brasil e
+     cada estado) ou de Governador, ou quem ocupa as 2 vagas do Senado.
+     Ex.: "19:42 - VIROU - GO Governador: FULANO passou BELTRANO".
+     Botao "limpar" zera a lista.
+
+---------------------------------------------------------------------------
  GIRO DOS ESTADOS - GOVERNADOR E SENADOR (resultado final)
 ---------------------------------------------------------------------------
 
@@ -184,12 +208,20 @@
 ---------------------------------------------------------------------------
 
    RESUMO-HORIZONTAL.bat (1920x1080) / RESUMO-VERTICAL.bat (1080x1920)
+   (7 telas; teclas 1 a 7)
      1  Mapa dos governadores: eleito (verde), 2o turno (azul),
         em apuracao (cinza-azul), aguardando (escuro) + placar
      2  Governadores por partido (so quem o TSE declarou ELEITO)
      3  Senado - eleitos por partido (de 54 vagas)
      4  Presidente por regiao (soma dos estados, sem o exterior)
      5  Comparecimento por estado
+     6  Estado em destaque (Parana): Presidente no estado, Governador e
+        Senado lado a lado. Outro estado: web\giro-config.js,
+        estado_destaque: "pr"
+     7  2026 x 2022: comparecimento, abstencao, brancos e nulos. Os
+        numeros de 2022 vem dos arquivos do PROPRIO TSE (o ESTADOS.bat
+        procura 1 vez a cada 10 min). Sem eles a tela diz "ainda nao
+        foram encontrados" - nunca um numero digitado.
    Abre sozinho o GRAFICOS.bat e o ESTADOS.bat se nao estiverem rodando.
    Troca: seta / clique / roda / passador; teclas 1 a 5 vao direto;
    ENTER liga o giro automatico; Alt+F4 fecha.
