@@ -17,7 +17,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "2.14 - 04/10/2026"
+$Versao = "2.15 - 04/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -424,7 +424,12 @@ function Resumir-Boletim {
         elseif ($null -ne $blocoE -and (Tem-Propriedade $blocoE "te") -and (Tem-Propriedade $blocoE "est")) {
             $faltam = [double] ((Converter-Inteiro $blocoE.te) - (Converter-Inteiro $blocoE.est))
         }
+        elseif ($null -ne $blocoE -and (Tem-Propriedade $blocoE "te") -and (Tem-Propriedade $blocoE "c")) {
+            # total - comparecimento: maior que o real, so deixa a conta mais dificil
+            $faltam = [double] ((Converter-Inteiro $blocoE.te) - (Converter-Inteiro $blocoE.c))
+        }
     }
+    if ($null -eq $faltam -and "$(Obter-Campo $Bruto @('and') '')".ToLower() -eq "f") { $faltam = 0.0 }
     $tseJaDisse = @($cands | Where-Object { $_.eleito -or $_.segundo_turno }).Count -gt 0
     if (-not $tseJaDisse -and $null -ne $faltam -and $faltam -ge 0 -and $cands.Count -gt 0) {
         $somaVotos = 0.0

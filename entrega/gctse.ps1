@@ -35,7 +35,7 @@ param(
 # Versao impressa na partida e no painel. Sem carimbo, "qual versao esta
 # rodando ai?" so se responde abrindo arquivo e comparando a olho - e no
 # meio de um teste com janela de horario ninguem faz isso.
-$Versao = "6.7 - 04/10/2026"
+$Versao = "6.8 - 04/10/2026"
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
@@ -924,6 +924,14 @@ function Montar-Candidato {
     }
 }
 
+function Avisar-Definicao {
+    param([string] $Praca, [string] $Cargo, [string] $Texto, [double] $Faltam, [string] $Fonte)
+    $chave = "def|$Praca|$Cargo|$Texto"
+    if ($script:SituacoesAvisadas.ContainsKey($chave)) { return }
+    $script:SituacoesAvisadas[$chave] = $true
+    Escrever-Log ("CONTA: {0} cargo {1} - {2} (faltam no maximo {3:N0} eleitores, {4})" -f $Praca, $Cargo, $Texto, $Faltam, $Fonte) "OK"
+}
+
 function Calcular-Definicao {
     # 6.7: ELEITO / 2o TURNO MATEMATICAMENTE DEFINIDOS, com os numeros do
     # proprio boletim, so quando o TSE ainda nao escreveu a situacao.
@@ -937,14 +945,41 @@ function Calcular-Definicao {
     $lista = @($Candidatos)
     if ($lista.Count -eq 0) { return }
     if (@($lista | Where-Object { $_.Eleito -eq "1" -or $_.SegundoTurno -eq "1" }).Count -gt 0) { return }
+    # Quantos eleitores AINDA podem votar na conta (sempre pelo lado seguro):
+    #   1) e.esnt = eleitorado das secoes nao totalizadas (o exato)
+    #   2) e.te - e.est = total menos o das secoes totalizadas
+    #   3) total - comparecimento (maior que o real: conta tambem quem ja
+    #      faltou nas secoes apuradas - so deixa a conta mais dificil)
+    #   4) totalizacao final (and=f): 0
+    $praca = "$(Obter-Campo $Bruto @('cdabr') '')".ToUpper()
+    $cdLog = ""
+    if (Tem-Propriedade $Bruto "carg") { $cdLog = "$(Obter-Campo (@($Bruto.carg)[0]) @('cd') '')" }
     $blocoE = Obter-Campo $Bruto @("e")
-    if ($null -eq $blocoE) { return }
-    $faltam = $null
-    if (Tem-Propriedade $blocoE "esnt") { $faltam = [double] (Converter-Inteiro $blocoE.esnt) }
-    elseif ((Tem-Propriedade $blocoE "te") -and (Tem-Propriedade $blocoE "est")) {
-        $faltam = [double] ((Converter-Inteiro $blocoE.te) - (Converter-Inteiro $blocoE.est))
+    $faltam = $null; $fonte = ""
+    $totalEl = $null
+    foreach ($ch in @("te", "ea", "apt")) {
+        if ($null -eq $totalEl -and $null -ne $blocoE -and (Tem-Propriedade $blocoE $ch)) { $totalEl = [double] (Converter-Inteiro $blocoE.$ch) }
+        if ($null -eq $totalEl -and (Tem-Propriedade $Bruto $ch)) { $totalEl = [double] (Converter-Inteiro $Bruto.$ch) }
     }
-    if ($null -eq $faltam -or $faltam -lt 0) { return }
+    if ($null -ne $blocoE -and (Tem-Propriedade $blocoE "esnt")) {
+        $faltam = [double] (Converter-Inteiro $blocoE.esnt); $fonte = "esnt"
+    } elseif ($null -ne $totalEl -and $null -ne $blocoE -and (Tem-Propriedade $blocoE "est")) {
+        $faltam = $totalEl - [double] (Converter-Inteiro $blocoE.est); $fonte = "te-est"
+    } elseif ($null -ne $totalEl -and $null -ne $blocoE -and (Tem-Propriedade $blocoE "c")) {
+        $faltam = $totalEl - [double] (Converter-Inteiro $blocoE.c); $fonte = "te-c"
+    } elseif ("$(Obter-Campo $Bruto @('and') '')".ToLower() -eq "f") {
+        $faltam = 0.0; $fonte = "final"
+    }
+    if ($null -eq $faltam -or $faltam -lt 0) {
+        $chaveF = "semconta|$praca|$cdLog"
+        if (-not $script:SituacoesAvisadas.ContainsKey($chaveF)) {
+            $script:SituacoesAvisadas[$chaveF] = $true
+            $temE = "nao veio"
+            if ($null -ne $blocoE) { $temE = (@($blocoE.PSObject.Properties | ForEach-Object { $_.Name }) -join ",") }
+            Escrever-Log ("conta de eleito/2o turno NAO feita para {0} cargo {1}: o boletim nao traz quantos eleitores faltam (bloco e: {2})" -f $praca, $cdLog, $temE) "AVISO"
+        }
+        return
+    }
     $cd = 0; $nv = 1
     if (Tem-Propriedade $Bruto "carg") {
         $primeiroCargo = @($Bruto.carg)[0]
@@ -958,6 +993,7 @@ function Calcular-Definicao {
         $lider = $lista[0]
         if ($lider.Valido -and $lider.Votos -gt 0 -and (2.0 * $lider.Votos) -gt ($soma + $faltam)) {
             $lider.Eleito = "1"; $lider.Calculado = $true
+            Avisar-Definicao $praca $cdLog ("ELEITO " + $lider.Nome) $faltam $fonte
         } elseif ($lista.Count -ge 2) {
             $maior = 0.0
             foreach ($k in $lista) { if ($k.Valido -and [double] $k.Votos -gt $maior) { $maior = [double] $k.Votos } }
@@ -968,6 +1004,7 @@ function Calcular-Definicao {
                 ([double] $vice.Votos -gt ($terceiro + $faltam))) {
                 $lider.SegundoTurno = "1"; $lider.Calculado = $true
                 $vice.SegundoTurno = "1"; $vice.Calculado = $true
+                Avisar-Definicao $praca $cdLog ("SEGUNDO TURNO " + $lider.Nome + " x " + $vice.Nome) $faltam $fonte
             }
         }
     } elseif ($cd -eq 5) {
@@ -975,7 +1012,10 @@ function Calcular-Definicao {
         if ($lista.Count -gt $nv) { $desafiante = [double] $lista[$nv].Votos }
         for ($i = 0; $i -lt [math]::Min($nv, $lista.Count); $i++) {
             $k = $lista[$i]
-            if ($k.Valido -and $k.Votos -gt 0 -and [double] $k.Votos -gt ($desafiante + $faltam)) { $k.Eleito = "1"; $k.Calculado = $true }
+            if ($k.Valido -and $k.Votos -gt 0 -and [double] $k.Votos -gt ($desafiante + $faltam)) {
+                $k.Eleito = "1"; $k.Calculado = $true
+                Avisar-Definicao $praca $cdLog ("ELEITO " + $k.Nome) $faltam $fonte
+            }
         }
     }
 }
