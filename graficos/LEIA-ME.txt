@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 1.4 - apuracao de PRESIDENTE em graficos
+ gctse GRAFICOS 1.5 - apuracao de PRESIDENTE em graficos
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -67,8 +67,8 @@
      reabre sozinho em 10 s. A cada minuto ela escreve o que os monitores
      estao recebendo, ex.: "dados OFICIAL ok (ha 5 s) - Brasil: 13
      candidatos, urnas 0%". Vermelho ali = olhe a janela do GRAFICOS.bat.
-   - A apresentacao e sempre do OFICIAL: se o TESTE estiver gravando, o
-     atalho abre o GRAFICOS.bat e o TESTE se encerra.
+   - A apresentacao e sempre do OFICIAL (este pacote nem tem mais o
+     modo de teste: nada nele mostra "SIMULADO" ou "NAO OFICIAL").
    - Para encerrar DE VEZ: Alt+F4 na apresentacao e, na janela preta,
      aperte S (antes de 10 s). Ou feche a janela preta primeiro.
 
@@ -122,7 +122,6 @@
    Selo no alto:  AGUARDANDO APURACAO .... antes da 1a urna (cinza)
                   PARCIAL ................ apuracao em andamento
                   TOTALIZACAO FINAL ...... o TSE fechou o Brasil
-                  SIMULADO - NAO OFICIAL . so no TESTE-GRAFICOS.bat
 
    ELEITO / 2o TURNO: so quando o TSE escreve isso na situacao do
    candidato. Quem declara e o TSE, nao o sistema.
@@ -152,22 +151,31 @@
    novo o GRAFICOS.bat.
 
 ---------------------------------------------------------------------------
- ANTES DO DIA - TESTE COM O SIMULADO DO TSE
+ GIRO DOS ESTADOS - GOVERNADOR E SENADOR (resultado final)
 ---------------------------------------------------------------------------
 
-   TESTE-GRAFICOS.bat le o ambiente de SIMULADO do TSE (enquanto ele
-   estiver no ar) e mostra os graficos com dados de teste, marcados
-   "SIMULADO - NAO OFICIAL". Serve para conferir a maquina, a rede e o
-   switcher.
+   GIRO-ESTADOS-HORIZONTAL.bat -> tela cheia 1920x1080
+   GIRO-ESTADOS-VERTICAL.bat   -> tela cheia 1080x1920
 
-   O OFICIAL sempre ganha: se o GRAFICOS.bat (ou um APRESENTACAO-*.bat)
-   abrir com o TESTE aberto, o TESTE se encerra sozinho, e o TESTE nao
-   abre se o oficial ja estiver rodando. Selo "SIMULADO - NAO OFICIAL"
-   na tela = quem esta gravando e o TESTE.
+   Um estado por vez: 1o e 2o de GOVERNADOR e os 2 primeiros de SENADOR
+   (2 vagas em 2026), com a faixa:
+     ELEITO / ELEITOS (verde) ... quando o TSE escreve "Eleito"
+     2o TURNO (azul) ............ quando o TSE escreve "2o turno"
+     EM APURACAO / AGUARDANDO ... enquanto nao ha resultado
 
-   A janela escreve os campos que o TSE mandou nos blocos de totais
-   ("campos do bloco 'v' ..."). Se algum grafico de brancos/nulos ou de
-   comparecimento ficar com "—", envie o arquivo logs\graficos-*.log.
+   O atalho abre sozinho o ESTADOS.bat (a coleta de Governador e Senador
+   dos 27 estados, separada da de Presidente). Deixe a janela dele aberta.
+
+   TROCAR DE ESTADO (no proprio computador, sem segundo monitor):
+     seta direita / clique / roda do mouse p/ baixo / passador .. proximo
+     seta esquerda / botao direito / roda p/ cima ............... anterior
+     digitar a sigla (P e depois R) ............................. Parana
+     Home ........................................................ primeiro
+     ENTER ............................... liga/desliga o giro automatico
+     Alt+F4 .................................................... fecha
+
+   Ordem dos estados, tempo do giro automatico e quantos candidatos:
+   web\giro-config.js (Bloco de Notas). Depois de salvar, F5 na tela.
 
 ---------------------------------------------------------------------------
  CREDITOS

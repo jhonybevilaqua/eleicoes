@@ -1,21 +1,17 @@
 ﻿<#
-    gctse GRAFICOS - apuracao de PRESIDENTE para graficos (mapa, barras, rosca)
+    gctse GRAFICOS - GOVERNADOR e SENADOR dos 27 estados (giro final)
 
-    Le do TSE o boletim de Presidente do Brasil e dos 27 estados e grava
-    web\dados.js. As paginas de web\ (abertas no Chrome, ou como fonte de
-    navegador no switcher) leem esse arquivo sozinhas a cada 3 segundos.
+    Le do TSE o boletim de Governador e de Senador de cada estado e grava
+    web\estados.js, que a tela giro-estados.html le sozinha.
 
-    Separado de proposito do gctse das tarjas: outro computador, outra
-    pasta, nenhum arquivo em comum. Um nao derruba o outro.
+    Separado do graficos.ps1 (Presidente) de proposito: se este parar, os
+    graficos de Presidente continuam. So o ambiente OFICIAL.
 
-    Uso:
-        GRAFICOS.bat          ambiente OFICIAL (dia 04/10)
-        TESTE-GRAFICOS.bat    ambiente de SIMULADO do TSE (so para conferir)
+    Uso:  ESTADOS.bat (ou o GIRO-ESTADOS.bat, que abre este junto)
 #>
 
 [CmdletBinding()]
 param(
-    [switch] $Teste,
     [switch] $UmaVez
 )
 
@@ -36,17 +32,17 @@ $ProgressPreference = "SilentlyContinue"
 # (visto na maquina do GC em 28/09). Desliga a edicao rapida desta janela.
 if ($env:OS -eq "Windows_NT") {
     try {
-        Add-Type -Namespace GcTseGraficos -Name JanelaConsole -ErrorAction Stop -MemberDefinition @'
+        Add-Type -Namespace GcTseEstados -Name JanelaConsole -ErrorAction Stop -MemberDefinition @'
 [DllImport("kernel32.dll", SetLastError = true)] public static extern IntPtr GetStdHandle(int nStdHandle);
 [DllImport("kernel32.dll", SetLastError = true)] public static extern bool GetConsoleMode(IntPtr hConsoleHandle, out uint lpMode);
 [DllImport("kernel32.dll", SetLastError = true)] public static extern bool SetConsoleMode(IntPtr hConsoleHandle, uint dwMode);
 '@
-        $entradaConsole = [GcTseGraficos.JanelaConsole]::GetStdHandle(-10)
+        $entradaConsole = [GcTseEstados.JanelaConsole]::GetStdHandle(-10)
         [uint32] $modoConsole = 0
-        if ([GcTseGraficos.JanelaConsole]::GetConsoleMode($entradaConsole, [ref] $modoConsole)) {
+        if ([GcTseEstados.JanelaConsole]::GetConsoleMode($entradaConsole, [ref] $modoConsole)) {
             if (($modoConsole -band 0x40) -ne 0) { $modoConsole = $modoConsole - 0x40 }
             $modoConsole = $modoConsole -bor 0x80
-            [void] [GcTseGraficos.JanelaConsole]::SetConsoleMode($entradaConsole, $modoConsole)
+            [void] [GcTseEstados.JanelaConsole]::SetConsoleMode($entradaConsole, $modoConsole)
         }
     } catch { }
 }
@@ -65,7 +61,7 @@ function Escrever-Log {
     }
     try {
         if (-not (Test-Path "logs")) { New-Item -ItemType Directory -Path "logs" | Out-Null }
-        Add-Content -Path (Join-Path "logs" ("graficos-{0}.log" -f (Get-Date -Format "yyyy-MM-dd"))) -Value $linha -Encoding UTF8
+        Add-Content -Path (Join-Path "logs" ("estados-{0}.log" -f (Get-Date -Format "yyyy-MM-dd"))) -Value $linha -Encoding UTF8
     } catch { }
 }
 
@@ -241,6 +237,7 @@ function Promover-Temporario {
 }
 
 
+
 # -------------------------------------------------------------------- config
 
 if (-not (Test-Path "config-graficos.json")) {
@@ -251,28 +248,23 @@ $cfg = Get-Content "config-graficos.json" -Raw -Encoding UTF8 | ConvertFrom-Json
 
 $Base    = "$($cfg.tse.base_url)".TrimEnd('/')
 $Ciclo   = "$($cfg.tse.ciclo)"
-$Eleicao = "$($cfg.tse.eleicao_presidente)"
+# 6259 = Eleicoes Gerais Estaduais (Governador e Senador), pagina oficial do TSE
+$Eleicao = "6259"
+if ((Tem-Propriedade $cfg.tse "eleicao_estaduais") -and $cfg.tse.eleicao_estaduais) { $Eleicao = "$($cfg.tse.eleicao_estaduais)" }
 $Modo    = "OFICIAL"
-if ($Teste) {
-    if (-not ((Tem-Propriedade $cfg.tse "base_url_simulado") -and $cfg.tse.base_url_simulado)) {
-        Write-Host "Modo TESTE sem 'base_url_simulado' no config-graficos.json." -ForegroundColor Red
-        exit 1
-    }
-    $Base    = "$($cfg.tse.base_url_simulado)".TrimEnd('/')
-    $Eleicao = "$($cfg.tse.eleicao_presidente_simulado)"
-    $Modo    = "SIMULADO"
-}
-$Intervalo = 20
-if (Tem-Propriedade $cfg "intervalo_segundos") { $Intervalo = [math]::Max(10, [int] $cfg.intervalo_segundos) }
+$Intervalo = 30
+if (Tem-Propriedade $cfg "intervalo_estados_segundos") { $Intervalo = [math]::Max(15, [int] $cfg.intervalo_estados_segundos) }
 $PastaWeb = Join-Path $Raiz "web"
 
 $UFs = @("ac","al","ap","am","ba","ce","df","es","go","ma","mt","ms","mg","pa",
          "pb","pr","pe","pi","rj","rn","rs","ro","rr","sc","sp","se","to")
+$Cargos = @(3, 5)   # 3 = Governador, 5 = Senador
 
 function Montar-Url {
-    param([string] $Abr)
+    param([string] $Abr, [int] $Cargo)
     $ele6 = "{0:000000}" -f ([int] $Eleicao)
-    return "$Base/$Ciclo/$Eleicao/dados/$Abr/$Abr-c0001-e$ele6-u.json"
+    $c4 = "{0:0000}" -f $Cargo
+    return "$Base/$Ciclo/$Eleicao/dados/$Abr/$Abr-c$c4-e$ele6-u.json"
 }
 
 # ------------------------------------------------ recebendo do TSE? (alarme)
@@ -280,7 +272,7 @@ function Montar-Url {
 $script:AbertoEm = Get-Date   # (nao confundir com $inicio do ciclo: PowerShell ignora maiusculas)
 $script:UltimaResposta = $null
 $script:UltimoErro = ""
-$script:ErroFoi404 = $false   # o ultimo erro foi "ainda nao publicado"?
+$script:ErroFoi404 = $false
 $script:Alarme = $false
 $script:UltimoQuadro = [datetime]::MinValue
 
@@ -296,7 +288,7 @@ function Segundos-Sem-Tse {
 }
 
 function Conferir-Recebimento {
-    if ((Segundos-Sem-Tse) -lt [math]::Max(60, 3 * $Intervalo)) { return }
+    if ((Segundos-Sem-Tse) -lt [math]::Max(90, 3 * $Intervalo)) { return }
     $script:Alarme = $true
     if (((Get-Date) - $script:UltimoQuadro).TotalSeconds -lt 30) { return }
     $script:UltimoQuadro = Get-Date
@@ -304,12 +296,11 @@ function Conferir-Recebimento {
     if ($null -ne $script:UltimaResposta) { $ultimo = $script:UltimaResposta.ToString("HH:mm:ss") }
     $cor = @{ ForegroundColor = "White"; BackgroundColor = "DarkRed" }
     Write-Host ""
-    Write-Host ("  {0,-70}" -f "ATENCAO: NAO ESTAMOS RECEBENDO DADOS DO TSE") @cor
+    Write-Host ("  {0,-70}" -f "ATENCAO: NAO ESTAMOS RECEBENDO DADOS DO TSE (estados)") @cor
     Write-Host ("  {0,-70}" -f "ultimo dado recebido: $ultimo") @cor
-    Write-Host ("  {0,-70}" -f "Os graficos ficam no ultimo dado REAL recebido (ou vazios).") @cor
+    Write-Host ("  {0,-70}" -f "A tela fica no ultimo dado REAL recebido (ou vazia).") @cor
     if ($script:ErroFoi404) {
         Write-Host "  O TSE RESPONDEU, mas o boletim ainda nao foi publicado (404)." -ForegroundColor Yellow
-        Write-Host "  Normal antes da 1a divulgacao (17h). Depois das 17h10, avise." -ForegroundColor Yellow
     } elseif ($script:UltimoErro) { Write-Host "  ultimo erro: $($script:UltimoErro)" -ForegroundColor Yellow }
     Write-Host ""
     Escrever-Log "NAO ESTAMOS RECEBENDO DADOS DO TSE - ultimo: $ultimo" "ERRO"
@@ -317,8 +308,8 @@ function Conferir-Recebimento {
 
 # ------------------------------------------------------------ leitura do TSE
 
-$script:ETags = @{}        # url -> ETag (texto)
-$script:Ausentes = @{}     # url -> @{ vezes; pularAte } : recuo depois de 404
+$script:ETags = @{}
+$script:Ausentes = @{}
 $script:NumCiclo = 0
 $script:UltimoPedido = [datetime]::MinValue
 
@@ -326,7 +317,6 @@ function Obter-Boletim {
     # Devolve o objeto do boletim, "SEM-MUDANCA" (304) ou $null.
     param([string] $Url)
     if ($script:Ausentes.ContainsKey($Url) -and $script:NumCiclo -lt $script:Ausentes[$Url].pularAte) { return $null }
-    # respiro entre pedidos: bem abaixo das 100 req/s do TSE
     $passou = ((Get-Date) - $script:UltimoPedido).TotalMilliseconds
     if ($passou -lt 150) { Start-Sleep -Milliseconds ([int] (150 - $passou)) }
     $script:UltimoPedido = Get-Date
@@ -344,9 +334,6 @@ function Obter-Boletim {
             return "SEM-MUDANCA"
         }
         if ($codigo -eq 404) {
-            # O TSE avisa que muitos 404 podem bloquear o IP: espaca (1, 2,
-            # 3 ciclos). Teto de 3 ciclos = no maximo ~1 min de atraso
-            # quando o boletim aparece.
             $vezes = 1
             if ($script:Ausentes.ContainsKey($Url)) { $vezes = $script:Ausentes[$Url].vezes + 1 }
             $espera = [math]::Min($vezes, 3)
@@ -377,55 +364,26 @@ function Obter-Boletim {
 
 # ----------------------------------------------------------- leitura do boletim
 
-$script:CamposVistos = @{}
-
-function Numero-De {
-    param($Bloco, [string[]] $Chaves)
-    if ($null -eq $Bloco) { return $null }
-    foreach ($k in $Chaves) {
-        if (Tem-Propriedade $Bloco $k) {
-            $v = $Bloco.$k
-            if ($null -ne $v -and "$v" -ne "") { return $v }
-        }
-    }
-    return $null
-}
-
-function Inteiro-Ou-Nulo { param($V) if ($null -eq $V) { return $null } return (Converter-Inteiro $V) }
-function Decimal-Ou-Nulo { param($V) if ($null -eq $V) { return $null } return (Converter-Decimal $V) }
-
 function Resumir-Boletim {
-    param($Bruto, [string] $Abr)
+    param($Bruto, [int] $Cargo)
     $fase = "$(Obter-Campo $Bruto @('f') '')".ToUpper()
-    $s = $null; $e = $null; $v = $null
-    if (Tem-Propriedade $Bruto "s") { $s = $Bruto.s }
-    if (Tem-Propriedade $Bruto "e") { $e = $Bruto.e }
-    if (Tem-Propriedade $Bruto "v") { $v = $Bruto.v }
-    # Os nomes dos campos de totais nao estao todos confirmados no arquivo
-    # de 2026: registra uma vez o que veio, para conferencia.
-    foreach ($par in @(@("s", $s), @("e", $e), @("v", $v))) {
-        $chaveV = "$Abr-$($par[0])"
-        if ($null -ne $par[1] -and -not $script:CamposVistos.ContainsKey($chaveV) -and $Abr -eq "br") {
-            $script:CamposVistos[$chaveV] = $true
-            Escrever-Log ("campos do bloco '{0}' no boletim do TSE: {1}" -f $par[0], (($par[1].PSObject.Properties | ForEach-Object { $_.Name }) -join ", "))
-        }
-    }
-
+    $vagas = 1
     $cands = @()
     if (Tem-Propriedade $Bruto "carg") {
-        foreach ($cargo in $Bruto.carg) {
-            if ("$(Obter-Campo $cargo @('cd') '1')" -ne "1") { continue }
-            if (-not (Tem-Propriedade $cargo "agr")) { continue }
-            foreach ($agr in $cargo.agr) {
+        foreach ($cg in $Bruto.carg) {
+            if ("$(Obter-Campo $cg @('cd') '')" -ne "$Cargo") { continue }
+            $nv = Converter-Inteiro (Obter-Campo $cg @('nv') 1)
+            if ($nv -ge 1) { $vagas = $nv }
+            if (-not (Tem-Propriedade $cg "agr")) { continue }
+            foreach ($agr in $cg.agr) {
                 if (-not (Tem-Propriedade $agr "par")) { continue }
-                foreach ($par in $agr.par) {
-                    $sigla = Decodificar-Entidades "$(Obter-Campo $par @('sg','nm') '')"
-                    if (-not (Tem-Propriedade $par "cand")) { continue }
-                    foreach ($c in $par.cand) {
+                foreach ($pa in $agr.par) {
+                    $sigla = Decodificar-Entidades "$(Obter-Campo $pa @('sg','nm') '')"
+                    if (-not (Tem-Propriedade $pa "cand")) { continue }
+                    foreach ($c in $pa.cand) {
                         $st = Decodificar-Entidades "$(Obter-Campo $c @('st') '')"
                         $marcaE = "$(Obter-Campo $c @('e') '')".ToLower()
-                        # ELEITO so com a palavra do TSE (mesma regra do gctse 6.x):
-                        # no simulado, e=s veio tambem para quem ia ao 2o turno.
+                        # ELEITO so com a palavra do TSE (mesma regra do gctse 6.x).
                         $eleito = $false
                         if ($st) { $eleito = ($st -match '^Eleito') } elseif ($marcaE -eq "s") { $eleito = $true }
                         $cands += [pscustomobject]@{
@@ -436,7 +394,7 @@ function Resumir-Boletim {
                             pct     = Converter-Decimal (Obter-Campo $c @('pvap') 0)
                             eleito  = $eleito
                             segundo_turno = ($st -match 'turno')
-                            destinacao = Decodificar-Entidades "$(Obter-Campo $c @('dvt') '')"
+                            situacao = $st
                         }
                     }
                 }
@@ -444,48 +402,18 @@ function Resumir-Boletim {
         }
     }
     $cands = @($cands | Sort-Object -Property @{Expression = "votos"; Descending = $true}, numero)
-
-    $validos = Inteiro-Ou-Nulo (Numero-De $v @('vv'))
-    $brancos = Inteiro-Ou-Nulo (Numero-De $v @('vb'))
-    $nulos   = Inteiro-Ou-Nulo (Numero-De $v @('tvn','vn'))
-    $pValidos = Decimal-Ou-Nulo (Numero-De $v @('pvv'))
-    $pBrancos = Decimal-Ou-Nulo (Numero-De $v @('pvb'))
-    $pNulos   = Decimal-Ou-Nulo (Numero-De $v @('ptvn','pvn'))
-    if ($null -eq $validos -and $cands.Count -gt 0) { $validos = [int64] (($cands | Measure-Object -Property votos -Sum).Sum) }
-    # Percentuais sobre os votos apurados (validos + brancos + nulos), quando
-    # o TSE nao manda pronto.
-    if ($null -ne $validos -and $null -ne $brancos -and $null -ne $nulos) {
-        $tot = [double] ($validos + $brancos + $nulos)
-        if ($tot -gt 0) {
-            if ($null -eq $pValidos) { $pValidos = [math]::Round(100.0 * $validos / $tot, 2) }
-            if ($null -eq $pBrancos) { $pBrancos = [math]::Round(100.0 * $brancos / $tot, 2) }
-            if ($null -eq $pNulos)   { $pNulos   = [math]::Round(100.0 * $nulos / $tot, 2) }
-        }
-    }
-
+    $s = $null
+    if (Tem-Propriedade $Bruto "s") { $s = $Bruto.s }
+    $pctUrnas = $null
+    if ($null -ne $s -and (Tem-Propriedade $s "pst")) { $pctUrnas = Converter-Decimal $s.pst }
     return [pscustomobject]@{
         tem        = $true
         fase       = $fase
         andamento  = "$(Obter-Campo $Bruto @('and') '')".ToLower()
         geracao    = "$(Obter-Campo $Bruto @('dg') '') $(Obter-Campo $Bruto @('hg') '')"
         hora       = "$(Obter-Campo $Bruto @('hg') '')"
-        secoes     = [pscustomobject]@{
-            total       = Inteiro-Ou-Nulo (Numero-De $s @('ts'))
-            totalizadas = Inteiro-Ou-Nulo (Numero-De $s @('st'))
-            pct         = Decimal-Ou-Nulo (Numero-De $s @('pst'))
-        }
-        eleitorado = [pscustomobject]@{
-            aptos          = Inteiro-Ou-Nulo (Numero-De $e @('te'))
-            comparecimento = Inteiro-Ou-Nulo (Numero-De $e @('c'))
-            pct_comparec   = Decimal-Ou-Nulo (Numero-De $e @('pc'))
-            abstencao      = Inteiro-Ou-Nulo (Numero-De $e @('a'))
-            pct_abstencao  = Decimal-Ou-Nulo (Numero-De $e @('pa'))
-        }
-        votos      = [pscustomobject]@{
-            validos = $validos; pct_validos = $pValidos
-            brancos = $brancos; pct_brancos = $pBrancos
-            nulos   = $nulos;   pct_nulos   = $pNulos
-        }
+        urnas_pct  = $pctUrnas
+        vagas      = $vagas
         candidatos = $cands
     }
 }
@@ -499,94 +427,57 @@ function Converter-Geracao {
     return $null
 }
 
-$script:Cache = @{}           # abr -> ultimo resumo aceito
-$script:Regressao = @{}       # abr -> vezes que o numero menor foi visto
+$script:Cache = @{}
+$script:Regressao = @{}
 $script:FaseAvisada = @{}
 
 function Ler-Abrangencia {
-    param([string] $Abr)
-    $url = Montar-Url $Abr
+    param([string] $Abr, [int] $Cargo)
+    $url = Montar-Url $Abr $Cargo
+    $chave = "$Abr-$Cargo"
     $bruto = Obter-Boletim $url
     if ($null -eq $bruto -or "$bruto" -eq "SEM-MUDANCA") { return }
-    $r = Resumir-Boletim $bruto $Abr
-    # No ar, so dado oficial: o ambiente OFICIAL nao pode passar simulado
-    # (S) nem teste (T).
-    if ($Modo -eq "OFICIAL" -and ($r.fase -eq "S" -or $r.fase -eq "T")) {
+    $r = Resumir-Boletim $bruto $Cargo
+    # No ar, so dado oficial: nada de simulado (S) nem teste (T).
+    if ($r.fase -eq "S" -or $r.fase -eq "T") {
         if (-not $script:FaseAvisada.ContainsKey($r.fase)) {
             $script:FaseAvisada[$r.fase] = $true
-            Escrever-Log "boletim de fase '$($r.fase)' no ambiente oficial - NAO vai para os graficos" "ERRO"
+            Escrever-Log "boletim de fase '$($r.fase)' no ambiente oficial - NAO vai para a tela" "ERRO"
         }
         return
     }
-    # Anti-regressao: numero menor com geracao mais ANTIGA e copia velha de
-    # CDN - segura. Com geracao mais nova e o TSE corrigindo/reiniciando.
-    if ($script:Cache.ContainsKey($Abr)) {
-        $velho = $script:Cache[$Abr]
-        $pNovo = $r.secoes.pct; $pVelho = $velho.secoes.pct
+    # Anti-regressao: numero menor com geracao mais ANTIGA e copia velha de CDN.
+    if ($script:Cache.ContainsKey($chave)) {
+        $velho = $script:Cache[$chave]
+        $pNovo = $r.urnas_pct; $pVelho = $velho.urnas_pct
         if ($null -ne $pNovo -and $null -ne $pVelho -and $pNovo -lt $pVelho - 0.001) {
             $gN = Converter-Geracao $r.geracao; $gV = Converter-Geracao $velho.geracao
             if (-not ($null -ne $gN -and $null -ne $gV -and $gN -gt $gV)) {
                 $n = 1
-                if ($script:Regressao.ContainsKey($Abr)) { $n = $script:Regressao[$Abr] + 1 }
-                $script:Regressao[$Abr] = $n
+                if ($script:Regressao.ContainsKey($chave)) { $n = $script:Regressao[$chave] + 1 }
+                $script:Regressao[$chave] = $n
                 if ($n -lt 3) {
                     if ($script:ETags.ContainsKey($url)) { $script:ETags.Remove($url) }
-                    Escrever-Log ("{0}: urnas voltaram de {1}% para {2}% - mantendo o ultimo bom ({3}a vez)" -f $Abr, $pVelho, $pNovo, $n) "AVISO"
+                    Escrever-Log ("{0}: urnas voltaram de {1}% para {2}% - mantendo o ultimo bom ({3}a vez)" -f $chave, $pVelho, $pNovo, $n) "AVISO"
                     return
                 }
             }
         }
     }
-    if ($script:Regressao.ContainsKey($Abr)) { $script:Regressao.Remove($Abr) }
-    $script:Cache[$Abr] = $r
-}
-
-# ------------------------------------------------------ cor de cada candidato
-# A cor segue o CANDIDATO, nunca a posicao: se fosse pela colocacao, o mapa
-# repintaria os estados quando o 2o passasse o 1o. As 3 primeiras cores da
-# paleta sao as unicas que continuam distinguiveis entre si num mapa
-# (validado, inclusive para daltonismo) - entao vao para os primeiros que
-# aparecem na frente, e a atribuicao fica CONGELADA em cores-atribuidas.json
-# (sobrevive a reiniciar o programa). Quem aparece depois pega a proxima.
-
-$ArquivoCores = Join-Path $Raiz "cores-atribuidas-$($Modo.ToLower()).json"
-$script:Slots = @{}
-if (Test-Path $ArquivoCores) {
-    try {
-        $lido = Get-Content $ArquivoCores -Raw -Encoding UTF8 | ConvertFrom-Json
-        foreach ($p in $lido.PSObject.Properties) { $script:Slots[$p.Name] = [int] $p.Value }
-    } catch { }
-}
-
-function Atribuir-Cores {
-    if (-not $script:Cache.ContainsKey("br")) { return }
-    $mudou = $false
-    foreach ($c in $script:Cache["br"].candidatos) {
-        if ($c.votos -le 0 -or -not $c.numero) { continue }
-        if ($script:Slots.ContainsKey($c.numero)) { continue }
-        $script:Slots["$($c.numero)"] = $script:Slots.Count
-        $mudou = $true
-    }
-    if ($mudou) {
-        try {
-            $obj = [ordered]@{}
-            foreach ($k in ($script:Slots.Keys | Sort-Object { $script:Slots[$_] })) { $obj["$k"] = $script:Slots[$k] }
-            [IO.File]::WriteAllText($ArquivoCores, ($obj | ConvertTo-Json), (New-Object System.Text.UTF8Encoding($false)))
-        } catch { }
-    }
+    if ($script:Regressao.ContainsKey($chave)) { $script:Regressao.Remove($chave) }
+    $script:Cache[$chave] = $r
 }
 
 # ------------------------------------------------------------- gravar dados
 
 function Gravar-Dados {
-    Atribuir-Cores
     $porEstado = [ordered]@{}
     foreach ($u in $UFs) {
-        if ($script:Cache.ContainsKey($u)) { $porEstado["$u"] = $script:Cache[$u] }
-        else { $porEstado["$u"] = [pscustomobject]@{ tem = $false } }
+        $g = [pscustomobject]@{ tem = $false }; $s = [pscustomobject]@{ tem = $false }
+        if ($script:Cache.ContainsKey("$u-3")) { $g = $script:Cache["$u-3"] }
+        if ($script:Cache.ContainsKey("$u-5")) { $s = $script:Cache["$u-5"] }
+        $porEstado["$u"] = [pscustomobject]@{ gov = $g; sen = $s }
     }
-    $br = [pscustomobject]@{ tem = $false }
-    if ($script:Cache.ContainsKey("br")) { $br = $script:Cache["br"] }
     $ult = ""
     if ($null -ne $script:UltimaResposta) { $ult = $script:UltimaResposta.ToString("HH:mm:ss") }
     $dados = [ordered]@{
@@ -597,81 +488,51 @@ function Gravar-Dados {
         recebendo_tse = (-not $script:Alarme)
         tse_nao_publicou = ($script:Alarme -and $script:ErroFoi404)
         ultimo_tse    = $ult
-        cores         = $(if (Tem-Propriedade $cfg "cores") { $cfg.cores } else { [pscustomobject]@{} })
-        cor_slot      = [pscustomobject] $script:Slots
-        br            = $br
         ufs           = $porEstado
     }
     $json = $dados | ConvertTo-Json -Depth 8 -Compress
-    $conteudo = "window.GCTSE_DADOS = $json;"
-    $destino = Join-Path $PastaWeb "dados.js"
+    $conteudo = "window.GCTSE_ESTADOS = $json;"
+    $destino = Join-Path $PastaWeb "estados.js"
     $tmp = "$destino.tmp"
     [IO.File]::WriteAllText($tmp, $conteudo, (New-Object System.Text.UTF8Encoding($false)))
     [void] (Promover-Temporario $tmp $destino)
 }
 
-# ------------------------------------------------- um coletor por pasta
-# OFICIAL e TESTE gravam o mesmo web\dados.js. Se os dois estiverem abertos,
-# a tela fica trocando entre oficial e simulado (visto em 02/10: monitores
-# parados com "SIMULADO" porque o TESTE ficou aberto). Regra: o OFICIAL
-# sempre ganha - o TESTE ve que o oficial esta gravando e se encerra.
-
-function Outro-Coletor-Oficial {
-    $arq = Join-Path $PastaWeb "dados.js"
-    if (-not (Test-Path $arq)) { return $false }
-    try {
-        if (((Get-Date) - (Get-Item $arq).LastWriteTime).TotalSeconds -gt 60) { return $false }
-        $txt = [IO.File]::ReadAllText($arq)
-        $m = [regex]::Match($txt, '"modo":"(\w+)".*?"pid":(\d+)')
-        if (-not $m.Success) { return $false }
-        return ($m.Groups[1].Value -eq "OFICIAL" -and [int] $m.Groups[2].Value -ne $PID)
-    } catch { return $false }
-}
-
 # ---------------------------------------------------------------- execucao
 
-Escrever-Log "gctse GRAFICOS versao $Versao" "OK"
-Escrever-Log "modo $Modo | intervalo ${Intervalo}s | Presidente: Brasil + 27 estados"
-Escrever-Log "caminho: $(Montar-Url 'br')"
-if ($Modo -eq "SIMULADO") { Escrever-Log "SIMULADO do TSE: os graficos saem com 'SIMULADO - NAO OFICIAL'. Nao use no ar." "AVISO" }
-Escrever-Log "Abra no Chrome: $(Join-Path $PastaWeb 'index.html')"
-if ($Modo -eq "SIMULADO" -and (Outro-Coletor-Oficial)) {
-    Escrever-Log "a coleta OFICIAL (GRAFICOS.bat) ja esta rodando nesta pasta - o TESTE nao abre para nao misturar." "ERRO"
-    exit 2
-}
+Escrever-Log "gctse ESTADOS (Governador e Senador) versao $Versao" "OK"
+Escrever-Log "modo $Modo | intervalo ${Intervalo}s | 27 estados x 2 cargos"
+Escrever-Log "caminho: $(Montar-Url 'pr' 3)"
 Gravar-Dados
 
 do {
     $inicio = Get-Date
     $script:NumCiclo++
-    if ($Modo -eq "SIMULADO" -and (Outro-Coletor-Oficial)) {
-        Escrever-Log "a coleta OFICIAL (GRAFICOS.bat) abriu nesta pasta - o TESTE se encerra aqui." "AVISO"
-        break
-    }
     try {
-        Ler-Abrangencia "br"
-        Gravar-Dados                       # o Brasil vai para a tela antes dos estados
-        # Estados so depois que o Brasil saiu: antes das 17h seriam 27
-        # pedidos com 404 por ciclo (o TSE avisa que 404 em excesso bloqueia
-        # o IP). Antes, so o Brasil e consultado.
-        if ($script:Cache.ContainsKey("br")) { foreach ($u in $UFs) { Ler-Abrangencia $u } }
+        foreach ($u in $UFs) { foreach ($cg in $Cargos) { Ler-Abrangencia $u $cg } }
         Conferir-Recebimento
         Gravar-Dados
-        $comDado = @($UFs | Where-Object { $script:Cache.ContainsKey($_) }).Count
-        $txt = "Brasil: sem boletim"
-        if ($script:ErroFoi404) { $txt = "Brasil: TSE ainda nao publicou (normal antes das 17h)" }
-        if ($script:Cache.ContainsKey("br")) {
-            $b = $script:Cache["br"]
-            $l = ""
-            if ($b.candidatos.Count -gt 0) { $l = " | 1o $($b.candidatos[0].nome) $($b.candidatos[0].pct)%" }
-            $txt = "Brasil: urnas $($b.secoes.pct)%$l"
+        $nG = @($UFs | Where-Object { $script:Cache.ContainsKey("$_-3") }).Count
+        $nS = @($UFs | Where-Object { $script:Cache.ContainsKey("$_-5") }).Count
+        $eleG = 0; $segG = 0; $eleS = 0
+        foreach ($u in $UFs) {
+            if ($script:Cache.ContainsKey("$u-3")) {
+                $cs = @($script:Cache["$u-3"].candidatos)
+                if (@($cs | Where-Object { $_.eleito }).Count -gt 0) { $eleG++ }
+                elseif (@($cs | Where-Object { $_.segundo_turno }).Count -gt 0) { $segG++ }
+            }
+            if ($script:Cache.ContainsKey("$u-5")) {
+                $eleS += @(@($script:Cache["$u-5"].candidatos) | Where-Object { $_.eleito }).Count
+            }
         }
         $situ = "TSE: recebendo"
         if ($script:Alarme) {
             $situ = "TSE: SEM RESPOSTA ha $(Segundos-Sem-Tse) s"
             if ($script:ErroFoi404) { $situ = "TSE: responde, mas sem boletim ha $(Segundos-Sem-Tse) s" }
         }
-        Escrever-Log "$txt | estados com boletim: $comDado de 27 | $situ" $(if ($script:Alarme) { "ERRO" } else { "INFO" })
+        $pr = ""
+        if ($script:Cache.ContainsKey("pr-3")) { $pr = " | PR gov: urnas $($script:Cache['pr-3'].urnas_pct)%" }
+        Escrever-Log ("governador: {0}/27 estados ({1} eleitos, {2} no 2o turno) | senador: {3}/27 ({4} eleitos){5} | {6}" -f $nG, $eleG, $segG, $nS, $eleS, $pr, $situ) $(if ($script:Alarme) { "ERRO" } else { "INFO" })
     } catch {
         Escrever-Log "erro no ciclo: $($_.Exception.Message)" "ERRO"
     }
