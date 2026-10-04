@@ -17,7 +17,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "2.12 - 04/10/2026"
+$Versao = "2.13 - 04/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -402,6 +402,8 @@ function Resumir-Boletim {
                             eleito  = $eleito
                             segundo_turno = $vaiTurno
                             situacao = $st
+                            valido  = ("$(Obter-Campo $c @('dvt') '')" -eq "" -or "$(Obter-Campo $c @('dvt') '')" -match '^V')
+                            calculado = $false
                         }
                     }
                 }
@@ -409,6 +411,40 @@ function Resumir-Boletim {
         }
     }
     $cands = @($cands | Sort-Object -Property @{Expression = "votos"; Descending = $true}, numero)
+
+    # MATEMATICAMENTE ELEITO (conta com os numeros do proprio TSE), so se o
+    # TSE ainda nao escreveu a situacao. Pior caso para quem lidera: TODOS os
+    # eleitores das secoes ainda nao totalizadas votam no adversario.
+    #   Governador: votos do 1o > metade de (todos os votos de candidatos + faltam)
+    #   Senador (nv vagas): votos do k-esimo > votos do (nv+1)-esimo + faltam
+    $faltam = $null
+    if (Tem-Propriedade $Bruto "e") {
+        $blocoE = $Bruto.e
+        if ($null -ne $blocoE -and (Tem-Propriedade $blocoE "esnt")) { $faltam = [double] (Converter-Inteiro $blocoE.esnt) }
+        elseif ($null -ne $blocoE -and (Tem-Propriedade $blocoE "te") -and (Tem-Propriedade $blocoE "est")) {
+            $faltam = [double] ((Converter-Inteiro $blocoE.te) - (Converter-Inteiro $blocoE.est))
+        }
+    }
+    $tseJaDisse = @($cands | Where-Object { $_.eleito -or $_.segundo_turno }).Count -gt 0
+    if (-not $tseJaDisse -and $null -ne $faltam -and $faltam -ge 0 -and $cands.Count -gt 0) {
+        $somaVotos = 0.0
+        foreach ($k in $cands) { $somaVotos += [double] $k.votos }
+        if ($Cargo -eq 3) {
+            $lider = $cands[0]
+            if ($lider.valido -and $lider.votos -gt 0 -and (2.0 * $lider.votos) -gt ($somaVotos + $faltam)) {
+                $lider.eleito = $true; $lider.calculado = $true
+            }
+        } else {
+            $desafiante = 0.0
+            if ($cands.Count -gt $vagas) { $desafiante = [double] $cands[$vagas].votos }
+            for ($i = 0; $i -lt [math]::Min($vagas, $cands.Count); $i++) {
+                $k = $cands[$i]
+                if ($k.valido -and $k.votos -gt 0 -and [double] $k.votos -gt ($desafiante + $faltam)) {
+                    $k.eleito = $true; $k.calculado = $true
+                }
+            }
+        }
+    }
     $s = $null
     if (Tem-Propriedade $Bruto "s") { $s = $Bruto.s }
     $pctUrnas = $null

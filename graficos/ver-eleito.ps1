@@ -32,7 +32,8 @@ try {
         L ("  {0}: urnas {1}%  andamento={2}" -f $q, $c.urnas_pct, $c.andamento)
         $cs = @($c.candidatos); if ($cs.Count -eq 1 -and $cs[0].PSObject.Properties["value"]) { $cs = @($cs[0].value) }
         foreach ($k in ($cs | Select-Object -First 4)) {
-            L ("     {0,-28} {1,6}%  eleito={2,-5} 2turno={3,-5} situacao='{4}'" -f $k.nome, $k.pct, $k.eleito, $k.segundo_turno, $k.situacao)
+            $calc = ""; if ($k.PSObject.Properties["calculado"] -and $k.calculado) { $calc = "  (matematicamente eleito pela conta)" }
+            L ("     {0,-28} {1,6}%  eleito={2,-5} 2turno={3,-5} situacao='{4}'{5}" -f $k.nome, $k.pct, $k.eleito, $k.segundo_turno, $k.situacao, $calc)
         }
     }
 } catch { L "TELA: nao consegui ler web\estados.js ($($_.Exception.Message))" }
@@ -49,6 +50,7 @@ foreach ($cargo in @(3, 5)) {
         foreach ($p in $b.PSObject.Properties) { if ($p.Name -notin @("carg", "s", "e", "v")) { $topo += ("{0}={1}" -f $p.Name, ((ConvertTo-Json -InputObject $p.Value -Compress -Depth 3) -replace '^"|"$', '')) } }
         L ("  topo: " + ($topo -join "  "))
         if ($b.s) { L ("  urnas: pst={0}" -f $b.s.pst) }
+        if ($b.e) { L ("  eleitorado: total={0}  em secoes apuradas={1}  FALTAM (secoes nao totalizadas)={2}  comparecimento={3}%" -f $b.e.te, $b.e.est, $b.e.esnt, $b.e.pc) }
         $lista = @()
         foreach ($cg in @($b.carg)) {
             $extra = @(); foreach ($p in $cg.PSObject.Properties) { if ($p.Name -notin @("agr", "fed")) { $extra += ("{0}={1}" -f $p.Name, ((ConvertTo-Json -InputObject $p.Value -Compress -Depth 2) -replace '^"|"$', '')) } }
