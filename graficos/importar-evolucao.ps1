@@ -76,22 +76,58 @@ if ($null -eq $diaEleicao) { Sair "nao sei o dia da eleicao: rode com -Dia AAAA-
 $janelaIni = $diaEleicao.Date.AddHours(16).AddMinutes(30); $janelaFim = $diaEleicao.Date.AddDays(1).AddHours(8)
 
 # --------------------------------------------------------------- arquivos de log
-if ($null -eq $Caminhos -or $Caminhos.Count -eq 0) { $Caminhos = @((Join-Path $Raiz "importar"), $Raiz) }
+# Arrastado sobre o .bat: aceita qualquer nome (copia de WhatsApp vira
+# "gctse-2026-10-04 (1).log", o Windows esconde ".txt" etc.). Sem arrastar:
+# procura log do gctse na pasta importar, nesta pasta, nas pastas "logs"
+# vizinhas (gctse no mesmo computador), na Area de Trabalho e em Downloads.
+$explicitos = ($null -ne $Caminhos -and @($Caminhos | Where-Object { $_ }).Count -gt 0)
+$ondeProcurar = New-Object System.Collections.ArrayList
+if ($explicitos) { foreach ($c in $Caminhos) { if ($c) { [void] $ondeProcurar.Add(@{ p = "$c".Trim('"'); fundo = $true }) } } }
+else {
+    [void] $ondeProcurar.Add(@{ p = (Join-Path $Raiz "importar"); fundo = $true })
+    [void] $ondeProcurar.Add(@{ p = $Raiz; fundo = $false })
+    $pai = Split-Path -Parent $Raiz
+    if ($pai) {
+        foreach ($viz in @(Get-ChildItem -LiteralPath $pai -Directory -ErrorAction SilentlyContinue)) {
+            [void] $ondeProcurar.Add(@{ p = (Join-Path $viz.FullName "logs"); fundo = $false })
+        }
+    }
+    $pessoais = @()
+    try { $pessoais += [Environment]::GetFolderPath("Desktop") } catch { }
+    if ($env:USERPROFILE) { $pessoais += @((Join-Path $env:USERPROFILE "Desktop"), (Join-Path $env:USERPROFILE "Downloads"), (Join-Path $env:USERPROFILE "OneDrive\Desktop")) }
+    foreach ($pp in ($pessoais | Where-Object { $_ } | Select-Object -Unique)) { [void] $ondeProcurar.Add(@{ p = $pp; fundo = $true }) }
+}
+$vistos = New-Object System.Collections.ArrayList     # para o diagnostico
 $arquivos = @()
-foreach ($c in $Caminhos) {
-    if (-not $c) { continue }
-    if (Test-Path -LiteralPath $c -PathType Container) { $arquivos += @(Get-ChildItem -LiteralPath $c -Filter "gctse-*.log" -File -ErrorAction SilentlyContinue) }
-    elseif (Test-Path -LiteralPath $c -PathType Leaf) { $arquivos += @(Get-Item -LiteralPath $c) }
+foreach ($o in $ondeProcurar) {
+    if (Test-Path -LiteralPath $o.p -PathType Leaf) { $arquivos += @(Get-Item -LiteralPath $o.p); continue }
+    if (-not (Test-Path -LiteralPath $o.p -PathType Container)) { continue }
+    $achados = @()
+    if ($o.fundo) { $achados = @(Get-ChildItem -LiteralPath $o.p -File -Recurse -Depth 2 -ErrorAction SilentlyContinue) }
+    else { $achados = @(Get-ChildItem -LiteralPath $o.p -File -ErrorAction SilentlyContinue) }
+    $arquivos += @($achados | Where-Object { $_.Name -match '(?i)^gctse.*\.(log|txt)$' })
 }
 $arquivos = @($arquivos | Sort-Object FullName -Unique)
-$arquivos = @($arquivos | Where-Object {
-    $m = [regex]::Match($_.Name, 'gctse-(\d{4}-\d\d-\d\d)\.log$')
-    if (-not $m.Success) { return $false }
-    $dt = [datetime]::ParseExact($m.Groups[1].Value, "yyyy-MM-dd", [Globalization.CultureInfo]::InvariantCulture)
-    return ($dt -eq $diaEleicao.Date -or $dt -eq $diaEleicao.Date.AddDays(1))
-})
-if ($arquivos.Count -eq 0) {
-    Sair ("nenhum log das tarjas do dia {0} (gctse-{1}.log). Copie da pasta logs do computador das tarjas e arraste sobre o IMPORTAR-EVOLUCAO.bat." -f $diaEleicao.ToString("dd/MM/yyyy"), $diaEleicao.ToString("yyyy-MM-dd")) 1
+# Dia pelo nome (gctse-AAAA-MM-DD...); so o dia da eleicao e o seguinte.
+# Sem data no nome, a hora decide (ver abaixo).
+$usar = @()
+foreach ($a in $arquivos) {
+    $m = [regex]::Match($a.Name, '(\d{4})-(\d\d)-(\d\d)')
+    $dtArq = $null
+    if ($m.Success) {
+        $dtArq = Get-Date -Year ([int] $m.Groups[1].Value) -Month ([int] $m.Groups[2].Value) -Day ([int] $m.Groups[3].Value) -Hour 0 -Minute 0 -Second 0 -Millisecond 0
+        if ($dtArq.Date -ne $diaEleicao.Date -and $dtArq.Date -ne $diaEleicao.Date.AddDays(1)) {
+            [void] $vistos.Add(("   {0}  (outro dia - ignorado)" -f $a.FullName)); continue
+        }
+    }
+    $usar += [pscustomobject]@{ Arquivo = $a; Dia = $dtArq }
+}
+if ($usar.Count -eq 0) {
+    Write-Host ("Procurei em:") -ForegroundColor Yellow
+    foreach ($o in $ondeProcurar) { Write-Host ("   {0}{1}" -f $o.p, $(if (Test-Path -LiteralPath $o.p) { "" } else { "  (nao existe)" })) }
+    if ($vistos.Count -gt 0) { Write-Host "Logs do gctse encontrados:" -ForegroundColor Yellow; foreach ($v in $vistos) { Write-Host $v } }
+    if ($explicitos) { Write-Host ("Recebi do arrastar: {0}" -f (($Caminhos | Where-Object { $_ }) -join " ; ")) -ForegroundColor Yellow }
+    Sair ("nenhum log das tarjas do dia {0}. No computador das TARJAS, pasta do gctse > logs, copie gctse-{1}.log (e o do dia seguinte) e ARRASTE os arquivos sobre o IMPORTAR-EVOLUCAO.bat (ou ponha na pasta importar)." -f $diaEleicao.ToString("dd/MM/yyyy"), $diaEleicao.ToString("yyyy-MM-dd")) 1
 }
 
 $re = '^(\d\d:\d\d:\d\d)\s+\S+\s+NO ARQUIVO\s+(.+?)\s+urnas\s+([\d.,]+)%?\s*\|\s*(.+)$'
@@ -99,17 +135,19 @@ $reCand = '^\s*\d+o\s+(.+?)\s+([\d.,]+)%(.*)$'
 $pontos = New-Object System.Collections.ArrayList
 $semCandidato = @{}
 $linhasLidas = 0
-foreach ($a in $arquivos) {
-    $dtArq = [datetime]::ParseExact(([regex]::Match($a.Name, '(\d{4}-\d\d-\d\d)').Value), "yyyy-MM-dd", [Globalization.CultureInfo]::InvariantCulture)
+foreach ($u0 in $usar) {
+    $a = $u0.Arquivo; $dtArq = $u0.Dia; $nesteArquivo = 0
     Write-Host ("lendo {0}" -f $a.FullName)
     foreach ($linha in [IO.File]::ReadAllLines($a.FullName, [Text.Encoding]::UTF8)) {
         $m = [regex]::Match($linha, $re)
         if (-not $m.Success) { continue }
         $onde = Normalizar $m.Groups[2].Value
         if (-not ($onde -match '^PRESIDENTE\b' -and $onde -match '\bBRASIL$')) { continue }
-        $linhasLidas++
+        $linhasLidas++; $nesteArquivo++
         $hora = [datetime]::ParseExact($m.Groups[1].Value, "HH:mm:ss", [Globalization.CultureInfo]::InvariantCulture)
-        $quando = $dtArq.Date.Add($hora.TimeOfDay)
+        if ($null -ne $dtArq) { $quando = $dtArq.Date.Add($hora.TimeOfDay) }
+        elseif ($hora.Hour -ge 12) { $quando = $diaEleicao.Date.Add($hora.TimeOfDay) }       # tarde/noite: dia da eleicao
+        else { $quando = $diaEleicao.Date.AddDays(1).Add($hora.TimeOfDay) }                 # madrugada: dia seguinte
         if ($quando -lt $janelaIni -or $quando -ge $janelaFim) { continue }
         $u = Numero-Br $m.Groups[3].Value
         if ($null -eq $u -or $u -le 0) { continue }
@@ -131,6 +169,7 @@ foreach ($a in $arquivos) {
         if ($porCand.Count -lt 2) { continue }
         [void] $pontos.Add([pscustomobject]@{ t = $quando.ToString("yyyy-MM-ddTHH:mm:ss"); u = $u; c = [pscustomobject] $porCand })
     }
+    Write-Host ("   {0} linha(s) PRESIDENTE BRASIL" -f $nesteArquivo)
 }
 if ($semCandidato.Count -gt 0) {
     Write-Host ("AVISO: nomes do log que nao achei no boletim do TSE (ignorados): {0}" -f (($semCandidato.Keys) -join ", ")) -ForegroundColor Yellow

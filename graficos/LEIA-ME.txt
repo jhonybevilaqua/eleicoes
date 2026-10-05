@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 3.0.1 - apuracao em graficos (versao final)
+ gctse GRAFICOS 3.0.2 - apuracao em graficos (versao final)
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -181,7 +181,11 @@
            passou da meia-noite).
         2. No computador dos GRAFICOS: arraste os arquivos (ou a pasta logs
            inteira) sobre IMPORTAR-EVOLUCAO.bat. Ou ponha-os na pasta
-           "importar" ao lado do .bat e de dois cliques.
+           "importar" ao lado do .bat e de dois cliques. Com dois cliques
+           ele procura tambem na Area de Trabalho, em Downloads e nas
+           pastas "logs" vizinhas (gctse no mesmo computador). Nome
+           trocado na copia ("gctse-2026-10-04 (1).log", .txt) serve.
+           Nao achou? a janela lista onde procurou.
         3. A janela mostra quantos pontos entraram e o ultimo valor de
            cada um. Confira com o resultado final. Pode estar com o
            GRAFICOS.bat aberto: a tela atualiza sozinha.
