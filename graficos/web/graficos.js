@@ -970,7 +970,8 @@
     } else {
       // so uma serie tem linha (a outra so o final): rotulo no inicio dela
       fins.forEach(function (f) {
-        if (f.s.pts.length > 1) o += t(X(f.p0.ms) + 4 * k, f.y0 - 14 * k, pctCurto(f.p0.v, 2), { s: Math.round(20 * k), b: true, c: f.s.cor, extra: HALO });
+        // linha que sobe: rotulo embaixo do inicio; que desce: em cima
+        if (f.s.pts.length > 1) o += t(X(f.p0.ms) + 4 * k, f.pf.v > f.p0.v ? f.y0 + 30 * k : f.y0 - 14 * k, pctCurto(f.p0.v, 2), { s: Math.round(20 * k), b: true, c: f.s.cor, extra: HALO });
       });
     }
     // fim: valores a direita, afastados se ficarem colados
