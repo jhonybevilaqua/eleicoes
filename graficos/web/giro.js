@@ -94,6 +94,7 @@
     if (g && s && g.andamento === "f" && s.andamento === "f") return { texto: "TOTALIZAÇÃO FINAL", cor: C.verde };
     var pg = g ? g.urnas_pct : 0, ps = s ? s.urnas_pct : 0;
     if (!(pg > 0) && !(ps > 0)) return { texto: "AGUARDANDO APURAÇÃO", cor: C.trilho };
+    if (pg >= 100 && ps >= 100) return { texto: "100% DAS URNAS", cor: C.verde };
     return { texto: "PARCIAL", cor: C.vermelho };
   }
   function hora(u) {

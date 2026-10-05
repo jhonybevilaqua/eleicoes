@@ -52,6 +52,12 @@ function Numero-Br([string] $Texto) {
     return $null
 }
 
+function Numero-Ponto([string] $Texto) {
+    $v = 0.0
+    if ([double]::TryParse("$Texto".Trim().TrimEnd('%'), [Globalization.NumberStyles]::Float, [Globalization.CultureInfo]::InvariantCulture, [ref] $v)) { return $v }
+    return $null
+}
+
 # ------------------------------------------------ config e candidatos (dados.js)
 if (-not (Test-Path "config-graficos.json")) { Sair "config-graficos.json nao encontrado nesta pasta." 1 }
 $cfg = Get-Content "config-graficos.json" -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -92,6 +98,7 @@ if ($explicitos) { foreach ($c in $Caminhos) { if ($c) { [void] $ondeProcurar.Ad
 else {
     [void] $ondeProcurar.Add(@{ p = (Join-Path $Raiz "importar"); fundo = $true })
     [void] $ondeProcurar.Add(@{ p = $Raiz; fundo = $false })
+    [void] $ondeProcurar.Add(@{ p = (Join-Path $Raiz "logs"); fundo = $false })
     $pai = Split-Path -Parent $Raiz
     if ($pai) {
         foreach ($viz in @(Get-ChildItem -LiteralPath $pai -Directory -ErrorAction SilentlyContinue)) {
@@ -104,36 +111,81 @@ else {
     foreach ($pp in ($pessoais | Where-Object { $_ } | Select-Object -Unique)) { [void] $ondeProcurar.Add(@{ p = $pp; fundo = $true }) }
 }
 $vistos = New-Object System.Collections.ArrayList     # para o diagnostico
-$arquivos = @()
+# Duas fontes: gctse-*.log (TARJAS: 1o e 2o a cada mudanca) e graficos-*.log
+# (este EXIBIDOR: so o 1o colocado a cada ciclo). Arrastado com outro nome
+# conta como log das tarjas.
+$arquivos = @(); $arquivosExib = @()
 foreach ($o in $ondeProcurar) {
-    if (Test-Path -LiteralPath $o.p -PathType Leaf) { $arquivos += @(Get-Item -LiteralPath $o.p); continue }
+    if (Test-Path -LiteralPath $o.p -PathType Leaf) {
+        $it = Get-Item -LiteralPath $o.p
+        if ($it.Name -match '(?i)^graficos') { $arquivosExib += @($it) } else { $arquivos += @($it) }
+        continue
+    }
     if (-not (Test-Path -LiteralPath $o.p -PathType Container)) { continue }
     $achados = @()
     if ($o.fundo) { $achados = @(Get-ChildItem -LiteralPath $o.p -File -Recurse -Depth 2 -ErrorAction SilentlyContinue) }
     else { $achados = @(Get-ChildItem -LiteralPath $o.p -File -ErrorAction SilentlyContinue) }
     $arquivos += @($achados | Where-Object { $_.Name -match '(?i)^gctse.*\.(log|txt)$' })
+    $arquivosExib += @($achados | Where-Object { $_.Name -match '(?i)^graficos.*\.(log|txt)$' })
 }
-$arquivos = @($arquivos | Sort-Object FullName -Unique)
-# Dia pelo nome (gctse-AAAA-MM-DD...); so o dia da eleicao e o seguinte.
-# Sem data no nome, a hora decide (ver abaixo).
-$usar = @()
-foreach ($a in $arquivos) {
-    $m = [regex]::Match($a.Name, '(\d{4})-(\d\d)-(\d\d)')
-    $dtArq = $null
-    if ($m.Success) {
-        $dtArq = Get-Date -Year ([int] $m.Groups[1].Value) -Month ([int] $m.Groups[2].Value) -Day ([int] $m.Groups[3].Value) -Hour 0 -Minute 0 -Second 0 -Millisecond 0
-        if ($dtArq.Date -ne $diaEleicao.Date -and $dtArq.Date -ne $diaEleicao.Date.AddDays(1)) {
-            [void] $vistos.Add(("   {0}  (outro dia - ignorado)" -f $a.FullName)); continue
+# Dia pelo nome (AAAA-MM-DD); so o dia da eleicao e o seguinte. Sem data
+# no nome, a hora decide (ver Quando-Foi).
+function Filtrar-Dia($Lista) {
+    $saida = @()
+    foreach ($a in @($Lista | Sort-Object FullName -Unique)) {
+        $m = [regex]::Match($a.Name, '(\d{4})-(\d\d)-(\d\d)')
+        $dtA = $null
+        if ($m.Success) {
+            $dtA = Get-Date -Year ([int] $m.Groups[1].Value) -Month ([int] $m.Groups[2].Value) -Day ([int] $m.Groups[3].Value) -Hour 0 -Minute 0 -Second 0 -Millisecond 0
+            if ($dtA.Date -ne $diaEleicao.Date -and $dtA.Date -ne $diaEleicao.Date.AddDays(1)) {
+                [void] $vistos.Add(("   {0}  (outro dia - ignorado)" -f $a.FullName)); continue
+            }
         }
+        $saida += [pscustomobject]@{ Arquivo = $a; Dia = $dtA }
     }
-    $usar += [pscustomobject]@{ Arquivo = $a; Dia = $dtArq }
+    return $saida
 }
-if ($usar.Count -eq 0) {
+function Quando-Foi($DiaArq, [string] $HoraTxt) {
+    $h = [datetime]::ParseExact($HoraTxt, "HH:mm:ss", [Globalization.CultureInfo]::InvariantCulture)
+    if ($null -ne $DiaArq) { return $DiaArq.Date.Add($h.TimeOfDay) }
+    if ($h.Hour -ge 12) { return $diaEleicao.Date.Add($h.TimeOfDay) }        # tarde/noite: dia da eleicao
+    return $diaEleicao.Date.AddDays(1).Add($h.TimeOfDay)                     # madrugada: dia seguinte
+}
+$usar = @(Filtrar-Dia $arquivos)
+$usarExib = @(Filtrar-Dia $arquivosExib)
+if ($usar.Count -eq 0 -and $usarExib.Count -eq 0) {
     Anotar "Procurei em:" "Yellow"
     foreach ($o in $ondeProcurar) { Anotar ("   {0}{1}" -f $o.p, $(if (Test-Path -LiteralPath $o.p) { "" } else { "  (nao existe)" })) }
-    if ($vistos.Count -gt 0) { Anotar "Logs do gctse encontrados:" "Yellow"; foreach ($v in $vistos) { Anotar $v } }
+    if ($vistos.Count -gt 0) { Anotar "Logs encontrados:" "Yellow"; foreach ($v in $vistos) { Anotar $v } }
     if ($explicitos) { Anotar ("Recebi do arrastar: {0}" -f (($Caminhos | Where-Object { $_ }) -join " ; ")) "Yellow" }
-    Sair ("nenhum log das tarjas do dia {0}. No computador das TARJAS, pasta do gctse > logs, copie gctse-{1}.log (e o do dia seguinte) e ARRASTE os arquivos sobre o IMPORTAR-EVOLUCAO.bat (ou ponha na pasta importar)." -f $diaEleicao.ToString("dd/MM/yyyy"), $diaEleicao.ToString("yyyy-MM-dd")) 1
+    Sair ("nenhum log do dia {0}: nem das tarjas (gctse-{1}.log) nem deste exibidor (logs\graficos-{1}.log)." -f $diaEleicao.ToString("dd/MM/yyyy"), $diaEleicao.ToString("yyyy-MM-dd")) 1
+}
+
+# Nome do log -> candidato do boletim do TSE (sem acento; cortado; abreviado).
+function Achar-Candidato([string] $NomeBruto) {
+    $nome = Normalizar $NomeBruto
+    if ($porNome.ContainsKey($nome)) { return $porNome[$nome] }
+    $parecidos = @($porNome.Keys | Where-Object { $_.StartsWith($nome) -or $nome.StartsWith($_) })
+    if ($parecidos.Count -eq 1) { return $porNome[$parecidos[0]] }
+    # abreviado ("F. BOLSONARO"): o unico com uma palavra de 4+ letras igual
+    $palavras = @($nome.Split(' ') | Where-Object { $_.Length -ge 4 })
+    $porPalavra = @($porNome.Keys | Where-Object { $ks = @($_.Split(' ')); @($palavras | Where-Object { $ks -contains $_ }).Count -gt 0 })
+    if ($porPalavra.Count -eq 1) { return $porNome[$porPalavra[0]] }
+    return $null
+}
+# Ordem do tempo; urnas nunca voltam (copia velha); repeticao seguida sai.
+function Limpar($Lista) {
+    $res = New-Object System.Collections.ArrayList
+    foreach ($p in @($Lista | Sort-Object t)) {
+        if ($res.Count -gt 0) {
+            $ant = $res[$res.Count - 1]
+            if ($p.t -eq $ant.t) { $res[$res.Count - 1] = $p; continue }
+            if ($p.u -lt $ant.u) { continue }
+            if ($p.u -eq $ant.u -and (($p.c | ConvertTo-Json -Compress) -eq ($ant.c | ConvertTo-Json -Compress))) { continue }
+        }
+        [void] $res.Add($p)
+    }
+    return ,$res
 }
 
 $re = '^\W{0,3}(\d\d:\d\d:\d\d)\s+\S+\s+NO ARQUIVO\s+(.+?)\s+urnas\s+([\d.,]+)\s*%?\s*\|\s*(.+)$'
@@ -159,10 +211,7 @@ foreach ($u0 in $usar) {
         $resto = ($onde -replace '^PRESIDENTE( DA REPUBLICA)?', '').Trim()
         if (-not ($resto -eq "" -or $resto -match '\bBRASIL\b' -or $resto -eq "BR" -or $resto -eq "NACIONAL")) { continue }
         $linhasLidas++; $nesteArquivo++
-        $hora = [datetime]::ParseExact($m.Groups[1].Value, "HH:mm:ss", [Globalization.CultureInfo]::InvariantCulture)
-        if ($null -ne $dtArq) { $quando = $dtArq.Date.Add($hora.TimeOfDay) }
-        elseif ($hora.Hour -ge 12) { $quando = $diaEleicao.Date.Add($hora.TimeOfDay) }       # tarde/noite: dia da eleicao
-        else { $quando = $diaEleicao.Date.AddDays(1).Add($hora.TimeOfDay) }                 # madrugada: dia seguinte
+        $quando = Quando-Foi $dtArq $m.Groups[1].Value
         if ($quando -lt $janelaIni -or $quando -ge $janelaFim) { $motivos["fora do horario da apuracao"]++; continue }
         $u = Numero-Br $m.Groups[3].Value
         if ($null -eq $u -or $u -le 0) { $motivos["urnas 0%"]++; continue }
@@ -170,20 +219,7 @@ foreach ($u0 in $usar) {
         foreach ($parte in ($m.Groups[4].Value -split '\s+\|\s+')) {
             $mc = [regex]::Match($parte, $reCand)
             if (-not $mc.Success) { continue }
-            $nome = Normalizar $mc.Groups[1].Value
-            $alvo = $null
-            if ($porNome.ContainsKey($nome)) { $alvo = $porNome[$nome] }
-            else {
-                # nome cortado na tarja: o unico candidato cujo nome comeca igual
-                $parecidos = @($porNome.Keys | Where-Object { $_.StartsWith($nome) -or $nome.StartsWith($_) })
-                if ($parecidos.Count -eq 1) { $alvo = $porNome[$parecidos[0]] }
-                else {
-                    # abreviado ("F. BOLSONARO"): o unico com uma palavra de 4+ letras igual
-                    $palavras = @($nome.Split(' ') | Where-Object { $_.Length -ge 4 })
-                    $porPalavra = @($porNome.Keys | Where-Object { $ks = @($_.Split(' ')); @($palavras | Where-Object { $ks -contains $_ }).Count -gt 0 })
-                    if ($porPalavra.Count -eq 1) { $alvo = $porNome[$porPalavra[0]] }
-                }
-            }
+            $alvo = Achar-Candidato $mc.Groups[1].Value
             if ($null -eq $alvo) { $semCandidato[$mc.Groups[1].Value] = $true; continue }
             $porCand["$($alvo.numero)"] = Numero-Br $mc.Groups[2].Value
         }
@@ -202,20 +238,58 @@ Anotar ("   candidatos no boletim do TSE: {0}" -f (($cands | Where-Object { $_.v
 if ($semCandidato.Count -gt 0) {
     Anotar ("AVISO: nomes do log que nao achei no boletim do TSE (ignorados): {0}" -f (($semCandidato.Keys) -join ", ")) "Yellow"
 }
-# Ordem do tempo; urnas nunca voltam (copia velha); repeticao seguida sai.
-$ordenados = @($pontos | Sort-Object t)
-$limpos = New-Object System.Collections.ArrayList
-foreach ($p in $ordenados) {
-    if ($limpos.Count -gt 0) {
-        $ant = $limpos[$limpos.Count - 1]
-        if ($p.t -eq $ant.t) { $limpos[$limpos.Count - 1] = $p; continue }
-        if ($p.u -lt $ant.u) { continue }
-        if ($p.u -eq $ant.u -and (($p.c | ConvertTo-Json -Compress) -eq ($ant.c | ConvertTo-Json -Compress))) { continue }
+$limpos = Limpar $pontos
+$origem = "log das tarjas"
+if ($limpos.Count -eq 0 -and $usar.Count -gt 0) {
+    Anotar ("log das tarjas: {0} linha(s) PRESIDENTE BRASIL, nenhuma entre {1} e {2} com 2 candidatos." -f $linhasLidas, $janelaIni.ToString("dd/MM HH:mm"), $janelaFim.ToString("dd/MM HH:mm")) "Yellow"
+}
+# Plano B: o log deste EXIBIDOR (GRAFICOS.bat) - a cada ciclo de 20 s:
+#   "18:42:10 INFO  Brasil: urnas 37.52% | 1o FULANO 48.12% | estados com boletim ..."
+# So tem o 1o colocado: a linha do 2o fica so com o resultado final.
+if ($limpos.Count -eq 0 -and $usarExib.Count -gt 0) {
+    Anotar "sem log das tarjas: uso o log deste exibidor (so o 1o colocado a cada ciclo)." "Yellow"
+    $reExib = '^\W{0,3}(\d\d:\d\d:\d\d)\s+\S+\s+Brasil: urnas ([\d.,]+)%\s*\|\s*1o (.+?) ([\d.,]+)%'
+    $pontosExib = New-Object System.Collections.ArrayList
+    foreach ($u0 in $usarExib) {
+        $a = $u0.Arquivo; $nesteArquivo = 0
+        $todas = [IO.File]::ReadAllLines($a.FullName, [Text.Encoding]::UTF8)
+        Anotar ("lendo {0}  ({1} linhas)" -f $a.FullName, $todas.Count)
+        foreach ($linha in $todas) {
+            $m = [regex]::Match($linha, $reExib)
+            if (-not $m.Success) { continue }
+            $quando = Quando-Foi $u0.Dia $m.Groups[1].Value
+            if ($quando -lt $janelaIni -or $quando -ge $janelaFim) { continue }
+            $u = Numero-Ponto $m.Groups[2].Value
+            if ($null -eq $u -or $u -le 0) { continue }
+            $alvo = Achar-Candidato $m.Groups[3].Value
+            if ($null -eq $alvo) { $semCandidato[$m.Groups[3].Value] = $true; continue }
+            $nesteArquivo++
+            [void] $pontosExib.Add([pscustomobject]@{ t = $quando.ToString("yyyy-MM-ddTHH:mm:ss"); u = $u; c = [pscustomobject]@{ "$($alvo.numero)" = (Numero-Ponto $m.Groups[4].Value) } })
+        }
+        Anotar ("   {0} ciclo(s) com o 1o colocado" -f $nesteArquivo)
     }
-    [void] $limpos.Add($p)
+    $limpos = Limpar $pontosExib
+    $origem = "log do exibidor"
+    # Fecha com o boletim atual do TSE (dados.js), que tem os dois: e o unico
+    # ponto do 2o colocado. Hora = a do TSE, ou logo depois do ultimo ciclo.
+    if ($limpos.Count -gt 0) {
+        $fimTse = @{}
+        foreach ($c in @($cands | Where-Object { $_.votos -gt 0 } | Select-Object -First 2)) { $fimTse["$($c.numero)"] = [double] $c.pct }
+        $ultT = [datetime]::ParseExact($limpos[$limpos.Count - 1].t, "yyyy-MM-ddTHH:mm:ss", [Globalization.CultureInfo]::InvariantCulture)
+        $tTse = $null
+        try { $tTse = [datetime]::ParseExact("$($d.br.geracao)".Trim(), "dd/MM/yyyy HH:mm:ss", [Globalization.CultureInfo]::InvariantCulture) } catch { }
+        $tFim = $ultT.AddSeconds(1)
+        if ($null -ne $tTse -and $tTse -gt $tFim) { $tFim = $tTse }
+        $uFim = [double] $d.br.secoes.pct
+        if ($fimTse.Count -eq 2 -and $uFim -ge $limpos[$limpos.Count - 1].u) {
+            $ordFim = [ordered]@{}; foreach ($k in $fimTse.Keys) { $ordFim[$k] = $fimTse[$k] }
+            [void] $limpos.Add([pscustomobject]@{ t = $tFim.ToString("yyyy-MM-ddTHH:mm:ss"); u = $uFim; c = [pscustomobject] $ordFim })
+            Anotar ("   + resultado do TSE ({0}): os dois candidatos" -f "$($d.br.geracao)")
+        }
+    }
 }
 if ($limpos.Count -eq 0) {
-    Sair ("{0} linha(s) PRESIDENTE BRASIL no log, nenhuma entre {1} e {2} com 2 candidatos. Nada importado." -f $linhasLidas, $janelaIni.ToString("dd/MM HH:mm"), $janelaFim.ToString("dd/MM HH:mm")) 1
+    Sair ("nada importado: nenhum registro de Presidente Brasil entre {0} e {1}." -f $janelaIni.ToString("dd/MM HH:mm"), $janelaFim.ToString("dd/MM HH:mm")) 1
 }
 
 # ------------------------------------------- junta com o historico que ja existe
@@ -233,13 +307,14 @@ if (Test-Path $arqEv) {
 }
 foreach ($c in $cands) { if ($c.numero -and $c.votos -gt 0) { $nomes["$($c.numero)"] = [pscustomobject]@{ nome = $c.nome; partido = $c.partido } } }
 # O log manda em tudo ate o seu ultimo ponto (nao mistura o relogio do
-# computador das tarjas com a hora do TSE); do GRAFICOS.bat fica so o depois.
+# computador do log com a hora do TSE); do GRAFICOS.bat fica so o depois
+# (o resultado final, com os dois candidatos).
 $fim = $limpos[$limpos.Count - 1].t
 $final = @($limpos) + @($existentes | Where-Object { "$($_.t)" -gt $fim })
 $final = @($final | Sort-Object { "$($_.t)" })
 $obj = [ordered]@{
     ciclo = $Ciclo; eleicao = $Eleicao; modo = "OFICIAL"
-    origem = "log das tarjas"
+    origem = $origem
     nomes = [pscustomobject] $nomes; pontos = $final
 }
 $tmp = "$arqEv.tmp"
@@ -264,7 +339,7 @@ Anotar "conferindo se a tela recebeu a linha (ate 60 s)..."
 $recebeu = $false
 for ($i = 0; $i -lt 30 -and -not $recebeu; $i++) {
     Start-Sleep -Seconds 2
-    try { $recebeu = ([IO.File]::ReadAllText($arqDados, [Text.Encoding]::UTF8) -match '"origem":"log das tarjas"') } catch { }
+    try { $recebeu = ([IO.File]::ReadAllText($arqDados, [Text.Encoding]::UTF8) -match ('"origem":"' + $origem + '"')) } catch { }
 }
 if ($recebeu) { Sair "PRONTO: a tela ja esta com a linha. (Na tela aberta, se precisar, aperte F5.)" 0 }
 $versaoCol = "$($d.versao)"

@@ -85,6 +85,9 @@
     // nenhum arquivo ainda): selo neutro, nada de vermelho.
     var pct = b && b.secoes ? b.secoes.pct : null;
     if (!b || !(pct > 0)) return { texto: "AGUARDANDO APURAÇÃO", cor: C.trilho };
+    // 100% das secoes apuradas (pst do TSE), mas o TSE ainda nao marcou o
+    // Brasil como final (exterior/revisao): nao e mais "parcial" no ar.
+    if (pct >= 100) return { texto: "100% DAS URNAS", cor: C.verde };
     return { texto: "PARCIAL", cor: C.vermelho };
   }
   function subtitulo() {
@@ -887,6 +890,9 @@
       return { c: c, cor: cor(c), nome: c.nome || (nomes[c.numero] || {}).nome || c.numero,
         pts: lista.filter(function (p) { return p.c[c.numero] != null; }).map(function (p) { return { ms: p.ms, v: +p.c[c.numero], u: p.u }; }) };
     });
+    // Serie com 1 ponto so (log do exibidor guardou so o 1o colocado): avisa na legenda.
+    var maxPts = Math.max.apply(null, series.map(function (s) { return s.pts.length; }).concat([0]));
+    series.forEach(function (s) { s.soFinal = maxPts >= 2 && s.pts.length === 1; });
     return { series: series, pontos: lista, origem: ev.origem || "" };
   }
   function hhmm(ms) { var x = new Date(ms); return ("0" + x.getHours()).slice(-2) + ":" + ("0" + x.getMinutes()).slice(-2); }
@@ -961,6 +967,11 @@
       var cima = fins[0].y0 <= fins[1].y0 ? fins[0] : fins[1], baixo = cima === fins[0] ? fins[1] : fins[0];
       o += t(x0 + 4 * k, cima.y0 - 14 * k, pctCurto(cima.p0.v, 2), { s: Math.round(20 * k), b: true, c: cima.s.cor, extra: HALO });
       o += t(x0 + 4 * k, baixo.y0 + 30 * k, pctCurto(baixo.p0.v, 2), { s: Math.round(20 * k), b: true, c: baixo.s.cor, extra: HALO });
+    } else {
+      // so uma serie tem linha (a outra so o final): rotulo no inicio dela
+      fins.forEach(function (f) {
+        if (f.s.pts.length > 1) o += t(X(f.p0.ms) + 4 * k, f.y0 - 14 * k, pctCurto(f.p0.v, 2), { s: Math.round(20 * k), b: true, c: f.s.cor, extra: HALO });
+      });
     }
     // fim: valores a direita, afastados se ficarem colados
     fins.sort(function (p, q) { return p.y - q.y; });
@@ -972,15 +983,15 @@
   function legendaEvolucao(ev, x, y, k, maxW) {
     var o = "";
     ev.series.forEach(function (s, i) {
-      var xx = x + i * maxW / 2, txt = s.nome + (s.c.partido ? " (" + s.c.partido + ")" : "");
+      var xx = x + i * maxW / 2, txt = s.nome + (s.c.partido ? " (" + s.c.partido + ")" : "") + (s.soFinal ? " · só o resultado final" : "");
       o += r(xx, y - 11 * k, 30 * k, 6 * k, s.cor, 3) + t(xx + 40 * k, y, txt, { s: Math.round(19 * k), b: true, max: maxW / 2 - 60 * k });
     });
     return o;
   }
   function rodapeEvolucao(ev) {
-    var b = br(), n = ev.pontos.length, log = !!ev.origem;
+    var b = br(), n = ev.pontos.length, exib = ev.origem === "log do exibidor", log = !!ev.origem;
     return "Fonte: TSE · % dos votos válidos a cada atualização (" + n + (n === 1 ? " registro" : " registros") +
-      (log ? ", gravados pelo sistema de tarjas no ar" : ", horário do TSE") + ")" +
+      (exib ? ", gravados pelo exibidor: só o 1º colocado a cada ciclo" : (log ? ", gravados pelo sistema de tarjas no ar" : ", horário do TSE")) + ")" +
       (b && b.secoes && b.secoes.pct != null ? " · urnas apuradas " + pct(b.secoes.pct) : "");
   }
   G["evolucao-h"] = function () {
@@ -997,7 +1008,7 @@
     var o = cabecalhoV(W, "EVOLUÇÃO DA APURAÇÃO", "presidente · " + subtitulo());
     var yy = 200;
     ev.series.forEach(function (s, i) {
-      o += r(35, yy + i * 34 - 11, 30, 6, s.cor, 3) + t(75, yy + i * 34, s.nome + (s.c.partido ? " (" + s.c.partido + ")" : ""), { s: 19, b: true, max: 430 });
+      o += r(35, yy + i * 34 - 11, 30, 6, s.cor, 3) + t(75, yy + i * 34, s.nome + (s.c.partido ? " (" + s.c.partido + ")" : "") + (s.soFinal ? " · só o final" : ""), { s: 19, b: true, max: 430 });
     });
     o += plotEvolucao(ev, 85, 410, 290, 820, 0.85, 5);
     return svg(W, H, o + t(35, 945, rodapeEvolucao(ev), { s: 11, c: C.apagado2, max: 470 }));

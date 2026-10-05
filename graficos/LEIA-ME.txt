@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 3.0.3 - apuracao em graficos (versao final)
+ gctse GRAFICOS 3.1 - apuracao em graficos (versao final)
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -24,7 +24,10 @@
 
  NOVO NA 3.0
    - Evolucao minuto a minuto com os numeros REAIS do 1o turno: o
-     IMPORTAR-EVOLUCAO.bat le o log do sistema das tarjas (ver abaixo).
+     IMPORTAR-EVOLUCAO.bat le o log das tarjas ou, sem ele, o log deste
+     proprio exibidor (ver abaixo).
+   - Selo "100% DAS URNAS" (verde) quando todas as secoes foram apuradas
+     mas o TSE ainda nao marcou a totalizacao como final.
    - Camara dos Deputados por partido (eleitos marcados pelo TSE).
    - Revisao geral: todas as telas, horizontal e vertical, conferidas.
 
@@ -198,6 +201,13 @@
       tarjas; o rodape diz "gravados pelo sistema de tarjas no ar".
       O arquivo anterior fica salvo como ...json.antes-da-importacao.
 
+      SEM LOG DAS TARJAS: o IMPORTAR-EVOLUCAO.bat usa o log deste
+      exibidor (logs\graficos-2026-10-04.log e -05.log, gravados pelo
+      GRAFICOS.bat a cada 20 s). Esse log guarda SO O 1o COLOCADO: a tela
+      mostra a linha dele a noite toda e o 2o so com o resultado final do
+      TSE (a legenda diz "so o resultado final"). Nada e completado por
+      estimativa. Nao precisa copiar nada: e so dar dois cliques.
+
    b) 2o TURNO (ao vivo) - o proprio GRAFICOS.bat
       Grava cada boletim novo do Brasil (hora do TSE) em
       evolucao-<ciclo>-<eleicao>-oficial.json, na pasta do programa.
@@ -269,6 +279,8 @@
 
    Selo no alto:  AGUARDANDO APURACAO .... antes da 1a urna (cinza)
                   PARCIAL ................ apuracao em andamento
+                  100% DAS URNAS ......... todas as secoes apuradas, o TSE
+                                           ainda nao marcou como final
                   TOTALIZACAO FINAL ...... o TSE fechou o Brasil
 
    ELEITO / 2o TURNO: quando o TSE escreve isso na situacao do candidato

@@ -97,15 +97,17 @@
 
   // Selo das telas de Governador/Senador e das de Presidente.
   function seloEstados() {
-    var fim = true, algum = false;
+    var fim = true, algum = false, todas = true;
     UFS.forEach(function (u) {
       ["gov", "sen"].forEach(function (q) {
         var c = cargo(u, q);
         if (!c || c.andamento !== "f") fim = false;
         if (c && c.urnas_pct > 0) algum = true;
+        if (!c || !(c.urnas_pct >= 100)) todas = false;
       });
     });
     if (fim) return { texto: "TOTALIZAÇÃO FINAL", cor: C.verde };
+    if (todas) return { texto: "100% DAS URNAS", cor: C.verde };
     return algum ? { texto: "PARCIAL", cor: C.vermelho } : { texto: "AGUARDANDO APURAÇÃO", cor: C.trilho };
   }
   // Telas que somam so os ESTADOS (por regiao, comparecimento por estado):
@@ -123,6 +125,7 @@
     var b = P().br;
     if (b && b.tem && b.andamento === "f") return { texto: "TOTALIZAÇÃO FINAL", cor: C.verde };
     var p = b && b.tem && b.secoes ? b.secoes.pct : 0;
+    if (p >= 100) return { texto: "100% DAS URNAS", cor: C.verde };
     return p > 0 ? { texto: "PARCIAL", cor: C.vermelho } : { texto: "AGUARDANDO APURAÇÃO", cor: C.trilho };
   }
 
