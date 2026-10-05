@@ -53,6 +53,21 @@
     document.head.appendChild(sc);
   }
 
+  // Fundo e logo da arte viram "data:" para entrar no PNG (imagem de
+  // arquivo nao entra num SVG desenhado no canvas).
+  var ARTE = {};
+  [["fundo-h", "jpg"], ["fundo-v", "jpg"], ["logo", "png"]].forEach(function (a) {
+    var im = new Image();
+    im.onload = function () {
+      try {
+        var c = document.createElement("canvas"); c.width = im.naturalWidth; c.height = im.naturalHeight;
+        c.getContext("2d").drawImage(im, 0, 0);
+        ARTE[a[0]] = c.toDataURL(a[1] === "png" ? "image/png" : "image/jpeg", 0.9);
+      } catch (e) { /* aberto direto do disco: o PNG sai sem o fundo */ }
+    };
+    im.src = "arte/" + a[0] + "." + a[1];
+  });
+
   function salvarPNG() {
     // Desenha de novo SEM fotos, fora da tela: foto de outro site nao entra
     // no PNG (sairia uma caixa cinza no lugar).
@@ -64,6 +79,10 @@
     finally { window.__gctseSemFotos = false; }
     var el = tmp.querySelector("svg");
     if (!el) { tmp.remove(); return; }
+    Array.prototype.forEach.call(el.querySelectorAll("image[data-arte]"), function (im) {
+      var d = ARTE[im.getAttribute("data-arte")];
+      if (d) im.setAttribute("href", d); else im.parentNode.removeChild(im);
+    });
     var W = +el.getAttribute("width"), H = +el.getAttribute("height");
     var escala = W > H ? 1920 / W : 1080 / W;       // 1920x1080 ou 1080x1920
     var img = new Image();

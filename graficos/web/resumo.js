@@ -10,10 +10,23 @@
 
   var C = {
     fundo: "#0b1220", texto: "#ffffff", apagado: "#8ea3bd", apagado2: "#6b7f99",
-    trilho: "#283548", painel: "#121b2b", vermelho: "#d03b3b", verde: "#16b216",
+    trilho: "#283548", painel: "rgba(8,14,32,0.78)", vermelho: "#d03b3b", verde: "#16b216",
     azul: "#2b84ff", neutro: "#7398cf", vazio: "#283548"
   };
   var FONTE = "'Segoe UI', 'DejaVu Sans', Arial, sans-serif";
+  // ARTE da TV: fundo (web\arte\fundo-h.jpg / fundo-v.jpg) e logo ELEICOES
+  // 2026 (web\arte\logo.png) no canto superior direito. Sem o arquivo,
+  // fica o fundo liso de sempre e nenhuma logo.
+  function arteFundo(W, H) {
+    var v = H > W ? "v" : "h";
+    return '<image href="arte/fundo-' + v + '.jpg" data-arte="fundo-' + v + '" x="0" y="0" width="' + W + '" height="' + H +
+      '" preserveAspectRatio="xMidYMid slice"/>';
+  }
+  function arteLogo(W, H, margem) {
+    var v = H > W, w = v ? 100 : 182, h = Math.round(w * 355 / 1044), x = W - margem - w, y = v ? 4 : 14;
+    return '<image href="arte/logo.png" data-arte="logo" x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '"/>';
+  }
+
   var UFS = ["ac", "al", "ap", "am", "ba", "ce", "df", "es", "go", "ma", "mt", "ms", "mg", "pa",
              "pb", "pr", "pe", "pi", "rj", "rn", "rs", "ro", "rr", "sc", "sp", "se", "to"];
   var REGIOES = [
@@ -57,7 +70,7 @@
   function lista(x) { return Array.isArray(x) ? x : (x && Array.isArray(x.value) ? x.value : []); }
   function svg(W, H, corpo) {
     return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + " " + H + '" width="' + W + '" height="' + H +
-      '" font-family="' + FONTE + '">' + r(0, 0, W, H, C.fundo) + corpo + "</svg>";
+      '" font-family="' + FONTE + '">' + r(0, 0, W, H, C.fundo) + arteFundo(W, H) + corpo + arteLogo(W, H, W > H ? 73 : 30) + "</svg>";
   }
 
   // ------------------------------------------------------------------ dados
@@ -105,9 +118,9 @@
   // Cabecalho: titulo grande, linha de apoio e selo.
   function cab(v, W, titulo, sub, s) {
     if (!v) {
-      return t(73, 74, titulo, { s: 44, b: true, ls: 1, max: W - 73 - 380 }) + t(73, 108, sub, { s: 20, c: C.apagado, max: W - 146 }) +
-        '<g data-selo="1" data-x="' + (W - 73) + '">' + r(W - 340, 44, 267, 36, s.cor, 3) +
-        t(W - 81, 70, s.texto, { s: 20, b: true, a: "end" }) + "</g>";
+      return t(73, 74, titulo, { s: 42, b: true, ls: 1, max: W - 73 - 520 }) + t(73, 108, sub, { s: 20, c: C.apagado, max: W - 146 }) +
+        '<g data-selo="1" data-x="' + (W - 73 - 200) + '">' + r(W - 540, 44, 267, 36, s.cor, 3) +
+        t(W - 281, 70, s.texto, { s: 20, b: true, a: "end" }) + "</g>";
     }
     return t(30, 62, titulo, { s: 32, b: true, max: W - 60 }) + t(30, 88, sub, { s: 15, c: C.apagado, max: W - 60 }) +
       r(30, 102, W - 60, 28, s.cor, 2) + t(W / 2, 122, s.texto, { s: 16, b: true, a: "middle" });
@@ -441,8 +454,10 @@
       if (lg <= max) continue;
       var cur = ms[j].getAttribute("data-curto");
       if (cur) { ms[j].textContent = cur; lg = ms[j].getComputedTextLength(); if (lg <= max) continue; }
-      var fs0 = parseFloat(ms[j].getAttribute("font-size")), fs = Math.max(Math.floor(fs0 * max / lg), Math.ceil(fs0 * (cur != null ? 0.6 : 0.7)));
+      var fs0 = parseFloat(ms[j].getAttribute("font-size")), fs = Math.max(Math.floor(fs0 * max / lg), Math.ceil(fs0 * 0.6));
       ms[j].setAttribute("font-size", fs);
+      // espacamento entre letras faz passar 1-2 px: desce de 1 em 1 ate caber
+      while (ms[j].getComputedTextLength() > max && fs > Math.ceil(fs0 * 0.6)) { fs--; ms[j].setAttribute("font-size", fs); }
       var txt = ms[j].textContent;
       while (ms[j].getComputedTextLength() > max && txt.length > 4) { txt = txt.slice(0, -1); ms[j].textContent = txt.replace(/\s+$/, "") + "…"; }
     }

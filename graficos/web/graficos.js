@@ -13,6 +13,24 @@
     abstencao: "#7f8ca3", comparec: "#2b84ff", semDado: "#6b7688", outros: "#7f8ca3"
   };
   var FONTE = "'Segoe UI', 'DejaVu Sans', Arial, sans-serif";
+  // Cor do PARTIDO (pedido da redacao): PT vermelho, PL azul. Os demais pela
+  // paleta, sem o azul e o vermelho (para nao confundir com PL e PT).
+  // config-graficos.json "cores" continua mandando por cima de tudo.
+  var CORES_PARTIDO = { "PT": "#e5132d", "PL": "#2f6bff" };
+  var PALETA_OUTROS = ["#ef5b16", "#00aa76", "#c98400", "#e8478a", "#159c15", "#9078ff"];
+  // ARTE da TV: fundo (web\arte\fundo-h.jpg / fundo-v.jpg) e logo ELEICOES
+  // 2026 (web\arte\logo.png) no canto superior direito. Sem o arquivo,
+  // fica o fundo liso de sempre e nenhuma logo.
+  function arteFundo(W, H) {
+    var v = H > W ? "v" : "h";
+    return '<image href="arte/fundo-' + v + '.jpg" data-arte="fundo-' + v + '" x="0" y="0" width="' + W + '" height="' + H +
+      '" preserveAspectRatio="xMidYMid slice"/>';
+  }
+  function arteLogo(W, H, margem) {
+    var v = H > W, w = v ? 100 : 182, h = Math.round(w * 355 / 1044), x = W - margem - w, y = v ? 4 : 14;
+    return '<image href="arte/logo.png" data-arte="logo" x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '"/>';
+  }
+
 
   // ---------------------------------------------------------------- formatos
   function esc(t) {
@@ -52,9 +70,11 @@
     var cores = D().cores || {};
     if (cores[c.numero]) return cores[c.numero];
     if (cores[c.partido]) return cores[c.partido];
+    var sg = String(c.partido || "").toUpperCase().trim();
+    if (CORES_PARTIDO[sg]) return CORES_PARTIDO[sg];
     var slot = (D().cor_slot || {})[c.numero];
     if (slot == null || slot >= PALETA.length) return C.outros;
-    return PALETA[slot];
+    return PALETA_OUTROS[slot % PALETA_OUTROS.length];
   }
 
   function selo() {
@@ -96,15 +116,16 @@
   // O selo tem a largura medida DEPOIS de desenhado (ver ajustarSelos).
   function seloH(W) {
     var s = selo();
-    return '<g data-selo="dir" data-x="' + (W - 73) + '">' + r(W - 320, 33, 247, 32, s.cor, 3) +
-      t(W - 81, 55, s.texto, { s: 18, b: true, a: "end" }) + "</g>";
+    // a esquerda da logo (canto superior direito)
+    return '<g data-selo="dir" data-x="' + (W - 73 - 200) + '">' + r(W - 520, 33, 247, 32, s.cor, 3) +
+      t(W - 281, 55, s.texto, { s: 18, b: true, a: "end" }) + "</g>";
   }
   function seloV(W) {
     var s = selo();
     return r(35, 127, W - 70, 26, s.cor, 2) + t(W / 2, 146, s.texto, { s: 16, b: true, a: "middle" });
   }
   function cabecalhoH(W, titulo, sub) {
-    return t(73, 57, titulo, { s: 36, b: true, ls: 1, max: W - 73 - 360 }) + t(73, 85, sub, { s: 19, c: C.apagado }) + seloH(W);
+    return t(73, 57, titulo, { s: 36, b: true, ls: 1, max: W - 73 - 540 }) + t(73, 85, sub, { s: 19, c: C.apagado, max: W - 146 }) + seloH(W);
   }
   function cabecalhoV(W, titulo, sub) {
     return r(35, 48, 6, 38, C.destaque) + t(53, 80, titulo, { s: 32, b: true, ls: 1, max: W - 53 - 35 }) +
@@ -112,7 +133,7 @@
   }
   function svg(W, H, corpo) {
     return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + " " + H + '" width="' + W + '" height="' + H +
-      '" font-family="' + FONTE + '">' + r(0, 0, W, H, C.fundo) + corpo + "</svg>";
+      '" font-family="' + FONTE + '">' + r(0, 0, W, H, C.fundo) + arteFundo(W, H) + corpo + arteLogo(W, H, 35 + (W > H ? 38 : 0)) + "</svg>";
   }
   function barra(x, y, w, h, frac, c) {
     frac = Math.max(0, Math.min(1, frac || 0));
@@ -584,7 +605,7 @@
     return { cs: top, definido: fim };
   }
   function cartaoPres(x, y, w, h, c, pos, k) {
-    var o = r(x, y, w, h, "#121b2b", 10);
+    var o = r(x, y, w, h, "rgba(8,14,32,0.78)", 10);
     if (!c) return o + t(x + 32 * k, y + 80 * k, "aguardando o TSE", { s: Math.round(24 * k), c: C.apagado });
     o += r(x, y, w, 8, cor(c), 4);
     var url = urlFoto(c), px = x + 32 * k, dx = 0;
@@ -732,7 +753,7 @@
       o += t(cxp, 168, gr[1], { s: 28, b: true, a: "middle", ls: 2 });
       anos.forEach(function (a, ai) {
         var x = x0 + 30 + ai * 110, w = 70, val = a[gr[0]];
-        o += r(x, topo, w, alt, "#152036", 12);
+        o += r(x, topo, w, alt, "rgba(255,255,255,0.08)", 12);
         if (val > 0) { var h = Math.max(6, alt * val / max); o += r(x, base - h, w, h, CORES_ANO[ai] || C.destaque, 12); }
         o += t(x + w / 2, topo - 14, val > 0 ? pct(val) : "—", { s: 21, b: true, a: "middle", c: ai === anos.length - 1 ? C.texto : "#c9d6e6" });
         o += t(x + w / 2, base + 34, String(a.ano), { s: 22, b: true, a: "middle", c: ai === anos.length - 1 ? C.texto : C.apagado });
@@ -751,7 +772,7 @@
       anos.forEach(function (a, ai) {
         var y = y0 + 30 + ai * 58, x = 110, w = 280, val = a[gr[0]];
         o += t(35, y + 26, String(a.ano), { s: 20, b: true, c: ai === anos.length - 1 ? C.texto : C.apagado });
-        o += r(x, y, w, 36, "#152036", 8);
+        o += r(x, y, w, 36, "rgba(255,255,255,0.08)", 8);
         if (val > 0) o += r(x, y, Math.max(8, w * val / max), 36, CORES_ANO[ai] || C.destaque, 8);
         o += t(505, y + 27, val > 0 ? pct(val) : "—", { s: 24, b: true, a: "end", c: ai === anos.length - 1 ? C.texto : "#c9d6e6" });
       });
