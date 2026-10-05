@@ -108,6 +108,17 @@
     if (fim) return { texto: "TOTALIZAÇÃO FINAL", cor: C.verde };
     return algum ? { texto: "PARCIAL", cor: C.vermelho } : { texto: "AGUARDANDO APURAÇÃO", cor: C.trilho };
   }
+  // Telas que somam so os ESTADOS (por regiao, comparecimento por estado):
+  // finais quando os 27 boletins de Presidente dos estados estao finalizados
+  // - o do Brasil inclui o exterior, que pode fechar depois.
+  function seloPresidenteEstados() {
+    var b = P().br;
+    if (b && b.tem && b.andamento === "f") return { texto: "TOTALIZAÇÃO FINAL", cor: C.verde };
+    var fim = true;
+    UFS.forEach(function (u) { var x = presUf(u); if (!x || x.andamento !== "f") fim = false; });
+    if (fim) return { texto: "TOTALIZAÇÃO FINAL", cor: C.verde };
+    return seloPresidente();
+  }
   function seloPresidente() {
     var b = P().br;
     if (b && b.tem && b.andamento === "f") return { texto: "TOTALIZAÇÃO FINAL", cor: C.verde };
@@ -119,8 +130,8 @@
   function cab(v, W, titulo, sub, s) {
     if (!v) {
       return t(73, 74, titulo, { s: 42, b: true, ls: 1, max: W - 73 - 520 }) + t(73, 108, sub, { s: 20, c: C.apagado, max: W - 146 }) +
-        '<g data-selo="1" data-x="' + (W - 73 - 200) + '">' + r(W - 540, 44, 267, 36, s.cor, 3) +
-        t(W - 281, 70, s.texto, { s: 20, b: true, a: "end" }) + "</g>";
+        '<g data-selo="1" data-x="' + (W - 73 - 200) + '">' + r(W - 540, 27, 267, 36, s.cor, 3) +
+        t(W - 281, 52, s.texto, { s: 20, b: true, a: "end" }) + "</g>";
     }
     return t(30, 62, titulo, { s: 32, b: true, max: W - 60 }) + t(30, 88, sub, { s: 15, c: C.apagado, max: W - 60 }) +
       r(30, 102, W - 60, 28, s.cor, 2) + t(W / 2, 122, s.texto, { s: 16, b: true, a: "middle" });
@@ -243,7 +254,7 @@
   }
   function presRegiao(v) {
     var W = v ? 540 : 1280, H = v ? 960 : 720;
-    var o = cab(v, W, "PRESIDENTE POR REGIÃO", "1º e 2º colocados em cada região", seloPresidente());
+    var o = cab(v, W, "PRESIDENTE POR REGIÃO", "1º e 2º colocados em cada região", seloPresidenteEstados());
     var x0 = v ? 30 : 73, x1 = v ? W - 30 : 1207, y0 = v ? 150 : 140, passo = v ? 156 : 104;
     REGIOES.forEach(function (R, i) {
       var g = regiao(R), yy = y0 + i * passo;
@@ -271,7 +282,7 @@
   // =================================================== 5. COMPARECIMENTO POR UF
   function comparecimento(v) {
     var W = v ? 540 : 1280, H = v ? 960 : 720;
-    var o = cab(v, W, "COMPARECIMENTO POR ESTADO", "% dos eleitores que votaram, nas urnas já apuradas", seloPresidente());
+    var o = cab(v, W, "COMPARECIMENTO POR ESTADO", "% dos eleitores que votaram, nas urnas já apuradas", seloPresidenteEstados());
     var L = [];
     UFS.forEach(function (u) {
       var x = presUf(u);

@@ -117,8 +117,8 @@
   function seloH(W) {
     var s = selo();
     // a esquerda da logo (canto superior direito)
-    return '<g data-selo="dir" data-x="' + (W - 73 - 200) + '">' + r(W - 520, 33, 247, 32, s.cor, 3) +
-      t(W - 281, 55, s.texto, { s: 18, b: true, a: "end" }) + "</g>";
+    return '<g data-selo="dir" data-x="' + (W - 73 - 200) + '">' + r(W - 520, 29, 247, 32, s.cor, 3) +
+      t(W - 281, 51, s.texto, { s: 18, b: true, a: "end" }) + "</g>";
   }
   function seloV(W) {
     var s = selo();

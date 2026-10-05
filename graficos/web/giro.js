@@ -206,8 +206,8 @@
     var g = cargo(u, "gov"), se = cargo(u, "sen");
     o += t(73, 76, NOMES[u] || u.toUpperCase(), { s: 52, b: true, ls: 1, max: W - 73 - 580 });
     o += t(73, 112, linhaUrnas(g, se, false), { s: 20, c: C.apagado, max: W - 73 - 380 });
-    o += '<g data-selo="1" data-x="' + (W - 73 - 200) + '">' + r(W - 540, 44, 267, 36, s.cor, 3) +
-      t(W - 281, 70, s.texto, { s: 20, b: true, a: "end" }) + "</g>";
+    o += '<g data-selo="1" data-x="' + (W - 73 - 200) + '">' + r(W - 540, 27, 267, 36, s.cor, 3) +
+      t(W - 281, 52, s.texto, { s: 20, b: true, a: "end" }) + "</g>";
     o += bloco(73, 146, 551, 528, "GOVERNADOR", g, 1, u);
     o += bloco(656, 146, 551, 528, "SENADOR", se, 1, u);
     o += t(73, 702, "Fonte: TSE — " + hora(u), { s: 13, c: C.apagado2 });
