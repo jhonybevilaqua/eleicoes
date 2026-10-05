@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 3.0 - apuracao em graficos (versao final)
+ gctse GRAFICOS 3.0.1 - apuracao em graficos (versao final)
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 

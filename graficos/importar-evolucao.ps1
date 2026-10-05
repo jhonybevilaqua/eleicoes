@@ -63,8 +63,13 @@ foreach ($c in $cands) { if ($c.numero) { $porNome[(Normalizar $c.nome)] = $c } 
 $diaEleicao = $null
 if ($Dia) { $diaEleicao = [datetime]::ParseExact($Dia, "yyyy-MM-dd", [Globalization.CultureInfo]::InvariantCulture) }
 else {
-    $m = [regex]::Match("$($d.br.geracao)", '(\d\d)/(\d\d)/(\d{4})')
-    if ($m.Success) { $diaEleicao = Get-Date -Year ([int] $m.Groups[3].Value) -Month ([int] $m.Groups[2].Value) -Day ([int] $m.Groups[1].Value) -Hour 0 -Minute 0 -Second 0 -Millisecond 0 }
+    $m = [regex]::Match("$($d.br.geracao)", '(\d\d)/(\d\d)/(\d{4})\s*(\d\d)?')
+    if ($m.Success) {
+        $diaEleicao = Get-Date -Year ([int] $m.Groups[3].Value) -Month ([int] $m.Groups[2].Value) -Day ([int] $m.Groups[1].Value) -Hour 0 -Minute 0 -Second 0 -Millisecond 0
+        # Boletim final gerado de madrugada (ex.: 05/10 02:59) e da eleicao
+        # do dia anterior: a apuracao comeca as 17h.
+        if ($m.Groups[4].Success -and [int] $m.Groups[4].Value -lt 12) { $diaEleicao = $diaEleicao.AddDays(-1) }
+    }
 }
 if ($null -eq $diaEleicao) { Sair "nao sei o dia da eleicao: rode com -Dia AAAA-MM-DD" 1 }
 # Apuracao comeca as 17h (Brasilia); vai ate a manha seguinte.
