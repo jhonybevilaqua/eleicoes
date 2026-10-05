@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 3.0.2 - apuracao em graficos (versao final)
+ gctse GRAFICOS 3.0.3 - apuracao em graficos (versao final)
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -187,8 +187,11 @@
            trocado na copia ("gctse-2026-10-04 (1).log", .txt) serve.
            Nao achou? a janela lista onde procurou.
         3. A janela mostra quantos pontos entraram e o ultimo valor de
-           cada um. Confira com o resultado final. Pode estar com o
-           GRAFICOS.bat aberto: a tela atualiza sozinha.
+           cada um. Confira com o resultado final. No fim ela confere se
+           a tela recebeu a linha ("PRONTO"). Se pedir, FECHE e ABRA o
+           GRAFICOS.bat (janela aberta antes de atualizar para a 3.0 fica
+           na versao velha e nao rele o historico).
+           Deu erro? tudo o que apareceu fica em IMPORTAR-EVOLUCAO.txt.
       So entram as linhas PRESIDENTE BRASIL entre 16h30 do dia da eleicao
       e 8h do dia seguinte (o dia sai do boletim do TSE; outro dia:
       importar-evolucao.ps1 -Dia AAAA-MM-DD). Hora = a do computador das

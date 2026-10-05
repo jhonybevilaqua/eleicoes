@@ -25,8 +25,14 @@ $ErrorActionPreference = "Stop"
 $Raiz = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $Raiz
 
+# Tudo o que aparece na janela vai tambem para IMPORTAR-EVOLUCAO.txt (para
+# mandar ao suporte se nao der certo).
+$script:Diag = New-Object System.Collections.Generic.List[string]
+function Anotar([string] $Texto, [string] $Cor = "Gray") { Write-Host $Texto -ForegroundColor $Cor; $script:Diag.Add($Texto) }
 function Sair([string] $Msg, [int] $Codigo) {
-    if ($Codigo -ne 0) { Write-Host $Msg -ForegroundColor Red } else { Write-Host $Msg -ForegroundColor Green }
+    if ($Codigo -ne 0) { Anotar $Msg "Red" } else { Anotar $Msg "Green" }
+    if ($Codigo -ne 0) { Write-Host ""; Write-Host "Mande a foto desta janela (ou o arquivo IMPORTAR-EVOLUCAO.txt desta pasta) para o suporte." -ForegroundColor Yellow }
+    try { [IO.File]::WriteAllLines((Join-Path $Raiz "IMPORTAR-EVOLUCAO.txt"), $script:Diag, (New-Object System.Text.UTF8Encoding($true))) } catch { }
     exit $Codigo
 }
 # Nome sem acento, maiusculo e com espacos simples (a tarja pode ter o nome
@@ -123,34 +129,43 @@ foreach ($a in $arquivos) {
     $usar += [pscustomobject]@{ Arquivo = $a; Dia = $dtArq }
 }
 if ($usar.Count -eq 0) {
-    Write-Host ("Procurei em:") -ForegroundColor Yellow
-    foreach ($o in $ondeProcurar) { Write-Host ("   {0}{1}" -f $o.p, $(if (Test-Path -LiteralPath $o.p) { "" } else { "  (nao existe)" })) }
-    if ($vistos.Count -gt 0) { Write-Host "Logs do gctse encontrados:" -ForegroundColor Yellow; foreach ($v in $vistos) { Write-Host $v } }
-    if ($explicitos) { Write-Host ("Recebi do arrastar: {0}" -f (($Caminhos | Where-Object { $_ }) -join " ; ")) -ForegroundColor Yellow }
+    Anotar "Procurei em:" "Yellow"
+    foreach ($o in $ondeProcurar) { Anotar ("   {0}{1}" -f $o.p, $(if (Test-Path -LiteralPath $o.p) { "" } else { "  (nao existe)" })) }
+    if ($vistos.Count -gt 0) { Anotar "Logs do gctse encontrados:" "Yellow"; foreach ($v in $vistos) { Anotar $v } }
+    if ($explicitos) { Anotar ("Recebi do arrastar: {0}" -f (($Caminhos | Where-Object { $_ }) -join " ; ")) "Yellow" }
     Sair ("nenhum log das tarjas do dia {0}. No computador das TARJAS, pasta do gctse > logs, copie gctse-{1}.log (e o do dia seguinte) e ARRASTE os arquivos sobre o IMPORTAR-EVOLUCAO.bat (ou ponha na pasta importar)." -f $diaEleicao.ToString("dd/MM/yyyy"), $diaEleicao.ToString("yyyy-MM-dd")) 1
 }
 
-$re = '^(\d\d:\d\d:\d\d)\s+\S+\s+NO ARQUIVO\s+(.+?)\s+urnas\s+([\d.,]+)%?\s*\|\s*(.+)$'
+$re = '^\W{0,3}(\d\d:\d\d:\d\d)\s+\S+\s+NO ARQUIVO\s+(.+?)\s+urnas\s+([\d.,]+)\s*%?\s*\|\s*(.+)$'
 $reCand = '^\s*\d+o\s+(.+?)\s+([\d.,]+)%(.*)$'
 $pontos = New-Object System.Collections.ArrayList
 $semCandidato = @{}
 $linhasLidas = 0
+$motivos = [ordered]@{ "fora do horario da apuracao" = 0; "urnas 0%" = 0; "menos de 2 candidatos reconhecidos" = 0 }
 foreach ($u0 in $usar) {
     $a = $u0.Arquivo; $dtArq = $u0.Dia; $nesteArquivo = 0
-    Write-Host ("lendo {0}" -f $a.FullName)
-    foreach ($linha in [IO.File]::ReadAllLines($a.FullName, [Text.Encoding]::UTF8)) {
+    $todas = [IO.File]::ReadAllLines($a.FullName, [Text.Encoding]::UTF8)
+    $locais = [ordered]@{}; $amostraNoArq = @(); $amostraPres = @(); $nNoArq = 0
+    Anotar ("lendo {0}  ({1} linhas, {2:dd/MM/yyyy HH:mm})" -f $a.FullName, $todas.Count, $a.LastWriteTime)
+    foreach ($linha in $todas) {
+        if ($linha -match 'NO ARQUIVO') { $nNoArq++; if ($amostraNoArq.Count -lt 3) { $amostraNoArq += $linha } }
+        elseif ($linha -match '(?i)presidente' -and $amostraPres.Count -lt 3) { $amostraPres += $linha }
         $m = [regex]::Match($linha, $re)
         if (-not $m.Success) { continue }
         $onde = Normalizar $m.Groups[2].Value
-        if (-not ($onde -match '^PRESIDENTE\b' -and $onde -match '\bBRASIL$')) { continue }
+        if ($locais.Contains($onde)) { $locais[$onde] = $locais[$onde] + 1 } else { $locais[$onde] = 1 }
+        # PRESIDENTE (ou PRESIDENTE DA REPUBLICA) + BRASIL/BR/NACIONAL (ou nada)
+        if (-not ($onde -match '^PRESIDENTE\b')) { continue }
+        $resto = ($onde -replace '^PRESIDENTE( DA REPUBLICA)?', '').Trim()
+        if (-not ($resto -eq "" -or $resto -match '\bBRASIL\b' -or $resto -eq "BR" -or $resto -eq "NACIONAL")) { continue }
         $linhasLidas++; $nesteArquivo++
         $hora = [datetime]::ParseExact($m.Groups[1].Value, "HH:mm:ss", [Globalization.CultureInfo]::InvariantCulture)
         if ($null -ne $dtArq) { $quando = $dtArq.Date.Add($hora.TimeOfDay) }
         elseif ($hora.Hour -ge 12) { $quando = $diaEleicao.Date.Add($hora.TimeOfDay) }       # tarde/noite: dia da eleicao
         else { $quando = $diaEleicao.Date.AddDays(1).Add($hora.TimeOfDay) }                 # madrugada: dia seguinte
-        if ($quando -lt $janelaIni -or $quando -ge $janelaFim) { continue }
+        if ($quando -lt $janelaIni -or $quando -ge $janelaFim) { $motivos["fora do horario da apuracao"]++; continue }
         $u = Numero-Br $m.Groups[3].Value
-        if ($null -eq $u -or $u -le 0) { continue }
+        if ($null -eq $u -or $u -le 0) { $motivos["urnas 0%"]++; continue }
         $porCand = [ordered]@{}
         foreach ($parte in ($m.Groups[4].Value -split '\s+\|\s+')) {
             $mc = [regex]::Match($parte, $reCand)
@@ -162,17 +177,30 @@ foreach ($u0 in $usar) {
                 # nome cortado na tarja: o unico candidato cujo nome comeca igual
                 $parecidos = @($porNome.Keys | Where-Object { $_.StartsWith($nome) -or $nome.StartsWith($_) })
                 if ($parecidos.Count -eq 1) { $alvo = $porNome[$parecidos[0]] }
+                else {
+                    # abreviado ("F. BOLSONARO"): o unico com uma palavra de 4+ letras igual
+                    $palavras = @($nome.Split(' ') | Where-Object { $_.Length -ge 4 })
+                    $porPalavra = @($porNome.Keys | Where-Object { $ks = @($_.Split(' ')); @($palavras | Where-Object { $ks -contains $_ }).Count -gt 0 })
+                    if ($porPalavra.Count -eq 1) { $alvo = $porNome[$porPalavra[0]] }
+                }
             }
             if ($null -eq $alvo) { $semCandidato[$mc.Groups[1].Value] = $true; continue }
             $porCand["$($alvo.numero)"] = Numero-Br $mc.Groups[2].Value
         }
-        if ($porCand.Count -lt 2) { continue }
+        if ($porCand.Count -lt 2) { $motivos["menos de 2 candidatos reconhecidos"]++; continue }
         [void] $pontos.Add([pscustomobject]@{ t = $quando.ToString("yyyy-MM-ddTHH:mm:ss"); u = $u; c = [pscustomobject] $porCand })
     }
-    Write-Host ("   {0} linha(s) PRESIDENTE BRASIL" -f $nesteArquivo)
+    Anotar ("   {0} linha(s) 'NO ARQUIVO'; {1} de PRESIDENTE BRASIL" -f $nNoArq, $nesteArquivo)
+    if ($nesteArquivo -eq 0) {
+        foreach ($k in $locais.Keys) { Anotar ("      tarja no log: {0} ({1}x)" -f $k, $locais[$k]) }
+        foreach ($l in $amostraNoArq) { Anotar ("      ex.: {0}" -f $l) }
+        if ($nNoArq -eq 0) { foreach ($l in $amostraPres) { Anotar ("      linha com PRESIDENTE: {0}" -f $l) } }
+    }
 }
+foreach ($k in $motivos.Keys) { if ($motivos[$k] -gt 0) { Anotar ("   ignoradas: {0} - {1}" -f $motivos[$k], $k) } }
+Anotar ("   candidatos no boletim do TSE: {0}" -f (($cands | Where-Object { $_.votos -gt 0 } | Select-Object -First 4 | ForEach-Object { $_.nome }) -join ", "))
 if ($semCandidato.Count -gt 0) {
-    Write-Host ("AVISO: nomes do log que nao achei no boletim do TSE (ignorados): {0}" -f (($semCandidato.Keys) -join ", ")) -ForegroundColor Yellow
+    Anotar ("AVISO: nomes do log que nao achei no boletim do TSE (ignorados): {0}" -f (($semCandidato.Keys) -join ", ")) "Yellow"
 }
 # Ordem do tempo; urnas nunca voltam (copia velha); repeticao seguida sai.
 $ordenados = @($pontos | Sort-Object t)
@@ -220,6 +248,24 @@ Move-Item -LiteralPath $tmp -Destination $arqEv -Force
 
 $p0 = $limpos[0]; $pf = $limpos[$limpos.Count - 1]
 Write-Host ""
-Write-Host ("importados {0} pontos de {1} a {2} (urnas {3}% a {4}%)" -f $limpos.Count, $p0.t.Substring(11, 5), $pf.t.Substring(11, 5), $p0.u, $pf.u)
-foreach ($k in $pf.c.PSObject.Properties) { Write-Host ("   ultimo ponto: {0,-28} {1}%" -f $nomes[$k.Name].nome, $k.Value) }
-Sair ("gravado em {0}. Com o GRAFICOS.bat aberto, a tela atualiza em ate 20 s." -f (Split-Path -Leaf $arqEv)) 0
+Anotar ("importados {0} pontos de {1} a {2} (urnas {3}% a {4}%)" -f $limpos.Count, $p0.t.Substring(11, 5), $pf.t.Substring(11, 5), $p0.u, $pf.u)
+foreach ($k in $pf.c.PSObject.Properties) { Anotar ("   ultimo ponto: {0,-28} {1}%" -f $nomes[$k.Name].nome, $k.Value) }
+Anotar ("gravado em {0}." -f (Split-Path -Leaf $arqEv))
+# A tela recebeu? Quem poe a linha na tela e o GRAFICOS.bat (dados.js). Um
+# GRAFICOS.bat aberto ANTES de atualizar para a 3.0 continua na versao velha,
+# que nao rele o historico: a tela fica com 1 ponto.
+$idade = ((Get-Date) - (Get-Item $arqDados).LastWriteTime).TotalSeconds
+$aberto = $false
+try { if ($d.PSObject.Properties["pid"] -and $d.pid) { $aberto = ($null -ne (Get-Process -Id ([int] $d.pid) -ErrorAction SilentlyContinue)) } } catch { }
+if ($idade -gt 120 -or -not $aberto) {
+    Sair "O GRAFICOS.bat NAO esta aberto: abra-o agora. A linha aparece na tela no primeiro ciclo (uns 20 s)." 0
+}
+Anotar "conferindo se a tela recebeu a linha (ate 60 s)..."
+$recebeu = $false
+for ($i = 0; $i -lt 30 -and -not $recebeu; $i++) {
+    Start-Sleep -Seconds 2
+    try { $recebeu = ([IO.File]::ReadAllText($arqDados, [Text.Encoding]::UTF8) -match '"origem":"log das tarjas"') } catch { }
+}
+if ($recebeu) { Sair "PRONTO: a tela ja esta com a linha. (Na tela aberta, se precisar, aperte F5.)" 0 }
+$versaoCol = "$($d.versao)"
+Sair ("O GRAFICOS.bat aberto e da versao {0} e nao recarregou o historico. FECHE a janela do GRAFICOS.bat e abra de novo: a linha aparece no primeiro ciclo. (O historico importado ja esta salvo.)" -f $versaoCol) 1
