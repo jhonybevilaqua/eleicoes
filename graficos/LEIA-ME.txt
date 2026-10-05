@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 2.19 - apuracao de PRESIDENTE em graficos
+ gctse GRAFICOS 2.20 - apuracao de PRESIDENTE em graficos
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -143,6 +143,28 @@
    2018 x 2022 x 2026 ...... abstencao, brancos e nulos. 2026 ao vivo do
                              TSE; 2018 (e 2022 sem o ESTADOS.bat) em
                              web\comparativo-config.js.
+
+---------------------------------------------------------------------------
+ EVOLUCAO MINUTO A MINUTO (2.20) - 1o x 2o colocado de Presidente
+---------------------------------------------------------------------------
+
+   Tela "Evolucao minuto a minuto (1o x 2o)" (horizontal e vertical, no
+   gerenciador e no rodizio): uma linha por candidato com o % dos votos
+   validos de cada boletim do TSE, hora do TSE embaixo (com % de urnas),
+   valores de inicio e do ultimo boletim, linha de 50% e marca de VIRADA
+   quando o 1o e o 2o trocam de posicao.
+
+   De onde vem: o GRAFICOS.bat GRAVA cada boletim novo do Brasil (hora de
+   geracao do TSE diferente) em evolucao-<ciclo>-<eleicao>-oficial.json,
+   na pasta do programa. O TSE NAO publica o historico - so o ultimo
+   boletim. Entao:
+     - so existe ponto de quando o GRAFICOS.bat estava aberto. Abra antes
+       das 17h no dia do 2o turno e NAO feche ate o fim;
+     - fechou e abriu? o arquivo continua; o trecho fechado vira uma reta;
+     - o 1o turno de 04/10 nao pode ser refeito (nao foi gravado).
+   2o turno: troque "eleicao_presidente" no config-graficos.json pelo codigo
+   do 2o turno; o grafico comeca um arquivo novo, sozinho.
+   Para recomecar do zero: feche o GRAFICOS.bat e apague o evolucao-*.json.
 
 ---------------------------------------------------------------------------
  CAMARA DOS DEPUTADOS (2.19) - bancadas eleitas por partido

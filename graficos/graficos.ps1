@@ -21,7 +21,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "2.19 - 05/10/2026"
+$Versao = "2.20 - 05/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -583,6 +583,53 @@ function Atribuir-Cores {
     }
 }
 
+# ------------------------------------------- evolucao minuto a minuto (Brasil)
+# Cada boletim NOVO do Brasil (hora de geracao do TSE diferente) vira um ponto:
+# hora do TSE, % de urnas e % dos validos de cada candidato. So o que o TSE
+# publicou - nada interpolado. Fica guardado em evolucao-<ciclo>-<eleicao>-<modo>.json
+# (sobrevive a fechar o programa; o 2o turno, outra eleicao, comeca um
+# arquivo novo) e vai para a tela dentro do dados.js.
+
+$ArquivoEvolucao = Join-Path $Raiz ("evolucao-{0}-{1}-{2}.json" -f $Ciclo, $Eleicao, $Modo.ToLower())
+$script:Evolucao = New-Object System.Collections.ArrayList
+$script:EvolucaoNomes = [ordered]@{}
+if (Test-Path $ArquivoEvolucao) {
+    try {
+        $lidoEv = Get-Content $ArquivoEvolucao -Raw -Encoding UTF8 | ConvertFrom-Json
+        foreach ($pt in @($lidoEv.pontos)) { if ($null -ne $pt) { [void] $script:Evolucao.Add($pt) } }
+        if (Tem-Propriedade $lidoEv "nomes") { foreach ($pn in $lidoEv.nomes.PSObject.Properties) { $script:EvolucaoNomes[$pn.Name] = $pn.Value } }
+    } catch { }
+}
+
+function Registrar-Evolucao {
+    if (-not $script:Cache.ContainsKey("br")) { return }
+    $b = $script:Cache["br"]
+    if ($null -eq $b.secoes.pct -or $b.secoes.pct -le 0) { return }
+    $quando = Converter-Geracao $b.geracao
+    $marca = $(if ($null -ne $quando) { $quando.ToString("yyyy-MM-ddTHH:mm:ss") } else { (Get-Date).ToString("yyyy-MM-ddTHH:mm:ss") })
+    $porCand = [ordered]@{}
+    foreach ($c in $b.candidatos) {
+        if (-not $c.numero -or $c.votos -le 0) { continue }
+        $porCand["$($c.numero)"] = $c.pct
+        $script:EvolucaoNomes["$($c.numero)"] = [pscustomobject]@{ nome = $c.nome; partido = $c.partido }
+    }
+    if ($porCand.Count -eq 0) { return }
+    if ($script:Evolucao.Count -gt 0) {
+        $ultimoPt = $script:Evolucao[$script:Evolucao.Count - 1]
+        if ("$($ultimoPt.t)" -ge $marca) { return }           # mesmo boletim (ou copia mais velha)
+        if ([double] $ultimoPt.u -eq [double] $b.secoes.pct -and
+            (($ultimoPt.c | ConvertTo-Json -Compress) -eq ([pscustomobject] $porCand | ConvertTo-Json -Compress))) { return }
+    }
+    [void] $script:Evolucao.Add([pscustomobject]@{ t = $marca; u = $b.secoes.pct; c = [pscustomobject] $porCand })
+    while ($script:Evolucao.Count -gt 3000) { $script:Evolucao.RemoveAt(0) }
+    try {
+        $objEv = [ordered]@{ ciclo = $Ciclo; eleicao = $Eleicao; modo = $Modo; nomes = [pscustomobject] $script:EvolucaoNomes; pontos = @($script:Evolucao) }
+        $tmpEv = "$ArquivoEvolucao.tmp"
+        [IO.File]::WriteAllText($tmpEv, ($objEv | ConvertTo-Json -Depth 6 -Compress), (New-Object System.Text.UTF8Encoding($false)))
+        [void] (Promover-Temporario $tmpEv $ArquivoEvolucao)
+    } catch { Escrever-Log "evolucao: nao gravei o historico ($($_.Exception.Message))" "AVISO" }
+}
+
 # ------------------------------------------------------------- gravar dados
 
 function Gravar-Dados {
@@ -610,6 +657,7 @@ function Gravar-Dados {
         tse           = [pscustomobject]@{ base = $Base; ciclo = $Ciclo; eleicao = $Eleicao }
         br            = $br
         ufs           = $porEstado
+        evolucao      = [pscustomobject]@{ nomes = [pscustomobject] $script:EvolucaoNomes; pontos = @($script:Evolucao) }
     }
     $json = $dados | ConvertTo-Json -Depth 8 -Compress
     $conteudo = "window.GCTSE_DADOS = $json;"
@@ -659,6 +707,7 @@ do {
     }
     try {
         Ler-Abrangencia "br"
+        Registrar-Evolucao
         Gravar-Dados                       # o Brasil vai para a tela antes dos estados
         # Estados so depois que o Brasil saiu: antes das 17h seriam 27
         # pedidos com 404 por ciclo (o TSE avisa que 404 em excesso bloqueia

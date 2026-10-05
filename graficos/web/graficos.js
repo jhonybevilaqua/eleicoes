@@ -865,6 +865,135 @@
     return svg(W, H, o + t(35, 945, "Fonte: TSE · abstenção sobre o eleitorado; brancos e nulos sobre os votos", { s: 11, c: C.apagado2 }));
   };
 
+  // ---- Evolucao minuto a minuto: os 2 primeiros do Brasil -------------------
+  // Cada ponto e um boletim do TSE gravado pelo GRAFICOS.bat (hora do TSE,
+  // % de urnas, % dos validos). Linha reta entre boletins; nada inventado.
+  function evolucao() {
+    var d = D(), ev = d.evolucao || {}, pts = comoLista(ev.pontos), cs = candidatos(br()).filter(function (c) { return c.votos > 0; }).slice(0, 2);
+    var nomes = ev.nomes || {};
+    var lista = pts.map(function (p) {
+      var m = /^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)/.exec(p.t || "");
+      return m ? { ms: new Date(+m[1], m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime(), u: +p.u, c: p.c || {} } : null;
+    }).filter(Boolean).sort(function (a, b) { return a.ms - b.ms; });
+    var series = cs.map(function (c) {
+      return { c: c, cor: cor(c), nome: c.nome || (nomes[c.numero] || {}).nome || c.numero,
+        pts: lista.filter(function (p) { return p.c[c.numero] != null; }).map(function (p) { return { ms: p.ms, v: +p.c[c.numero], u: p.u }; }) };
+    });
+    return { series: series, pontos: lista };
+  }
+  function hhmm(ms) { var x = new Date(ms); return ("0" + x.getHours()).slice(-2) + ":" + ("0" + x.getMinutes()).slice(-2); }
+  function pctCurto(v, casas) { return Number(v).toFixed(casas).replace(".", ",") + "%"; }
+  var HALO = ' stroke="#0b1220" stroke-width="6" stroke-linejoin="round" paint-order="stroke"';
+  // Area do grafico: x0..x1, y0..y1. k = escala das letras.
+  function plotEvolucao(ev, x0, x1, y0, y1, k, maxTicks) {
+    var ss = ev.series.filter(function (s) { return s.pts.length; }), o = "";
+    if (!ss.length) return t((x0 + x1) / 2, (y0 + y1) / 2, br() ? "nenhum boletim gravado ainda" : "aguardando o primeiro boletim do TSE", { s: Math.round(22 * k), c: C.apagado, a: "middle" }) +
+      t((x0 + x1) / 2, (y0 + y1) / 2 + 30 * k, "o GRAFICOS.bat grava cada boletim novo do TSE", { s: Math.round(16 * k), c: C.apagado2, a: "middle" });
+    var tA = Infinity, tB = -Infinity, vA = Infinity, vB = -Infinity;
+    ss.forEach(function (s) { s.pts.forEach(function (p) { tA = Math.min(tA, p.ms); tB = Math.max(tB, p.ms); vA = Math.min(vA, p.v); vB = Math.max(vB, p.v); }); });
+    var unico = tB - tA < 1000;
+    if (unico) { tA -= 30000; tB += 30000; }
+    var span = Math.max(4, vB - vA + 2), passo = span <= 6 ? 1 : span <= 14 ? 2 : span <= 30 ? 5 : 10;
+    var lo = Math.floor((vA - 1) / passo) * passo, hi = Math.ceil((vB + 1) / passo) * passo;
+    lo = Math.max(0, lo); hi = Math.min(100, hi); if (hi - lo < passo * 2) hi = lo + passo * 2;
+    var X = function (ms) { return x0 + (x1 - x0) * (ms - tA) / (tB - tA); };
+    var Y = function (v) { return y1 - (y1 - y0) * (v - lo) / (hi - lo); };
+    // grade horizontal + 50% em destaque (maioria no 2o turno)
+    for (var g = lo; g <= hi + 1e-9; g += passo) {
+      var gy = Y(g).toFixed(1), meio = Math.abs(g - 50) < 1e-9;
+      o += '<line x1="' + x0 + '" x2="' + x1 + '" y1="' + gy + '" y2="' + gy + '" stroke="' + (meio ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.10)") +
+        '" stroke-width="' + (meio ? 2 : 1) + '"' + (meio ? ' stroke-dasharray="8 6"' : "") + "/>";
+      o += t(x0 - 12 * k, +gy + 6 * k, g + "%", { s: Math.round(16 * k), c: meio ? C.texto : C.apagado, a: "end", b: meio });
+    }
+    // eixo de horas: intervalo "redondo" que de ate maxTicks marcas
+    var min = (tB - tA) / 60000, opc = [1, 2, 5, 10, 15, 20, 30, 60, 120, 180, 240], iv = opc[opc.length - 1];
+    for (var i = 0; i < opc.length; i++) if (min / opc[i] <= maxTicks - 1) { iv = opc[i]; break; }
+    var ivMs = iv * 60000, primeiro = Math.ceil(tA / ivMs) * ivMs, ultimoX = -1e9;
+    var tz = new Date(tA).getTimezoneOffset() * 60000;   // marcas na hora cheia LOCAL
+    primeiro = Math.ceil((tA - tz) / ivMs) * ivMs + tz;
+    var todos = ev.pontos, marcas = [tA];
+    for (var mm = primeiro; mm <= tB; mm += ivMs) if (X(mm) - X(tA) >= 70 * k) marcas.push(mm);
+    if (unico) { marcas = [(tA + tB) / 2]; o += t((x0 + x1) / 2, y1 - 24 * k, "1 boletim gravado: a linha começa no próximo boletim do TSE", { s: Math.round(16 * k), c: C.apagado, a: "middle" }); }
+    marcas.forEach(function (m) {
+      var mx = X(m); if (mx - ultimoX < 70 * k) return; ultimoX = mx;
+      o += '<line x1="' + mx.toFixed(1) + '" x2="' + mx.toFixed(1) + '" y1="' + y0 + '" y2="' + y1 + '" stroke="rgba(255,255,255,0.06)"/>';
+      o += t(mx, y1 + 26 * k, hhmm(m), { s: Math.round(16 * k), b: true, c: C.apagado, a: "middle" });
+      var ant = null; todos.forEach(function (p) { if (p.ms <= m) ant = p; });
+      if (ant && ant.u >= 0) o += t(mx, y1 + 46 * k, "urnas " + pctCurto(ant.u, ant.u < 10 ? 1 : 0), { s: Math.round(13 * k), c: C.apagado2, a: "middle" });
+    });
+    o += '<line x1="' + x0 + '" x2="' + x1 + '" y1="' + y1 + '" y2="' + y1 + '" stroke="rgba(255,255,255,0.25)"/>';
+    // virada: ultimo boletim em que o 1o e o 2o trocaram de posicao
+    if (ss.length === 2) {
+      var a = ss[0], b = ss[1], mapa = {}, virada = null, antes = null;
+      b.pts.forEach(function (p) { mapa[p.ms] = p.v; });
+      a.pts.forEach(function (p) {
+        if (mapa[p.ms] == null) return;
+        var sinal = p.v > mapa[p.ms] ? 1 : (p.v < mapa[p.ms] ? -1 : 0);
+        if (sinal && antes && sinal !== antes) virada = p.ms;
+        if (sinal) antes = sinal;
+      });
+      if (virada != null) {
+        var vx = X(virada).toFixed(1);
+        o += '<line x1="' + vx + '" x2="' + vx + '" y1="' + y0 + '" y2="' + y1 + '" stroke="rgba(255,255,255,0.55)" stroke-width="2" stroke-dasharray="4 5"/>';
+        o += t(+vx + 8 * k, y0 + 24 * k, "VIRADA · " + hhmm(virada), { s: Math.round(15 * k), b: true, ls: 1, extra: HALO });
+      }
+    }
+    // linhas, pontos inicial/final e rotulos
+    var fins = [];
+    ss.forEach(function (s) {
+      var d = s.pts.map(function (p, j) { return (j ? "L" : "M") + X(p.ms).toFixed(1) + " " + Y(p.v).toFixed(1); }).join(" ");
+      o += '<path d="' + d + '" fill="none" stroke="' + s.cor + '" stroke-width="' + (4 * k).toFixed(1) + '" stroke-linejoin="round" stroke-linecap="round"/>';
+      var p0 = s.pts[0], pf = s.pts[s.pts.length - 1];
+      o += '<circle cx="' + X(p0.ms).toFixed(1) + '" cy="' + Y(p0.v).toFixed(1) + '" r="' + (5 * k).toFixed(1) + '" fill="' + s.cor + '" stroke="#0b1220" stroke-width="2"/>';
+      o += '<circle cx="' + X(pf.ms).toFixed(1) + '" cy="' + Y(pf.v).toFixed(1) + '" r="' + (8 * k).toFixed(1) + '" fill="' + s.cor + '" stroke="#ffffff" stroke-width="' + (2.5 * k).toFixed(1) + '"/>';
+      fins.push({ s: s, y: Y(pf.v), y0: Y(p0.v), p0: p0, pf: pf });
+    });
+    // inicio: acima de quem comeca na frente, abaixo de quem comeca atras
+    if (fins.length === 2 && fins[0].p0.ms === fins[1].p0.ms && (fins[0].p0.ms !== fins[0].pf.ms)) {
+      var cima = fins[0].y0 <= fins[1].y0 ? fins[0] : fins[1], baixo = cima === fins[0] ? fins[1] : fins[0];
+      o += t(x0 + 4 * k, cima.y0 - 14 * k, pctCurto(cima.p0.v, 2), { s: Math.round(20 * k), b: true, c: cima.s.cor, extra: HALO });
+      o += t(x0 + 4 * k, baixo.y0 + 30 * k, pctCurto(baixo.p0.v, 2), { s: Math.round(20 * k), b: true, c: baixo.s.cor, extra: HALO });
+    }
+    // fim: valores a direita, afastados se ficarem colados
+    fins.sort(function (p, q) { return p.y - q.y; });
+    var dist = 40 * k;
+    if (fins.length === 2 && fins[1].y - fins[0].y < dist) { var meioY = (fins[0].y + fins[1].y) / 2; fins[0].y = meioY - dist / 2; fins[1].y = meioY + dist / 2; }
+    fins.forEach(function (f) { o += t(x1 + 16 * k, f.y + 10 * k, pctCurto(f.pf.v, 2), { s: Math.round(30 * k), b: true, c: C.texto }); });
+    return o;
+  }
+  function legendaEvolucao(ev, x, y, k, maxW) {
+    var o = "";
+    ev.series.forEach(function (s, i) {
+      var xx = x + i * maxW / 2, txt = s.nome + (s.c.partido ? " (" + s.c.partido + ")" : "");
+      o += r(xx, y - 11 * k, 30 * k, 6 * k, s.cor, 3) + t(xx + 40 * k, y, txt, { s: Math.round(19 * k), b: true, max: maxW / 2 - 60 * k });
+    });
+    return o;
+  }
+  function rodapeEvolucao(ev) {
+    var b = br(), n = ev.pontos.length;
+    return "Fonte: TSE · % dos votos válidos em cada boletim (" + n + (n === 1 ? " boletim" : " boletins") + ", horário do TSE)" +
+      (b && b.secoes && b.secoes.pct != null ? " · urnas apuradas " + pct(b.secoes.pct) : "");
+  }
+  G["evolucao-h"] = function () {
+    var W = 1280, H = 720, ev = evolucao();
+    var nomes = ev.series.map(function (s) { return s.nome; }).join(" × ");
+    var o = cabecalhoH(W, "EVOLUÇÃO DA APURAÇÃO", (nomes ? nomes + "  ·  " : "") + "presidente  ·  " + subtitulo());
+    o += legendaEvolucao(ev, 73, 135, 1, 900);
+    o += plotEvolucao(ev, 125, 1085, 175, 600, 1, 9);
+    o += t(73, 700, rodapeEvolucao(ev), { s: 13, c: C.apagado2, max: 1134 });
+    return svg(W, H, o);
+  };
+  G["evolucao-v"] = function () {
+    var W = 540, H = 960, ev = evolucao();
+    var o = cabecalhoV(W, "EVOLUÇÃO DA APURAÇÃO", "presidente · " + subtitulo());
+    var yy = 200;
+    ev.series.forEach(function (s, i) {
+      o += r(35, yy + i * 34 - 11, 30, 6, s.cor, 3) + t(75, yy + i * 34, s.nome + (s.c.partido ? " (" + s.c.partido + ")" : ""), { s: 19, b: true, max: 430 });
+    });
+    o += plotEvolucao(ev, 85, 410, 290, 820, 0.85, 5);
+    return svg(W, H, o + t(35, 945, rodapeEvolucao(ev), { s: 11, c: C.apagado2, max: 470 }));
+  };
+
   window.GCTSE_GRAFICOS = {
     lista: [
       { id: "presidente-h", nome: "Presidente — Brasil", f: "h" },
@@ -878,6 +1007,7 @@
       { id: "senado-h", nome: "Senado: atual × 2027", f: "h" },
       { id: "comparativo-h", nome: "2018 × 2022 × 2026", f: "h" },
       { id: "camara-h", nome: "Câmara: bancadas 2027", f: "h" },
+      { id: "evolucao-h", nome: "Evolução minuto a minuto (1º × 2º)", f: "h" },
       { id: "urnas-v", nome: "Urnas apuradas", f: "v" },
       { id: "votos-v", nome: "Brancos e nulos", f: "v" },
       { id: "presidente-v", nome: "Presidente", f: "v" },
@@ -888,7 +1018,8 @@
       { id: "pres2t-v", nome: "Presidente — 2º turno", f: "v" },
       { id: "senado-v", nome: "Senado: 2027", f: "v" },
       { id: "comparativo-v", nome: "2018 × 2022 × 2026", f: "v" },
-      { id: "camara-v", nome: "Câmara: bancadas 2027", f: "v" }
+      { id: "camara-v", nome: "Câmara: bancadas 2027", f: "v" },
+      { id: "evolucao-v", nome: "Evolução minuto a minuto (1º × 2º)", f: "v" }
     ],
     desenhar: function (id) { return G[id] ? G[id]() : null; },
     ajustarSelos: ajustarSelos,
