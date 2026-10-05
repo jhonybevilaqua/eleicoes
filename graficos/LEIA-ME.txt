@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 3.1 - apuracao em graficos (versao final)
+ gctse GRAFICOS 3.1.1 - apuracao em graficos (versao final)
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -207,6 +207,9 @@
       mostra a linha dele a noite toda e o 2o so com o resultado final do
       TSE (a legenda diz "so o resultado final"). Nada e completado por
       estimativa. Nao precisa copiar nada: e so dar dois cliques.
+      Se na noite o GRAFICOS.bat rodou de OUTRA pasta (versao antiga em
+      Downloads, outro disco), o importador procura sozinho em todos os
+      discos (1 a 2 minutos) e mostra onde achou ("achei: ...").
 
    b) 2o TURNO (ao vivo) - o proprio GRAFICOS.bat
       Grava cada boletim novo do Brasil (hora do TSE) em

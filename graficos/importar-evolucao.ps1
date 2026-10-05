@@ -19,6 +19,7 @@
 [CmdletBinding(PositionalBinding = $false)]
 param(
     [string] $Dia = "",
+    [string[]] $RaizesBusca = @(),
     [Parameter(ValueFromRemainingArguments = $true)] [string[]] $Caminhos = @()
 )
 $ErrorActionPreference = "Stop"
@@ -153,12 +154,55 @@ function Quando-Foi($DiaArq, [string] $HoraTxt) {
 }
 $usar = @(Filtrar-Dia $arquivos)
 $usarExib = @(Filtrar-Dia $arquivosExib)
+
+# Nada do DIA DA ELEICAO nos lugares de costume (ex.: na noite o GRAFICOS.bat
+# rodou de outra pasta - versao antiga extraida em Downloads, outro disco):
+# procura no computador inteiro os arquivos com a data no nome.
+function Tem-DoDia($Lista) { return (@($Lista | Where-Object { $null -ne $_.Dia -and $_.Dia.Date -eq $diaEleicao.Date }).Count -gt 0) }
+if (-not (Tem-DoDia $usar) -and -not (Tem-DoDia $usarExib)) {
+    $d1 = $diaEleicao.ToString("yyyy-MM-dd"); $d2 = $diaEleicao.AddDays(1).ToString("yyyy-MM-dd")
+    $nomesBusca = @("gctse-$d1", "gctse-$d2", "graficos-$d1", "graficos-$d2")
+    $raizes = @($RaizesBusca | Where-Object { $_ })
+    if ($raizes.Count -eq 0) {
+        $raizes = @([IO.DriveInfo]::GetDrives() | Where-Object { $_.IsReady -and ($_.DriveType -eq 'Fixed' -or $_.DriveType -eq 'Removable') } | ForEach-Object { $_.RootDirectory.FullName })
+    }
+    $pular = @('windows', 'program files', 'program files (x86)', 'programdata', '$recycle.bin', 'system volume information', 'appdata', 'node_modules', '$windows.~bt', '$windows.~ws', 'windowsapps', 'proc', 'sys', 'dev')
+    Anotar ("nao achei log do dia {0} nos lugares de costume: procurando no computador inteiro ({1}) - pode levar 1 ou 2 minutos..." -f $diaEleicao.ToString("dd/MM/yyyy"), ($raizes -join " ")) "Yellow"
+    $achadosFundo = New-Object System.Collections.ArrayList
+    $pilha = New-Object System.Collections.Stack
+    foreach ($rz in $raizes) { $pilha.Push($rz) }
+    $pastasVistas = 0
+    while ($pilha.Count -gt 0) {
+        $pasta = [string] $pilha.Pop()
+        $pastasVistas++
+        try {
+            foreach ($arq in [IO.Directory]::EnumerateFiles($pasta, "*.*")) {
+                $nm = [IO.Path]::GetFileName($arq).ToLowerInvariant()
+                foreach ($nb in $nomesBusca) { if ($nm.StartsWith($nb) -and ($nm.EndsWith(".log") -or $nm.EndsWith(".txt"))) { [void] $achadosFundo.Add($arq); break } }
+            }
+            foreach ($sub in [IO.Directory]::EnumerateDirectories($pasta)) {
+                $info = New-Object IO.DirectoryInfo $sub
+                if (($info.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { continue }   # atalho de pasta: evita laco
+                if ($pular -contains $info.Name.ToLowerInvariant()) { continue }
+                $pilha.Push($sub)
+            }
+        } catch { }
+    }
+    Anotar ("   {0} pastas olhadas; {1} log(s) achado(s)" -f $pastasVistas, $achadosFundo.Count)
+    foreach ($af in $achadosFundo) {
+        Anotar ("   achei: {0}" -f $af)
+        $it = Get-Item -LiteralPath $af
+        if ($it.Name -match '(?i)^graficos') { $arquivosExib += @($it) } else { $arquivos += @($it) }
+    }
+    $usar = @(Filtrar-Dia $arquivos)
+    $usarExib = @(Filtrar-Dia $arquivosExib)
+}
 if ($usar.Count -eq 0 -and $usarExib.Count -eq 0) {
     Anotar "Procurei em:" "Yellow"
     foreach ($o in $ondeProcurar) { Anotar ("   {0}{1}" -f $o.p, $(if (Test-Path -LiteralPath $o.p) { "" } else { "  (nao existe)" })) }
     if ($vistos.Count -gt 0) { Anotar "Logs encontrados:" "Yellow"; foreach ($v in $vistos) { Anotar $v } }
     if ($explicitos) { Anotar ("Recebi do arrastar: {0}" -f (($Caminhos | Where-Object { $_ }) -join " ; ")) "Yellow" }
-    Sair ("nenhum log do dia {0}: nem das tarjas (gctse-{1}.log) nem deste exibidor (logs\graficos-{1}.log)." -f $diaEleicao.ToString("dd/MM/yyyy"), $diaEleicao.ToString("yyyy-MM-dd")) 1
+    Sair ("nenhum log do dia {0} em todos os discos: nem das tarjas (gctse-{1}.log) nem deste exibidor (logs\graficos-{1}.log)." -f $diaEleicao.ToString("dd/MM/yyyy"), $diaEleicao.ToString("yyyy-MM-dd")) 1
 }
 
 # Nome do log -> candidato do boletim do TSE (sem acento; cortado; abreviado).
@@ -289,6 +333,9 @@ if ($limpos.Count -eq 0 -and $usarExib.Count -gt 0) {
     }
 }
 if ($limpos.Count -eq 0) {
+    if (-not (Tem-DoDia $usar) -and -not (Tem-DoDia $usarExib)) {
+        Sair ("nada importado: NAO existe neste computador log da noite de {0} (graficos-{1}.log nem gctse-{1}.log) - procurei em todos os discos. Se a pasta do GRAFICOS usada na eleicao foi apagada, restaure-a da LIXEIRA e rode de novo; se a noite rodou em OUTRO computador, copie de la a pasta logs para a pasta importar." -f $diaEleicao.ToString("dd/MM/yyyy"), $diaEleicao.ToString("yyyy-MM-dd")) 1
+    }
     Sair ("nada importado: nenhum registro de Presidente Brasil entre {0} e {1}." -f $janelaIni.ToString("dd/MM HH:mm"), $janelaFim.ToString("dd/MM HH:mm")) 1
 }
 
