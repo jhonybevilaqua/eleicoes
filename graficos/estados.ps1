@@ -17,7 +17,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "2.19 - 05/10/2026"
+$Versao = "3.0 - 05/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -251,6 +251,10 @@ $Ciclo   = "$($cfg.tse.ciclo)"
 # 6259 = Eleicoes Gerais Estaduais (Governador e Senador), pagina oficial do TSE
 $Eleicao = "6259"
 if ((Tem-Propriedade $cfg.tse "eleicao_estaduais") -and $cfg.tse.eleicao_estaduais) { $Eleicao = "$($cfg.tse.eleicao_estaduais)" }
+# Camara: deputado federal so tem 1o turno. No 2o turno, "eleicao_camara"
+# continua no codigo do 1o turno e a tela da Camara nao se perde.
+$EleicaoCamara = $Eleicao
+if ((Tem-Propriedade $cfg.tse "eleicao_camara") -and $cfg.tse.eleicao_camara) { $EleicaoCamara = "$($cfg.tse.eleicao_camara)" }
 $Modo    = "OFICIAL"
 $Intervalo = 30
 if (Tem-Propriedade $cfg "intervalo_estados_segundos") { $Intervalo = [math]::Max(15, [int] $cfg.intervalo_estados_segundos) }
@@ -261,10 +265,11 @@ $UFs = @("ac","al","ap","am","ba","ce","df","es","go","ma","mt","ms","mg","pa",
 $Cargos = @(3, 5)   # 3 = Governador, 5 = Senador
 
 function Montar-Url {
-    param([string] $Abr, [int] $Cargo)
-    $ele6 = "{0:000000}" -f ([int] $Eleicao)
+    param([string] $Abr, [int] $Cargo, [string] $Pleito = "")
+    if (-not $Pleito) { $Pleito = $Eleicao }
+    $ele6 = "{0:000000}" -f ([int] $Pleito)
     $c4 = "{0:0000}" -f $Cargo
-    return "$Base/$Ciclo/$Eleicao/dados/$Abr/$Abr-c$c4-e$ele6-u.json"
+    return "$Base/$Ciclo/$Pleito/dados/$Abr/$Abr-c$c4-e$ele6-u.json"
 }
 
 # ------------------------------------------------ recebendo do TSE? (alarme)
@@ -549,7 +554,7 @@ function Ler-Abrangencia {
 $script:Camara = @{}
 function Ler-Camara {
     param([string] $Abr)
-    $url = Montar-Url $Abr 6
+    $url = Montar-Url $Abr 6 $EleicaoCamara
     $bruto = Obter-Boletim $url
     if ($null -eq $bruto -or "$bruto" -eq "SEM-MUDANCA") { return }
     $fase = "$(Obter-Campo $bruto @('f') '')".ToUpper()

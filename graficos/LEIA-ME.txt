@@ -1,19 +1,32 @@
 ===========================================================================
- gctse GRAFICOS 2.20 - apuracao de PRESIDENTE em graficos
+ gctse GRAFICOS 3.0 - apuracao em graficos (versao final)
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
  O QUE FAZ
 
-   Le do TSE o boletim de Presidente do Brasil e dos 27 estados, a cada
-   20 segundos, e mantem 10 graficos atualizados sozinhos:
+   GRAFICOS.bat le do TSE o boletim de Presidente (Brasil e 27 estados) a
+   cada 20 s; ESTADOS.bat le Governador, Senador e Deputado Federal dos 27
+   estados. Todas as telas se atualizam sozinhas, so com dado do TSE (o
+   que nao e do TSE fica em arquivo de config e aparece com a fonte).
 
-   HORIZONTAIS 1280x720 (TV)          VERTICAIS 540x960 (redes/tela vertical)
-     Presidente - Brasil                Urnas apuradas
-     Como o Brasil votou                Brancos e nulos
-     Apuracao nacional                  Presidente
-     Como cada estado votou             Comparecimento
-     Lideranca por estado               Lideranca por estado
+   GRAFICOS (horizontal 1280x720 e vertical 540x960)
+     Presidente - Brasil              Como o Brasil votou / Brancos e nulos
+     Apuracao nacional / Urnas        Como cada estado votou (mapa)
+     Lideranca por estado             Comparecimento
+     Abstencao, brancos e nulos       Mapa da abstencao
+     Presidente - 2o turno            Senado: atual x 2027
+     2018 x 2022 x 2026               Camara: bancadas 2027
+     Evolucao minuto a minuto (1o x 2o colocado de Presidente)
+   GIRO DOS ESTADOS (Governador e Senador, um estado por vez)
+   RESUMO (7 telas de fechamento)
+   GERENCIADOR (escolhe o que vai para as saidas SDI da DeckLink)
+
+ NOVO NA 3.0
+   - Evolucao minuto a minuto com os numeros REAIS do 1o turno: o
+     IMPORTAR-EVOLUCAO.bat le o log do sistema das tarjas (ver abaixo).
+   - Camara dos Deputados por partido (eleitos marcados pelo TSE).
+   - Revisao geral: todas as telas, horizontal e vertical, conferidas.
 
    Nao instala nada. Nao precisa de internet alem do TSE (o mapa e os
    graficos estao dentro da pasta).
@@ -25,10 +38,10 @@
  1. Copie a pasta GCTSE-GRAFICOS para o outro computador. Ex.: D:\GRAFICOS
 
  2. Duplo clique em GRAFICOS.bat e deixe a janela ABERTA.
-    (No dia 04/10, perto das 16h45 - o TSE so publica depois das 17h.)
+    (No dia da eleicao, perto das 16h45 - o TSE so publica depois das 17h.)
 
  3. Duplo clique em ABRIR-GRAFICOS.bat. Abre a pagina do operador, com a
-    situacao da coleta no alto e a previa dos 10 graficos.
+    situacao da coleta no alto e a previa de todos os graficos.
 
  4. Para cada grafico:
       - Chrome em tela cheia: clique em "Abrir" e aperte F11
@@ -51,10 +64,12 @@
 
    Um duplo clique por maquina:
 
-   APRESENTACAO-HORIZONTAL.bat  -> tela cheia 1920x1080, passa pelos
-                                   5 graficos horizontais
-   APRESENTACAO-VERTICAL.bat    -> tela cheia 1080x1920, passa pelos
-                                   5 graficos verticais
+   APRESENTACAO-HORIZONTAL.bat  -> tela cheia 1920x1080, passa pelas
+                                   telas horizontais do rodizio
+   APRESENTACAO-VERTICAL.bat    -> tela cheia 1080x1920, passa pelas
+                                   telas verticais do rodizio
+   (rodizio = o escolhido no GERENCIADOR; sem escolha, o do
+   web\apresentacao-config.js)
 
    Abrem no Chrome (ou no Edge, se nao tiver Chrome) em tela cheia, sem
    barra nem mouse. Os numeros continuam se atualizando sozinhos durante
@@ -150,21 +165,40 @@
 
    Tela "Evolucao minuto a minuto (1o x 2o)" (horizontal e vertical, no
    gerenciador e no rodizio): uma linha por candidato com o % dos votos
-   validos de cada boletim do TSE, hora do TSE embaixo (com % de urnas),
-   valores de inicio e do ultimo boletim, linha de 50% e marca de VIRADA
-   quando o 1o e o 2o trocam de posicao.
+   validos a cada atualizacao do TSE, hora embaixo (com % de urnas),
+   valores de inicio e do ultimo ponto, linha de 50% e marca de VIRADA
+   quando o 1o e o 2o trocam de posicao. Os dois candidatos sao o 1o e o
+   2o do boletim atual do TSE.
 
-   De onde vem: o GRAFICOS.bat GRAVA cada boletim novo do Brasil (hora de
-   geracao do TSE diferente) em evolucao-<ciclo>-<eleicao>-oficial.json,
-   na pasta do programa. O TSE NAO publica o historico - so o ultimo
-   boletim. Entao:
-     - so existe ponto de quando o GRAFICOS.bat estava aberto. Abra antes
-       das 17h no dia do 2o turno e NAO feche ate o fim;
-     - fechou e abriu? o arquivo continua; o trecho fechado vira uma reta;
-     - o 1o turno de 04/10 nao pode ser refeito (nao foi gravado).
-   2o turno: troque "eleicao_presidente" no config-graficos.json pelo codigo
-   do 2o turno; o grafico comeca um arquivo novo, sozinho.
-   Para recomecar do zero: feche o GRAFICOS.bat e apague o evolucao-*.json.
+   O TSE NAO publica o historico - so o ultimo boletim. Os pontos vem de:
+
+   a) 1o TURNO (04/10) - IMPORTAR-EVOLUCAO.bat
+      O sistema das tarjas escreveu no log, a cada mudanca, a linha que
+      foi ao ar ("NO ARQUIVO  PRESIDENTE BRASIL  urnas ...% | 1o ... | 2o
+      ..."). Sao os numeros do TSE naquela hora. Para usar:
+        1. No computador das TARJAS, pasta do gctse, pasta logs: copie
+           gctse-2026-10-04.log (e gctse-2026-10-05.log, se a apuracao
+           passou da meia-noite).
+        2. No computador dos GRAFICOS: arraste os arquivos (ou a pasta logs
+           inteira) sobre IMPORTAR-EVOLUCAO.bat. Ou ponha-os na pasta
+           "importar" ao lado do .bat e de dois cliques.
+        3. A janela mostra quantos pontos entraram e o ultimo valor de
+           cada um. Confira com o resultado final. Pode estar com o
+           GRAFICOS.bat aberto: a tela atualiza sozinha.
+      So entram as linhas PRESIDENTE BRASIL entre 16h30 do dia da eleicao
+      e 8h do dia seguinte (o dia sai do boletim do TSE; outro dia:
+      importar-evolucao.ps1 -Dia AAAA-MM-DD). Hora = a do computador das
+      tarjas; o rodape diz "gravados pelo sistema de tarjas no ar".
+      O arquivo anterior fica salvo como ...json.antes-da-importacao.
+
+   b) 2o TURNO (ao vivo) - o proprio GRAFICOS.bat
+      Grava cada boletim novo do Brasil (hora do TSE) em
+      evolucao-<ciclo>-<eleicao>-oficial.json, na pasta do programa.
+        - abra antes das 17h e NAO feche ate o fim: so existe ponto de
+          quando ele estava aberto (fechou e abriu = o trecho vira reta);
+        - troque "eleicao_presidente" no config-graficos.json pelo codigo
+          do 2o turno publicado pelo TSE: o grafico comeca arquivo novo.
+      Para recomecar do zero: feche o GRAFICOS.bat e apague o arquivo.
 
 ---------------------------------------------------------------------------
  CAMARA DOS DEPUTADOS (2.19) - bancadas eleitas por partido
@@ -230,8 +264,9 @@
                   PARCIAL ................ apuracao em andamento
                   TOTALIZACAO FINAL ...... o TSE fechou o Brasil
 
-   ELEITO / 2o TURNO: so quando o TSE escreve isso na situacao do
-   candidato. Quem declara e o TSE, nao o sistema.
+   ELEITO / 2o TURNO: quando o TSE escreve isso na situacao do candidato
+   OU quando a conta com os numeros do proprio TSE ja garante (regra em
+   VER-ELEITO.bat, acima). Se o TSE escreveu a situacao, vale o TSE.
 
    Sem dado do TSE, o grafico mostra "aguardando o primeiro boletim" e
    zeros - nunca numero inventado. Sem resposta do TSE por mais de 60 s,
@@ -296,8 +331,9 @@
      VAO AO 2o TURNO (azul) ........ os dois nomes, partido e %
      sem resultado ainda ........... 1o e 2o com % e barra, selo
                                      EM APURACAO ou AGUARDANDO
-   ELEITO e 2o TURNO so quando o TSE escreve isso na situacao do
-   candidato (Senado 2026: 2 vagas, os dois aparecem como ELEITOS).
+   ELEITO e 2o TURNO: o que o TSE escreve, ou a conta matematica com os
+   numeros do TSE (ver VER-ELEITO.bat). Senado 2026: 2 vagas, os dois
+   aparecem como ELEITOS.
 
    O atalho abre sozinho o ESTADOS.bat (a coleta de Governador e Senador
    dos 27 estados, separada da de Presidente). Deixe a janela dele aberta.
@@ -314,7 +350,7 @@
    web\giro-config.js (Bloco de Notas). Depois de salvar, F5 na tela.
 
 ---------------------------------------------------------------------------
- RESUMO - 5 TELAS DE FECHAMENTO
+ RESUMO - 7 TELAS DE FECHAMENTO
 ---------------------------------------------------------------------------
 
    RESUMO-HORIZONTAL.bat (1920x1080) / RESUMO-VERTICAL.bat (1080x1920)
@@ -333,7 +369,7 @@
         procura 1 vez a cada 10 min). Sem eles a tela diz "ainda nao
         foram encontrados" - nunca um numero digitado.
    Abre sozinho o GRAFICOS.bat e o ESTADOS.bat se nao estiverem rodando.
-   Troca: seta / clique / roda / passador; teclas 1 a 5 vao direto;
+   Troca: seta / clique / roda / passador; teclas 1 a 7 vao direto;
    ENTER liga o giro automatico; Alt+F4 fecha.
 
 ---------------------------------------------------------------------------
@@ -354,6 +390,21 @@
    O PNG (tecla P) sai sempre sem fotos: o navegador nao deixa colocar
    imagem de outro site dentro do PNG.
    As fotos precisam de internet para o site do TSE (como os dados).
+
+---------------------------------------------------------------------------
+ 2o TURNO (25/10) - O QUE MUDAR
+---------------------------------------------------------------------------
+
+   1. config-graficos.json: "eleicao_presidente" (e "eleicao_estaduais",
+      para Governador) com os codigos do 2o turno que o TSE publicar.
+      Nao chute codigo: confira no site de resultados do TSE.
+      "eleicao_camara" NAO muda (6259): deputado federal so tem 1o turno,
+      e assim a tela da Camara continua com os eleitos.
+   2. Abra GRAFICOS.bat e ESTADOS.bat antes das 17h e deixe abertos.
+   3. Tela "Presidente - 2o turno" e "Evolucao minuto a minuto" ja servem
+      para o 2o turno (so os dois candidatos).
+   4. web\senado-config.js, web\camara-config.js e
+      web\comparativo-config.js nao mudam (Senado e Camara sao do 1o turno).
 
 ---------------------------------------------------------------------------
  CREDITOS

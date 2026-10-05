@@ -598,6 +598,8 @@
   // "1o e 2o colocados" e o selo fica PARCIAL.
   function doisDoSegundoTurno() {
     var b = br(), cs = candidatos(b);
+    // Boletim do 2o turno: o TSE manda so os dois candidatos.
+    if (cs.length === 2) return { cs: cs, definido: true, turno2: true, fim: !!(b && b.andamento === "f") };
     var marcados = cs.filter(function (c) { return c.segundo_turno; });
     if (marcados.length >= 2) return { cs: marcados.slice(0, 2), definido: true };
     var top = cs.slice(0, 2);
@@ -616,12 +618,17 @@
     o += t(x + w - 32 * k, y + h - 110 * k, pct(c.pct), { s: Math.round(92 * k), b: true, a: "end" });
     o += t(x + w - 32 * k, y + h - 74 * k, "dos votos válidos", { s: Math.round(18 * k), c: C.apagado, a: "end" });
     o += t(x + w - 32 * k, y + h - 38 * k, inteiro(c.votos) + " votos", { s: Math.round(22 * k), c: C.apagado, a: "end" });
+    if (c.eleito) o += r(px + dx, y + 172 * k, 112 * k, 32 * k, C.verde, 4) + t(px + dx + 56 * k, y + 195 * k, "ELEITO", { s: Math.round(20 * k), b: true, a: "middle" });
     return o;
+  }
+  function titulos2t(d) {
+    if (d.turno2) return { tit: "PRESIDENTE — 2º TURNO", sub: "% dos votos válidos" + (d.fim ? "" : "  ·  parcial") };
+    return { tit: d.definido ? "PRESIDENTE — 2º TURNO" : "PRESIDENTE — 1º E 2º COLOCADOS",
+             sub: (d.definido ? "vão ao 2º turno" : "parcial") + "  ·  % dos votos válidos no 1º turno" };
   }
   G["pres2t-h"] = function () {
     var W = 1280, H = 720, d = doisDoSegundoTurno(), b = br();
-    var o = cabecalhoH(W, d.definido ? "PRESIDENTE — 2º TURNO" : "PRESIDENTE — 1º E 2º COLOCADOS",
-      (d.definido ? "vão ao 2º turno" : "parcial") + "  ·  % dos votos válidos no 1º turno  ·  " + subtitulo());
+    var tt = titulos2t(d), o = cabecalhoH(W, tt.tit, tt.sub + "  ·  " + subtitulo());
     o += cartaoPres(73, 130, 544, 510, d.cs[0], 1, 1) + cartaoPres(663, 130, 544, 510, d.cs[1], 2, 1);
     var s = b ? b.secoes : null;
     o += t(73, 690, (s ? "urnas apuradas " + pct(s.pct) + "  ·  " : "") + "Fonte: TSE", { s: 14, c: C.apagado2 });
@@ -631,7 +638,8 @@
   };
   G["pres2t-v"] = function () {
     var W = 540, H = 960, d = doisDoSegundoTurno();
-    var o = cabecalhoV(W, d.definido ? "PRESIDENTE — 2º TURNO" : "PRESIDENTE", (d.definido ? "vão ao 2º turno" : "1º e 2º colocados") + " · " + subtitulo());
+    var o = cabecalhoV(W, d.definido ? "PRESIDENTE — 2º TURNO" : "PRESIDENTE",
+      (d.turno2 ? "% dos votos válidos" : (d.definido ? "vão ao 2º turno" : "1º e 2º colocados")) + " · " + subtitulo());
     o += cartaoPres(35, 170, 470, 360, d.cs[0], 1, 0.74) + cartaoPres(35, 545, 470, 360, d.cs[1], 2, 0.74);
     var dif = diferenca(d.cs);
     if (dif) o += t(35, 925, dif, { s: 14, b: true, max: 470 });
@@ -879,7 +887,7 @@
       return { c: c, cor: cor(c), nome: c.nome || (nomes[c.numero] || {}).nome || c.numero,
         pts: lista.filter(function (p) { return p.c[c.numero] != null; }).map(function (p) { return { ms: p.ms, v: +p.c[c.numero], u: p.u }; }) };
     });
-    return { series: series, pontos: lista };
+    return { series: series, pontos: lista, origem: ev.origem || "" };
   }
   function hhmm(ms) { var x = new Date(ms); return ("0" + x.getHours()).slice(-2) + ":" + ("0" + x.getMinutes()).slice(-2); }
   function pctCurto(v, casas) { return Number(v).toFixed(casas).replace(".", ",") + "%"; }
@@ -970,8 +978,9 @@
     return o;
   }
   function rodapeEvolucao(ev) {
-    var b = br(), n = ev.pontos.length;
-    return "Fonte: TSE · % dos votos válidos em cada boletim (" + n + (n === 1 ? " boletim" : " boletins") + ", horário do TSE)" +
+    var b = br(), n = ev.pontos.length, log = !!ev.origem;
+    return "Fonte: TSE · % dos votos válidos a cada atualização (" + n + (n === 1 ? " registro" : " registros") +
+      (log ? ", gravados pelo sistema de tarjas no ar" : ", horário do TSE") + ")" +
       (b && b.secoes && b.secoes.pct != null ? " · urnas apuradas " + pct(b.secoes.pct) : "");
   }
   G["evolucao-h"] = function () {

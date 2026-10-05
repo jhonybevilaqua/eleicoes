@@ -1,10 +1,11 @@
 {
-  "_comentario": "gctse GRAFICOS - pacote do dia 04/10/2026, so ambiente OFICIAL. Pleito 3220: 6257 = Presidente; 6259 = Governador e Senador. Nao precisa mexer.",
+  "_comentario": "gctse GRAFICOS - pacote do dia 04/10/2026, so ambiente OFICIAL. Pleito 3220: 6257 = Presidente; 6259 = Governador, Senador e Camara (eleicao_camara fica 6259 tambem no 2o turno). No 2o turno troque so eleicao_presidente e eleicao_estaduais.",
   "tse": {
     "base_url": "https://resultados.tse.jus.br/oficial",
     "ciclo": "ele2026",
     "eleicao_presidente": "6257",
-    "eleicao_estaduais": "6259"
+    "eleicao_estaduais": "6259",
+    "eleicao_camara": "6259"
   },
   "intervalo_segundos": 20,
   "intervalo_estados_segundos": 30,

@@ -21,7 +21,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "2.20 - 05/10/2026"
+$Versao = "3.0 - 05/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -593,15 +593,34 @@ function Atribuir-Cores {
 $ArquivoEvolucao = Join-Path $Raiz ("evolucao-{0}-{1}-{2}.json" -f $Ciclo, $Eleicao, $Modo.ToLower())
 $script:Evolucao = New-Object System.Collections.ArrayList
 $script:EvolucaoNomes = [ordered]@{}
-if (Test-Path $ArquivoEvolucao) {
+$script:EvolucaoOrigem = ""
+$script:EvolucaoLidaEm = [datetime]::MinValue
+# Le (ou rele) o arquivo. O IMPORTAR-EVOLUCAO.bat pode gravar nele com este
+# programa aberto: quando a data do arquivo muda, a lista e recarregada.
+function Carregar-Evolucao {
+    if (-not (Test-Path $ArquivoEvolucao)) { return }
     try {
+        $quandoArq = (Get-Item $ArquivoEvolucao).LastWriteTimeUtc
+        if ($quandoArq -eq $script:EvolucaoLidaEm) { return }
         $lidoEv = Get-Content $ArquivoEvolucao -Raw -Encoding UTF8 | ConvertFrom-Json
-        foreach ($pt in @($lidoEv.pontos)) { if ($null -ne $pt) { [void] $script:Evolucao.Add($pt) } }
+        $novaLista = New-Object System.Collections.ArrayList
+        foreach ($pt in @($lidoEv.pontos)) {
+            if ($null -eq $pt) { continue }
+            # PowerShell 7 transforma "2026-10-04T18:00:00" em data: volta a texto.
+            if ($pt.t -is [datetime]) { $pt.t = $pt.t.ToString("yyyy-MM-ddTHH:mm:ss") }
+            [void] $novaLista.Add($pt)
+        }
+        $script:Evolucao = $novaLista
         if (Tem-Propriedade $lidoEv "nomes") { foreach ($pn in $lidoEv.nomes.PSObject.Properties) { $script:EvolucaoNomes[$pn.Name] = $pn.Value } }
-    } catch { }
+        if (Tem-Propriedade $lidoEv "origem") { $script:EvolucaoOrigem = "$($lidoEv.origem)" }
+        $script:EvolucaoLidaEm = $quandoArq
+        if ($script:Evolucao.Count -gt 0) { Escrever-Log ("evolucao: {0} pontos no historico ({1})" -f $script:Evolucao.Count, (Split-Path -Leaf $ArquivoEvolucao)) }
+    } catch { Escrever-Log "evolucao: nao li $ArquivoEvolucao ($($_.Exception.Message))" "AVISO" }
 }
+Carregar-Evolucao
 
 function Registrar-Evolucao {
+    Carregar-Evolucao
     if (-not $script:Cache.ContainsKey("br")) { return }
     $b = $script:Cache["br"]
     if ($null -eq $b.secoes.pct -or $b.secoes.pct -le 0) { return }
@@ -623,10 +642,11 @@ function Registrar-Evolucao {
     [void] $script:Evolucao.Add([pscustomobject]@{ t = $marca; u = $b.secoes.pct; c = [pscustomobject] $porCand })
     while ($script:Evolucao.Count -gt 3000) { $script:Evolucao.RemoveAt(0) }
     try {
-        $objEv = [ordered]@{ ciclo = $Ciclo; eleicao = $Eleicao; modo = $Modo; nomes = [pscustomobject] $script:EvolucaoNomes; pontos = @($script:Evolucao) }
+        $objEv = [ordered]@{ ciclo = $Ciclo; eleicao = $Eleicao; modo = $Modo; origem = $script:EvolucaoOrigem; nomes = [pscustomobject] $script:EvolucaoNomes; pontos = @($script:Evolucao) }
         $tmpEv = "$ArquivoEvolucao.tmp"
         [IO.File]::WriteAllText($tmpEv, ($objEv | ConvertTo-Json -Depth 6 -Compress), (New-Object System.Text.UTF8Encoding($false)))
         [void] (Promover-Temporario $tmpEv $ArquivoEvolucao)
+        $script:EvolucaoLidaEm = (Get-Item $ArquivoEvolucao).LastWriteTimeUtc
     } catch { Escrever-Log "evolucao: nao gravei o historico ($($_.Exception.Message))" "AVISO" }
 }
 
@@ -657,7 +677,7 @@ function Gravar-Dados {
         tse           = [pscustomobject]@{ base = $Base; ciclo = $Ciclo; eleicao = $Eleicao }
         br            = $br
         ufs           = $porEstado
-        evolucao      = [pscustomobject]@{ nomes = [pscustomobject] $script:EvolucaoNomes; pontos = @($script:Evolucao) }
+        evolucao      = [pscustomobject]@{ origem = $script:EvolucaoOrigem; nomes = [pscustomobject] $script:EvolucaoNomes; pontos = @($script:Evolucao) }
     }
     $json = $dados | ConvertTo-Json -Depth 8 -Compress
     $conteudo = "window.GCTSE_DADOS = $json;"
