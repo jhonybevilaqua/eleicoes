@@ -128,7 +128,7 @@
   window.__gctseRedesenhar = function () { desenharEm(camadas[visivel], ids[atual]); };   // foto que falhou: refaz sem ela
   mostrar(0);
   agendar();
-  // estados.js so quando ha tela de estado/resumo no rodizio
-  var usaEstados = ids.some(function (id) { return id.indexOf(":") > 0; });
+  // estados.js so quando ha tela de estado/resumo/Camara/comparativo no rodizio
+  var usaEstados = ids.some(function (id) { return id.indexOf(":") > 0 || /^(camara|comparativo)/.test(id); });
   setInterval(function () { recarregar("dados.js"); if (usaEstados) recarregar("estados.js"); }, 3000);
 })();

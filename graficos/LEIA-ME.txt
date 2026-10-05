@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 2.18 - apuracao de PRESIDENTE em graficos
+ gctse GRAFICOS 2.19 - apuracao de PRESIDENTE em graficos
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -143,6 +143,32 @@
    2018 x 2022 x 2026 ...... abstencao, brancos e nulos. 2026 ao vivo do
                              TSE; 2018 (e 2022 sem o ESTADOS.bat) em
                              web\comparativo-config.js.
+
+---------------------------------------------------------------------------
+ CAMARA DOS DEPUTADOS (2.19) - bancadas eleitas por partido
+---------------------------------------------------------------------------
+
+   Tela "Camara: bancadas 2027" (horizontal e vertical, no gerenciador e
+   no rodizio): hemiciclo de 513 cadeiras + tabela por partido.
+
+   De onde vem: o ESTADOS.bat le, a cada 3 ciclos, o boletim de DEPUTADO
+   FEDERAL (cargo 6) dos 27 estados e conta os candidatos que o PROPRIO TSE
+   marcou como eleitos ("Eleito por QP" / "Eleito por media"). Nada e
+   calculado: suplente e nao eleito nao entram. Enquanto faltar estado, o
+   subtitulo diz "X de 513 cadeiras definidas pelo TSE" e as cadeiras que
+   faltam ficam vazias no hemiciclo.
+
+   Partidos alem do 14o viram "OUTROS (n)" (cinza na tabela e no hemiciclo).
+
+   web\camara-config.js (opcional):
+     cores ........ cor de cada partido (PT vermelho, PL azul ja vem).
+     atual ........ composicao ATUAL da Camara por partido. NAO vem do
+                    boletim do TSE: so preencha com numeros oficiais da
+                    Camara e ponha a fonte em fonte_atual. Preenchido, a
+                    tabela vira ATUAL / 2027 / SALDO. Vazio = CADEIRAS / %.
+
+   Depois de atualizar: feche e abra o ESTADOS.bat (a Camara aparece no
+   1o ciclo; o log mostra "camara: 27/27 estados, N deputados ...").
 
 ---------------------------------------------------------------------------
  VER-ELEITO.bat - estado eleito no site do TSE mas sem ELEITO na tela?

@@ -17,7 +17,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "2.18 - 05/10/2026"
+$Versao = "2.19 - 05/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -541,6 +541,55 @@ function Ler-Abrangencia {
     $script:Cache[$chave] = $r
 }
 
+# ------------------------------------------- CAMARA: deputados federais eleitos
+# Mesmo pleito estadual, cargo 6. Conta, em cada estado, os candidatos que o
+# TSE marcou como eleitos (Eleito por QP / Eleito por media), por partido.
+# Nada calculado: so a palavra do TSE. A cada 3 ciclos (o arquivo de SP e
+# grande) e, com o resultado final, o TSE responde "sem mudanca" (304).
+$script:Camara = @{}
+function Ler-Camara {
+    param([string] $Abr)
+    $url = Montar-Url $Abr 6
+    $bruto = Obter-Boletim $url
+    if ($null -eq $bruto -or "$bruto" -eq "SEM-MUDANCA") { return }
+    $fase = "$(Obter-Campo $bruto @('f') '')".ToUpper()
+    if ($fase -eq "S" -or $fase -eq "T") { return }
+    $porPartido = [ordered]@{}
+    $vagas = 0; $eleitos = 0
+    if (Tem-Propriedade $bruto "carg") {
+        foreach ($cg in $bruto.carg) {
+            if ("$(Obter-Campo $cg @('cd') '')" -ne "6") { continue }
+            $vagas = Converter-Inteiro (Obter-Campo $cg @('nv') 0)
+            if (-not (Tem-Propriedade $cg "agr")) { continue }
+            foreach ($agr in $cg.agr) {
+                if (-not (Tem-Propriedade $agr "par")) { continue }
+                foreach ($pa in $agr.par) {
+                    $sigla = Decodificar-Entidades "$(Obter-Campo $pa @('sg','nm') '')"
+                    if (-not (Tem-Propriedade $pa "cand")) { continue }
+                    foreach ($c in $pa.cand) {
+                        $st = Decodificar-Entidades "$(Obter-Campo $c @('st') '')"
+                        $eleitoDep = $false
+                        if ($st) { $eleitoDep = ($st -match 'eleit') -and -not ($st -match 'n\S{1,2}o\s+eleit') -and -not ($st -match 'turno') }
+                        else { $eleitoDep = ("$(Obter-Campo $c @('e') '')".ToLower() -eq "s") }
+                        if ($eleitoDep) {
+                            if (-not $porPartido.Contains($sigla)) { $porPartido[$sigla] = 0 }
+                            $porPartido[$sigla] = [int] $porPartido[$sigla] + 1
+                            $eleitos++
+                        }
+                    }
+                }
+            }
+        }
+    }
+    $pctUrnas = $null
+    if (Tem-Propriedade $bruto "s") { $pctUrnas = Converter-Decimal $bruto.s.pst }
+    $script:Camara[$Abr] = [pscustomobject]@{
+        vagas = $vagas; eleitos = $eleitos; urnas_pct = $pctUrnas
+        andamento = "$(Obter-Campo $bruto @('and') '')".ToLower()
+        partidos = [pscustomobject] $porPartido
+    }
+}
+
 # ------------------------------------------------- 2022, para comparacao
 # Abstencao, brancos, nulos e comparecimento do 1o turno de 2022 (Presidente,
 # Brasil), lidos dos arquivos do PROPRIO TSE - nada digitado a mao. Tenta os
@@ -629,6 +678,7 @@ function Gravar-Dados {
         tse           = [pscustomobject]@{ base = $Base; ciclo = $Ciclo; eleicao = $Eleicao }
         ref2022       = $script:Ref2022
         ufs           = $porEstado
+        camara        = [pscustomobject] $script:Camara
     }
     $json = $dados | ConvertTo-Json -Depth 8 -Compress
     $conteudo = "window.GCTSE_ESTADOS = $json;"
@@ -651,6 +701,14 @@ do {
     try {
         foreach ($u in $UFs) { foreach ($cg in $Cargos) { Ler-Abrangencia $u $cg } }
         try { Buscar-2022 } catch { Escrever-Log "2022: $($_.Exception.Message)" "AVISO" }
+        if (($script:NumCiclo % 3) -eq 1) {
+            try {
+                foreach ($u in $UFs) { Ler-Camara $u }
+                $nE = 0; $nV = 0
+                foreach ($k in $script:Camara.Keys) { $nE += $script:Camara[$k].eleitos; $nV += $script:Camara[$k].vagas }
+                Escrever-Log ("camara: {0}/27 estados, {1} deputados federais eleitos (de {2} vagas lidas)" -f $script:Camara.Count, $nE, $nV)
+            } catch { Escrever-Log "camara: $($_.Exception.Message)" "AVISO" }
+        }
         Conferir-Recebimento
         Gravar-Dados
         $nG = @($UFs | Where-Object { $script:Cache.ContainsKey("$_-3") }).Count

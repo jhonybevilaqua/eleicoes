@@ -651,7 +651,7 @@
   function hemiciclo(cx, cy, R, r0, ps, campo) {
     var n = 0; ps.forEach(function (p) { n += Math.max(0, +p[campo] || 0); });
     if (!n) return "";
-    var filas = n <= 40 ? 3 : (n <= 100 ? 5 : 7), raios = [], soma = 0, i, j;
+    var filas = n <= 40 ? 3 : (n <= 100 ? 5 : Math.round(Math.sqrt(n / 3))), raios = [], soma = 0, i, j;
     for (i = 0; i < filas; i++) { raios.push(r0 + (R - r0) * i / (filas - 1)); soma += raios[i]; }
     var porFila = raios.map(function (rr) { return Math.max(1, Math.round(n * rr / soma)); });
     var dif = n - porFila.reduce(function (a, b) { return a + b; }, 0);
@@ -717,6 +717,91 @@
       [{ x: 330, rot: "ATUAL", campo: "atual" }, { x: 420, rot: "2027", campo: "em2027" }, { x: 505, rot: "SALDO", campo: "saldo" }]);
     if (sd.fonte) o += t(35, 950, sd.fonte, { s: 12, c: C.apagado2 });
     return svg(W, H, o);
+  };
+
+  // ---- Camara dos Deputados: bancadas eleitas (TSE) -------------------------
+  function corPartidoCamara(sg, i) {
+    var cfg = window.GCTSE_CAMARA || {}, k = String(sg || "").toUpperCase().trim();
+    if (cfg.cores && cfg.cores[k]) return cfg.cores[k];
+    var sen = ((window.GCTSE_SENADO || {}).partidos || []).filter(function (p) { return String(p.sigla).toUpperCase() === k; })[0];
+    if (sen && sen.cor) return sen.cor;
+    var reserva = ["#7f8ca3", "#9aa7bd", "#6b7688", "#b0bccf"];
+    return reserva[i % reserva.length];
+  }
+  function camara() {
+    var e = window.GCTSE_ESTADOS || {}, cm = e.camara || {}, soma = {}, vagas = 0, eleitos = 0, ufs = 0, finais = 0;
+    Object.keys(cm).forEach(function (u) {
+      var x = cm[u]; if (!x) return;
+      ufs++; vagas += +x.vagas || 0; eleitos += +x.eleitos || 0; if (x.andamento === "f") finais++;
+      var ps = x.partidos || {};
+      Object.keys(ps).forEach(function (sg) { soma[sg] = (soma[sg] || 0) + (+ps[sg] || 0); });
+    });
+    var cfg = window.GCTSE_CAMARA || {}, atual = cfg.atual || {}, temAtual = Object.keys(atual).length > 0;
+    var lista = Object.keys(soma).map(function (sg) { return { sigla: sg, em2027: soma[sg], atual: +atual[sg] || 0 }; });
+    if (temAtual) Object.keys(atual).forEach(function (sg) { if (!(sg in soma)) lista.push({ sigla: sg, em2027: 0, atual: +atual[sg] || 0 }); });
+    lista.sort(function (a, b) { return (b.em2027 - a.em2027) || (b.atual - a.atual) || a.sigla.localeCompare(b.sigla); });
+    lista.forEach(function (p, i) { p.cor = corPartidoCamara(p.sigla, i); });
+    // 513 = total fixo da Camara (LC 78/1993); a soma das vagas so vale com os 27 estados lidos.
+    return { ps: lista, vagas: ufs >= 27 && vagas ? vagas : 513, eleitos: eleitos, ufs: ufs, finais: finais, temAtual: temAtual, fonteAtual: cfg.fonte_atual || "" };
+  }
+  // Tabela com no maximo n linhas: o resto vira "OUTROS (k partidos)".
+  function linhasCamara(ps, n) {
+    if (ps.length <= n) return ps;
+    var resto = ps.slice(n - 1), o = { sigla: "OUTROS (" + resto.length + ")", em2027: 0, atual: 0, cor: "#5c6b82" };
+    resto.forEach(function (p) { o.em2027 += p.em2027; o.atual += p.atual; });
+    return ps.slice(0, n - 1).concat([o]);
+  }
+  function tabelaCamara(x0, x1, y, passo, cm, s, n, colX) {
+    var lin = linhasCamara(cm.ps, n), cols = cm.temAtual ?
+      [{ x: colX[0], rot: "ATUAL", f: function (p) { return String(p.atual); }, c: C.apagado },
+       { x: colX[1], rot: "2027", f: function (p) { return String(p.em2027); }, c: C.texto, b: true },
+       { x: colX[2], rot: "SALDO", saldo: true }] :
+      [{ x: colX[1], rot: "CADEIRAS", f: function (p) { return String(p.em2027); }, c: C.texto, b: true },
+       { x: colX[2], rot: "%", f: function (p) { return cm.eleitos ? (p.em2027 / cm.eleitos * 100).toFixed(1).replace(".", ",") + "%" : "—"; }, c: C.apagado }];
+    var o = t(x0 + 20, y, "PARTIDO", { s: s - 4, b: true, c: C.apagado, ls: 1 });
+    cols.forEach(function (cl) { o += t(cl.x, y, cl.rot, { s: s - 4, b: true, c: C.apagado, a: "end", ls: 1 }); });
+    o += r(x0, y + 10, x1 - x0, 1, C.linha);
+    lin.forEach(function (p, i) {
+      var yy = y + 10 + passo * (i + 1) - passo * 0.3;
+      o += '<circle cx="' + (x0 + 7) + '" cy="' + (yy - s * 0.35).toFixed(1) + '" r="' + (s * 0.33).toFixed(1) + '" fill="' + p.cor + '"/>';
+      o += t(x0 + 20, yy, p.sigla, { s: s, b: true, max: (cm.temAtual ? colX[0] : colX[1]) - x0 - 85 });
+      cols.forEach(function (cl) {
+        if (cl.saldo) { var sd = saldo(p); o += t(cl.x, yy, sd.txt, { s: s, b: true, c: sd.c, a: "end" }); }
+        else o += t(cl.x, yy, cl.f(p), { s: s, b: !!cl.b, c: cl.c, a: "end" });
+      });
+    });
+    return o;
+  }
+  // Enquanto o TSE nao define todas as vagas, as cadeiras que faltam aparecem
+  // vazias (cor do trilho) no fim do hemiciclo.
+  function hemiCamara(cm) {
+    var l = linhasCamara(cm.ps, 15), falta = cm.vagas - cm.eleitos;
+    return falta > 0 ? l.concat([{ sigla: "", em2027: falta, cor: C.trilho }]) : l;
+  }
+  function subCamara(cm) {
+    if (!cm.ufs) return "aguardando os deputados eleitos (ESTADOS.bat)";
+    if (cm.eleitos >= cm.vagas) return cm.vagas + " cadeiras  ·  bancadas eleitas em 2026";
+    return cm.eleitos + " de " + cm.vagas + " cadeiras definidas pelo TSE";
+  }
+  function rodapeCamara(cm) {
+    return "Fonte: TSE — deputados federais eleitos" + (cm.temAtual && cm.fonteAtual ? "  ·  composição atual: " + cm.fonteAtual : "");
+  }
+  G["camara-h"] = function () {
+    var W = 1280, H = 720, cm = camara();
+    var o = t(73, 57, "CÂMARA DOS DEPUTADOS", { s: 36, b: true, ls: 1, max: 667 }) + t(73, 85, subCamara(cm), { s: 19, c: C.apagado });
+    // O hemiciclo usa as mesmas linhas da tabela (o "OUTROS" fica cinza nos dois).
+    o += hemiciclo(385, 640, 320, 120, hemiCamara(cm), "em2027") + rotuloHemi(385, 640, "2027", cm.eleitos, 1.1);
+    o += tabelaCamara(745, 1207, 150, 32, cm, 20, 15, [1010, 1110, 1207]);
+    o += t(73, 700, rodapeCamara(cm), { s: 13, c: C.apagado2, max: 1134 });
+    return svg(W, H, o);
+  };
+  G["camara-v"] = function () {
+    var W = 540, H = 960, cm = camara();
+    var o = r(35, 48, 6, 38, C.destaque) + t(53, 80, "CÂMARA DOS DEPUTADOS", { s: 30, b: true, ls: 1, max: W - 53 - 35 }) +
+      t(53, 106, subCamara(cm), { s: 15, c: C.apagado, max: W - 53 - 35 });
+    o += hemiciclo(270, 400, 232, 88, hemiCamara(cm), "em2027") + rotuloHemi(270, 400, "2027", cm.eleitos, 1);
+    o += tabelaCamara(40, 505, 448, 29, cm, 19, 15, [330, 420, 505]);
+    return svg(W, H, o + t(35, 950, rodapeCamara(cm), { s: 11, c: C.apagado2, max: 470 }));
   };
 
   // ---- Comparativo 2018 x 2022 x 2026: abstencao, brancos e nulos -----------
@@ -792,6 +877,7 @@
       { id: "pres2t-h", nome: "Presidente — 2º turno", f: "h" },
       { id: "senado-h", nome: "Senado: atual × 2027", f: "h" },
       { id: "comparativo-h", nome: "2018 × 2022 × 2026", f: "h" },
+      { id: "camara-h", nome: "Câmara: bancadas 2027", f: "h" },
       { id: "urnas-v", nome: "Urnas apuradas", f: "v" },
       { id: "votos-v", nome: "Brancos e nulos", f: "v" },
       { id: "presidente-v", nome: "Presidente", f: "v" },
@@ -801,7 +887,8 @@
       { id: "abstencao-mapa-v", nome: "Mapa da abstenção", f: "v" },
       { id: "pres2t-v", nome: "Presidente — 2º turno", f: "v" },
       { id: "senado-v", nome: "Senado: 2027", f: "v" },
-      { id: "comparativo-v", nome: "2018 × 2022 × 2026", f: "v" }
+      { id: "comparativo-v", nome: "2018 × 2022 × 2026", f: "v" },
+      { id: "camara-v", nome: "Câmara: bancadas 2027", f: "v" }
     ],
     desenhar: function (id) { return G[id] ? G[id]() : null; },
     ajustarSelos: ajustarSelos,
