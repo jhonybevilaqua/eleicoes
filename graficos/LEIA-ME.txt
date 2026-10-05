@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 3.2 - apuracao em graficos (versao final)
+ gctse GRAFICOS 3.3 - apuracao em graficos (versao final)
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -22,6 +22,14 @@
    GIRO DOS ESTADOS (Governador e Senador, um estado por vez)
    RESUMO (7 telas de fechamento)
    GERENCIADOR (escolhe o que vai para as saidas SDI da DeckLink)
+
+ NOVO NA 3.3 - 2o TURNO E TELAS NO ESTILO TELAO (ver abaixo)
+   - Apuracao por regiao e estado, Presidente + mapa (1o e 2o turno),
+     Presidente | Regioes, Presidente | estado ou regiao, Governadores
+     (foto + mapa), 1o x 2o turno (abstencao, brancos, nulos).
+   - Gerenciador com menu por assunto e menu de regioes e estados.
+   - No 2o turno o 1o turno continua na tela (governadores eleitos,
+     senadores, mapa do 1o turno, comparativos).
 
  NOVO NA 3.2
    - Tela "Deputados federais eleitos" (ver abaixo).
@@ -251,6 +259,39 @@
    1o ciclo; o log mostra "camara: 27/27 estados, N deputados ...").
 
 ---------------------------------------------------------------------------
+ TELAS NOVAS (3.3) - todas com ELEITO no candidato eleito
+---------------------------------------------------------------------------
+
+   Apuracao: regioes e estados .. % de secoes totalizadas por regiao e por
+                                  estado, mapa pintado pela apuracao e o
+                                  Brasil no circulo.
+   Presidente + mapa ............ cartoes com foto, % e "na frente em N
+                                  estados"; mapa pela cor de quem lidera
+                                  (PT vermelho, PL azul). 1o turno: 3
+                                  cartoes; 2o turno: os 2.
+   Presidente + mapa - 1o turno . no 2o turno, o mapa FINAL do 1o turno.
+   Presidente | Regioes ......... 5 colunas: % apurado, mini-mapa da regiao
+                                  e os primeiros com foto, % e votos.
+   Presidente | estado/regiao ... escolhido no gerenciador (NORTE... ou a
+                                  sigla): mapa da area + lista com foto,
+                                  barra, votos e %. No rodizio tambem.
+   Governadores (1o verde, 2o azul) foto de cada estado: eleito no 1o turno
+                                  borda/mapa VERDE; eleito no 2o turno
+                                  AZUL; aguardando o 2o turno sem foto,
+                                  azul hachurado.
+   Governadores por partido ..... mesma grade; mapa pela cor do partido do
+                                  eleito, 2o turno hachurado.
+   1o x 2o turno ................ comparecimento, abstencao, brancos e nulos
+                                  do 1o (final) e do 2o turno (ao vivo), com a
+                                  diferenca em pontos. Aparece no 2o turno.
+   Evolucao minuto a minuto ..... no 2o turno grava sozinho desde o 1o
+                                  boletim do TSE, com marca de VIRADA.
+
+   GERENCIADOR: blocos por assunto (Presidente, Presidente | estado ou
+   regiao, Apuracao, Governador e Senado, Camara, Comparativos) e o menu
+   de regioes e siglas. No rodizio: "Presidente | Regiao" e "| Estado".
+
+---------------------------------------------------------------------------
  DEPUTADOS FEDERAIS ELEITOS (3.2) - foto, nome e votos, 5 por tela
 ---------------------------------------------------------------------------
 
@@ -446,11 +487,13 @@
  2o TURNO (25/10) - O QUE MUDAR
 ---------------------------------------------------------------------------
 
-   1. config-graficos.json: "eleicao_presidente" (e "eleicao_estaduais",
-      para Governador) com os codigos do 2o turno que o TSE publicar.
+   1. config-graficos.json: troque SO "eleicao_presidente" e
+      "eleicao_estaduais" pelos codigos do 2o turno que o TSE publicar.
       Nao chute codigo: confira no site de resultados do TSE.
-      "eleicao_camara" NAO muda (6259): deputado federal so tem 1o turno,
-      e assim a tela da Camara continua com os eleitos.
+      NAO mude "eleicao_presidente_1turno" (6257), "eleicao_estaduais_1turno"
+      (6259) nem "eleicao_camara" (6259): com eles o 1o turno continua na
+      tela - governadores eleitos no 1o turno, senadores, Camara, deputados,
+      mapa do 1o turno e o comparativo 1o x 2o turno.
    2. Abra GRAFICOS.bat e ESTADOS.bat antes das 17h e deixe abertos.
    3. Tela "Presidente - 2o turno" e "Evolucao minuto a minuto" ja servem
       para o 2o turno (so os dois candidatos).

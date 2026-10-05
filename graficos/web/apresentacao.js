@@ -27,6 +27,7 @@
   function valido(id) {
     if (id.indexOf("resumo:") === 0) return !!(RES && RES.telas.some(function (x) { return x.id === id.slice(7); }));
     if (id.indexOf("estado:") === 0) return !!(GIRO && GIRO.nomes[id.slice(7)]);
+    if (id.indexOf("presloc:") === 0) return conhecidos["presloc-" + formato] === formato;   // presidente | estado ou regiao
     return conhecidos[id] === formato;
   }
   var pedidos = q.get("lista") ? q.get("lista").split(",") : (formato === "v" ? cfg.vertical : cfg.horizontal);
@@ -49,7 +50,7 @@
 
   function chave() {
     var d = window.GCTSE_GRAFICOS.dados(), e = window.GCTSE_ESTADOS || {};
-    return JSON.stringify([d.modo, d.br, d.ufs, d.cor_slot, d.cores, e.ufs, e.ref2022]);
+    return JSON.stringify([d.modo, d.br, d.ufs, d.cor_slot, d.cores, d.turno1, e.ufs, e.ref2022, e.camara]);
   }
   function desenharEm(camada, id) {
     if (id.indexOf("resumo:") === 0) {
@@ -63,6 +64,8 @@
       GIRO.ajustar(camada);
       return;
     }
+    window.__gctseAlvo = "";
+    if (id.indexOf("presloc:") === 0) { window.__gctseAlvo = id.slice(8); id = "presloc-" + formato; }
     var s = window.GCTSE_GRAFICOS.desenhar(id);
     camada.innerHTML = s || "";
     window.GCTSE_GRAFICOS.ajustarSelos(camada);
@@ -131,7 +134,7 @@
   mostrar(0);
   agendar();
   // estados.js so quando ha tela de estado/resumo/Camara/comparativo no rodizio
-  var usaEstados = ids.some(function (id) { return id.indexOf(":") > 0 || /^(camara|comparativo|deputados)/.test(id); });
+  var usaEstados = ids.some(function (id) { return id.indexOf(":") > 0 || /^(camara|comparativo|deputados|governadores|govpartido)/.test(id); });
   // Deputados troca de tela sozinho dentro do seu tempo no rodizio.
   var pagAtual = "";
   setInterval(function () {

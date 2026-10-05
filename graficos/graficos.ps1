@@ -21,7 +21,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "3.2 - 05/10/2026"
+$Versao = "3.3 - 05/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -262,6 +262,12 @@ if ($Teste) {
     $Eleicao = "$($cfg.tse.eleicao_presidente_simulado)"
     $Modo    = "SIMULADO"
 }
+# 2o TURNO: com "eleicao_presidente_1turno" diferente de "eleicao_presidente",
+# o resultado FINAL do 1o turno (Brasil e 27 estados) continua sendo lido
+# (a cada 3 ciclos) para o mapa do 1o turno e as comparacoes.
+$Eleicao1T = ""
+if ((Tem-Propriedade $cfg.tse "eleicao_presidente_1turno") -and $cfg.tse.eleicao_presidente_1turno -and
+    "$($cfg.tse.eleicao_presidente_1turno)" -ne $Eleicao -and $Modo -eq "OFICIAL") { $Eleicao1T = "$($cfg.tse.eleicao_presidente_1turno)" }
 $Intervalo = 20
 if (Tem-Propriedade $cfg "intervalo_segundos") { $Intervalo = [math]::Max(10, [int] $cfg.intervalo_segundos) }
 $PastaWeb = Join-Path $Raiz "web"
@@ -270,9 +276,10 @@ $UFs = @("ac","al","ap","am","ba","ce","df","es","go","ma","mt","ms","mg","pa",
          "pb","pr","pe","pi","rj","rn","rs","ro","rr","sc","sp","se","to")
 
 function Montar-Url {
-    param([string] $Abr)
-    $ele6 = "{0:000000}" -f ([int] $Eleicao)
-    return "$Base/$Ciclo/$Eleicao/dados/$Abr/$Abr-c0001-e$ele6-u.json"
+    param([string] $Abr, [string] $Pleito = "")
+    if (-not $Pleito) { $Pleito = $Eleicao }
+    $ele6 = "{0:000000}" -f ([int] $Pleito)
+    return "$Base/$Ciclo/$Pleito/dados/$Abr/$Abr-c0001-e$ele6-u.json"
 }
 
 # ------------------------------------------------ recebendo do TSE? (alarme)
@@ -548,6 +555,22 @@ function Ler-Abrangencia {
     $script:Cache[$Abr] = $r
 }
 
+# 1o turno guardado (so no 2o turno): resumo enxuto de Brasil e estados.
+$script:Turno1 = [ordered]@{}
+function Ler-Turno1 {
+    foreach ($abr in @("br") + $UFs) {
+        $bruto = Obter-Boletim (Montar-Url $abr $Eleicao1T)
+        if ($null -eq $bruto -or "$bruto" -eq "SEM-MUDANCA") { continue }
+        $r = Resumir-Boletim $bruto "t1-$abr"
+        if ($r.fase -eq "S" -or $r.fase -eq "T") { continue }
+        $script:Turno1[$abr] = [pscustomobject]@{
+            tem = $true; andamento = $r.andamento; geracao = $r.geracao; secoes = $r.secoes; votos = $r.votos
+            eleitorado = $r.eleitorado
+            candidatos = @($r.candidatos | Select-Object -First 8)
+        }
+    }
+}
+
 # ------------------------------------------------------ cor de cada candidato
 # A cor segue o CANDIDATO, nunca a posicao: se fosse pela colocacao, o mapa
 # repintaria os estados quando o 2o passasse o 1o. As 3 primeiras cores da
@@ -677,6 +700,7 @@ function Gravar-Dados {
         tse           = [pscustomobject]@{ base = $Base; ciclo = $Ciclo; eleicao = $Eleicao }
         br            = $br
         ufs           = $porEstado
+        turno1        = $(if ($Eleicao1T) { [pscustomobject]@{ eleicao = $Eleicao1T; br = $(if ($script:Turno1.Contains("br")) { $script:Turno1["br"] } else { [pscustomobject]@{ tem = $false } }); ufs = [pscustomobject] $script:Turno1 } } else { $null })
         evolucao      = [pscustomobject]@{ origem = $script:EvolucaoOrigem; nomes = [pscustomobject] $script:EvolucaoNomes; pontos = @($script:Evolucao) }
     }
     $json = $dados | ConvertTo-Json -Depth 8 -Compress
@@ -727,6 +751,9 @@ do {
     }
     try {
         Ler-Abrangencia "br"
+        if ($Eleicao1T -and (($script:NumCiclo % 3) -eq 1)) {
+            try { Ler-Turno1; Escrever-Log ("1o turno guardado: {0} de 28 boletins (eleicao {1})" -f $script:Turno1.Count, $Eleicao1T) } catch { Escrever-Log "1o turno: $($_.Exception.Message)" "AVISO" }
+        }
         Registrar-Evolucao
         Gravar-Dados                       # o Brasil vai para a tela antes dos estados
         # Estados so depois que o Brasil saiu: antes das 17h seriam 27

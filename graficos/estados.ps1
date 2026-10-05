@@ -17,7 +17,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "3.2 - 05/10/2026"
+$Versao = "3.3 - 05/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -255,6 +255,12 @@ if ((Tem-Propriedade $cfg.tse "eleicao_estaduais") -and $cfg.tse.eleicao_estadua
 # continua no codigo do 1o turno e a tela da Camara nao se perde.
 $EleicaoCamara = $Eleicao
 if ((Tem-Propriedade $cfg.tse "eleicao_camara") -and $cfg.tse.eleicao_camara) { $EleicaoCamara = "$($cfg.tse.eleicao_camara)" }
+# 2o TURNO: com "eleicao_estaduais_1turno" diferente de "eleicao_estaduais",
+# Governador vem do 2o turno onde houver e do 1o turno nos demais estados
+# (eleitos no 1o turno), e Senador sempre do 1o turno (nao tem 2o turno).
+$Eleicao1T = ""
+if ((Tem-Propriedade $cfg.tse "eleicao_estaduais_1turno") -and $cfg.tse.eleicao_estaduais_1turno -and
+    "$($cfg.tse.eleicao_estaduais_1turno)" -ne $Eleicao) { $Eleicao1T = "$($cfg.tse.eleicao_estaduais_1turno)" }
 $Modo    = "OFICIAL"
 $Intervalo = 30
 if (Tem-Propriedade $cfg "intervalo_estados_segundos") { $Intervalo = [math]::Max(15, [int] $cfg.intervalo_estados_segundos) }
@@ -510,9 +516,9 @@ $script:Regressao = @{}
 $script:FaseAvisada = @{}
 
 function Ler-Abrangencia {
-    param([string] $Abr, [int] $Cargo)
-    $url = Montar-Url $Abr $Cargo
-    $chave = "$Abr-$Cargo"
+    param([string] $Abr, [int] $Cargo, [string] $Pleito = "", [string] $Chave = "")
+    $url = Montar-Url $Abr $Cargo $Pleito
+    if (-not $Chave) { $Chave = "$Abr-$Cargo" }
     $bruto = Obter-Boletim $url
     if ($null -eq $bruto -or "$bruto" -eq "SEM-MUDANCA") { return }
     $r = Resumir-Boletim $bruto $Cargo
@@ -525,25 +531,25 @@ function Ler-Abrangencia {
         return
     }
     # Anti-regressao: numero menor com geracao mais ANTIGA e copia velha de CDN.
-    if ($script:Cache.ContainsKey($chave)) {
-        $velho = $script:Cache[$chave]
+    if ($script:Cache.ContainsKey($Chave)) {
+        $velho = $script:Cache[$Chave]
         $pNovo = $r.urnas_pct; $pVelho = $velho.urnas_pct
         if ($null -ne $pNovo -and $null -ne $pVelho -and $pNovo -lt $pVelho - 0.001) {
             $gN = Converter-Geracao $r.geracao; $gV = Converter-Geracao $velho.geracao
             if (-not ($null -ne $gN -and $null -ne $gV -and $gN -gt $gV)) {
                 $n = 1
-                if ($script:Regressao.ContainsKey($chave)) { $n = $script:Regressao[$chave] + 1 }
-                $script:Regressao[$chave] = $n
+                if ($script:Regressao.ContainsKey($Chave)) { $n = $script:Regressao[$Chave] + 1 }
+                $script:Regressao[$Chave] = $n
                 if ($n -lt 3) {
                     if ($script:ETags.ContainsKey($url)) { $script:ETags.Remove($url) }
-                    Escrever-Log ("{0}: urnas voltaram de {1}% para {2}% - mantendo o ultimo bom ({3}a vez)" -f $chave, $pVelho, $pNovo, $n) "AVISO"
+                    Escrever-Log ("{0}: urnas voltaram de {1}% para {2}% - mantendo o ultimo bom ({3}a vez)" -f $Chave, $pVelho, $pNovo, $n) "AVISO"
                     return
                 }
             }
         }
     }
-    if ($script:Regressao.ContainsKey($chave)) { $script:Regressao.Remove($chave) }
-    $script:Cache[$chave] = $r
+    if ($script:Regressao.ContainsKey($Chave)) { $script:Regressao.Remove($Chave) }
+    $script:Cache[$Chave] = $r
 }
 
 # ------------------------------------------- CAMARA: deputados federais eleitos
@@ -676,6 +682,17 @@ function Gravar-Dados {
         $g = [pscustomobject]@{ tem = $false }; $s = [pscustomobject]@{ tem = $false }
         if ($script:Cache.ContainsKey("$u-3")) { $g = $script:Cache["$u-3"] }
         if ($script:Cache.ContainsKey("$u-5")) { $s = $script:Cache["$u-5"] }
+        $turnoG = 1; $eleG = $Eleicao
+        if ($Eleicao1T) {
+            # estado com 2o turno (boletim do 2o turno com candidatos) ou o 1o turno
+            $tem2 = ($g.tem -and @($g.candidatos).Count -gt 0)
+            if ($tem2) { $turnoG = 2 }
+            else {
+                $eleG = $Eleicao1T
+                if ($script:Cache.ContainsKey("$u-3-1t")) { $g = $script:Cache["$u-3-1t"] } else { $g = [pscustomobject]@{ tem = $false } }
+            }
+        }
+        $g = $g | Select-Object *, @{ n = "turno"; e = { $turnoG } }, @{ n = "eleicao"; e = { $eleG } }
         $porEstado["$u"] = [pscustomobject]@{ gov = $g; sen = $s }
     }
     $ult = ""
@@ -690,7 +707,8 @@ function Gravar-Dados {
         ultimo_tse    = $ult
         # Para a tela montar o endereco da foto oficial do TSE:
         # {base}/{ciclo}/{eleicao}/fotos/{uf}/{sqcand}.jpeg
-        tse           = [pscustomobject]@{ base = $Base; ciclo = $Ciclo; eleicao = $Eleicao; eleicao_camara = $EleicaoCamara }
+        tse           = [pscustomobject]@{ base = $Base; ciclo = $Ciclo; eleicao = $Eleicao; eleicao_camara = $EleicaoCamara; eleicao_1turno = $(if ($Eleicao1T) { $Eleicao1T } else { $Eleicao }) }
+        turno         = $(if ($Eleicao1T) { 2 } else { 1 })
         ref2022       = $script:Ref2022
         ufs           = $porEstado
         camara        = [pscustomobject] $script:Camara
@@ -714,7 +732,15 @@ do {
     $inicio = Get-Date
     $script:NumCiclo++
     try {
-        foreach ($u in $UFs) { foreach ($cg in $Cargos) { Ler-Abrangencia $u $cg } }
+        if (-not $Eleicao1T) { foreach ($u in $UFs) { foreach ($cg in $Cargos) { Ler-Abrangencia $u $cg } } }
+        else {
+            # 2o turno: Governador do 2o turno (so os estados que tem) a cada
+            # ciclo; 1o turno (Governador e Senador, resultado final) a cada 3.
+            foreach ($u in $UFs) { Ler-Abrangencia $u 3 }
+            if (($script:NumCiclo % 3) -eq 1) {
+                foreach ($u in $UFs) { Ler-Abrangencia $u 3 $Eleicao1T "$u-3-1t"; Ler-Abrangencia $u 5 $Eleicao1T }
+            }
+        }
         try { Buscar-2022 } catch { Escrever-Log "2022: $($_.Exception.Message)" "AVISO" }
         if (($script:NumCiclo % 3) -eq 1) {
             try {
@@ -729,11 +755,16 @@ do {
         $nG = @($UFs | Where-Object { $script:Cache.ContainsKey("$_-3") }).Count
         $nS = @($UFs | Where-Object { $script:Cache.ContainsKey("$_-5") }).Count
         $eleG = 0; $segG = 0; $eleS = 0
+        $tem1T = 0
         foreach ($u in $UFs) {
-            if ($script:Cache.ContainsKey("$u-3")) {
-                $cs = @($script:Cache["$u-3"].candidatos)
+            # 2o turno: estado sem boletim do 2o turno conta pelo 1o turno
+            $chG = "$u-3"
+            if ($Eleicao1T -and -not ($script:Cache.ContainsKey($chG) -and @($script:Cache[$chG].candidatos).Count -gt 0)) { $chG = "$u-3-1t" }
+            if ($script:Cache.ContainsKey($chG)) {
+                if ($chG -like "*-1t") { $tem1T++ }
+                $cs = @($script:Cache[$chG].candidatos)
                 if (@($cs | Where-Object { $_.eleito }).Count -gt 0) { $eleG++ }
-                elseif (@($cs | Where-Object { $_.segundo_turno }).Count -gt 0) { $segG++ }
+                elseif ($Eleicao1T -or @($cs | Where-Object { $_.segundo_turno }).Count -gt 0) { $segG++ }
             }
             if ($script:Cache.ContainsKey("$u-5")) {
                 $eleS += @(@($script:Cache["$u-5"].candidatos) | Where-Object { $_.eleito }).Count
@@ -746,6 +777,7 @@ do {
         }
         $pr = ""
         if ($script:Cache.ContainsKey("pr-3")) { $pr = " | PR gov: urnas $($script:Cache['pr-3'].urnas_pct)%" }
+        if ($Eleicao1T) { $nG = $nG + $tem1T; $pr = " | 2o TURNO: $(@($UFs | Where-Object { $script:Cache.ContainsKey("$_-3") -and @($script:Cache["$_-3"].candidatos).Count -gt 0 }).Count) estados com 2o turno$pr" }
         Escrever-Log ("governador: {0}/27 estados ({1} eleitos, {2} no 2o turno) | senador: {3}/27 ({4} eleitos){5} | {6}" -f $nG, $eleG, $segG, $nS, $eleS, $pr, $situ) $(if ($script:Alarme) { "ERRO" } else { "INFO" })
     } catch {
         Escrever-Log "erro no ciclo: $($_.Exception.Message)" "ERRO"

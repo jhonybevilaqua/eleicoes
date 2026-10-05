@@ -56,7 +56,8 @@
       if (acao.indexOf("estado:") === 0) return "resumo-" + sufixo + ".html?tela=estado&uf=" + encodeURIComponent(acao.slice(7));
       return "resumo-" + sufixo + ".html" + (acao.indexOf("tela:") === 0 ? "?tela=" + encodeURIComponent(acao.slice(5)) : "");
     }
-    if (/^[a-z0-9-]+$/.test(tela)) return "grafico.html?g=" + encodeURIComponent(tela);
+    // grafico com alvo (Presidente | estado ou regiao): acao "alvo:sp"
+    if (/^[a-z0-9-]+$/.test(tela)) return "grafico.html?g=" + encodeURIComponent(tela) + (acao.indexOf("alvo:") === 0 ? "&a=" + encodeURIComponent(acao.slice(5)) : "");
     return null;
   }
 

@@ -62,6 +62,19 @@
                                    border-radius: 6px; background: var(--cartao); color: var(--texto); }
   .rod-painel .acoes { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
   .rod-painel .msg { font-size: 13px; font-weight: 700; }
+  /* Menu por assunto (estilo telao): faixa colorida a esquerda de cada bloco */
+  .sec { margin-top: 12px; padding: 8px 10px 10px; border-left: 4px solid var(--tema-sec, #0f8f8f); background: var(--bt); border-radius: 0 6px 6px 0; }
+  .sec > .grupo { margin: 0 0 6px; color: var(--tema-sec, #0f8f8f); font-size: 13px; }
+  .sec.presidente { --tema-sec: #1f6fc0; } .sec.local { --tema-sec: #0f8f8f; } .sec.apuracao { --tema-sec: #128a12; }
+  .sec.estados { --tema-sec: #8a5a12; } .sec.camara { --tema-sec: #7a3fb0; } .sec.comparativos { --tema-sec: #c62828; } .sec.auto { --tema-sec: #5a6b80; }
+  :root.escuro .sec { background: #172234; }
+  .sec button { background: var(--cartao); }
+  .sec button:hover { background: var(--bt-hover); }
+  .sec button.ativo, .sec button.ativo:hover { background: var(--verm); border-color: var(--verm-borda); color: #fff; }
+  .regs { display: grid; grid-template-columns: 150px 1fr; gap: 6px 8px; align-items: center; }
+  .regs .reg { font-weight: 800; letter-spacing: 1px; text-align: left; white-space: nowrap; }
+  .regs .ufs { display: flex; flex-wrap: wrap; gap: 4px; }
+  .regs .ufs button { width: 46px; padding: 6px 0; }
 </style>
 <script>try { if (localStorage.getItem("gctse-tema") === "escuro") document.documentElement.className = "escuro"; } catch (e) { }</script>
 </head>
@@ -93,6 +106,8 @@
     { id: "v", nome: "SAÍDA VERTICAL", sub: "OBS SAIDA-VERTICAL → canal da DeckLink escolhido nele · tela 1080×1920 girada no quadro 1920×1080", W: 1080, H: 1920, f: "v" }
   ];
   var estado = null, autoTimer = { h: null, v: null };
+  var REGIOES_MENU = [["NORTE", "norte", ["ac", "am", "ap", "pa", "ro", "rr", "to"]], ["NORDESTE", "nordeste", ["al", "ba", "ce", "ma", "pb", "pe", "pi", "rn", "se"]],
+    ["CENTRO-OESTE", "centro-oeste", ["df", "go", "ms", "mt"]], ["SUDESTE", "sudeste", ["es", "mg", "rj", "sp"]], ["SUL", "sul", ["pr", "rs", "sc"]]];
 
   // ------------------------------------------------ rodizio da apresentacao
   // Vazio no gerenciador = as telas do apresentacao-config.js.
@@ -116,6 +131,7 @@
     if (id === "apresentacao") return "Apresentação automática (" + rodizioAtual(S).length + " telas, " + tempoAtual(S) + " s cada)";
     if (id === "giro") return "Giro dos estados";
     if (id === "resumo") return "Resumo (7 telas)";
+    if (/^presloc-/.test(id)) { var a = estado && estado[S.id] ? String(estado[S.id].acao || "") : ""; return "Presidente | " + (a.indexOf("alvo:") === 0 ? a.slice(5).toUpperCase() : "estado ou região"); }
     var g = window.GCTSE_GRAFICOS.lista.filter(function (x) { return x.id === id; })[0];
     return g ? g.nome : id;
   }
@@ -175,11 +191,51 @@
       itens.forEach(function (it) { bx.appendChild(botao(it[1], function () { definir(S.id, it[0], it[2]); }, it[0])); });
       g.appendChild(bx); col.appendChild(g);
     }
-    grupo("AUTOMÁTICO", [["apresentacao", "▶ Apresentação automática"]]);
-    col.appendChild(painelRodizio(S));
-    grupo("GRÁFICOS (fica fixo no ar)", window.GCTSE_GRAFICOS.lista.filter(function (g) { return g.f === S.f; }).map(function (g) { return [g.id, g.nome]; }));
-    grupo("FECHAMENTO (controle aqui embaixo)", [["giro", "Giro dos estados", "uf:" + (ordem.indexOf(String(cfg.estado_destaque || "pr")) >= 0 ? String(cfg.estado_destaque || "pr") : ordem[0])],
-                                                 ["resumo", "Resumo (7 telas)", "tela:1"]]);
+    // Menu por assunto. Cada botao poe a tela fixa no ar desta saida.
+    function bloco(classe, titulo) {
+      var g = document.createElement("div"); g.className = "sec " + classe;
+      g.innerHTML = '<div class="grupo">' + titulo + '</div>';
+      col.appendChild(g); return g;
+    }
+    function botoesEm(g, itens) {
+      var bx = document.createElement("div"); bx.className = "botoes";
+      itens.forEach(function (it) { bx.appendChild(botao(it[1], function () { definir(S.id, it[0], it[2]); }, it[3] || it[0])); });
+      g.appendChild(bx);
+    }
+    var lista = graficosDe(S), usados = {};
+    usados["presloc-" + S.f] = 1;   // vai pelo menu de regioes e estados
+    function itensDe(bases) {
+      var out = [];
+      bases.forEach(function (b) {
+        var g = lista.filter(function (x) { return x.id === b + "-" + S.f; })[0];
+        if (g && !usados[g.id]) { usados[g.id] = 1; out.push([g.id, g.nome]); }
+      });
+      return out;
+    }
+    var gA = bloco("auto", "AUTOMÁTICO");
+    botoesEm(gA, [["apresentacao", "▶ Apresentação automática"]]);
+    gA.appendChild(painelRodizio(S));
+    botoesEm(bloco("presidente", "PRESIDENTE"), itensDe(["presidente", "presmapa", "presmapa1t", "regioes", "pres2t", "evolucao", "estados", "lideranca"]));
+    // Presidente | estado ou regiao (como no telao)
+    var gL = bloco("local", "PRESIDENTE | ESTADO OU REGIÃO");
+    var regs = document.createElement("div"); regs.className = "regs";
+    REGIOES_MENU.forEach(function (rg) {
+      var br0 = botao(rg[0], function () { definir(S.id, "presloc-" + S.f, "alvo:" + rg[1]); }, "presloc-" + S.f + "|alvo:" + rg[1]);
+      br0.className = "reg"; regs.appendChild(br0);
+      var ufsBox = document.createElement("div"); ufsBox.className = "ufs";
+      rg[2].forEach(function (u) { ufsBox.appendChild(botao(u.toUpperCase(), function () { definir(S.id, "presloc-" + S.f, "alvo:" + u); }, "presloc-" + S.f + "|alvo:" + u)); });
+      regs.appendChild(ufsBox);
+    });
+    gL.appendChild(regs);
+    botoesEm(bloco("apuracao", "APURAÇÃO"), itensDe(["apuracao", "urnas"]));
+    var gE = bloco("estados", "GOVERNADOR E SENADO");
+    botoesEm(gE, itensDe(["governadores", "govpartido", "senado"]).concat([
+      ["giro", "Giro dos estados", "uf:" + (ordem.indexOf(String(cfg.estado_destaque || "pr")) >= 0 ? String(cfg.estado_destaque || "pr") : ordem[0])],
+      ["resumo", "Resumo (7 telas)", "tela:1"]]));
+    botoesEm(bloco("camara", "CÂMARA DOS DEPUTADOS"), itensDe(["camara", "deputados"]));
+    botoesEm(bloco("comparativos", "COMPARATIVOS"), itensDe(["turnos", "abstencao", "abstencao-mapa", "comparativo", "comparecimento", "votos"]));
+    var resto = lista.filter(function (g) { return !usados[g.id]; }).map(function (g) { return [g.id, g.nome]; });
+    if (resto.length) botoesEm(bloco("auto", "OUTRAS TELAS"), resto);
     // controles do giro / resumo
     var ctl = document.createElement("div"); ctl.className = "controle";
     var l1 = document.createElement("div"); l1.className = "linha";
@@ -236,7 +292,9 @@
       var ia = pad.indexOf(a.id), ib = pad.indexOf(b.id);
       return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
     });
-    secao("PRESIDENTE", gs.map(function (g) { return [g.id, g.nome]; }));
+    secao("GRÁFICOS", gs.map(function (g) { return [g.id, g.nome]; }));
+    secao("PRESIDENTE | REGIÃO", REGIOES_MENU.map(function (rg) { return ["presloc:" + rg[1], rg[0]]; }));
+    secao("PRESIDENTE | ESTADO", ordem.map(function (u) { return ["presloc:" + u, u.toUpperCase()]; }), "uf");
     secao("RESUMO", RESUMO_IDS.map(function (id, i) { return ["resumo:" + id, RESUMO[i]]; }));
     secao("GOVERNADOR E SENADOR — tela do estado", ordem.map(function (u) { return ["estado:" + u, u.toUpperCase()]; }), "uf");
     var ac = document.createElement("div"); ac.className = "acoes";
@@ -286,7 +344,7 @@
       if (e.tela === "resumo" && pos.tela) txt += " — " + pos.tela + ". " + RESUMO[pos.tela - 1] + (pos.ufr ? " — " + pos.ufr.toUpperCase() : "");
       if (pos.ufr) ufResumo[S.id] = pos.ufr;
       col.querySelector(".noar .tela").textContent = txt + (e.quando ? "  (desde " + e.quando + ")" : "");
-      col.querySelectorAll(".botoes button[data-k]").forEach(function (b) { b.classList.toggle("ativo", b.dataset.k === e.tela); });
+      col.querySelectorAll(".botoes button[data-k], .regs button[data-k]").forEach(function (b) { b.classList.toggle("ativo", b.dataset.k === e.tela || b.dataset.k === e.tela + "|" + e.acao); });
       col.querySelectorAll(".girar button").forEach(function (b) { b.classList.toggle("ativo", String(estado.girar_v) === b.dataset.g); });
       var ctl = col.querySelector(".controle");
       ctl.classList.toggle("on", e.tela === "giro" || e.tela === "resumo");

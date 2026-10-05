@@ -33,7 +33,7 @@
   var tela = document.getElementById("tela");
   var ultimo = "";
   // Camara e comparativo tambem leem estados.js (coletor ESTADOS.bat).
-  var usaEstados = /^(camara|comparativo|deputados)/.test(id);
+  var usaEstados = /^(camara|comparativo|deputados|governadores|govpartido)/.test(id);
   // Deputados: a tela troca sozinha (deputados-config.js, "segundos").
   var paginada = /^deputados/.test(id);
 
@@ -41,9 +41,9 @@
     var d = window.GCTSE_GRAFICOS.dados();
     var e = window.GCTSE_ESTADOS || {};
     var pg = paginada ? window.GCTSE_GRAFICOS.pagina(id) : "";
-    var chave = JSON.stringify([d.modo, d.br, d.ufs, d.cor_slot, d.cores, usaEstados ? [e.camara, e.ref2022] : 0, pg]);
+    var chave = JSON.stringify([d.modo, d.br, d.ufs, d.cor_slot, d.cores, usaEstados ? [e.camara, e.ref2022, e.ufs] : 0, d.turno1, pg]);
     if (chave === ultimo) return;       // so redesenha quando o dado mudou
-    var trocouPagina = paginada && ultimo && JSON.parse(ultimo)[6] !== pg;
+    var trocouPagina = paginada && ultimo && JSON.parse(ultimo)[7] !== pg;
     ultimo = chave;
     if (trocouPagina) {                 // troca de tela: apaga, redesenha, acende
       tela.style.transition = "opacity .25s"; tela.style.opacity = 0;
