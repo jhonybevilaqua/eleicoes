@@ -17,7 +17,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "3.1 - 05/10/2026"
+$Versao = "3.2 - 05/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -561,6 +561,7 @@ function Ler-Camara {
     if ($fase -eq "S" -or $fase -eq "T") { return }
     $porPartido = [ordered]@{}
     $vagas = 0; $eleitos = 0
+    $listaEleitos = New-Object System.Collections.ArrayList   # tela "Deputados federais eleitos"
     if (Tem-Propriedade $bruto "carg") {
         foreach ($cg in $bruto.carg) {
             if ("$(Obter-Campo $cg @('cd') '')" -ne "6") { continue }
@@ -580,6 +581,14 @@ function Ler-Camara {
                             if (-not $porPartido.Contains($sigla)) { $porPartido[$sigla] = 0 }
                             $porPartido[$sigla] = [int] $porPartido[$sigla] + 1
                             $eleitos++
+                            [void] $listaEleitos.Add([pscustomobject]@{
+                                nome = Decodificar-Entidades "$(Obter-Campo $c @('nmu','nm') '')"
+                                partido = $sigla
+                                numero = "$(Obter-Campo $c @('n') '')"
+                                sqcand = "$(Obter-Campo $c @('sqcand') '')"
+                                votos = Converter-Inteiro (Obter-Campo $c @('vap') 0)
+                                situacao = $st
+                            })
                         }
                     }
                 }
@@ -592,6 +601,7 @@ function Ler-Camara {
         vagas = $vagas; eleitos = $eleitos; urnas_pct = $pctUrnas
         andamento = "$(Obter-Campo $bruto @('and') '')".ToLower()
         partidos = [pscustomobject] $porPartido
+        lista = @($listaEleitos | Sort-Object -Property @{Expression = "votos"; Descending = $true}, nome)
     }
 }
 
@@ -680,7 +690,7 @@ function Gravar-Dados {
         ultimo_tse    = $ult
         # Para a tela montar o endereco da foto oficial do TSE:
         # {base}/{ciclo}/{eleicao}/fotos/{uf}/{sqcand}.jpeg
-        tse           = [pscustomobject]@{ base = $Base; ciclo = $Ciclo; eleicao = $Eleicao }
+        tse           = [pscustomobject]@{ base = $Base; ciclo = $Ciclo; eleicao = $Eleicao; eleicao_camara = $EleicaoCamara }
         ref2022       = $script:Ref2022
         ufs           = $porEstado
         camara        = [pscustomobject] $script:Camara

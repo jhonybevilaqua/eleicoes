@@ -71,6 +71,8 @@
   // Desenha o proximo na camada escondida e cruza.
   function mostrar(i) {
     atual = (i + ids.length) % ids.length;
+    // tela que troca sozinha comeca do inicio cada vez que entra
+    if (window.GCTSE_GRAFICOS.reiniciarPaginas && ids[atual].indexOf("deputados") === 0) window.GCTSE_GRAFICOS.reiniciarPaginas();
     var prox = camadas[1 - visivel];
     desenharEm(prox, ids[atual]);
     prox.classList.add("on");
@@ -129,6 +131,12 @@
   mostrar(0);
   agendar();
   // estados.js so quando ha tela de estado/resumo/Camara/comparativo no rodizio
-  var usaEstados = ids.some(function (id) { return id.indexOf(":") > 0 || /^(camara|comparativo)/.test(id); });
+  var usaEstados = ids.some(function (id) { return id.indexOf(":") > 0 || /^(camara|comparativo|deputados)/.test(id); });
+  // Deputados troca de tela sozinho dentro do seu tempo no rodizio.
+  var pagAtual = "";
+  setInterval(function () {
+    var id = ids[atual], pg = window.GCTSE_GRAFICOS.pagina(id);
+    if (pg && pg !== pagAtual) { pagAtual = pg; desenharEm(camadas[visivel], id); }
+  }, 500);
   setInterval(function () { recarregar("dados.js"); if (usaEstados) recarregar("estados.js"); }, 3000);
 })();

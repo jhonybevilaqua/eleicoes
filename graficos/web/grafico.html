@@ -21,6 +21,7 @@
 <script charset="utf-8" src="fotos-config.js"></script>
 <script charset="utf-8" src="senado-config.js"></script>
 <script charset="utf-8" src="camara-config.js"></script>
+<script charset="utf-8" src="deputados-config.js"></script>
 <script charset="utf-8" src="comparativo-config.js"></script>
 <script charset="utf-8" src="estados.js"></script>
 <script charset="utf-8" src="graficos.js"></script>
@@ -32,14 +33,23 @@
   var tela = document.getElementById("tela");
   var ultimo = "";
   // Camara e comparativo tambem leem estados.js (coletor ESTADOS.bat).
-  var usaEstados = /^(camara|comparativo)/.test(id);
+  var usaEstados = /^(camara|comparativo|deputados)/.test(id);
+  // Deputados: a tela troca sozinha (deputados-config.js, "segundos").
+  var paginada = /^deputados/.test(id);
 
   function desenhar() {
     var d = window.GCTSE_GRAFICOS.dados();
     var e = window.GCTSE_ESTADOS || {};
-    var chave = JSON.stringify([d.modo, d.br, d.ufs, d.cor_slot, d.cores, usaEstados ? [e.camara, e.ref2022] : 0]);
+    var pg = paginada ? window.GCTSE_GRAFICOS.pagina(id) : "";
+    var chave = JSON.stringify([d.modo, d.br, d.ufs, d.cor_slot, d.cores, usaEstados ? [e.camara, e.ref2022] : 0, pg]);
     if (chave === ultimo) return;       // so redesenha quando o dado mudou
+    var trocouPagina = paginada && ultimo && JSON.parse(ultimo)[6] !== pg;
     ultimo = chave;
+    if (trocouPagina) {                 // troca de tela: apaga, redesenha, acende
+      tela.style.transition = "opacity .25s"; tela.style.opacity = 0;
+      setTimeout(function () { ultimo = ""; desenhar(); tela.style.opacity = 1; }, 260);
+      return;
+    }
     var s = window.GCTSE_GRAFICOS.desenhar(id);
     if (!s) { tela.textContent = "grafico desconhecido: " + id; return; }
     tela.innerHTML = s;
@@ -124,6 +134,7 @@
   window.__gctseRedesenhar = function () { ultimo = ""; desenhar(); };   // foto que falhou: refaz sem ela
   desenhar();
   setInterval(recarregar, 3000);
+  if (paginada) setInterval(desenhar, 500);
 })();
 </script>
 </body>

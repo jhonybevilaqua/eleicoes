@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 3.1.1 - apuracao em graficos (versao final)
+ gctse GRAFICOS 3.2 - apuracao em graficos (versao final)
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -17,10 +17,14 @@
      Abstencao, brancos e nulos       Mapa da abstencao
      Presidente - 2o turno            Senado: atual x 2027
      2018 x 2022 x 2026               Camara: bancadas 2027
+     Deputados federais eleitos (foto, nome e votos, 5 por tela)
      Evolucao minuto a minuto (1o x 2o colocado de Presidente)
    GIRO DOS ESTADOS (Governador e Senador, um estado por vez)
    RESUMO (7 telas de fechamento)
    GERENCIADOR (escolhe o que vai para as saidas SDI da DeckLink)
+
+ NOVO NA 3.2
+   - Tela "Deputados federais eleitos" (ver abaixo).
 
  NOVO NA 3.0
    - Evolucao minuto a minuto com os numeros REAIS do 1o turno: o
@@ -245,6 +249,31 @@
 
    Depois de atualizar: feche e abra o ESTADOS.bat (a Camara aparece no
    1o ciclo; o log mostra "camara: 27/27 estados, N deputados ...").
+
+---------------------------------------------------------------------------
+ DEPUTADOS FEDERAIS ELEITOS (3.2) - foto, nome e votos, 5 por tela
+---------------------------------------------------------------------------
+
+   Tela "Deputados federais eleitos" (horizontal e vertical, no
+   gerenciador e no rodizio). Cada tela mostra 5 eleitos de UM estado:
+   foto oficial do TSE, nome de urna, partido e numero, votos e a
+   situacao do TSE (ELEITO POR QP / POR MEDIA). Troca sozinha a cada 8 s.
+   Ordem: regiao (Norte, Nordeste, Centro-Oeste, Sudeste, Sul), estado em
+   ordem alfabetica dentro da regiao, e no estado do mais votado ao menos.
+   Com os 10 estados do pacote: 318 deputados em 68 telas (~9 minutos).
+
+   De onde vem: o ESTADOS.bat (boletim de deputado federal, so quem o TSE
+   marcou eleito). Depois de atualizar, FECHE e ABRA o ESTADOS.bat - antes
+   disso a tela diz "aguardando os eleitos do TSE".
+
+   web\deputados-config.js (Bloco de Notas):
+     estados ..... siglas dos estados (padrao: CE PR PE SP MG RN RJ SC PA RS)
+     por_tela .... candidatos por tela (ate 5)
+     segundos .... tempo de cada tela
+   Foto que o TSE nao tiver: aparecem as iniciais. Pacote SEM-FOTOS: so
+   iniciais. No rodizio, de a esta tela um tempo maior no gerenciador -
+   ela continua trocando dentro do proprio tempo e recomeca do 1o estado
+   cada vez que entra.
 
 ---------------------------------------------------------------------------
  VER-ELEITO.bat - estado eleito no site do TSE mas sem ELEITO na tela?

@@ -117,14 +117,14 @@
       (rx ? ' rx="' + rx + '"' : "") + "/>";
   }
   // O selo tem a largura medida DEPOIS de desenhado (ver ajustarSelos).
-  function seloH(W) {
-    var s = selo();
+  function seloH(W, sl) {
+    var s = sl || selo();
     // a esquerda da logo (canto superior direito)
     return '<g data-selo="dir" data-x="' + (W - 73 - 200) + '">' + r(W - 520, 29, 247, 32, s.cor, 3) +
       t(W - 281, 51, s.texto, { s: 18, b: true, a: "end" }) + "</g>";
   }
-  function seloV(W) {
-    var s = selo();
+  function seloV(W, sl) {
+    var s = sl || selo();
     return r(35, 127, W - 70, 26, s.cor, 2) + t(W / 2, 146, s.texto, { s: 16, b: true, a: "middle" });
   }
   function cabecalhoH(W, titulo, sub) {
@@ -1015,6 +1015,142 @@
     return svg(W, H, o + t(35, 945, rodapeEvolucao(ev), { s: 11, c: C.apagado2, max: 470 }));
   };
 
+  // ---- Deputados federais eleitos: N por tela, trocando sozinha -------------
+  // Lista do TSE (cargo 6, so quem o TSE marcou eleito), lida pelo
+  // ESTADOS.bat. Estados e tempo em web\deputados-config.js. Ordem: regiao
+  // (N, NE, CO, SE, S), nome do estado, e no estado do mais votado ao menos.
+  var DEP_UF = { ac: "ACRE", al: "ALAGOAS", ap: "AMAPÁ", am: "AMAZONAS", ba: "BAHIA", ce: "CEARÁ", df: "DISTRITO FEDERAL",
+    es: "ESPÍRITO SANTO", go: "GOIÁS", ma: "MARANHÃO", mt: "MATO GROSSO", ms: "MATO GROSSO DO SUL", mg: "MINAS GERAIS",
+    pa: "PARÁ", pb: "PARAÍBA", pr: "PARANÁ", pe: "PERNAMBUCO", pi: "PIAUÍ", rj: "RIO DE JANEIRO", rn: "RIO GRANDE DO NORTE",
+    rs: "RIO GRANDE DO SUL", ro: "RONDÔNIA", rr: "RORAIMA", sc: "SANTA CATARINA", sp: "SÃO PAULO", se: "SERGIPE", to: "TOCANTINS" };
+  var DEP_REGIOES = [["Norte", ["ac", "am", "ap", "pa", "ro", "rr", "to"]], ["Nordeste", ["al", "ba", "ce", "ma", "pb", "pe", "pi", "rn", "se"]],
+    ["Centro-Oeste", ["df", "go", "ms", "mt"]], ["Sudeste", ["es", "mg", "rj", "sp"]], ["Sul", ["pr", "rs", "sc"]]];
+  var T0_DEP = Date.now();   // a troca comeca na 1a tela quando a pagina abre
+  function paginasDeputados() {
+    var cfg = window.GCTSE_DEPUTADOS || {}, porTela = Math.max(1, Math.min(5, +cfg.por_tela || 5));
+    var pedidos = (cfg.estados || []).map(function (u) { return String(u).toLowerCase().trim(); });
+    var cm = (window.GCTSE_ESTADOS || {}).camara || {}, pags = [];
+    DEP_REGIOES.forEach(function (rg) {
+      rg[1].filter(function (u) { return pedidos.indexOf(u) >= 0; })
+        .sort(function (a, b) { return DEP_UF[a].localeCompare(DEP_UF[b], "pt-BR"); })
+        .forEach(function (u) {
+          var x = cm[u], lista = x ? comoLista(x.lista).slice() : [];
+          if (!lista.length) return;   // estado ainda sem eleito do TSE: fica fora
+          lista.sort(function (a, b) { return ((+b.votos || 0) - (+a.votos || 0)) || String(a.nome).localeCompare(String(b.nome), "pt-BR"); });
+          var n = Math.ceil(lista.length / porTela);
+          for (var k = 0; k < n; k++) {
+            pags.push({ uf: u, regiao: rg[0], x: x, cs: lista.slice(k * porTela, (k + 1) * porTela), ini: k * porTela, k: k, n: n,
+              total: lista.length, vagas: +x.vagas || 0 });
+          }
+        });
+    });
+    return pags;
+  }
+  function indiceDeputados(pags) {
+    var seg = Math.max(3, +(window.GCTSE_DEPUTADOS || {}).segundos || 8);
+    return pags.length ? Math.floor((Date.now() - T0_DEP) / (seg * 1000)) % pags.length : 0;
+  }
+  function seloDep(x) {
+    if (!x) return { texto: "AGUARDANDO APURAÇÃO", cor: C.trilho };
+    if (x.andamento === "f") return { texto: "TOTALIZAÇÃO FINAL", cor: C.verde };
+    if (x.urnas_pct >= 100) return { texto: "100% DAS URNAS", cor: C.verde };
+    return { texto: "PARCIAL", cor: C.vermelho };
+  }
+  // Foto oficial do TSE: {base}/{ciclo}/{eleicao da Camara}/fotos/{uf}/{sqcand}.jpeg.
+  // Embaixo ficam as iniciais: se a foto nao vier, elas aparecem.
+  var FOTO_DEP = { falhou: {} };
+  window.__gctseFotoD = function (img, ok) {
+    if (ok) return;
+    FOTO_DEP.falhou[img.getAttribute("href")] = true;
+    if (img.parentNode) img.parentNode.removeChild(img);
+  };
+  function fotoDep(u, c, x, y, w, h) {
+    var ini = String(c.nome || "").split(" ").filter(function (p) { return p.length > 2; }).slice(0, 2).map(function (p) { return p.charAt(0); }).join("");
+    var o = r(x, y, w, h, "#1c2a40", 4) + t(x + w / 2, y + h / 2 + w * 0.12, ini, { s: Math.round(w * 0.34), b: true, c: C.apagado2, a: "middle" });
+    var tse = (window.GCTSE_ESTADOS || {}).tse;
+    if (window.GCTSE_FOTOS_DO_TSE !== true || window.__gctseSemFotos || !tse || !tse.base || !c.sqcand) return o;
+    var url = tse.base + "/" + tse.ciclo + "/" + (tse.eleicao_camara || tse.eleicao) + "/fotos/" + u + "/" + c.sqcand + ".jpeg";
+    if (FOTO_DEP.falhou[url]) return o;
+    return o + '<image href="' + esc(url) + '" x="' + x + '" y="' + y + '" width="' + w + '" height="' + h +
+      '" preserveAspectRatio="xMidYMin slice" onload="__gctseFotoD(this,true)" onerror="__gctseFotoD(this,false)"/>';
+  }
+  // Nome em ate 2 linhas, quebrando no espaco que deixa as partes parecidas.
+  function linhasNome(nome, n) {
+    nome = String(nome || "");
+    if (nome.length <= n) return [nome];
+    var ps = nome.split(" "), melhor = null;
+    for (var i = 1; i < ps.length; i++) {
+      var l1 = ps.slice(0, i).join(" "), l2 = ps.slice(i).join(" "), d = Math.max(l1.length, l2.length);
+      if (!melhor || d < melhor.d) melhor = { d: d, l: [l1, l2] };
+    }
+    return melhor ? melhor.l : [nome];
+  }
+  function situacaoDep(c) {
+    var st = String(c.situacao || "").toUpperCase();
+    if (/M[ÉE]DIA/.test(st)) return "ELEITO POR MÉDIA";
+    if (/QP/.test(st)) return "ELEITO POR QP";
+    return st ? "ELEITO" : "";
+  }
+  function subDep(pg) {
+    return "DEPUTADOS FEDERAIS ELEITOS  ·  " + (pg.ini + 1) + "º" + (pg.cs.length > 1 ? " a " + (pg.ini + pg.cs.length) + "º" : "") +
+      " mais votados  ·  " + pg.total + (pg.vagas && pg.vagas !== pg.total ? " de " + pg.vagas + " vagas" : " eleitos");
+  }
+  function semDeputados(W, H, v) {
+    var o = v ? r(35, 48, 6, 38, C.destaque) + t(53, 80, "DEPUTADOS FEDERAIS", { s: 32, b: true, ls: 1 }) :
+      t(73, 57, "DEPUTADOS FEDERAIS ELEITOS", { s: 36, b: true, ls: 1 });
+    return svg(W, H, o + t(W / 2, H / 2, "aguardando os eleitos do TSE (ESTADOS.bat)", { s: v ? 18 : 24, c: C.apagado, a: "middle" }));
+  }
+  G["deputados-h"] = function () {
+    var W = 1280, H = 720, pags = paginasDeputados();
+    if (!pags.length) return semDeputados(W, H, false);
+    var ip = indiceDeputados(pags), pg = pags[ip];
+    var o = t(73, 57, DEP_UF[pg.uf], { s: 36, b: true, ls: 1, max: W - 73 - 540 }) +
+      t(73, 85, subDep(pg), { s: 18, b: true, c: "#c9d6e6", max: W - 146 }) + seloH(W, seloDep(pg.x));
+    var gap = 18, w = (1134 - gap * 4) / 5, y = 118, h = 530;
+    var x0 = 73 + (5 - pg.cs.length) * (w + gap) / 2;   // ultima tela do estado com menos: centraliza
+    pg.cs.forEach(function (c, i) {
+      var x = x0 + i * (w + gap), cor = corPartidoCamara(c.partido, 0);
+      o += r(x, y, w, h, "rgba(8,14,32,0.80)", 10) + r(x, y, w, 6, cor, 3);
+      o += t(x + 16, y + 38, (pg.ini + i + 1) + "º", { s: 20, b: true, c: C.apagado });
+      var pw = 174, ph = 232;
+      o += fotoDep(pg.uf, c, x + (w - pw) / 2, y + 50, pw, ph);
+      var ln = linhasNome(c.nome, 14), yn = y + 318;
+      ln.forEach(function (l, j) { o += t(x + w / 2, yn + j * 26, l, { s: 22, b: true, a: "middle", max: w - 20 }); });
+      var yp = yn + ln.length * 26 + 2;
+      o += t(x + w / 2, yp, c.partido + (c.numero ? "  ·  " + c.numero : ""), { s: 16, c: C.apagado, a: "middle", max: w - 20 });
+      o += t(x + w / 2, y + h - 74, inteiro(c.votos), { s: 32, b: true, a: "middle", max: w - 16 });
+      o += t(x + w / 2, y + h - 52, "votos", { s: 15, c: C.apagado, a: "middle" });
+      var sit = situacaoDep(c);
+      if (sit) o += t(x + w / 2, y + h - 20, sit, { s: 13, b: true, c: "#69db7c", a: "middle", ls: 1, max: w - 16 });
+    });
+    o += t(73, 700, "Fonte: TSE — deputados federais eleitos (situação e votos do TSE)  ·  " + pg.regiao, { s: 13, c: C.apagado2, max: 760 });
+    o += t(1207, 700, DEP_UF[pg.uf] + " " + (pg.k + 1) + "/" + pg.n + "   ·   tela " + (ip + 1) + " de " + pags.length, { s: 13, c: C.apagado2, a: "end" });
+    return svg(W, H, o);
+  };
+  G["deputados-v"] = function () {
+    var W = 540, H = 960, pags = paginasDeputados();
+    if (!pags.length) return semDeputados(W, H, true);
+    var ip = indiceDeputados(pags), pg = pags[ip];
+    var o = r(35, 48, 6, 38, C.destaque) + t(53, 80, DEP_UF[pg.uf], { s: 32, b: true, ls: 1, max: W - 53 - 35 }) +
+      t(53, 106, "DEPUTADOS FEDERAIS ELEITOS · " + (pg.ini + 1) + "º a " + (pg.ini + pg.cs.length) + "º de " + pg.total,
+        { s: 15, b: true, c: "#c9d6e6", max: W - 53 - 35 }) + seloV(W, seloDep(pg.x));
+    var y0 = 168, hh = 142, gap = 7;
+    pg.cs.forEach(function (c, i) {
+      var y = y0 + i * (hh + gap), cor = corPartidoCamara(c.partido, 0);
+      o += r(35, y, 470, hh, "rgba(8,14,32,0.80)", 8) + r(35, y, 6, hh, cor, 3);
+      o += fotoDep(pg.uf, c, 51, y + 9, 93, 124);
+      o += t(160, y + 30, (pg.ini + i + 1) + "º", { s: 16, b: true, c: C.apagado });
+      var ln = linhasNome(c.nome, 20);
+      ln.forEach(function (l, j) { o += t(160, y + 58 + j * 25, l, { s: 22, b: true, max: 330 }); });
+      o += t(160, y + 124, c.partido + (c.numero ? " · " + c.numero : ""), { s: 15, c: C.apagado, max: 170 });
+      o += t(493, y + 124, inteiro(c.votos) + " votos", { s: 22, b: true, a: "end", max: 200 });
+      var sit = situacaoDep(c);
+      if (sit) o += t(493, y + 30, sit, { s: 11, b: true, c: "#69db7c", a: "end", ls: 1 });
+    });
+    o += t(35, 945, "Fonte: TSE · " + DEP_UF[pg.uf] + " " + (pg.k + 1) + "/" + pg.n + " · tela " + (ip + 1) + " de " + pags.length, { s: 11, c: C.apagado2, max: 470 });
+    return svg(W, H, o);
+  };
+
   window.GCTSE_GRAFICOS = {
     lista: [
       { id: "presidente-h", nome: "Presidente — Brasil", f: "h" },
@@ -1029,6 +1165,7 @@
       { id: "comparativo-h", nome: "2018 × 2022 × 2026", f: "h" },
       { id: "camara-h", nome: "Câmara: bancadas 2027", f: "h" },
       { id: "evolucao-h", nome: "Evolução minuto a minuto (1º × 2º)", f: "h" },
+      { id: "deputados-h", nome: "Deputados federais eleitos", f: "h" },
       { id: "urnas-v", nome: "Urnas apuradas", f: "v" },
       { id: "votos-v", nome: "Brancos e nulos", f: "v" },
       { id: "presidente-v", nome: "Presidente", f: "v" },
@@ -1040,9 +1177,17 @@
       { id: "senado-v", nome: "Senado: 2027", f: "v" },
       { id: "comparativo-v", nome: "2018 × 2022 × 2026", f: "v" },
       { id: "camara-v", nome: "Câmara: bancadas 2027", f: "v" },
-      { id: "evolucao-v", nome: "Evolução minuto a minuto (1º × 2º)", f: "v" }
+      { id: "evolucao-v", nome: "Evolução minuto a minuto (1º × 2º)", f: "v" },
+      { id: "deputados-v", nome: "Deputados federais eleitos", f: "v" }
     ],
     desenhar: function (id) { return G[id] ? G[id]() : null; },
+    // Telas que trocam sozinhas (deputados): muda quando a tela da vez muda.
+    pagina: function (id) {
+      if (String(id).indexOf("deputados") !== 0) return "";
+      var pags = paginasDeputados();
+      return pags.length + ":" + indiceDeputados(pags);
+    },
+    reiniciarPaginas: function () { T0_DEP = Date.now(); },
     ajustarSelos: ajustarSelos,
     dados: D,
     cor: cor,
