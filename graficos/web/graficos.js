@@ -570,6 +570,195 @@
     return svg(W, H, o + RODAPE_V());
   };
 
+  // =========================================================== RESULTADO FINAL
+  // ---- Presidente: so os dois do 2o turno ----------------------------------
+  // "Vao ao 2o turno" com a palavra do TSE (2o turno no st) ou com a
+  // totalizacao final sem ninguem acima de 50%; antes disso, a tela diz
+  // "1o e 2o colocados" e o selo fica PARCIAL.
+  function doisDoSegundoTurno() {
+    var b = br(), cs = candidatos(b);
+    var marcados = cs.filter(function (c) { return c.segundo_turno; });
+    if (marcados.length >= 2) return { cs: marcados.slice(0, 2), definido: true };
+    var top = cs.slice(0, 2);
+    var fim = !!(b && b.andamento === "f" && top.length === 2 && !(top[0].pct > 50));
+    return { cs: top, definido: fim };
+  }
+  function cartaoPres(x, y, w, h, c, pos, k) {
+    var o = r(x, y, w, h, "#121b2b", 10);
+    if (!c) return o + t(x + 32 * k, y + 80 * k, "aguardando o TSE", { s: Math.round(24 * k), c: C.apagado });
+    o += r(x, y, w, 8, cor(c), 4);
+    var url = urlFoto(c), px = x + 32 * k, dx = 0;
+    if (url) { var fw = 165 * k, fh = fw * 4 / 3; o += foto(url, px, y + 44 * k, fw, fh); dx = fw + 28 * k; }
+    o += t(px + dx, y + 74 * k, pos + "º COLOCADO", { s: Math.round(16 * k), b: true, c: C.apagado, ls: 2 });
+    o += t(px + dx, y + 118 * k, c.nome, { s: Math.round(40 * k), b: true, max: w - 64 * k - dx, nome: true });
+    o += t(px + dx, y + 152 * k, c.partido, { s: Math.round(22 * k), c: C.apagado, max: w - 64 * k - dx });
+    o += t(x + w - 32 * k, y + h - 110 * k, pct(c.pct), { s: Math.round(92 * k), b: true, a: "end" });
+    o += t(x + w - 32 * k, y + h - 74 * k, "dos votos válidos", { s: Math.round(18 * k), c: C.apagado, a: "end" });
+    o += t(x + w - 32 * k, y + h - 38 * k, inteiro(c.votos) + " votos", { s: Math.round(22 * k), c: C.apagado, a: "end" });
+    return o;
+  }
+  G["pres2t-h"] = function () {
+    var W = 1280, H = 720, d = doisDoSegundoTurno(), b = br();
+    var o = cabecalhoH(W, d.definido ? "PRESIDENTE — 2º TURNO" : "PRESIDENTE — 1º E 2º COLOCADOS",
+      (d.definido ? "vão ao 2º turno" : "parcial") + "  ·  % dos votos válidos no 1º turno  ·  " + subtitulo());
+    o += cartaoPres(73, 130, 544, 510, d.cs[0], 1, 1) + cartaoPres(663, 130, 544, 510, d.cs[1], 2, 1);
+    var s = b ? b.secoes : null;
+    o += t(73, 690, (s ? "urnas apuradas " + pct(s.pct) + "  ·  " : "") + "Fonte: TSE", { s: 14, c: C.apagado2 });
+    var dif = diferenca(d.cs);
+    if (dif) o += t(1207, 690, dif, { s: 18, b: true, a: "end", max: 760 });
+    return svg(W, H, o);
+  };
+  G["pres2t-v"] = function () {
+    var W = 540, H = 960, d = doisDoSegundoTurno();
+    var o = cabecalhoV(W, d.definido ? "PRESIDENTE — 2º TURNO" : "PRESIDENTE", (d.definido ? "vão ao 2º turno" : "1º e 2º colocados") + " · " + subtitulo());
+    o += cartaoPres(35, 170, 470, 360, d.cs[0], 1, 0.74) + cartaoPres(35, 545, 470, 360, d.cs[1], 2, 0.74);
+    var dif = diferenca(d.cs);
+    if (dif) o += t(35, 925, dif, { s: 14, b: true, max: 470 });
+    return svg(W, H, o + t(35, 950, "Fonte: TSE", { s: 12, c: C.apagado2 }));
+  };
+
+  // ---- Senado: hemiciclo (81 cadeiras), atual x 2027 ------------------------
+  // Numeros por partido em web\senado-config.js (nao saem do boletim do TSE).
+  function senado() {
+    var cfg = window.GCTSE_SENADO || { partidos: [] }, ps = (cfg.partidos || []).filter(function (p) { return p && p.sigla; });
+    var sa = 0, sn = 0;
+    ps.forEach(function (p) { sa += +p.atual || 0; sn += +p.em2027 || 0; });
+    return { ps: ps, totalAtual: sa, total2027: sn, fonte: cfg.fonte || "" };
+  }
+  // Cadeiras em fileiras concentricas; partidos em fatias, da esquerda para
+  // a direita na ordem do senado-config.js.
+  function hemiciclo(cx, cy, R, r0, ps, campo) {
+    var n = 0; ps.forEach(function (p) { n += Math.max(0, +p[campo] || 0); });
+    if (!n) return "";
+    var filas = n <= 40 ? 3 : (n <= 100 ? 5 : 7), raios = [], soma = 0, i, j;
+    for (i = 0; i < filas; i++) { raios.push(r0 + (R - r0) * i / (filas - 1)); soma += raios[i]; }
+    var porFila = raios.map(function (rr) { return Math.max(1, Math.round(n * rr / soma)); });
+    var dif = n - porFila.reduce(function (a, b) { return a + b; }, 0);
+    porFila[filas - 1] += dif;
+    var pos = [];
+    for (i = 0; i < filas; i++) for (j = 0; j < porFila[i]; j++) {
+      var ang = porFila[i] > 1 ? Math.PI - Math.PI * j / (porFila[i] - 1) : Math.PI / 2;
+      pos.push({ a: ang, r: raios[i] });
+    }
+    pos.sort(function (p, q) { return (q.a - p.a) || (p.r - q.r); });
+    var passoR = (R - r0) / (filas - 1), passoA = Math.PI * R / Math.max(1, porFila[filas - 1] - 1);
+    var raio = Math.min(passoR, passoA) * 0.42, cores = [], o = "";
+    ps.forEach(function (p) { for (var k = 0; k < (+p[campo] || 0); k++) cores.push(p.cor || C.outros); });
+    pos.forEach(function (p, k) {
+      o += '<circle cx="' + (cx + p.r * Math.cos(p.a)).toFixed(1) + '" cy="' + (cy - p.r * Math.sin(p.a)).toFixed(1) +
+        '" r="' + raio.toFixed(1) + '" fill="' + (cores[k] || C.trilho) + '"/>';
+    });
+    return o;
+  }
+  function saldo(p) {
+    var d = (+p.em2027 || 0) - (+p.atual || 0);
+    if (d > 0) return { txt: "+" + d, c: "#69db7c" };
+    if (d < 0) return { txt: "−" + (-d), c: "#ff8787" };
+    return { txt: "0", c: C.apagado };
+  }
+  function tabelaSenado(x0, x1, y, passo, ps, s, colunas) {
+    var o = t(x0 + 20, y, "PARTIDO", { s: s - 4, b: true, c: C.apagado, ls: 1 });
+    colunas.forEach(function (cl) { o += t(cl.x, y, cl.rot, { s: s - 4, b: true, c: C.apagado, a: "end", ls: 1 }); });
+    o += r(x0, y + 10, x1 - x0, 1, C.linha);
+    var lin = ps.slice().sort(function (a, b) { return (b.em2027 - a.em2027) || (b.atual - a.atual) || String(a.sigla).localeCompare(b.sigla); });
+    lin.forEach(function (p, i) {
+      var yy = y + 10 + passo * (i + 1) - passo * 0.3;
+      o += '<circle cx="' + (x0 + 7) + '" cy="' + (yy - s * 0.35).toFixed(1) + '" r="' + (s * 0.33).toFixed(1) + '" fill="' + (p.cor || C.outros) + '"/>';
+      o += t(x0 + 20, yy, p.sigla, { s: s, b: true });
+      colunas.forEach(function (cl) {
+        if (cl.campo === "saldo") { var sd = saldo(p); o += t(cl.x, yy, sd.txt, { s: s, b: true, c: sd.c, a: "end" }); }
+        else o += t(cl.x, yy, String(+p[cl.campo] || 0), { s: s, b: cl.campo === "em2027", c: cl.campo === "em2027" ? C.texto : C.apagado, a: "end" });
+      });
+    });
+    return o;
+  }
+  function rotuloHemi(cx, cy, txt, n, k) {
+    return t(cx, cy - 44 * k, txt, { s: Math.round(16 * k), b: true, c: C.apagado, a: "middle", ls: 2 }) +
+      t(cx, cy - 4 * k, String(n), { s: Math.round(42 * k), b: true, a: "middle" });
+  }
+  G["senado-h"] = function () {
+    var W = 1280, H = 720, sd = senado();
+    var o = t(73, 57, "SENADO FEDERAL", { s: 36, b: true, ls: 1 }) +
+      t(73, 85, sd.total2027 + " cadeiras  ·  composição atual e a partir de 2027", { s: 19, c: C.apagado });
+    o += hemiciclo(300, 345, 200, 92, sd.ps, "atual") + rotuloHemi(300, 345, "ATUAL", sd.totalAtual, 1);
+    o += hemiciclo(300, 640, 200, 92, sd.ps, "em2027") + rotuloHemi(300, 640, "2027", sd.total2027, 1);
+    o += tabelaSenado(620, 1207, 150, 31.5, sd.ps, 20,
+      [{ x: 960, rot: "ATUAL", campo: "atual" }, { x: 1085, rot: "2027", campo: "em2027" }, { x: 1207, rot: "SALDO", campo: "saldo" }]);
+    if (sd.fonte) o += t(73, 700, sd.fonte, { s: 13, c: C.apagado2 });
+    return svg(W, H, o);
+  };
+  G["senado-v"] = function () {
+    var W = 540, H = 960, sd = senado();
+    var o = r(35, 48, 6, 38, C.destaque) + t(53, 80, "SENADO FEDERAL", { s: 32, b: true, ls: 1 }) +
+      t(53, 106, sd.total2027 + " cadeiras a partir de 2027", { s: 16, c: C.apagado });
+    o += hemiciclo(270, 405, 225, 100, sd.ps, "em2027") + rotuloHemi(270, 405, "2027", sd.total2027, 1);
+    o += tabelaSenado(40, 505, 452, 28, sd.ps, 19,
+      [{ x: 330, rot: "ATUAL", campo: "atual" }, { x: 420, rot: "2027", campo: "em2027" }, { x: 505, rot: "SALDO", campo: "saldo" }]);
+    if (sd.fonte) o += t(35, 950, sd.fonte, { s: 12, c: C.apagado2 });
+    return svg(W, H, o);
+  };
+
+  // ---- Comparativo 2018 x 2022 x 2026: abstencao, brancos e nulos -----------
+  // 2026 ao vivo (dados.js); 2022 do arquivo do TSE (estados.js), senao do
+  // comparativo-config.js; 2018 do comparativo-config.js.
+  var CORES_ANO = ["#5b7db8", "#2b84ff", "#38d9e8"];
+  function anosComparativo() {
+    var cfg = (window.GCTSE_COMPARATIVO || {}).anos || [], porAno = {};
+    cfg.forEach(function (a) { porAno[a.ano] = { ano: a.ano, abstencao: a.abstencao, brancos: a.brancos, nulos: a.nulos }; });
+    var ref = (window.GCTSE_ESTADOS || {}).ref2022;
+    if (ref && ref.pct_abstencao > 0) porAno[2022] = { ano: 2022, abstencao: ref.pct_abstencao, brancos: ref.pct_brancos, nulos: ref.pct_nulos };
+    var b = br(), e = b && b.eleitorado, v = b && b.votos;
+    porAno[2026] = { ano: 2026, abstencao: e && e.pct_abstencao > 0 ? e.pct_abstencao : null,
+      brancos: v && v.pct_brancos != null && b.secoes && b.secoes.pct > 0 ? v.pct_brancos : null,
+      nulos: v && v.pct_nulos != null && b.secoes && b.secoes.pct > 0 ? v.pct_nulos : null };
+    return Object.keys(porAno).map(Number).sort().slice(-3).map(function (k) { return porAno[k]; });
+  }
+  function escalaComp(anos) {
+    var m = 0;
+    anos.forEach(function (a) { ["abstencao", "brancos", "nulos"].forEach(function (q) { if (a[q] > m) m = a[q]; }); });
+    return Math.max(30, Math.ceil((m + 3) / 10) * 10);
+  }
+  var GRUPOS_COMP = [["abstencao", "ABSTENÇÃO"], ["brancos", "BRANCOS"], ["nulos", "NULOS"]];
+  G["comparativo-h"] = function () {
+    var W = 1280, H = 720, anos = anosComparativo(), max = escalaComp(anos);
+    var o = cabecalhoH(W, "ABSTENÇÃO, BRANCOS E NULOS", "1º turno  ·  " + anos.map(function (a) { return a.ano; }).join(", "));
+    var topo = 230, base = 610, alt = base - topo;
+    for (var g = 0; g < 10 && g * 10 <= max; g++) {
+      var yg = base - alt * (g * 10) / max;
+      o += r(73, yg, 1134, 1, C.linha) + t(68, yg + 5, (g * 10) + "%", { s: 13, c: C.apagado2, a: "end" });
+    }
+    GRUPOS_COMP.forEach(function (gr, gi) {
+      var x0 = 95 + gi * 378, cxp = x0 + 175;
+      o += t(cxp, 168, gr[1], { s: 28, b: true, a: "middle", ls: 2 });
+      anos.forEach(function (a, ai) {
+        var x = x0 + 30 + ai * 110, w = 70, val = a[gr[0]];
+        o += r(x, topo, w, alt, "#152036", 12);
+        if (val > 0) { var h = Math.max(6, alt * val / max); o += r(x, base - h, w, h, CORES_ANO[ai] || C.destaque, 12); }
+        o += t(x + w / 2, topo - 14, val > 0 ? pct(val) : "—", { s: 21, b: true, a: "middle", c: ai === anos.length - 1 ? C.texto : "#c9d6e6" });
+        o += t(x + w / 2, base + 34, String(a.ano), { s: 22, b: true, a: "middle", c: ai === anos.length - 1 ? C.texto : C.apagado });
+      });
+    });
+    o += t(73, 698, "Fonte: TSE  ·  abstenção sobre o eleitorado; brancos e nulos sobre os votos  ·  " +
+      (anos.length ? anos[anos.length - 1].ano : "") + " " + subtitulo(), { s: 13, c: C.apagado2, max: 1134 });
+    return svg(W, H, o);
+  };
+  G["comparativo-v"] = function () {
+    var W = 540, H = 960, anos = anosComparativo(), max = escalaComp(anos);
+    var o = cabecalhoV(W, "ABSTENÇÃO, BRANCOS E NULOS", "1º turno · " + anos.map(function (a) { return a.ano; }).join(", "));
+    GRUPOS_COMP.forEach(function (gr, gi) {
+      var y0 = 200 + gi * 235;
+      o += t(35, y0, gr[1], { s: 26, b: true, ls: 2 });
+      anos.forEach(function (a, ai) {
+        var y = y0 + 30 + ai * 58, x = 110, w = 280, val = a[gr[0]];
+        o += t(35, y + 26, String(a.ano), { s: 20, b: true, c: ai === anos.length - 1 ? C.texto : C.apagado });
+        o += r(x, y, w, 36, "#152036", 8);
+        if (val > 0) o += r(x, y, Math.max(8, w * val / max), 36, CORES_ANO[ai] || C.destaque, 8);
+        o += t(505, y + 27, val > 0 ? pct(val) : "—", { s: 24, b: true, a: "end", c: ai === anos.length - 1 ? C.texto : "#c9d6e6" });
+      });
+    });
+    return svg(W, H, o + t(35, 945, "Fonte: TSE · abstenção sobre o eleitorado; brancos e nulos sobre os votos", { s: 11, c: C.apagado2 }));
+  };
+
   window.GCTSE_GRAFICOS = {
     lista: [
       { id: "presidente-h", nome: "Presidente — Brasil", f: "h" },
@@ -579,13 +768,19 @@
       { id: "lideranca-h", nome: "Liderança por estado", f: "h" },
       { id: "abstencao-h", nome: "Abstenção, brancos e nulos", f: "h" },
       { id: "abstencao-mapa-h", nome: "Mapa da abstenção", f: "h" },
+      { id: "pres2t-h", nome: "Presidente — 2º turno", f: "h" },
+      { id: "senado-h", nome: "Senado: atual × 2027", f: "h" },
+      { id: "comparativo-h", nome: "2018 × 2022 × 2026", f: "h" },
       { id: "urnas-v", nome: "Urnas apuradas", f: "v" },
       { id: "votos-v", nome: "Brancos e nulos", f: "v" },
       { id: "presidente-v", nome: "Presidente", f: "v" },
       { id: "comparecimento-v", nome: "Comparecimento", f: "v" },
       { id: "lideranca-v", nome: "Liderança por estado", f: "v" },
       { id: "abstencao-v", nome: "Abstenção, brancos e nulos", f: "v" },
-      { id: "abstencao-mapa-v", nome: "Mapa da abstenção", f: "v" }
+      { id: "abstencao-mapa-v", nome: "Mapa da abstenção", f: "v" },
+      { id: "pres2t-v", nome: "Presidente — 2º turno", f: "v" },
+      { id: "senado-v", nome: "Senado: 2027", f: "v" },
+      { id: "comparativo-v", nome: "2018 × 2022 × 2026", f: "v" }
     ],
     desenhar: function (id) { return G[id] ? G[id]() : null; },
     ajustarSelos: ajustarSelos,

@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 2.15 - apuracao de PRESIDENTE em graficos
+ gctse GRAFICOS 2.16 - apuracao de PRESIDENTE em graficos
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -120,6 +120,18 @@
    extrair ou criar pasta). Na mao, so UMA vez em cada OBS: escolher o
    canal da DeckLink. Passo a passo: OBS-DECKLINK.txt (ABRIR-OBS.bat
    reabre um OBS fechado; ENDERECOS-OBS.bat = plano B na mao).
+
+---------------------------------------------------------------------------
+ RESULTADO FINAL (2.16) - telas novas no gerenciador e no rodizio
+---------------------------------------------------------------------------
+
+   Presidente - 2o turno ... so os dois do 2o turno (TSE), foto, % e votos
+   Senado: atual x 2027 .... hemiciclo de 81 cadeiras + tabela por partido.
+                             Numeros em web\senado-config.js (nao saem do
+                             boletim do TSE): confira; "fonte" = credito.
+   2018 x 2022 x 2026 ...... abstencao, brancos e nulos. 2026 ao vivo do
+                             TSE; 2018 (e 2022 sem o ESTADOS.bat) em
+                             web\comparativo-config.js.
 
 ---------------------------------------------------------------------------
  VER-ELEITO.bat - estado eleito no site do TSE mas sem ELEITO na tela?
