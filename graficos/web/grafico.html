@@ -132,6 +132,10 @@
   document.addEventListener("keydown", function (e) { if (e.key === "p" || e.key === "P") salvarPNG(); });
 
   window.__gctseRedesenhar = function () { ultimo = ""; desenhar(); };   // foto que falhou: refaz sem ela
+  // Comando do gerenciador (pela saida): deputados manual "sp:2".
+  window.GCTSE_GRAFICO_CONTROLE = {
+    deputados: function (v) { window.__gctseDep = v; }   // o tique de 0,5 s redesenha com a troca suave
+  };
   desenhar();
   setInterval(recarregar, 3000);
   if (paginada) setInterval(desenhar, 500);

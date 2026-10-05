@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 3.3 - apuracao em graficos (versao final)
+ gctse GRAFICOS 3.4 - apuracao em graficos (versao final)
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -22,6 +22,12 @@
    GIRO DOS ESTADOS (Governador e Senador, um estado por vez)
    RESUMO (7 telas de fechamento)
    GERENCIADOR (escolhe o que vai para as saidas SDI da DeckLink)
+
+ NOVO NA 3.4
+   - Governadores: barrinha com o nome do eleito embaixo de cada foto
+     ("2o TURNO" em quem aguarda).
+   - Deputados federais: no gerenciador, escolha o estado e passe as telas
+     pelas setas, sem troca automatica (ver DEPUTADOS abaixo).
 
  NOVO NA 3.3 - 2o TURNO E TELAS NO ESTILO TELAO (ver abaixo)
    - Apuracao por regiao e estado, Presidente + mapa (1o e 2o turno),
@@ -312,7 +318,13 @@
      por_tela .... candidatos por tela (ate 5)
      segundos .... tempo de cada tela
    Foto que o TSE nao tiver: aparecem as iniciais. Pacote SEM-FOTOS: so
-   iniciais. No rodizio, de a esta tela um tempo maior no gerenciador -
+   iniciais.
+
+   NAVEGACAO MANUAL (gerenciador): o botao "Deputados federais eleitos
+   (escolher estado)" abre o painel com os 27 estados por regiao e as
+   setas. Clicou no estado = 1a tela dele; "proximo"/"anterior" passam de
+   5 em 5 e seguem para o estado seguinte. A tela NAO troca sozinha.
+   "troca automatica" volta ao rodizio dos estados do deputados-config.js. No rodizio, de a esta tela um tempo maior no gerenciador -
    ela continua trocando dentro do proprio tempo e recomeca do 1o estado
    cada vez que entra.
 

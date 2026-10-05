@@ -75,6 +75,8 @@
   .regs .reg { font-weight: 800; letter-spacing: 1px; text-align: left; white-space: nowrap; }
   .regs .ufs { display: flex; flex-wrap: wrap; gap: 4px; }
   .regs .ufs button { width: 46px; padding: 6px 0; }
+  .ctldep .depregs { margin-top: 6px; }
+  .ctldep .depregs button.ativo { background: var(--azul); border-color: var(--azul-borda); color: #fff; }
 </style>
 <script>try { if (localStorage.getItem("gctse-tema") === "escuro") document.documentElement.className = "escuro"; } catch (e) { }</script>
 </head>
@@ -87,6 +89,7 @@
 
 <script charset="utf-8" src="giro-config.js"></script>
 <script charset="utf-8" src="apresentacao-config.js"></script>
+<script charset="utf-8" src="deputados-config.js"></script>
 <script charset="utf-8" src="graficos.js"></script>
 <script charset="utf-8" src="dados.js"></script>
 <script charset="utf-8" src="estados.js"></script>
@@ -131,6 +134,7 @@
     if (id === "apresentacao") return "Apresentação automática (" + rodizioAtual(S).length + " telas, " + tempoAtual(S) + " s cada)";
     if (id === "giro") return "Giro dos estados";
     if (id === "resumo") return "Resumo (7 telas)";
+    if (/^deputados-/.test(id)) { var ad = estado && estado[S.id] ? String(estado[S.id].acao || "") : ""; var md = /^dep:([a-z]{2}):(\d+)$/.exec(ad); return "Deputados federais eleitos — " + (md ? md[1].toUpperCase() + " (tela " + (+md[2] + 1) + ")" : "troca automática"); }
     if (/^presloc-/.test(id)) { var a = estado && estado[S.id] ? String(estado[S.id].acao || "") : ""; return "Presidente | " + (a.indexOf("alvo:") === 0 ? a.slice(5).toUpperCase() : "estado ou região"); }
     var g = window.GCTSE_GRAFICOS.lista.filter(function (x) { return x.id === id; })[0];
     return g ? g.nome : id;
@@ -165,6 +169,23 @@
       var n = posicao(s).tela || 1; n = ((n - 1 + d + RESUMO.length) % RESUMO.length) + 1;
       return comandar(s, acaoResumo(s, n));
     }
+  }
+  // Deputados: lista de telas (estado, n-esima tela do estado) na ordem regiao > estado.
+  function depPags() { try { return window.GCTSE_GRAFICOS.depPaginas(); } catch (e) { return []; } }
+  function primeiroDep() {
+    var cfgD = (window.GCTSE_DEPUTADOS || {}).estados || [], ps = depPags();
+    for (var i = 0; i < ps.length; i++) if (cfgD.indexOf(ps[i].uf) >= 0) return ps[i].uf;
+    return ps.length ? ps[0].uf : "sp";
+  }
+  function posDep(s) {
+    var a = estado && estado[s] ? String(estado[s].acao || "") : "", m = /^dep:([a-z]{2}):(\d+)$/.exec(a);
+    return m ? { uf: m[1], k: +m[2] } : null;
+  }
+  function navDep(S, d) {
+    var ps = depPags(); if (!ps.length) return;
+    var p = posDep(S.id), i = 0;
+    if (p) { for (var j = 0; j < ps.length; j++) if (ps[j].uf === p.uf && ps[j].k === p.k) { i = j; break; } i = (i + d + ps.length) % ps.length; }
+    comandar(S.id, "dep:" + ps[i].uf + ":" + ps[i].k);
   }
   function pararAuto(s) { clearInterval(autoTimer[s]); autoTimer[s] = null; }
   function alternarAuto(s) {
@@ -232,7 +253,10 @@
     botoesEm(gE, itensDe(["governadores", "govpartido", "senado"]).concat([
       ["giro", "Giro dos estados", "uf:" + (ordem.indexOf(String(cfg.estado_destaque || "pr")) >= 0 ? String(cfg.estado_destaque || "pr") : ordem[0])],
       ["resumo", "Resumo (7 telas)", "tela:1"]]));
-    botoesEm(bloco("camara", "CÂMARA DOS DEPUTADOS"), itensDe(["camara", "deputados"]));
+    // Deputados: entra na navegacao manual (estado escolhido + setas).
+    botoesEm(bloco("camara", "CÂMARA DOS DEPUTADOS"), itensDe(["camara", "deputados"]).map(function (it) {
+      return /^deputados-/.test(it[0]) ? [it[0], it[1] + " (escolher estado)", "dep:" + primeiroDep() + ":0"] : it;
+    }));
     botoesEm(bloco("comparativos", "COMPARATIVOS"), itensDe(["turnos", "abstencao", "abstencao-mapa", "comparativo", "comparecimento", "votos"]));
     var resto = lista.filter(function (g) { return !usados[g.id]; }).map(function (g) { return [g.id, g.nome]; });
     if (resto.length) botoesEm(bloco("auto", "OUTRAS TELAS"), resto);
@@ -259,6 +283,28 @@
     dica.textContent = "O giro automático troca a cada " + (cfg.tempo_auto_segundos || 10) + " s enquanto esta página estiver aberta.";
     ctl.appendChild(dica);
     col.appendChild(ctl);
+    // controle dos deputados: estado + setas (sem troca automatica)
+    var cd = document.createElement("div"); cd.className = "controle ctldep";
+    var d1 = document.createElement("div"); d1.className = "linha";
+    d1.appendChild(botao("◀ anterior", function () { navDep(S, -1); }));
+    d1.appendChild(botao("próximo ▶", function () { navDep(S, 1); }));
+    var bAuto = botao("troca automática", function () { definir(S.id, "deputados-" + S.f, ""); }); bAuto.className = "auto depauto"; d1.appendChild(bAuto);
+    var pos = document.createElement("span"); pos.className = "deppos"; pos.style.cssText = "font-weight:700;margin-left:8px"; d1.appendChild(pos);
+    cd.appendChild(d1);
+    var dr = document.createElement("div"); dr.className = "regs depregs";
+    REGIOES_MENU.forEach(function (rg) {
+      var lb = document.createElement("span"); lb.className = "reg"; lb.textContent = rg[0]; lb.style.cssText = "font-weight:800;letter-spacing:1px;font-size:13px"; dr.appendChild(lb);
+      var bx = document.createElement("div"); bx.className = "ufs";
+      rg[2].forEach(function (u) {
+        var b = botao(u.toUpperCase(), function () { comandar(S.id, "dep:" + u + ":0"); }); b.dataset.d = u; bx.appendChild(b);
+      });
+      dr.appendChild(bx);
+    });
+    cd.appendChild(dr);
+    var dd = document.createElement("div"); dd.className = "dica";
+    dd.textContent = "Escolha o estado e passe as telas pelas setas (5 eleitos por tela, do mais votado ao menos). Na Apresentação automática a tela continua trocando sozinha.";
+    cd.appendChild(dd);
+    col.appendChild(cd);
     cols.appendChild(col);
     col.querySelectorAll(".girar button").forEach(function (b) { b.onclick = function () { pedir("/girar?graus=" + b.dataset.g); }; });
     var q = col.querySelector(".previa"), f = q.querySelector("iframe");
@@ -345,6 +391,7 @@
       if (pos.ufr) ufResumo[S.id] = pos.ufr;
       col.querySelector(".noar .tela").textContent = txt + (e.quando ? "  (desde " + e.quando + ")" : "");
       col.querySelectorAll(".botoes button[data-k], .regs button[data-k]").forEach(function (b) { b.classList.toggle("ativo", b.dataset.k === e.tela || b.dataset.k === e.tela + "|" + e.acao); });
+      col.querySelectorAll(".controle.ctldep .depregs button").forEach(function (b) { if (!b.dataset.d) b.classList.remove("ativo"); });
       col.querySelectorAll(".girar button").forEach(function (b) { b.classList.toggle("ativo", String(estado.girar_v) === b.dataset.g); });
       var ctl = col.querySelector(".controle");
       ctl.classList.toggle("on", e.tela === "giro" || e.tela === "resumo");
@@ -354,6 +401,18 @@
       var chaveTl = pos.ufr ? "tela:" + TELA_ESTADO : e.acao;
       ctl.querySelectorAll(".uf button, .tl button").forEach(function (b) { b.classList.toggle("ativo", b.dataset.k === e.acao || b.dataset.k === chaveTl); });
       ctl.querySelector(".auto").classList.toggle("ligado", !!autoTimer[S.id]);
+      var cd = col.querySelector(".ctldep"), emDep = /^deputados-/.test(e.tela), pd = posDep(S.id);
+      cd.classList.toggle("on", emDep);
+      if (emDep) {
+        var ps = depPags(), nUf = ps.filter(function (x) { return pd && x.uf === pd.uf; }).length;
+        cd.querySelector(".deppos").textContent = pd ? pd.uf.toUpperCase() + " — tela " + (pd.k + 1) + " de " + (nUf || "?") : "troca automática (rodízio de estados)";
+        cd.querySelectorAll("button[data-d]").forEach(function (b) {
+          b.classList.toggle("ativo", !!pd && b.dataset.d === pd.uf);
+          b.disabled = !ps.some(function (x) { return x.uf === b.dataset.d; });
+          b.style.opacity = b.disabled ? 0.4 : 1;
+        });
+        cd.querySelector(".depauto").classList.toggle("ligado", !pd);
+      }
       ctl.querySelector(".auto").textContent = autoTimer[S.id] ? "giro automático: LIGADO" : "giro automático";
     });
   }

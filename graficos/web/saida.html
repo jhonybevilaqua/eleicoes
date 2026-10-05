@@ -57,7 +57,8 @@
       return "resumo-" + sufixo + ".html" + (acao.indexOf("tela:") === 0 ? "?tela=" + encodeURIComponent(acao.slice(5)) : "");
     }
     // grafico com alvo (Presidente | estado ou regiao): acao "alvo:sp"
-    if (/^[a-z0-9-]+$/.test(tela)) return "grafico.html?g=" + encodeURIComponent(tela) + (acao.indexOf("alvo:") === 0 ? "&a=" + encodeURIComponent(acao.slice(5)) : "");
+    if (/^[a-z0-9-]+$/.test(tela)) return "grafico.html?g=" + encodeURIComponent(tela) + (acao.indexOf("alvo:") === 0 ? "&a=" + encodeURIComponent(acao.slice(5)) : "") +
+      (acao.indexOf("dep:") === 0 ? "&dep=" + encodeURIComponent(acao.slice(4)) : "");
     return null;
   }
 
@@ -101,8 +102,9 @@
   function comando(acao) {
     if (visivel < 0) return;
     var w = quadros[visivel].contentWindow, c = null;
-    try { c = w.GCTSE_GIRO_CONTROLE || w.GCTSE_RESUMO_CONTROLE; } catch (e) { return; }
+    try { c = w.GCTSE_GIRO_CONTROLE || w.GCTSE_RESUMO_CONTROLE || w.GCTSE_GRAFICO_CONTROLE; } catch (e) { return; }
     if (!c) return;
+    if (acao.indexOf("dep:") === 0) { if (c.deputados) c.deputados(acao.slice(4)); return; }
     if (acao === "proximo") c.proximo();
     else if (acao === "anterior") c.anterior();
     else if (acao === "auto" && c.alternarAuto) c.alternarAuto();

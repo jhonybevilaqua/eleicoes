@@ -1026,9 +1026,10 @@
   var DEP_REGIOES = [["Norte", ["ac", "am", "ap", "pa", "ro", "rr", "to"]], ["Nordeste", ["al", "ba", "ce", "ma", "pb", "pe", "pi", "rn", "se"]],
     ["Centro-Oeste", ["df", "go", "ms", "mt"]], ["Sudeste", ["es", "mg", "rj", "sp"]], ["Sul", ["pr", "rs", "sc"]]];
   var T0_DEP = Date.now();   // a troca comeca na 1a tela quando a pagina abre
-  function paginasDeputados() {
+  // todos = navegacao manual (gerenciador): os 27 estados, mesma ordem.
+  function paginasDeputados(todos) {
     var cfg = window.GCTSE_DEPUTADOS || {}, porTela = Math.max(1, Math.min(5, +cfg.por_tela || 5));
-    var pedidos = (cfg.estados || []).map(function (u) { return String(u).toLowerCase().trim(); });
+    var pedidos = todos ? Object.keys(DEP_UF) : (cfg.estados || []).map(function (u) { return String(u).toLowerCase().trim(); });
     var cm = (window.GCTSE_ESTADOS || {}).camara || {}, pags = [];
     DEP_REGIOES.forEach(function (rg) {
       rg[1].filter(function (u) { return pedidos.indexOf(u) >= 0; })
@@ -1045,6 +1046,18 @@
         });
     });
     return pags;
+  }
+  // Navegacao manual: "sp:2" = Sao Paulo, 3a tela do estado (vem do
+  // gerenciador pela URL ?dep= ou por comando na saida).
+  function depManual() {
+    var v = String(window.__gctseDep || "");
+    if (!v) { try { v = new URLSearchParams(location.search).get("dep") || ""; } catch (e) { v = ""; } }
+    return /^[a-z]{2}:\d+$/.test(v) ? v : "";
+  }
+  function indiceManual(pags, v) {
+    var uf = v.split(":")[0], k = +v.split(":")[1], ult = -1;
+    for (var i = 0; i < pags.length; i++) if (pags[i].uf === uf) { ult = i; if (pags[i].k === k) return i; }
+    return ult >= 0 ? ult : 0;
   }
   function indiceDeputados(pags) {
     var seg = Math.max(3, +(window.GCTSE_DEPUTADOS || {}).segundos || 8);
@@ -1101,9 +1114,9 @@
     return svg(W, H, o + t(W / 2, H / 2, "aguardando os eleitos do TSE (ESTADOS.bat)", { s: v ? 18 : 24, c: C.apagado, a: "middle" }));
   }
   G["deputados-h"] = function () {
-    var W = 1280, H = 720, pags = paginasDeputados();
+    var W = 1280, H = 720, man = depManual(), pags = paginasDeputados(!!man);
     if (!pags.length) return semDeputados(W, H, false);
-    var ip = indiceDeputados(pags), pg = pags[ip];
+    var ip = man ? indiceManual(pags, man) : indiceDeputados(pags), pg = pags[ip];
     var o = t(73, 57, DEP_UF[pg.uf], { s: 36, b: true, ls: 1, max: W - 73 - 540 }) +
       t(73, 85, subDep(pg), { s: 18, b: true, c: "#c9d6e6", max: W - 146 }) + seloH(W, seloDep(pg.x));
     var gap = 18, w = (1134 - gap * 4) / 5, y = 118, h = 530;
@@ -1128,9 +1141,9 @@
     return svg(W, H, o);
   };
   G["deputados-v"] = function () {
-    var W = 540, H = 960, pags = paginasDeputados();
+    var W = 540, H = 960, man = depManual(), pags = paginasDeputados(!!man);
     if (!pags.length) return semDeputados(W, H, true);
-    var ip = indiceDeputados(pags), pg = pags[ip];
+    var ip = man ? indiceManual(pags, man) : indiceDeputados(pags), pg = pags[ip];
     var o = r(35, 48, 6, 38, C.destaque) + t(53, 80, DEP_UF[pg.uf], { s: 32, b: true, ls: 1, max: W - 53 - 35 }) +
       t(53, 106, "DEPUTADOS FEDERAIS ELEITOS · " + (pg.ini + 1) + "º a " + (pg.ini + pg.cs.length) + "º de " + pg.total,
         { s: 15, b: true, c: "#c9d6e6", max: W - 53 - 35 }) + seloV(W, seloDep(pg.x));
@@ -1485,14 +1498,27 @@
     if (modoPartido) return (st.tipo === "eleito1" || st.tipo === "eleito2") ? corPartidoCamara(st.c.partido, 0) : (st.tipo === "segundo" ? "#3a4c66" : null);
     return st.tipo === "eleito1" ? COR_T1 : (st.tipo === "eleito2" || st.tipo === "segundo") ? COR_T2 : null;
   }
-  function cartaoGov(k, x, y, w, h, modoPartido) {
-    var st = govEstado(k), borda = corGov(k, modoPartido) || "#3a4c66", o = "";
-    o += r(x, y, w, 18, borda, 3) + t(x + w / 2, y + 13, k.toUpperCase(), { s: 12, b: true, a: "middle", ls: 1 });
-    var fy = y + 20, fh = h - 20;
-    o += r(x - 2, fy - 2, w + 4, fh + 4, borda, 4);
-    if (st.tipo === "eleito1" || st.tipo === "eleito2") o += fotoOuSilhueta(urlFotoGov(k, st), x, fy, w, fh);
+  // Cartao: sigla em cima, foto, e a barrinha com o nome do eleito embaixo
+  // (aguardando: "2º TURNO"). fn = tamanho da letra do nome.
+  function cartaoGov(k, x, y, w, h, modoPartido, fn) {
+    var st = govEstado(k), borda = corGov(k, modoPartido) || "#3a4c66", o = "", eleito = st.tipo === "eleito1" || st.tipo === "eleito2";
+    fn = fn || 10;
+    var hl = Math.round(fn * 1.6), hb = Math.round(fn * 2.6);   // sigla e barra do nome
+    o += r(x, y, w, hl, borda, 3) + t(x + w / 2, y + hl * 0.74, k.toUpperCase(), { s: Math.round(fn * 1.15), b: true, a: "middle", ls: 1 });
+    var fy = y + hl + 2, fh = h - hl - 2 - hb;
+    o += r(x - 2, fy - 2, w + 4, fh + hb + 4, borda, 4);
+    if (eleito) o += fotoOuSilhueta(urlFotoGov(k, st), x, fy, w, fh);
     else o += silhueta(x, fy, w, fh);
     if (st.tipo === "segundo") o += '<rect x="' + x + '" y="' + fy + '" width="' + w + '" height="' + fh + '" fill="url(#hach)" opacity="0.35"/>';
+    o += r(x, fy + fh, w, hb, "#0b1220", 0);
+    if (eleito && st.c) {
+      var ln = linhasNome(st.c.nome, Math.max(8, Math.round(w / (fn * 0.62))));
+      if (ln.length === 1) o += t(x + w / 2, fy + fh + hb * 0.62, ln[0], { s: fn, b: true, a: "middle", max: w - 4 });
+      else ln.forEach(function (l, j) { o += t(x + w / 2, fy + fh + hb * (j ? 0.86 : 0.43), l, { s: Math.round(fn * 0.92), b: true, a: "middle", max: w - 4 }); });
+    } else {
+      var tx = st.tipo === "segundo" ? "2º TURNO" : (st.tipo === "apurando" ? "APURANDO" : "—");
+      o += t(x + w / 2, fy + fh + hb * 0.62, tx, { s: Math.round(fn * 0.9), b: true, c: st.tipo === "segundo" ? "#7fb8ff" : C.apagado, a: "middle", max: w - 4 });
+    }
     return o;
   }
   function contaGov() {
@@ -1535,10 +1561,10 @@
     if (!v) {
       var W = 1280, H = 720;
       o = HACH + t(73, 57, "GOVERNADORES", { s: 36, b: true, ls: 1 }) + t(73, 85, sub, { s: 18, c: C.apagado, max: 640 }) + seloH(W, sl);
-      var cw = 70, ch = 112, gx = 13, gy = 18;
+      var cw = 74, ch = 126, gx = 10, gy = 8;
       GRADE_GOV.forEach(function (lin, li) {
-        var x0 = 73 + (li === 3 ? (cw + gx) / 2 : 0);
-        lin.forEach(function (k, ci) { o += cartaoGov(k, x0 + ci * (cw + gx), 118 + li * (ch + gy), cw, ch, modoPartido); });
+        var x0 = 70 + (li === 3 ? (cw + gx) / 2 : 0);
+        lin.forEach(function (k, ci) { o += cartaoGov(k, x0 + ci * (cw + gx), 110 + li * (ch + gy), cw, ch, modoPartido, 10); });
       });
       o += mapaCor(700, 112, 0.74, function (k) { return corGov(k, modoPartido); }, { rotulos: true, fonte: 12, apagado: "#22324a", hachura: hachTem });
       o += legendaGov(700, 626, modoPartido, false);
@@ -1546,13 +1572,13 @@
     }
     var W2 = 540, H2 = 960;
     o = HACH + r(35, 48, 6, 38, C.destaque) + t(53, 80, "GOVERNADORES", { s: 32, b: true, ls: 1 }) + t(53, 106, sub, { s: 13, c: C.apagado, max: 450 }) + seloV(W2, sl);
-    o += mapaCor(118, 160, 0.49, function (k) { return corGov(k, modoPartido); }, { rotulos: true, fonte: 9, apagado: "#22324a", hachura: hachTem });
-    var cw2 = 56, ch2 = 82, gx2 = 12, todos = [].concat.apply([], GRADE_GOV);
+    o += mapaCor(126, 158, 0.47, function (k) { return corGov(k, modoPartido); }, { rotulos: true, fonte: 9, apagado: "#22324a", hachura: hachTem });
+    var cw2 = 60, ch2 = 92, gx2 = 7, todos = [].concat.apply([], GRADE_GOV);
     todos.forEach(function (k, i) {
       var li = Math.floor(i / 7), ci = i % 7, x0 = 36 + (li === 3 ? (cw2 + gx2) / 2 : 0);
-      o += cartaoGov(k, x0 + ci * (cw2 + gx2), 482 + li * (ch2 + 8), cw2, ch2, modoPartido);
+      o += cartaoGov(k, x0 + ci * (cw2 + gx2), 470 + li * (ch2 + 6), cw2, ch2, modoPartido, 8);
     });
-    return svg(W2, H2, o + legendaGov(36, 864, modoPartido, true));
+    return svg(W2, H2, o + legendaGov(36, 888, modoPartido, true));
   }
   G["governadores-h"] = function () { return telaGov(false, false); };
   G["governadores-v"] = function () { return telaGov(true, false); };
@@ -1664,9 +1690,13 @@
     // Telas que trocam sozinhas (deputados): muda quando a tela da vez muda.
     pagina: function (id) {
       if (String(id).indexOf("deputados") !== 0) return "";
+      var man = depManual();
+      if (man) return "m:" + man;           // manual: so troca pelo comando
       var pags = paginasDeputados();
       return pags.length + ":" + indiceDeputados(pags);
     },
+    // Telas dos deputados para a navegacao manual (gerenciador).
+    depPaginas: function () { return paginasDeputados(true).map(function (p) { return { uf: p.uf, k: p.k, n: p.n, total: p.total }; }); },
     reiniciarPaginas: function () { T0_DEP = Date.now(); },
     ajustarSelos: ajustarSelos,
     dados: D,
