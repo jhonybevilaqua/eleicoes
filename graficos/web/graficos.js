@@ -1770,6 +1770,126 @@
   G["mulheres-h"] = function () { return telaFem(false); };
   G["mulheres-v"] = function () { return telaFem(true); };
 
+  // ---- SENADORES ELEITOS: 2 por estado, foto + nome + partido, mapa em blocos
+  // Boletim de Senador do TSE (estados.js, cargo 5; no 2o turno, o do 1o).
+  // Eleito = situacao do TSE (ou a conta matematica do coletor).
+  function senEstado(k) {
+    var u = (E().ufs || {})[k], sg = u && u.sen && u.sen.tem ? u.sen : null;
+    if (!sg) return { tem: false, el: [] };
+    var cs = comoLista(sg.candidatos), el = cs.filter(function (c) { return c.eleito; })
+      .sort(function (a, b) { return (+b.votos || 0) - (+a.votos || 0); });
+    return { tem: true, el: el, vagas: Math.max(+sg.vagas || 0, 2), urnas: sg.urnas_pct };
+  }
+  function urlFotoSen(k, c) {
+    var tse = E().tse;
+    if (window.GCTSE_FOTOS_DO_TSE !== true || window.__gctseSemFotos || !tse || !tse.base || !c || !c.sqcand) return "";
+    var url = tse.base + "/" + tse.ciclo + "/" + (tse.eleicao_1turno || tse.eleicao) + "/fotos/" + k + "/" + c.sqcand + ".jpeg";
+    return FOTO_DEP.falhou[url] ? "" : url;
+  }
+  // Mapa em blocos (cada estado um quadrado na posicao aproximada).
+  var BLOCOS_UF = { rr: [1, 0], ap: [2, 0], am: [1, 1], pa: [2, 1], ma: [3, 1], ce: [4, 1], rn: [5, 1],
+    ac: [0, 2], ro: [1, 2], mt: [2, 2], to: [3, 2], pi: [4, 2], pb: [5, 2], ms: [2, 3], go: [3, 3], ba: [4, 3], pe: [5, 3],
+    sp: [2, 4], df: [3, 4], mg: [4, 4], al: [5, 4], pr: [2, 5], rj: [3, 5], es: [4, 5], se: [5, 5], sc: [2, 6], rs: [2, 7] };
+  var COR_VAZIO_SEN = "#2a3a55";
+  function coresSen(k) {
+    var st = senEstado(k), c = st.el.map(function (x, i) { return corPartidoCamara(x.partido, i); });
+    if (!c.length) return [COR_VAZIO_SEN, COR_VAZIO_SEN];
+    if (c.length === 1 && (st.vagas || 2) > 1) return [c[0], COR_VAZIO_SEN];   // vaga ainda em aberto
+    return [c[0], c[1] || c[0]];
+  }
+  function blocoUF(k, x, y, l) {
+    var cc = coresSen(k), o;
+    if (cc[0] === cc[1]) o = r(x, y, l, l, cc[0], 3);
+    else o = '<polygon points="' + x + "," + y + " " + (x + l) + "," + y + " " + x + "," + (y + l) + '" fill="' + cc[0] + '"/>' +
+      '<polygon points="' + (x + l) + "," + y + " " + (x + l) + "," + (y + l) + " " + x + "," + (y + l) + '" fill="' + cc[1] + '"/>';
+    return o + r(x + l / 2 - l * 0.22, y + l / 2 - l * 0.15, l * 0.44, l * 0.3, "#0b1220", 2) +
+      t(x + l / 2, y + l / 2 + l * 0.09, k.toUpperCase(), { s: Math.round(l * 0.22), b: true, a: "middle" });
+  }
+  function mapaBlocos(x, y, l, gap) {
+    var o = "";
+    Object.keys(BLOCOS_UF).forEach(function (k) { var p = BLOCOS_UF[k]; o += blocoUF(k, x + p[0] * (l + gap), y + p[1] * (l + gap), l); });
+    return o;
+  }
+  // Cartao do estado: sigla em faixa (cor dos 2 partidos), 2 fotos com nome e partido.
+  function cartaoSen(k, x, y, w, h, fn) {
+    var st = senEstado(k), cc = coresSen(k), o = "", n = Math.max(2, Math.min(3, st.vagas || 2));
+    o += r(x, y, w, h, "rgba(8,14,32,0.82)", 5);
+    var hf = Math.round(fn * 2);
+    o += r(x, y, w / 2, hf, cc[0], 0) + r(x + w / 2, y, w / 2, hf, cc[1], 0);
+    o += r(x + w / 2 - fn * 1.6, y + 2, fn * 3.2, hf - 4, "#0b1220", 2) + t(x + w / 2, y + hf * 0.72, k.toUpperCase(), { s: Math.round(fn * 1.2), b: true, a: "middle" });
+    var pad = 4, gw = (w - pad * (n + 1)) / n, top = y + hf + pad, hb = Math.round(fn * 2.3), hp = Math.round(fn * 1.5);
+    var fh = h - hf - pad * 2 - hb - hp;
+    for (var i = 0; i < n; i++) {
+      var c = st.el[i], gx = x + pad + i * (gw + pad), cor = c ? corPartidoCamara(c.partido, i) : COR_VAZIO_SEN;
+      o += r(gx - 1, top - 1, gw + 2, fh + hb + hp + 2, cor, 3);
+      o += c ? fotoOuSilhueta(urlFotoSen(k, c), gx, top, gw, fh) : silhueta(gx, top, gw, fh);
+      o += r(gx, top + fh, gw, hb, "#0b1220", 0);
+      if (c) {
+        var ln = linhasNome(c.nome, Math.max(8, Math.round(gw / (fn * 0.62))));
+        if (ln.length === 1) o += t(gx + gw / 2, top + fh + hb * 0.62, ln[0], { s: fn, b: true, a: "middle", max: gw - 3 });
+        else ln.forEach(function (l, j) { o += t(gx + gw / 2, top + fh + hb * (j ? 0.86 : 0.43), l, { s: Math.round(fn * 0.9), b: true, a: "middle", max: gw - 3 }); });
+        o += r(gx, top + fh + hb, gw, hp, cor, 0) + t(gx + gw / 2, top + fh + hb + hp * 0.76, c.partido, { s: Math.round(fn * 0.95), b: true, c: "#0b1220", a: "middle", max: gw - 4 });
+      } else {
+        o += t(gx + gw / 2, top + fh + hb * 0.62, st.tem && st.urnas > 0 ? "APURANDO" : "AGUARDANDO", { s: Math.round(fn * 0.85), b: true, c: C.apagado, a: "middle", max: gw - 3 });
+        o += r(gx, top + fh + hb, gw, hp, COR_VAZIO_SEN, 0);
+      }
+    }
+    return o;
+  }
+  function contaSen() {
+    var pp = {}, n = 0, vagas = 0;
+    Object.keys(DEP_UF).forEach(function (k) {
+      var st = senEstado(k); vagas += st.tem ? (st.vagas || 2) : 2;
+      st.el.forEach(function (c) { pp[c.partido] = (pp[c.partido] || 0) + 1; n++; });
+    });
+    return { pp: pp, n: n, vagas: vagas };
+  }
+  function legendaSen(x, y, cols, cw, passo, fs) {
+    var cs = contaSen(), ls = Object.keys(cs.pp).sort(function (a, b) { return cs.pp[b] - cs.pp[a] || a.localeCompare(b); }), o = "";
+    ls.forEach(function (sg, i) {
+      var xx = x + (i % cols) * cw, yy = y + Math.floor(i / cols) * passo;
+      o += r(xx, yy - fs + 1, fs, fs, corPartidoCamara(sg, i), 3) + t(xx + fs + 8, yy, sg + " " + cs.pp[sg], { s: fs, b: true, max: cw - fs - 12 });
+    });
+    var i2 = ls.length, xx2 = x + (i2 % cols) * cw, yy2 = y + Math.floor(i2 / cols) * passo;
+    o += '<polygon points="' + xx2 + "," + (yy2 - fs + 1) + " " + (xx2 + fs) + "," + (yy2 - fs + 1) + " " + xx2 + "," + (yy2 + 1) + '" fill="#2f6bff"/>' +
+      '<polygon points="' + (xx2 + fs) + "," + (yy2 - fs + 1) + " " + (xx2 + fs) + "," + (yy2 + 1) + " " + xx2 + "," + (yy2 + 1) + '" fill="#e5132d"/>' +
+      t(xx2 + fs + 8, yy2, "2 partidos na UF", { s: Math.round(fs * 0.9), c: "#c9d6e6", max: cw - fs - 12 });
+    return o;
+  }
+  var GRADE_SEN = [["ac", "al", "am", "ap", "ba", "ce", "df"], ["es", "go", "ma", "mg", "ms", "mt", "pa"], ["pb", "pe", "pi", "pr", "rj", "rn", "ro"], ["rr", "rs", "sc", "se", "sp", "to"]];
+  function seloSen() {
+    var cs = contaSen();
+    if (cs.n >= cs.vagas && cs.n > 0) return { texto: cs.vagas + " VAGAS", cor: C.destaque };
+    return { texto: cs.n + " DE " + cs.vagas + " DEFINIDOS", cor: cs.n ? C.vermelho : C.trilho };
+  }
+  function telaSen(v) {
+    var cs = contaSen(), o, sub = cs.n + (cs.n === 1 ? " eleito" : " eleitos") + " · 2 por estado · cor = partido do eleito";
+    if (!v) {
+      var W = 1280, H = 720;
+      o = t(73, 57, "SENADORES", { s: 36, b: true, ls: 1 }) + t(73, 85, sub, { s: 18, c: C.apagado, max: 640 }) + seloH(W, seloSen());
+      var cw = 116, ch = 136, gx = 8, gy = 6;
+      GRADE_SEN.forEach(function (lin, li) {
+        var x0 = 60 + (li === 3 ? (cw + gx) / 2 : 0);
+        lin.forEach(function (k, ci) { o += cartaoSen(k, x0 + ci * (cw + gx), 110 + li * (ch + gy), cw, ch, 7.5); });
+      });
+      o += mapaBlocos(944, 110, 42, 4);
+      o += legendaSen(924, 520, 3, 100, 22, 12);
+      return svg(W, H, o + t(60, 700, "Fonte: TSE — senadores eleitos" + (E().turno === 2 ? " no 1º turno" : "") + " · mandato 2027–2035", { s: 13, c: C.apagado2 }));
+    }
+    var W2 = 540, H2 = 960;
+    o = r(35, 48, 6, 38, C.destaque) + t(53, 80, "SENADORES", { s: 32, b: true, ls: 1 }) + t(53, 106, sub, { s: 13, c: C.apagado, max: 450 }) + seloV(W2, seloSen());
+    var cw2 = 90, ch2 = 110, g2 = 5, todos = [].concat.apply([], GRADE_SEN), nUlt = todos.length % 5 || 5;
+    todos.forEach(function (k, i) {
+      var li = Math.floor(i / 5), ci = i % 5, ult = li === Math.floor((todos.length - 1) / 5);
+      var x0 = 38 + (ult ? (5 - nUlt) * (cw2 + g2) / 2 : 0);
+      o += cartaoSen(k, x0 + ci * (cw2 + g2), 162 + li * (ch2 + g2), cw2, ch2, 6.5);
+    });
+    o += legendaSen(40, 868, 4, 116, 17, 10);
+    return svg(W2, H2, o + t(35, 952, "Fonte: TSE — senadores eleitos · mandato 2027–2035", { s: 10, c: C.apagado2 }));
+  }
+  G["senadores-h"] = function () { return telaSen(false); };
+  G["senadores-v"] = function () { return telaSen(true); };
+
   window.GCTSE_GRAFICOS = {
     lista: [
       { id: "presidente-h", nome: "Presidente — Brasil", f: "h" },
@@ -1793,6 +1913,7 @@
       { id: "presloc-h", nome: "Presidente | Estado ou região", f: "h" },
       { id: "governadores-h", nome: "Governadores (1º verde · 2º azul)", f: "h" },
       { id: "govpartido-h", nome: "Governadores por partido", f: "h" },
+      { id: "senadores-h", nome: "Senadores eleitos (foto + partido)", f: "h" },
       { id: "turnos-h", nome: "1º × 2º turno: abstenção, brancos e nulos", f: "h" },
       { id: "urnas-v", nome: "Urnas apuradas", f: "v" },
       { id: "votos-v", nome: "Brancos e nulos", f: "v" },
@@ -1815,6 +1936,7 @@
       { id: "presloc-v", nome: "Presidente | Estado ou região", f: "v" },
       { id: "governadores-v", nome: "Governadores (1º verde · 2º azul)", f: "v" },
       { id: "govpartido-v", nome: "Governadores por partido", f: "v" },
+      { id: "senadores-v", nome: "Senadores eleitos (foto + partido)", f: "v" },
       { id: "turnos-v", nome: "1º × 2º turno: abstenção, brancos e nulos", f: "v" }
     ],
     desenhar: function (id) { return G[id] ? G[id]() : null; },

@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 3.6.1 - apuracao em graficos (versao final)
+ gctse GRAFICOS 3.7 - apuracao em graficos (versao final)
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -22,6 +22,14 @@
    GIRO DOS ESTADOS (Governador e Senador, um estado por vez)
    RESUMO (7 telas de fechamento)
    GERENCIADOR (escolhe o que vai para as saidas SDI da DeckLink)
+
+ NOVO NA 3.7
+   - Tela "Senadores eleitos (foto + partido)": os 2 eleitos de cada
+     estado com foto, nome e partido; mapa em blocos (dividido na
+     diagonal quando sao 2 partidos) e quantos eleitos por partido.
+     Vaga ainda nao definida: "APURANDO"/"AGUARDANDO" e meio bloco vazio.
+     Dados: boletim de Senador do TSE (ESTADOS.bat). Gerenciador: bloco
+     GOVERNADOR E SENADO.
 
  NOVO NA 3.6
    - Gerenciador: bloco "DEPUTADOS FEDERAIS | ESTADO OU REGIAO" (igual ao
