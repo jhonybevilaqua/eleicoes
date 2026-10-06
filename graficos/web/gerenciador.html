@@ -258,7 +258,7 @@
     gL.appendChild(regs);
     botoesEm(bloco("apuracao", "APURAÇÃO"), itensDe(["apuracao", "urnas"]));
     var gE = bloco("estados", "GOVERNADOR E SENADO");
-    botoesEm(gE, itensDe(["governadores", "govpartido", "senadores", "senado"]).concat([
+    botoesEm(gE, itensDe(["governadores", "govpartido", "senadores", "senadores1", "senadores2", "senado"]).concat([
       ["giro", "Giro dos estados", "uf:" + (ordem.indexOf(String(cfg.estado_destaque || "pr")) >= 0 ? String(cfg.estado_destaque || "pr") : ordem[0])],
       ["resumo", "Resumo (7 telas)", "tela:1"]]));
     botoesEm(bloco("camara", "CÂMARA DOS DEPUTADOS"), itensDe(["camara", "deputados", "mulheres"]).map(function (it) {

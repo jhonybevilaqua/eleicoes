@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 3.7 - apuracao em graficos (versao final)
+ gctse GRAFICOS 3.7.1 - apuracao em graficos (versao final)
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -30,6 +30,9 @@
      Vaga ainda nao definida: "APURANDO"/"AGUARDANDO" e meio bloco vazio.
      Dados: boletim de Senador do TSE (ESTADOS.bat). Gerenciador: bloco
      GOVERNADOR E SENADO.
+   - Senadores em DUAS telas, com cartoes e fotos maiores: "Senadores 1/2
+     (AC a PA)" e "Senadores 2/2 (PB a TO)"; a contagem por partido nas
+     duas e a do Brasil inteiro.
 
  NOVO NA 3.6
    - Gerenciador: bloco "DEPUTADOS FEDERAIS | ESTADO OU REGIAO" (igual ao

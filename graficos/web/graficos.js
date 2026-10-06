@@ -1890,6 +1890,41 @@
   G["senadores-h"] = function () { return telaSen(false); };
   G["senadores-v"] = function () { return telaSen(true); };
 
+  // Senadores em DUAS telas (cartoes maiores): parte 1 = AC..PA, parte 2 = PB..TO.
+  var SEN_PARTES = [["ac", "al", "am", "ap", "ba", "ce", "df", "es", "go", "ma", "mg", "ms", "mt", "pa"],
+                    ["pb", "pe", "pi", "pr", "rj", "rn", "ro", "rr", "rs", "sc", "se", "sp", "to"]];
+  function gradeSen(ufs, x0, y0, cols, cw, ch, gx, gy, fn, larguraTotal) {
+    var o = "", linhas = Math.ceil(ufs.length / cols);
+    ufs.forEach(function (k, i) {
+      var li = Math.floor(i / cols), ci = i % cols, nLin = li === linhas - 1 ? ufs.length - li * cols : cols;
+      var xi = x0 + (larguraTotal - (nLin * cw + (nLin - 1) * gx)) / 2;
+      o += cartaoSen(k, xi + ci * (cw + gx), y0 + li * (ch + gy), cw, ch, fn);
+    });
+    return o;
+  }
+  function telaSenParte(v, parte) {
+    var ufs = SEN_PARTES[parte], cs = contaSen(), o;
+    var de = DEP_UF[ufs[0]], ate = DEP_UF[ufs[ufs.length - 1]];
+    var sub = cs.n + (cs.n === 1 ? " eleito" : " eleitos") + " no Brasil · parte " + (parte + 1) + " de 2: " + ufs[0].toUpperCase() + " a " + ufs[ufs.length - 1].toUpperCase();
+    var tit = "SENADORES  " + (parte + 1) + "/2";
+    if (!v) {
+      var W = 1280, H = 720;
+      o = t(73, 57, tit, { s: 36, b: true, ls: 1 }) + t(73, 85, sub, { s: 18, c: C.apagado, max: 640 }) + seloH(W, seloSen());
+      o += gradeSen(ufs, 73, 104, 5, 214, 168, 16, 8, 10, 1134);
+      o += r(73, 632, 1134, 1, C.linha) + legendaSen(73, 656, 8, 142, 22, 12);
+      return svg(W, H, o + t(73, 708, "Fonte: TSE — senadores eleitos" + (E().turno === 2 ? " no 1º turno" : "") + " · mandato 2027–2035 · contagem por partido = Brasil", { s: 11, c: C.apagado2 }));
+    }
+    var W2 = 540, H2 = 960;
+    o = r(35, 48, 6, 38, C.destaque) + t(53, 80, tit, { s: 32, b: true, ls: 1 }) + t(53, 106, sub, { s: 13, c: C.apagado, max: 450 }) + seloV(W2, seloSen());
+    o += gradeSen(ufs, 35, 162, 3, 152, 132, 7, 6, 8, 470);
+    o += legendaSen(40, 880, 4, 116, 17, 10);
+    return svg(W2, H2, o + t(35, 952, "Fonte: TSE — senadores eleitos · contagem por partido = Brasil", { s: 10, c: C.apagado2 }));
+  }
+  G["senadores1-h"] = function () { return telaSenParte(false, 0); };
+  G["senadores2-h"] = function () { return telaSenParte(false, 1); };
+  G["senadores1-v"] = function () { return telaSenParte(true, 0); };
+  G["senadores2-v"] = function () { return telaSenParte(true, 1); };
+
   window.GCTSE_GRAFICOS = {
     lista: [
       { id: "presidente-h", nome: "Presidente — Brasil", f: "h" },
@@ -1914,6 +1949,8 @@
       { id: "governadores-h", nome: "Governadores (1º verde · 2º azul)", f: "h" },
       { id: "govpartido-h", nome: "Governadores por partido", f: "h" },
       { id: "senadores-h", nome: "Senadores eleitos (foto + partido)", f: "h" },
+      { id: "senadores1-h", nome: "Senadores 1/2 (AC a PA)", f: "h" },
+      { id: "senadores2-h", nome: "Senadores 2/2 (PB a TO)", f: "h" },
       { id: "turnos-h", nome: "1º × 2º turno: abstenção, brancos e nulos", f: "h" },
       { id: "urnas-v", nome: "Urnas apuradas", f: "v" },
       { id: "votos-v", nome: "Brancos e nulos", f: "v" },
@@ -1937,6 +1974,8 @@
       { id: "governadores-v", nome: "Governadores (1º verde · 2º azul)", f: "v" },
       { id: "govpartido-v", nome: "Governadores por partido", f: "v" },
       { id: "senadores-v", nome: "Senadores eleitos (foto + partido)", f: "v" },
+      { id: "senadores1-v", nome: "Senadores 1/2 (AC a PA)", f: "v" },
+      { id: "senadores2-v", nome: "Senadores 2/2 (PB a TO)", f: "v" },
       { id: "turnos-v", nome: "1º × 2º turno: abstenção, brancos e nulos", f: "v" }
     ],
     desenhar: function (id) { return G[id] ? G[id]() : null; },
