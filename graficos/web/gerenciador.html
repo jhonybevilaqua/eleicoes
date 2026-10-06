@@ -185,6 +185,16 @@
     } else if (p) { for (var j = 0; j < ps.length; j++) if (ps[j].uf === p.uf && ps[j].k === p.k) { i = j; break; } i = (i + d + ps.length) % ps.length; }
     comandar(S.id, "dep:" + ps[i].uf + ":" + ps[i].k);
   }
+  // Estado ainda sem eleitos na tela: botao tracejado + motivo ao passar o
+  // mouse (vem do ESTADOS.bat). Continua clicavel: a tela avisa "aguardando".
+  function marcarFaltaDep(col, ps) {
+    var mot = (window.GCTSE_ESTADOS || {}).camara_motivos || {};
+    col.querySelectorAll(".regs button[data-d]").forEach(function (b) {
+      var u = b.dataset.d, tem = ps.some(function (x) { return x.uf === u; });
+      b.style.borderStyle = tem ? "" : "dashed"; b.style.opacity = tem ? 1 : 0.55;
+      b.title = tem ? "" : u.toUpperCase() + ": sem eleitos na tela ainda — " + (mot[u] || "o ESTADOS.bat ainda não leu este estado");
+    });
+  }
   function pararAuto(s) { clearInterval(autoTimer[s]); autoTimer[s] = null; }
   function alternarAuto(s) {
     if (autoTimer[s]) { pararAuto(s); pintar(); return; }
@@ -408,15 +418,13 @@
       ctl.querySelectorAll(".uf button, .tl button").forEach(function (b) { b.classList.toggle("ativo", b.dataset.k === e.acao || b.dataset.k === chaveTl); });
       ctl.querySelector(".auto").classList.toggle("ligado", !!autoTimer[S.id]);
       var cd = col.querySelector(".ctldep"), emDep = /^deputados-/.test(e.tela), pd = posDep(S.id);
+      if (!emDep) marcarFaltaDep(col, depPags());
       cd.classList.toggle("on", emDep);
       if (emDep) {
         var ps = depPags();
         cd.querySelector(".deppos").textContent = !pd ? "troca automática (estados do deputados-config.js)" :
           (pd.regiao ? "região " + pd.nome + " (trocando entre os estados)" : pd.uf.toUpperCase() + " — os 5 mais votados");
-        col.querySelectorAll(".regs button[data-d]").forEach(function (b) {
-          b.disabled = !ps.some(function (x) { return x.uf === b.dataset.d; });
-          b.style.opacity = b.disabled ? 0.4 : 1;
-        });
+        marcarFaltaDep(col, ps);
         cd.querySelector(".depauto").classList.toggle("ligado", !pd);
       }
       ctl.querySelector(".auto").textContent = autoTimer[S.id] ? "giro automático: LIGADO" : "giro automático";

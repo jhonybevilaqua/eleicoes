@@ -1065,6 +1065,10 @@
       return { pags: pr, ip: indiceDeputados(pr), regiao: reg };
     }
     var ps = paginasDeputados(!!man);
+    if (man) {   // estado escolhido sem eleitos ainda: avisa DELE (nunca mostra outro estado)
+      var ufM = man.split(":")[0];
+      if (!ps.some(function (p) { return p.uf === ufM; })) return { pags: [], ip: 0, regiao: "", faltaUf: ufM };
+    }
     return { pags: ps, ip: man ? indiceManual(ps, man) : indiceDeputados(ps), regiao: "" };
   }
   function indiceManual(pags, v) {
@@ -1122,14 +1126,15 @@
     return "DEPUTADOS FEDERAIS ELEITOS  ·  " + (pg.ini + 1) + "º" + (pg.cs.length > 1 ? " a " + (pg.ini + pg.cs.length) + "º" : "") +
       " mais votados  ·  " + pg.total + (pg.vagas && pg.vagas !== pg.total ? " de " + pg.vagas + " vagas" : " eleitos");
   }
-  function semDeputados(W, H, v) {
-    var o = v ? r(35, 48, 6, 38, C.destaque) + t(53, 80, "DEPUTADOS FEDERAIS", { s: 32, b: true, ls: 1 }) :
-      t(73, 57, "DEPUTADOS FEDERAIS ELEITOS", { s: 36, b: true, ls: 1 });
-    return svg(W, H, o + t(W / 2, H / 2, "aguardando os eleitos do TSE (ESTADOS.bat)", { s: v ? 18 : 24, c: C.apagado, a: "middle" }));
+  function semDeputados(W, H, v, uf) {
+    var tit = uf ? (DEP_UF[uf] || uf.toUpperCase()) : "DEPUTADOS FEDERAIS ELEITOS";
+    var o = v ? r(35, 48, 6, 38, C.destaque) + t(53, 80, uf ? tit : "DEPUTADOS FEDERAIS", { s: 32, b: true, ls: 1, max: 450 }) :
+      t(73, 57, tit, { s: 36, b: true, ls: 1 }) + (uf ? t(73, 85, "DEPUTADOS FEDERAIS ELEITOS", { s: 18, b: true, c: "#c9d6e6" }) : "");
+    return svg(W, H, o + t(W / 2, H / 2, "aguardando os eleitos do TSE" + (uf ? "" : " (ESTADOS.bat)"), { s: v ? 18 : 24, c: C.apagado, a: "middle" }));
   }
   G["deputados-h"] = function () {
     var W = 1280, H = 720, sel = selecaoDep(), pags = sel.pags;
-    if (!pags.length) return semDeputados(W, H, false);
+    if (!pags.length) return semDeputados(W, H, false, sel.faltaUf);
     var ip = sel.ip, pg = pags[ip];
     var o = t(73, 57, DEP_UF[pg.uf], { s: 36, b: true, ls: 1, max: W - 73 - 540 }) +
       t(73, 85, subDep(pg), { s: 18, b: true, c: "#c9d6e6", max: W - 146 }) + seloH(W, seloDep(pg.x));
@@ -1156,7 +1161,7 @@
   };
   G["deputados-v"] = function () {
     var W = 540, H = 960, sel = selecaoDep(), pags = sel.pags;
-    if (!pags.length) return semDeputados(W, H, true);
+    if (!pags.length) return semDeputados(W, H, true, sel.faltaUf);
     var ip = sel.ip, pg = pags[ip];
     var o = r(35, 48, 6, 38, C.destaque) + t(53, 80, DEP_UF[pg.uf], { s: 32, b: true, ls: 1, max: W - 53 - 35 }) +
       t(53, 106, "DEPUTADOS FEDERAIS ELEITOS · " + (pg.ini + 1) + "º a " + (pg.ini + pg.cs.length) + "º de " + pg.total,

@@ -17,7 +17,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "3.6 - 06/10/2026"
+$Versao = "3.6.1 - 06/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -558,13 +558,24 @@ function Ler-Abrangencia {
 # Nada calculado: so a palavra do TSE. A cada 3 ciclos (o arquivo de SP e
 # grande) e, com o resultado final, o TSE responde "sem mudanca" (304).
 $script:Camara = @{}
+$script:CamaraMotivo = [ordered]@{}   # estado sem eleitos na tela -> por que (vai para o log e o gerenciador)
 function Ler-Camara {
     param([string] $Abr)
     $url = Montar-Url $Abr 6 $EleicaoCamara
     $bruto = Obter-Boletim $url
-    if ($null -eq $bruto -or "$bruto" -eq "SEM-MUDANCA") { return }
+    # "sem mudanca" (304) sem nunca ter guardado este estado: pede de novo sem cache
+    if ("$bruto" -eq "SEM-MUDANCA" -and -not $script:Camara.ContainsKey($Abr)) {
+        if ($script:ETags.ContainsKey($url)) { $script:ETags.Remove($url) }
+        $bruto = Obter-Boletim $url
+    }
+    if ("$bruto" -eq "SEM-MUDANCA") { return }
+    if ($null -eq $bruto) {
+        if ($script:Ausentes.ContainsKey($url)) { $script:CamaraMotivo[$Abr] = "TSE ainda nao publicou o arquivo (404)" }
+        else { $script:CamaraMotivo[$Abr] = "sem resposta do TSE ($($script:UltimoErro))" }
+        return
+    }
     $fase = "$(Obter-Campo $bruto @('f') '')".ToUpper()
-    if ($fase -eq "S" -or $fase -eq "T") { return }
+    if ($fase -eq "S" -or $fase -eq "T") { $script:CamaraMotivo[$Abr] = "boletim de simulado/teste (fase $fase) - ignorado"; return }
     $porPartido = [ordered]@{}
     $vagas = 0; $eleitos = 0
     $listaEleitos = New-Object System.Collections.ArrayList   # tela "Deputados federais eleitos"
@@ -603,6 +614,11 @@ function Ler-Camara {
     }
     $pctUrnas = $null
     if (Tem-Propriedade $bruto "s") { $pctUrnas = Converter-Decimal $bruto.s.pst }
+    $nCand = 0
+    if (Tem-Propriedade $bruto "carg") { foreach ($cg in $bruto.carg) { if ((Tem-Propriedade $cg "agr")) { foreach ($agr in $cg.agr) { if (Tem-Propriedade $agr "par") { foreach ($pa in $agr.par) { if (Tem-Propriedade $pa "cand") { $nCand += @($pa.cand).Count } } } } } } }
+    if ($eleitos -gt 0) { if ($script:CamaraMotivo.Contains($Abr)) { $script:CamaraMotivo.Remove($Abr) } }
+    elseif ($nCand -eq 0) { $script:CamaraMotivo[$Abr] = "arquivo do TSE sem candidatos de Deputado Federal (cargo 6)" }
+    else { $script:CamaraMotivo[$Abr] = "o TSE ainda nao marcou eleitos ($nCand candidatos lidos, nenhum com situacao Eleito)" }
     $script:Camara[$Abr] = [pscustomobject]@{
         vagas = $vagas; eleitos = $eleitos; urnas_pct = $pctUrnas
         andamento = "$(Obter-Campo $bruto @('and') '')".ToLower()
@@ -712,6 +728,7 @@ function Gravar-Dados {
         ref2022       = $script:Ref2022
         ufs           = $porEstado
         camara        = [pscustomobject] $script:Camara
+        camara_motivos = [pscustomobject] $script:CamaraMotivo
     }
     $json = $dados | ConvertTo-Json -Depth 8 -Compress
     $conteudo = "window.GCTSE_ESTADOS = $json;"
@@ -742,12 +759,16 @@ do {
             }
         }
         try { Buscar-2022 } catch { Escrever-Log "2022: $($_.Exception.Message)" "AVISO" }
-        if (($script:NumCiclo % 3) -eq 1) {
+        # Todos a cada 3 ciclos; estado que ainda nao tem eleitos, a CADA ciclo.
+        $faltam = @($UFs | Where-Object { -not $script:Camara.ContainsKey($_) -or $script:Camara[$_].eleitos -le 0 })
+        if (($script:NumCiclo % 3) -eq 1 -or $faltam.Count -gt 0) {
             try {
-                foreach ($u in $UFs) { Ler-Camara $u }
-                $nE = 0; $nV = 0
-                foreach ($k in $script:Camara.Keys) { $nE += $script:Camara[$k].eleitos; $nV += $script:Camara[$k].vagas }
-                Escrever-Log ("camara: {0}/27 estados, {1} deputados federais eleitos (de {2} vagas lidas)" -f $script:Camara.Count, $nE, $nV)
+                $lerAgora = $(if (($script:NumCiclo % 3) -eq 1) { $UFs } else { $faltam })
+                foreach ($u in $lerAgora) { Ler-Camara $u }
+                $nE = 0; $nV = 0; $comEleitos = 0
+                foreach ($k in $script:Camara.Keys) { $nE += $script:Camara[$k].eleitos; $nV += $script:Camara[$k].vagas; if ($script:Camara[$k].eleitos -gt 0) { $comEleitos++ } }
+                Escrever-Log ("camara: {0}/27 estados com eleitos, {1} deputados federais eleitos (de {2} vagas lidas)" -f $comEleitos, $nE, $nV) $(if ($comEleitos -lt 27) { "AVISO" } else { "INFO" })
+                foreach ($k in $script:CamaraMotivo.Keys) { Escrever-Log ("   camara {0}: {1}" -f $k.ToUpper(), $script:CamaraMotivo[$k]) "AVISO" }
             } catch { Escrever-Log "camara: $($_.Exception.Message)" "AVISO" }
         }
         Conferir-Recebimento

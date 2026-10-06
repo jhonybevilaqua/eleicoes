@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 3.6 - apuracao em graficos (versao final)
+ gctse GRAFICOS 3.6.1 - apuracao em graficos (versao final)
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -361,7 +361,15 @@
                           no ar).
      "Deputados federais eleitos (troca automatica)", no bloco CAMARA:
                           volta ao rodizio dos estados do deputados-config.js.
-   Trocar de estado com a tela ja no ar e instantaneo (sem recarregar). No rodizio, de a esta tela um tempo maior no gerenciador -
+   Trocar de estado com a tela ja no ar e instantaneo (sem recarregar).
+
+   ESTADO TRACEJADO no gerenciador = ainda sem eleitos na tela. Passe o
+   mouse: aparece o motivo (ex.: "TSE ainda nao publicou", "o TSE ainda
+   nao marcou eleitos"). O ESTADOS.bat tenta esse estado de novo A CADA
+   ciclo e escreve na janela "camara XX: motivo". Clicado, a tela mostra
+   "aguardando os eleitos do TSE" daquele estado. Na regiao, o estado que
+   falta e pulado ate chegar. Conferir: VER-ELEITO.bat, sigla do estado -
+   mostra o que o TSE manda de Deputado Federal e o que a tela recebeu. No rodizio, de a esta tela um tempo maior no gerenciador -
    ela continua trocando dentro do proprio tempo e recomeca do 1o estado
    cada vez que entra.
 

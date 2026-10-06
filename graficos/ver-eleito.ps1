@@ -1,6 +1,6 @@
 <#
     gctse GRAFICOS - VER ELEITO: o que o TSE manda para um estado
-    (Governador e Senador) e o que a tela recebeu (web\estados.js).
+    (Governador, Senador e Deputado Federal) e o que a tela recebeu (web\estados.js).
     Uso: VER-ELEITO.bat  (pergunta a sigla; padrao MT)
     Grava tudo tambem em VER-ELEITO.txt para mandar ao suporte.
 #>
@@ -39,13 +39,23 @@ try {
             L ("     {0,-28} {1,6}%  eleito={2,-5} 2turno={3,-5} situacao='{4}'{5}" -f $k.nome, $k.pct, $k.eleito, $k.segundo_turno, $k.situacao, $calc)
         }
     }
+    # Deputados federais (tela "Deputados" e gerenciador)
+    $cm = $null; if ($e.PSObject.Properties["camara"]) { $cm = $e.camara.$Uf }
+    if ($cm) {
+        $nl = 0; if ($cm.PSObject.Properties["lista"]) { $nl = @($cm.lista).Count }
+        L ("  deputados federais: {0} eleitos na tela (de {1} vagas), lista com {2} nomes" -f $cm.eleitos, $cm.vagas, $nl)
+    } else { L "  deputados federais: NADA na tela para este estado" }
+    if ($e.PSObject.Properties["camara_motivos"] -and $e.camara_motivos.$Uf) { L ("  motivo: {0}" -f $e.camara_motivos.$Uf) }
 } catch { L "TELA: nao consegui ler web\estados.js ($($_.Exception.Message))" }
 L ""
 
 # 2) o que o TSE MANDA agora
-foreach ($cargo in @(3, 5)) {
-    $url = "{0}/{1}/{2}/dados/{3}/{3}-c{4:0000}-e{5:000000}-u.json" -f $base, $ciclo, $ele, $Uf, $cargo, [int] $ele
-    L ("TSE {0}: {1}" -f $(if ($cargo -eq 3) { "GOVERNADOR" } else { "SENADOR" }), $url)
+$eleCam = $ele
+if ($cfg.tse.PSObject.Properties["eleicao_camara"] -and $cfg.tse.eleicao_camara) { $eleCam = "$($cfg.tse.eleicao_camara)" }
+foreach ($cargo in @(3, 5, 6)) {
+    $eleC = $(if ($cargo -eq 6) { $eleCam } else { $ele })
+    $url = "{0}/{1}/{2}/dados/{3}/{3}-c{4:0000}-e{5:000000}-u.json" -f $base, $ciclo, $eleC, $Uf, $cargo, [int] $eleC
+    L ("TSE {0}: {1}" -f $(switch ($cargo) { 3 { "GOVERNADOR" } 5 { "SENADOR" } default { "DEPUTADO FEDERAL" } }), $url)
     try {
         $r = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 20 -Headers @{ "Cache-Control" = "no-cache" }
         $b = [Text.Encoding]::UTF8.GetString($r.RawContentStream.ToArray()) | ConvertFrom-Json
@@ -62,7 +72,13 @@ foreach ($cargo in @(3, 5)) {
                 $lista += [pscustomobject]@{ nm = "$($c.nmu)"; e = "$($c.e)"; st = "$($c.st)"; pvap = "$($c.pvap)"; vap = [long] ("0" + ("$($c.vap)" -replace '\D', '')) }
             } } }
         }
-        foreach ($k in ($lista | Sort-Object vap -Descending | Select-Object -First 4)) {
+        if ($cargo -eq 6) {
+            $el = @($lista | Where-Object { $_.st -match '(?i)eleit' -and $_.st -notmatch '(?i)n\S{1,2}o\s+eleit' -and $_.st -notmatch '(?i)turno' })
+            L ("  {0} candidatos no arquivo; {1} com situacao de ELEITO" -f $lista.Count, $el.Count)
+            $sts = @($lista | Group-Object st | Sort-Object Count -Descending | ForEach-Object { "'{0}'={1}" -f $_.Name, $_.Count })
+            L ("  situacoes (st): " + ($sts -join "  "))
+        }
+        foreach ($k in ($lista | Sort-Object vap -Descending | Select-Object -First $(if ($cargo -eq 6) { 5 } else { 4 }))) {
             L ("     {0,-28} {1,6}%  e='{2}'  st='{3}'" -f $k.nm, $k.pvap, $k.e, $k.st)
         }
     } catch { L ("  ERRO: " + $_.Exception.Message) }
