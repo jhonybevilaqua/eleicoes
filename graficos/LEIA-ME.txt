@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 3.7.1 - apuracao em graficos (versao final)
+ gctse GRAFICOS 3.7.2 - apuracao em graficos (versao final)
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -33,6 +33,8 @@
    - Senadores em DUAS telas, com cartoes e fotos maiores: "Senadores 1/2
      (AC a PA)" e "Senadores 2/2 (PB a TO)"; a contagem por partido nas
      duas e a do Brasil inteiro.
+     No ar o titulo e so "SENADORES" e cada cartao traz o nome do estado
+     por extenso (o "1/2" e "2/2" so aparece no gerenciador).
 
  NOVO NA 3.6
    - Gerenciador: bloco "DEPUTADOS FEDERAIS | ESTADO OU REGIAO" (igual ao

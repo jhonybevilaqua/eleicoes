@@ -1816,7 +1816,9 @@
     o += r(x, y, w, h, "rgba(8,14,32,0.82)", 5);
     var hf = Math.round(fn * 2);
     o += r(x, y, w / 2, hf, cc[0], 0) + r(x + w / 2, y, w / 2, hf, cc[1], 0);
-    o += r(x + w / 2 - fn * 1.6, y + 2, fn * 3.2, hf - 4, "#0b1220", 2) + t(x + w / 2, y + hf * 0.72, k.toUpperCase(), { s: Math.round(fn * 1.2), b: true, a: "middle" });
+    // nome do estado por extenso na faixa (encolhe se nao couber)
+    var nomeUf = DEP_UF[k] || k.toUpperCase(), fsU = Math.round(fn * 1.2), wChip = Math.min(w - 8, nomeUf.length * fsU * 0.66 + 14);
+    o += r(x + (w - wChip) / 2, y + 2, wChip, hf - 4, "#0b1220", 2) + t(x + w / 2, y + hf * 0.72, nomeUf, { s: fsU, b: true, a: "middle", max: wChip - 8 });
     var pad = 4, gw = (w - pad * (n + 1)) / n, top = y + hf + pad, hb = Math.round(fn * 2.3), hp = Math.round(fn * 1.5);
     var fh = h - hf - pad * 2 - hb - hp;
     for (var i = 0; i < n; i++) {
@@ -1905,8 +1907,8 @@
   function telaSenParte(v, parte) {
     var ufs = SEN_PARTES[parte], cs = contaSen(), o;
     var de = DEP_UF[ufs[0]], ate = DEP_UF[ufs[ufs.length - 1]];
-    var sub = cs.n + (cs.n === 1 ? " eleito" : " eleitos") + " no Brasil · parte " + (parte + 1) + " de 2: " + ufs[0].toUpperCase() + " a " + ufs[ufs.length - 1].toUpperCase();
-    var tit = "SENADORES  " + (parte + 1) + "/2";
+    var sub = cs.n + (cs.n === 1 ? " eleito" : " eleitos") + " no Brasil · 2 por estado · cor = partido do eleito";
+    var tit = "SENADORES";
     if (!v) {
       var W = 1280, H = 720;
       o = t(73, 57, tit, { s: 36, b: true, ls: 1 }) + t(73, 85, sub, { s: 18, c: C.apagado, max: 640 }) + seloH(W, seloSen());
