@@ -1038,7 +1038,8 @@
           var x = cm[u], lista = x ? comoLista(x.lista).slice() : [];
           if (!lista.length) return;   // estado ainda sem eleito do TSE: fica fora
           lista.sort(function (a, b) { return ((+b.votos || 0) - (+a.votos || 0)) || String(a.nome).localeCompare(String(b.nome), "pt-BR"); });
-          var n = Math.ceil(lista.length / porTela);
+          // so os N mais votados de cada estado (deputados-config.js)
+          var n = cfg.apenas_mais_votados === false ? Math.ceil(lista.length / porTela) : 1;
           for (var k = 0; k < n; k++) {
             pags.push({ uf: u, regiao: rg[0], x: x, cs: lista.slice(k * porTela, (k + 1) * porTela), ini: k * porTela, k: k, n: n,
               total: lista.length, vagas: +x.vagas || 0 });
@@ -1049,10 +1050,22 @@
   }
   // Navegacao manual: "sp:2" = Sao Paulo, 3a tela do estado (vem do
   // gerenciador pela URL ?dep= ou por comando na saida).
+  //   "sp:0" = estado fixo   |   "r-norte" = estados da regiao, trocando sozinho
   function depManual() {
     var v = String(window.__gctseDep || "");
     if (!v) { try { v = new URLSearchParams(location.search).get("dep") || ""; } catch (e) { v = ""; } }
-    return /^[a-z]{2}:\d+$/.test(v) ? v : "";
+    return /^([a-z]{2}:\d+|r-[a-z-]+)$/.test(v) ? v : "";
+  }
+  var REG_DEP = { "r-norte": "Norte", "r-nordeste": "Nordeste", "r-centro-oeste": "Centro-Oeste", "r-sudeste": "Sudeste", "r-sul": "Sul" };
+  // Telas e tela da vez conforme o modo (automatico, estado fixo, regiao).
+  function selecaoDep() {
+    var man = depManual(), reg = REG_DEP[man];
+    if (reg) {
+      var ufsR = ufsDaRegiao(reg), pr = paginasDeputados(true).filter(function (p) { return ufsR.indexOf(p.uf) >= 0; });
+      return { pags: pr, ip: indiceDeputados(pr), regiao: reg };
+    }
+    var ps = paginasDeputados(!!man);
+    return { pags: ps, ip: man ? indiceManual(ps, man) : indiceDeputados(ps), regiao: "" };
   }
   function indiceManual(pags, v) {
     var uf = v.split(":")[0], k = +v.split(":")[1], ult = -1;
@@ -1105,6 +1118,7 @@
     return st ? "ELEITO" : "";
   }
   function subDep(pg) {
+    if (pg.n === 1 && pg.total > pg.cs.length) return "DEPUTADOS FEDERAIS ELEITOS  ·  OS " + pg.cs.length + " MAIS VOTADOS  ·  " + pg.total + " eleitos no estado";
     return "DEPUTADOS FEDERAIS ELEITOS  ·  " + (pg.ini + 1) + "º" + (pg.cs.length > 1 ? " a " + (pg.ini + pg.cs.length) + "º" : "") +
       " mais votados  ·  " + pg.total + (pg.vagas && pg.vagas !== pg.total ? " de " + pg.vagas + " vagas" : " eleitos");
   }
@@ -1114,9 +1128,9 @@
     return svg(W, H, o + t(W / 2, H / 2, "aguardando os eleitos do TSE (ESTADOS.bat)", { s: v ? 18 : 24, c: C.apagado, a: "middle" }));
   }
   G["deputados-h"] = function () {
-    var W = 1280, H = 720, man = depManual(), pags = paginasDeputados(!!man);
+    var W = 1280, H = 720, sel = selecaoDep(), pags = sel.pags;
     if (!pags.length) return semDeputados(W, H, false);
-    var ip = man ? indiceManual(pags, man) : indiceDeputados(pags), pg = pags[ip];
+    var ip = sel.ip, pg = pags[ip];
     var o = t(73, 57, DEP_UF[pg.uf], { s: 36, b: true, ls: 1, max: W - 73 - 540 }) +
       t(73, 85, subDep(pg), { s: 18, b: true, c: "#c9d6e6", max: W - 146 }) + seloH(W, seloDep(pg.x));
     var gap = 18, w = (1134 - gap * 4) / 5, y = 118, h = 530;
@@ -1137,13 +1151,13 @@
       if (sit) o += t(x + w / 2, y + h - 20, sit, { s: 13, b: true, c: "#69db7c", a: "middle", ls: 1, max: w - 16 });
     });
     o += t(73, 700, "Fonte: TSE — deputados federais eleitos (situação e votos do TSE)  ·  " + pg.regiao, { s: 13, c: C.apagado2, max: 760 });
-    o += t(1207, 700, DEP_UF[pg.uf] + " " + (pg.k + 1) + "/" + pg.n + "   ·   tela " + (ip + 1) + " de " + pags.length, { s: 13, c: C.apagado2, a: "end" });
+    o += t(1207, 700, (sel.regiao ? REG_NOME[sel.regiao] + " · estado " + (ip + 1) + " de " + pags.length : DEP_UF[pg.uf] + (pg.n > 1 ? " " + (pg.k + 1) + "/" + pg.n : "") + "   ·   " + (pg.n > 1 ? "tela " : "estado ") + (ip + 1) + " de " + pags.length), { s: 13, c: C.apagado2, a: "end" });
     return svg(W, H, o);
   };
   G["deputados-v"] = function () {
-    var W = 540, H = 960, man = depManual(), pags = paginasDeputados(!!man);
+    var W = 540, H = 960, sel = selecaoDep(), pags = sel.pags;
     if (!pags.length) return semDeputados(W, H, true);
-    var ip = man ? indiceManual(pags, man) : indiceDeputados(pags), pg = pags[ip];
+    var ip = sel.ip, pg = pags[ip];
     var o = r(35, 48, 6, 38, C.destaque) + t(53, 80, DEP_UF[pg.uf], { s: 32, b: true, ls: 1, max: W - 53 - 35 }) +
       t(53, 106, "DEPUTADOS FEDERAIS ELEITOS · " + (pg.ini + 1) + "º a " + (pg.ini + pg.cs.length) + "º de " + pg.total,
         { s: 15, b: true, c: "#c9d6e6", max: W - 53 - 35 }) + seloV(W, seloDep(pg.x));
@@ -1160,7 +1174,7 @@
       var sit = situacaoDep(c);
       if (sit) o += t(493, y + 30, sit, { s: 11, b: true, c: "#69db7c", a: "end", ls: 1 });
     });
-    o += t(35, 945, "Fonte: TSE · " + DEP_UF[pg.uf] + " " + (pg.k + 1) + "/" + pg.n + " · tela " + (ip + 1) + " de " + pags.length, { s: 11, c: C.apagado2, max: 470 });
+    o += t(35, 945, "Fonte: TSE · " + (sel.regiao ? REG_NOME[sel.regiao] + " · estado " + (ip + 1) + " de " + pags.length : DEP_UF[pg.uf] + (pg.n > 1 ? " " + (pg.k + 1) + "/" + pg.n : "") + " · " + (pg.n > 1 ? "tela " : "estado ") + (ip + 1) + " de " + pags.length), { s: 11, c: C.apagado2, max: 470 });
     return svg(W, H, o);
   };
 
@@ -1641,6 +1655,116 @@
   G["turnos-h"] = function () { return telaTurnos(false); };
   G["turnos-v"] = function () { return telaTurnos(true); };
 
+  // ---- CAMARA: BANCADA FEMININA ---------------------------------------------
+  // Genero: arquivo "Candidatos" do TSE (Dados Abertos), importado pelo
+  // IMPORTAR-CANDIDATOS.bat (web\candidatos-genero.js). Eleitas de 2026 =
+  // eleitos do boletim do TSE (estados.js) cujo sqcand e de mulher; sem o
+  // boletim, a situacao do proprio arquivo de candidatos.
+  var COR_MULHER = "#a678f0";
+  function bancadaFem() {
+    var gen = window.GCTSE_GENERO, cm = (E().camara || {});
+    if (!gen || !gen.anos) return null;
+    var a26 = gen.anos["2026"], a22 = gen.anos["2022"], r = { a22: a22, a26: a26, fonte: gen.fonte, quando: gen.gerado_em };
+    if (!a26) return r;
+    var fem = {}; comoLista(a26.mulheres).forEach(function (q) { fem[q] = 1; });
+    var tot = 0, el = 0, pp = {}, ufs = 0;
+    Object.keys(cm).forEach(function (u) {
+      var l = comoLista(cm[u].lista); if (!l.length) return; ufs++;
+      l.forEach(function (c) { tot++; if (fem[c.sqcand]) { el++; pp[c.partido] = (pp[c.partido] || 0) + 1; } });
+    });
+    if (tot > 0) { r.eleitas = el; r.eleitos = tot; r.partidos = pp; r.aoVivo = true; r.ufs = ufs; }
+    else { r.eleitas = +a26.eleitas || 0; r.eleitos = +a26.eleitos || 513; r.partidos = a26.eleitas_por_partido || {}; r.aoVivo = false; }
+    return r;
+  }
+  function meiaLua(cx, cy, raio, esp, frac, cor) {
+    var L = Math.PI * raio, d = "M" + (cx - raio) + " " + cy + " A" + raio + " " + raio + " 0 0 1 " + (cx + raio) + " " + cy;
+    return '<path d="' + d + '" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="' + esp + '"/>' +
+      (frac > 0 ? '<path d="' + d + '" fill="none" stroke="' + cor + '" stroke-width="' + esp + '" stroke-dasharray="' + (L * Math.min(1, frac)).toFixed(1) + " " + L.toFixed(1) + '"/>' : "");
+  }
+  function pct1(v) { return Number(v).toFixed(1).replace(".", ",") + "%"; }
+  function sinal(v, txt) { return (v > 0 ? "▲ +" : v < 0 ? "▼ −" : "") + txt; }
+  function blocoAno(x, y, ano, n, total, destaque, k) {
+    var o = t(x, y, ano, { s: Math.round(20 * k), b: true, c: destaque ? C.texto : C.apagado, a: "middle", ls: 2 });
+    o += meiaLua(x, y + 150 * k, 96 * k, 26 * k, total ? n / total : 0, destaque ? COR_MULHER : "#7f6aa8");
+    o += t(x, y + 128 * k, String(n), { s: Math.round(54 * k), b: true, a: "middle" });
+    o += t(x, y + 152 * k, "deputadas", { s: Math.round(15 * k), c: C.apagado, a: "middle" });
+    o += t(x, y + 196 * k, total ? pct1(100 * n / total) : "—", { s: Math.round(30 * k), b: true, c: destaque ? COR_MULHER : "#b9a8d8", a: "middle" });
+    o += t(x, y + 218 * k, "das " + total + " cadeiras", { s: Math.round(13 * k), c: C.apagado, a: "middle" });
+    return o;
+  }
+  function barrasPartidosFem(x, y, w, passo, pp, n, k) {
+    var ls = Object.keys(pp || {}).sort(function (a, b) { return pp[b] - pp[a] || a.localeCompare(b); }).slice(0, n), o = "";
+    if (!ls.length) return t(x, y + 20, "sem eleitas ainda", { s: 16, c: C.apagado });
+    var max = pp[ls[0]];
+    ls.forEach(function (sg, i) {
+      var yy = y + i * passo;
+      o += t(x, yy + 20 * k, sg, { s: Math.round(18 * k), b: true, max: 140 * k });
+      o += r(x + 150 * k, yy + 2 * k, w - 150 * k - 50 * k, 24 * k, "rgba(255,255,255,0.10)", 4) +
+        r(x + 150 * k, yy + 2 * k, Math.max(6, (w - 200 * k) * pp[sg] / max), 24 * k, corPartidoCamara(sg, i), 4);
+      o += t(x + w, yy + 21 * k, String(pp[sg]), { s: Math.round(20 * k), b: true, a: "end" });
+    });
+    return o;
+  }
+  function telaFem(v) {
+    var bf = bancadaFem(), W = v ? 540 : 1280, H = v ? 960 : 720, o;
+    var semDado = !bf || !bf.a26;
+    var tit = "CÂMARA: BANCADA FEMININA";
+    if (semDado) {
+      o = v ? r(35, 48, 6, 38, C.destaque) + t(53, 80, tit, { s: 26, b: true, ls: 1, max: 450 }) : t(73, 57, tit, { s: 36, b: true, ls: 1 });
+      return svg(W, H, o + t(W / 2, H / 2 - 10, "falta o arquivo de candidatos do TSE", { s: v ? 18 : 24, c: C.apagado, a: "middle" }) +
+        t(W / 2, H / 2 + 22, "rode o IMPORTAR-CANDIDATOS.bat (consulta_cand_2026.zip, Dados Abertos)", { s: v ? 12 : 16, c: C.apagado2, a: "middle", max: W - 60 }));
+    }
+    var a22 = bf.a22, n26 = bf.eleitas, tot = bf.eleitos || 513, n22 = a22 ? +a22.eleitas : null;
+    var sub = n26 + " deputadas eleitas  ·  " + pct1(100 * n26 / tot) + " das " + tot + " cadeiras" + (n22 != null ? "  ·  em 2022 foram " + n22 : "");
+    var cand26 = +bf.a26.aptas_mulheres || +bf.a26.candidaturas_mulheres, tot26 = +bf.a26.aptas || +bf.a26.candidaturas;
+    var cand22 = a22 ? (+a22.aptas_mulheres || +a22.candidaturas_mulheres) : null;
+    var rod = "Fonte: TSE — gênero: Dados Abertos (Candidatos); eleitas: " + (bf.aoVivo ? "boletim de resultados" + (bf.ufs < 27 ? " (" + bf.ufs + " de 27 estados)" : "") : "arquivo de candidatos") + "; candidaturas aptas a Deputado Federal";
+    if (!v) {
+      o = t(73, 57, tit, { s: 36, b: true, ls: 1, max: 667 }) + t(73, 85, sub, { s: 18, c: C.apagado, max: 640 });
+      o += r(73, 110, 560, 410, "rgba(8,14,32,0.80)", 10) + t(93, 142, "BANCADA FEMININA NA CÂMARA", { s: 16, b: true, c: "#c9d6e6", ls: 1 });
+      if (n22 != null) o += blocoAno(213, 186, "2022", n22, 513, false, 1);
+      o += blocoAno(n22 != null ? 493 : 353, 186, "2026", n26, tot, true, 1);
+      if (n22 != null) {
+        var dC = n26 - n22, dP = n22 ? 100 * (n26 - n22) / n22 : 0;
+        o += r(93, 440, 250, 60, "rgba(255,255,255,0.06)", 8) + r(363, 440, 250, 60, "rgba(255,255,255,0.06)", 8);
+        o += t(218, 470, sinal(dC, Math.abs(dC) + (Math.abs(dC) === 1 ? " cadeira" : " cadeiras")), { s: 20, b: true, c: dC >= 0 ? "#69db7c" : "#ff8787", a: "middle" }) + t(218, 490, "em relação a 2022", { s: 12, c: C.apagado, a: "middle" });
+        o += t(488, 470, sinal(dP, pct1(Math.abs(dP))), { s: 20, b: true, c: dP >= 0 ? "#69db7c" : "#ff8787", a: "middle" }) + t(488, 490, "de deputadas a mais que em 2022".replace("a mais", dP >= 0 ? "a mais" : "a menos"), { s: 12, c: C.apagado, a: "middle" });
+      }
+      o += r(653, 110, 554, 410, "rgba(8,14,32,0.80)", 10) + t(673, 142, "PARTIDOS COM MAIS MULHERES ELEITAS", { s: 16, b: true, c: "#c9d6e6", ls: 1 });
+      o += barrasPartidosFem(673, 170, 514, 56, bf.partidos, 6, 1);
+      o += r(73, 536, 1134, 136, "rgba(8,14,32,0.80)", 10);
+      o += t(100, 600, inteiro(cand26), { s: 48, b: true }) + t(100, 630, "mulheres candidatas a Deputado Federal em 2026", { s: 15, c: C.apagado }) + t(100, 650, "(candidaturas aptas)", { s: 12, c: C.apagado2 });
+      if (cand22) {
+        var dCand = 100 * (cand26 - cand22) / cand22;
+        o += t(560, 600, sinal(dCand, pct1(Math.abs(dCand))), { s: 36, b: true, c: dCand >= 0 ? "#69db7c" : "#ff8787" }) + t(560, 630, "em relação a 2022 (" + inteiro(cand22) + " candidatas)", { s: 15, c: C.apagado });
+      }
+      var fc = tot26 ? cand26 / tot26 : 0;
+      o += rosca(1125, 604, 46, 14, [{ v: fc, c: COR_MULHER }, { v: 1 - fc, c: "rgba(255,255,255,0.12)" }]) + t(1125, 611, pct1(100 * fc).replace(",0%", "%"), { s: 18, b: true, a: "middle" });
+      o += t(1060, 600, "das candidaturas", { s: 14, c: C.apagado, a: "end" }) + t(1060, 620, "a deputado federal", { s: 14, c: C.apagado, a: "end" }) + t(1060, 640, "eram de mulheres", { s: 14, c: C.apagado, a: "end" });
+      return svg(W, H, o + t(73, 700, rod, { s: 12, c: C.apagado2, max: 1134 }));
+    }
+    o = r(35, 48, 6, 38, C.destaque) + t(53, 80, "BANCADA FEMININA", { s: 30, b: true, ls: 1, max: 450 }) + t(53, 106, "Câmara dos Deputados · " + n26 + " eleitas", { s: 15, c: C.apagado, max: 450 });
+    o += r(35, 130, 470, 300, "rgba(8,14,32,0.80)", 10);
+    if (n22 != null) o += blocoAno(150, 160, "2022", n22, 513, false, 0.95);
+    o += blocoAno(n22 != null ? 390 : 270, 160, "2026", n26, tot, true, 0.95);
+    if (n22 != null) {
+      var dC2 = n26 - n22, dP2 = n22 ? 100 * (n26 - n22) / n22 : 0;
+      o += t(150, 412, sinal(dC2, Math.abs(dC2) + " cadeiras"), { s: 18, b: true, c: dC2 >= 0 ? "#69db7c" : "#ff8787", a: "middle" });
+      o += t(390, 412, sinal(dP2, pct1(Math.abs(dP2))) + " vs 2022", { s: 18, b: true, c: dP2 >= 0 ? "#69db7c" : "#ff8787", a: "middle" });
+    }
+    o += r(35, 446, 470, 330, "rgba(8,14,32,0.80)", 10) + t(55, 476, "PARTIDOS COM MAIS ELEITAS", { s: 15, b: true, c: "#c9d6e6", ls: 1 });
+    o += barrasPartidosFem(55, 494, 430, 46, bf.partidos, 6, 0.9);
+    o += r(35, 792, 470, 132, "rgba(8,14,32,0.80)", 10);
+    o += t(55, 842, inteiro(cand26), { s: 38, b: true }) + t(55, 866, "candidatas a Dep. Federal em 2026", { s: 13, c: C.apagado });
+    var fc2 = tot26 ? cand26 / tot26 : 0;
+    if (cand22) { var dc2 = 100 * (cand26 - cand22) / cand22; o += t(55, 900, sinal(dc2, pct1(Math.abs(dc2))) + " vs 2022 (" + inteiro(cand22) + ")", { s: 15, b: true, c: dc2 >= 0 ? "#69db7c" : "#ff8787" }); }
+    o += rosca(440, 852, 40, 12, [{ v: fc2, c: COR_MULHER }, { v: 1 - fc2, c: "rgba(255,255,255,0.12)" }]) + t(440, 859, pct1(100 * fc2).replace(",0%", "%"), { s: 15, b: true, a: "middle" });
+    o += t(440, 910, "das candidaturas", { s: 11, c: C.apagado, a: "middle" });
+    return svg(W, H, o + t(35, 948, "Fonte: TSE — Dados Abertos (Candidatos) e boletim de resultados", { s: 11, c: C.apagado2, max: 470 }));
+  }
+  G["mulheres-h"] = function () { return telaFem(false); };
+  G["mulheres-v"] = function () { return telaFem(true); };
+
   window.GCTSE_GRAFICOS = {
     lista: [
       { id: "presidente-h", nome: "Presidente — Brasil", f: "h" },
@@ -1656,6 +1780,7 @@
       { id: "camara-h", nome: "Câmara: bancadas 2027", f: "h" },
       { id: "evolucao-h", nome: "Evolução minuto a minuto (1º × 2º)", f: "h" },
       { id: "deputados-h", nome: "Deputados federais eleitos", f: "h" },
+      { id: "mulheres-h", nome: "Câmara: bancada feminina", f: "h" },
       { id: "apuracao-h", nome: "Apuração: regiões e estados", f: "h" },
       { id: "presmapa-h", nome: "Presidente + mapa", f: "h" },
       { id: "presmapa1t-h", nome: "Presidente + mapa — 1º turno", f: "h" },
@@ -1677,6 +1802,7 @@
       { id: "camara-v", nome: "Câmara: bancadas 2027", f: "v" },
       { id: "evolucao-v", nome: "Evolução minuto a minuto (1º × 2º)", f: "v" },
       { id: "deputados-v", nome: "Deputados federais eleitos", f: "v" },
+      { id: "mulheres-v", nome: "Câmara: bancada feminina", f: "v" },
       { id: "apuracao-v", nome: "Apuração: regiões", f: "v" },
       { id: "presmapa-v", nome: "Presidente + mapa", f: "v" },
       { id: "presmapa1t-v", nome: "Presidente + mapa — 1º turno", f: "v" },
@@ -1690,10 +1816,9 @@
     // Telas que trocam sozinhas (deputados): muda quando a tela da vez muda.
     pagina: function (id) {
       if (String(id).indexOf("deputados") !== 0) return "";
-      var man = depManual();
-      if (man) return "m:" + man;           // manual: so troca pelo comando
-      var pags = paginasDeputados();
-      return pags.length + ":" + indiceDeputados(pags);
+      var man = depManual(), sel = selecaoDep();
+      if (man && !REG_DEP[man]) return "m:" + man;           // estado fixo: so troca pelo comando
+      return (man || "a") + ":" + sel.pags.length + ":" + sel.ip;
     },
     // Telas dos deputados para a navegacao manual (gerenciador).
     depPaginas: function () { return paginasDeputados(true).map(function (p) { return { uf: p.uf, k: p.k, n: p.n, total: p.total }; }); },

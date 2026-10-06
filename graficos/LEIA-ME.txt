@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 3.4 - apuracao em graficos (versao final)
+ gctse GRAFICOS 3.6 - apuracao em graficos (versao final)
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -22,6 +22,13 @@
    GIRO DOS ESTADOS (Governador e Senador, um estado por vez)
    RESUMO (7 telas de fechamento)
    GERENCIADOR (escolhe o que vai para as saidas SDI da DeckLink)
+
+ NOVO NA 3.6
+   - Gerenciador: bloco "DEPUTADOS FEDERAIS | ESTADO OU REGIAO" (igual ao
+     de Presidente). So os 5 mais votados de cada estado.
+
+ NOVO NA 3.5
+   - Tela "Camara: bancada feminina" (ver BANCADA FEMININA abaixo).
 
  NOVO NA 3.4
    - Governadores: barrinha com o nome do eleito embaixo de cada foto
@@ -298,6 +305,28 @@
    de regioes e siglas. No rodizio: "Presidente | Regiao" e "| Estado".
 
 ---------------------------------------------------------------------------
+ BANCADA FEMININA (3.5) - deputadas eleitas 2026 x 2022
+---------------------------------------------------------------------------
+
+   O boletim de resultados do TSE NAO traz o genero do candidato. Ele vem
+   do arquivo oficial "Candidatos" do Portal de Dados Abertos do TSE:
+     1. dadosabertos.tse.jus.br > Candidatos 2026 > baixe
+        consulta_cand_2026.zip  (e Candidatos 2022 > consulta_cand_2022.zip,
+        para a comparacao).
+     2. Ponha os .zip na pasta "importar" (ou deixe em Downloads).
+     3. Dois cliques em IMPORTAR-CANDIDATOS.bat (le o zip direto; ~1 min).
+     4. No gerenciador, clique de novo na tela "Camara: bancada feminina".
+   A tela mostra: deputadas eleitas em 2022 e 2026 (n e % das 513), a
+   diferenca, os partidos com mais mulheres eleitas, quantas mulheres
+   foram candidatas (candidaturas APTAS a Deputado Federal), a variacao
+   sobre 2022 e o % das candidaturas.
+   Eleitas de 2026 = eleitos do boletim de resultados (ESTADOS.bat) cujo
+   registro no arquivo de candidatos e FEMININO. 2022 = situacao do
+   proprio arquivo de 2022. Sem o arquivo: a tela avisa, sem numero.
+   Os numeros de candidaturas podem diferir de reportagens que contam
+   tambem as indeferidas/renuncias: aqui sao as APTAS (dito na tela).
+
+---------------------------------------------------------------------------
  DEPUTADOS FEDERAIS ELEITOS (3.2) - foto, nome e votos, 5 por tela
 ---------------------------------------------------------------------------
 
@@ -320,11 +349,19 @@
    Foto que o TSE nao tiver: aparecem as iniciais. Pacote SEM-FOTOS: so
    iniciais.
 
-   NAVEGACAO MANUAL (gerenciador): o botao "Deputados federais eleitos
-   (escolher estado)" abre o painel com os 27 estados por regiao e as
-   setas. Clicou no estado = 1a tela dele; "proximo"/"anterior" passam de
-   5 em 5 e seguem para o estado seguinte. A tela NAO troca sozinha.
-   "troca automatica" volta ao rodizio dos estados do deputados-config.js. No rodizio, de a esta tela um tempo maior no gerenciador -
+   SO OS 5 MAIS VOTADOS (3.6): cada estado tem UMA tela, com os 5 mais
+   votados (deputados-config.js, apenas_mais_votados: true; false = todos
+   os eleitos de 5 em 5, como antes).
+
+   GERENCIADOR, bloco "DEPUTADOS FEDERAIS | ESTADO OU REGIAO":
+     sigla (SP, BA...) .. tela FIXA com os 5 mais votados do estado.
+     regiao (NORTE...) .. passa pelos estados da regiao, 5 mais votados de
+                          cada, trocando a cada "segundos" (8).
+     setas .............. estado anterior / proximo (aparecem com a tela
+                          no ar).
+     "Deputados federais eleitos (troca automatica)", no bloco CAMARA:
+                          volta ao rodizio dos estados do deputados-config.js.
+   Trocar de estado com a tela ja no ar e instantaneo (sem recarregar). No rodizio, de a esta tela um tempo maior no gerenciador -
    ela continua trocando dentro do proprio tempo e recomeca do 1o estado
    cada vez que entra.
 

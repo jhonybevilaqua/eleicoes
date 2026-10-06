@@ -134,7 +134,7 @@
     if (id === "apresentacao") return "Apresentação automática (" + rodizioAtual(S).length + " telas, " + tempoAtual(S) + " s cada)";
     if (id === "giro") return "Giro dos estados";
     if (id === "resumo") return "Resumo (7 telas)";
-    if (/^deputados-/.test(id)) { var ad = estado && estado[S.id] ? String(estado[S.id].acao || "") : ""; var md = /^dep:([a-z]{2}):(\d+)$/.exec(ad); return "Deputados federais eleitos — " + (md ? md[1].toUpperCase() + " (tela " + (+md[2] + 1) + ")" : "troca automática"); }
+    if (/^deputados-/.test(id)) { var pdn = posDep(S.id); return "Deputados federais — " + (!pdn ? "troca automática" : pdn.regiao ? "região " + pdn.nome : pdn.uf.toUpperCase() + " (5 mais votados)"); }
     if (/^presloc-/.test(id)) { var a = estado && estado[S.id] ? String(estado[S.id].acao || "") : ""; return "Presidente | " + (a.indexOf("alvo:") === 0 ? a.slice(5).toUpperCase() : "estado ou região"); }
     var g = window.GCTSE_GRAFICOS.lista.filter(function (x) { return x.id === id; })[0];
     return g ? g.nome : id;
@@ -172,19 +172,17 @@
   }
   // Deputados: lista de telas (estado, n-esima tela do estado) na ordem regiao > estado.
   function depPags() { try { return window.GCTSE_GRAFICOS.depPaginas(); } catch (e) { return []; } }
-  function primeiroDep() {
-    var cfgD = (window.GCTSE_DEPUTADOS || {}).estados || [], ps = depPags();
-    for (var i = 0; i < ps.length; i++) if (cfgD.indexOf(ps[i].uf) >= 0) return ps[i].uf;
-    return ps.length ? ps[0].uf : "sp";
-  }
   function posDep(s) {
-    var a = estado && estado[s] ? String(estado[s].acao || "") : "", m = /^dep:([a-z]{2}):(\d+)$/.exec(a);
+    var a = estado && estado[s] ? String(estado[s].acao || "") : "", m = /^dep:([a-z]{2}):(\d+)$/.exec(a), mr = /^dep:r-([a-z-]+)$/.exec(a);
+    if (mr) { var rg = REGIOES_MENU.filter(function (x) { return x[1] === mr[1]; })[0]; return { regiao: mr[1], nome: rg ? rg[0] : mr[1], ufs: rg ? rg[2] : [] }; }
     return m ? { uf: m[1], k: +m[2] } : null;
   }
   function navDep(S, d) {
     var ps = depPags(); if (!ps.length) return;
     var p = posDep(S.id), i = 0;
-    if (p) { for (var j = 0; j < ps.length; j++) if (ps[j].uf === p.uf && ps[j].k === p.k) { i = j; break; } i = (i + d + ps.length) % ps.length; }
+    if (p && p.regiao) {   // de regiao: comeca no 1o estado dela
+      for (var r0 = 0; r0 < ps.length; r0++) if (p.ufs.indexOf(ps[r0].uf) >= 0) { i = r0; break; }
+    } else if (p) { for (var j = 0; j < ps.length; j++) if (ps[j].uf === p.uf && ps[j].k === p.k) { i = j; break; } i = (i + d + ps.length) % ps.length; }
     comandar(S.id, "dep:" + ps[i].uf + ":" + ps[i].k);
   }
   function pararAuto(s) { clearInterval(autoTimer[s]); autoTimer[s] = null; }
@@ -253,10 +251,29 @@
     botoesEm(gE, itensDe(["governadores", "govpartido", "senado"]).concat([
       ["giro", "Giro dos estados", "uf:" + (ordem.indexOf(String(cfg.estado_destaque || "pr")) >= 0 ? String(cfg.estado_destaque || "pr") : ordem[0])],
       ["resumo", "Resumo (7 telas)", "tela:1"]]));
-    // Deputados: entra na navegacao manual (estado escolhido + setas).
-    botoesEm(bloco("camara", "CÂMARA DOS DEPUTADOS"), itensDe(["camara", "deputados"]).map(function (it) {
-      return /^deputados-/.test(it[0]) ? [it[0], it[1] + " (escolher estado)", "dep:" + primeiroDep() + ":0"] : it;
+    botoesEm(bloco("camara", "CÂMARA DOS DEPUTADOS"), itensDe(["camara", "deputados", "mulheres"]).map(function (it) {
+      return /^deputados-/.test(it[0]) ? [it[0], it[1] + " (troca automática)", "", it[0] + "|"] : it;
     }));
+    // Deputados federais | estado ou regiao: so os 5 mais votados de cada estado.
+    var gD = bloco("camara", "DEPUTADOS FEDERAIS | ESTADO OU REGIÃO — os 5 mais votados");
+    var dregs = document.createElement("div"); dregs.className = "regs";
+    function irDep(v) {
+      var e0 = estado && estado[S.id];
+      if (e0 && e0.tela === "deputados-" + S.f) comandar(S.id, "dep:" + v);   // ja no ar: troca sem recarregar
+      else definir(S.id, "deputados-" + S.f, "dep:" + v);
+    }
+    REGIOES_MENU.forEach(function (rg) {
+      var bR = botao(rg[0], function () { irDep("r-" + rg[1]); }, "deputados-" + S.f + "|dep:r-" + rg[1]);
+      bR.className = "reg"; dregs.appendChild(bR);
+      var bx = document.createElement("div"); bx.className = "ufs";
+      rg[2].forEach(function (u) { var b = botao(u.toUpperCase(), function () { irDep(u + ":0"); }, "deputados-" + S.f + "|dep:" + u + ":0"); b.dataset.d = u; bx.appendChild(b); });
+      dregs.appendChild(bx);
+    });
+    gD.appendChild(dregs);
+    var dd0 = document.createElement("div"); dd0.className = "dica";
+    dd0.textContent = "Estado = tela fixa com os 5 mais votados. Região = passa pelos estados da região (5 mais votados de cada), trocando a cada " +
+      ((window.GCTSE_DEPUTADOS || {}).segundos || 8) + " s.";
+    gD.appendChild(dd0);
     botoesEm(bloco("comparativos", "COMPARATIVOS"), itensDe(["turnos", "abstencao", "abstencao-mapa", "comparativo", "comparecimento", "votos"]));
     var resto = lista.filter(function (g) { return !usados[g.id]; }).map(function (g) { return [g.id, g.nome]; });
     if (resto.length) botoesEm(bloco("auto", "OUTRAS TELAS"), resto);
@@ -291,18 +308,8 @@
     var bAuto = botao("troca automática", function () { definir(S.id, "deputados-" + S.f, ""); }); bAuto.className = "auto depauto"; d1.appendChild(bAuto);
     var pos = document.createElement("span"); pos.className = "deppos"; pos.style.cssText = "font-weight:700;margin-left:8px"; d1.appendChild(pos);
     cd.appendChild(d1);
-    var dr = document.createElement("div"); dr.className = "regs depregs";
-    REGIOES_MENU.forEach(function (rg) {
-      var lb = document.createElement("span"); lb.className = "reg"; lb.textContent = rg[0]; lb.style.cssText = "font-weight:800;letter-spacing:1px;font-size:13px"; dr.appendChild(lb);
-      var bx = document.createElement("div"); bx.className = "ufs";
-      rg[2].forEach(function (u) {
-        var b = botao(u.toUpperCase(), function () { comandar(S.id, "dep:" + u + ":0"); }); b.dataset.d = u; bx.appendChild(b);
-      });
-      dr.appendChild(bx);
-    });
-    cd.appendChild(dr);
     var dd = document.createElement("div"); dd.className = "dica";
-    dd.textContent = "Escolha o estado e passe as telas pelas setas (5 eleitos por tela, do mais votado ao menos). Na Apresentação automática a tela continua trocando sozinha.";
+    dd.textContent = "As setas passam de estado em estado (5 mais votados de cada). Escolha estado ou região no bloco DEPUTADOS FEDERAIS acima.";
     cd.appendChild(dd);
     col.appendChild(cd);
     cols.appendChild(col);
@@ -391,7 +398,6 @@
       if (pos.ufr) ufResumo[S.id] = pos.ufr;
       col.querySelector(".noar .tela").textContent = txt + (e.quando ? "  (desde " + e.quando + ")" : "");
       col.querySelectorAll(".botoes button[data-k], .regs button[data-k]").forEach(function (b) { b.classList.toggle("ativo", b.dataset.k === e.tela || b.dataset.k === e.tela + "|" + e.acao); });
-      col.querySelectorAll(".controle.ctldep .depregs button").forEach(function (b) { if (!b.dataset.d) b.classList.remove("ativo"); });
       col.querySelectorAll(".girar button").forEach(function (b) { b.classList.toggle("ativo", String(estado.girar_v) === b.dataset.g); });
       var ctl = col.querySelector(".controle");
       ctl.classList.toggle("on", e.tela === "giro" || e.tela === "resumo");
@@ -404,10 +410,10 @@
       var cd = col.querySelector(".ctldep"), emDep = /^deputados-/.test(e.tela), pd = posDep(S.id);
       cd.classList.toggle("on", emDep);
       if (emDep) {
-        var ps = depPags(), nUf = ps.filter(function (x) { return pd && x.uf === pd.uf; }).length;
-        cd.querySelector(".deppos").textContent = pd ? pd.uf.toUpperCase() + " — tela " + (pd.k + 1) + " de " + (nUf || "?") : "troca automática (rodízio de estados)";
-        cd.querySelectorAll("button[data-d]").forEach(function (b) {
-          b.classList.toggle("ativo", !!pd && b.dataset.d === pd.uf);
+        var ps = depPags();
+        cd.querySelector(".deppos").textContent = !pd ? "troca automática (estados do deputados-config.js)" :
+          (pd.regiao ? "região " + pd.nome + " (trocando entre os estados)" : pd.uf.toUpperCase() + " — os 5 mais votados");
+        col.querySelectorAll(".regs button[data-d]").forEach(function (b) {
           b.disabled = !ps.some(function (x) { return x.uf === b.dataset.d; });
           b.style.opacity = b.disabled ? 0.4 : 1;
         });
