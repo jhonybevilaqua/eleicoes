@@ -57,6 +57,12 @@
                       border-radius: 6px; background: var(--bt); cursor: pointer; font-size: 14px; font-weight: 600; user-select: none; }
   .rod-painel label.marcado { background: var(--azul); border-color: var(--azul-borda); color: #fff; }
   .rod-painel .uf label { width: 52px; justify-content: center; padding: 6px 0; }
+  /* Governador ja ELEITO no 1o turno: verde. Cinza (padrao) = vai ao 2o turno. */
+  .gov-eleito { background: #d6f2d6 !important; border-color: #2e9e2e !important; color: #11621a !important; }
+  :root.escuro .gov-eleito { background: #134a1c !important; border-color: #3fbf4f !important; color: #d8ffd8 !important; }
+  .controle .uf button.gov-eleito.ativo, .rod-painel label.gov-eleito.marcado { background: var(--azul) !important; border-color: #3fbf4f !important; color: #fff !important; box-shadow: inset 0 -4px 0 #3fbf4f; }
+  .leg-gov { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; font-size: 12px; color: var(--apagado); margin: 2px 0 6px; }
+  .leg-gov i { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: -2px; margin-right: 4px; border: 1px solid; }
   .rod-painel input[type=checkbox] { display: none; }
   .rod-painel input[type=number] { width: 70px; padding: 6px; font: 600 14px 'Segoe UI', Arial, sans-serif; border: 1px solid var(--bt-borda);
                                    border-radius: 6px; background: var(--cartao); color: var(--texto); }
@@ -294,8 +300,9 @@
     l1.appendChild(botao("próximo ▶", function () { pararAuto(S.id); passo(S.id, 1); }));
     var ba = botao("giro automático", function () { alternarAuto(S.id); }); ba.className = "auto"; l1.appendChild(ba);
     ctl.appendChild(l1);
+    ctl.appendChild(legendaGov());
     var ufs = document.createElement("div"); ufs.className = "linha uf";
-    ordem.forEach(function (u) { ufs.appendChild(botao(u.toUpperCase(), function () { pararAuto(S.id); comandar(S.id, "uf:" + u); }, "uf:" + u)); });
+    ordem.forEach(function (u) { var b = botao(u.toUpperCase(), function () { pararAuto(S.id); comandar(S.id, "uf:" + u); }, "uf:" + u); b.dataset.gov = u; ufs.appendChild(b); });
     ctl.appendChild(ufs);
     var tls = document.createElement("div"); tls.className = "linha tl";
     RESUMO.forEach(function (n, i) { tls.appendChild(botao((i + 1) + " · " + n, function () { pararAuto(S.id); comandar(S.id, acaoResumo(S.id, i + 1)); }, "tela:" + (i + 1))); });
@@ -303,7 +310,7 @@
     var ufr = document.createElement("div"); ufr.className = "linha uf ufr";
     ufr.innerHTML = '<span class="grupo" style="margin:0 6px 0 0">ESTADO EM DESTAQUE (tela 6):</span>';
     ordem.forEach(function (u) {
-      ufr.appendChild(botao(u.toUpperCase(), function () { pararAuto(S.id); ufResumo[S.id] = u; comandar(S.id, "estado:" + u); }, "estado:" + u));
+      var b = botao(u.toUpperCase(), function () { pararAuto(S.id); ufResumo[S.id] = u; comandar(S.id, "estado:" + u); }, "estado:" + u); b.dataset.gov = u; ufr.appendChild(b);
     });
     ctl.appendChild(ufr);
     var dica = document.createElement("div"); dica.className = "dica";
@@ -345,6 +352,7 @@
         cb.type = "checkbox"; cb.value = it[0];
         cb.onchange = function () { lb.classList.toggle("marcado", cb.checked); msg(""); };
         lb.appendChild(cb); lb.appendChild(document.createTextNode(it[1]));
+        if (/^estado:/.test(it[0])) lb.dataset.gov = it[0].slice(7);
         ops.appendChild(lb); itens.push(cb);
       });
       g.appendChild(ops); painel.appendChild(g);
@@ -360,6 +368,7 @@
     secao("PRESIDENTE | ESTADO", ordem.map(function (u) { return ["presloc:" + u, u.toUpperCase()]; }), "uf");
     secao("RESUMO", RESUMO_IDS.map(function (id, i) { return ["resumo:" + id, RESUMO[i]]; }));
     secao("GOVERNADOR E SENADOR — tela do estado", ordem.map(function (u) { return ["estado:" + u, u.toUpperCase()]; }), "uf");
+    painel.lastChild.insertBefore(legendaGov(), painel.lastChild.children[1]);
     var ac = document.createElement("div"); ac.className = "acoes";
     ac.innerHTML = '<span>segundos por tela</span><input type="number" min="3" max="300" step="1" class="tempo">' +
       '<button type="button" class="aplicar">✔ aplicar no rodízio</button><button type="button" class="padrao">voltar ao padrão</button>' +
@@ -396,8 +405,36 @@
   }
 
   // ---------------------------------------------------------------- pintar
+  // Situacao do Governador de cada estado (estados.js). No 2o turno o
+  // coletor marca turno 2 nos estados com 2o turno: esses ficam cinza mesmo
+  // depois de definidos, para nao confundir na hora de escolher.
+  function govSit(u) {
+    var x = ((window.GCTSE_ESTADOS || {}).ufs || {})[u], g = x && x.gov && x.gov.tem ? x.gov : null;
+    if (!g) return { tipo: "?" };
+    var cs = Array.isArray(g.candidatos) ? g.candidatos : ((g.candidatos || {}).value || []);
+    var el = cs.filter(function (c) { return c.eleito; })[0], seg = cs.filter(function (c) { return c.segundo_turno; });
+    var turno2 = +g.turno === 2 || seg.length > 0;
+    if (el && !(+g.turno === 2)) return { tipo: "eleito1", c: el };
+    if (turno2) return { tipo: "segundo", c: el, cs: (seg.length ? seg : cs).slice(0, 2) };
+    return { tipo: "apurando" };
+  }
+  function legendaGov() {
+    var d = document.createElement("div"); d.className = "leg-gov";
+    d.innerHTML = '<span><i class="gov-eleito"></i>governador eleito no 1º turno</span><span><i style="background:var(--bt);border-color:var(--bt-borda)"></i>2º turno (ou ainda apurando)</span>';
+    return d;
+  }
+  function marcarGov() {
+    document.querySelectorAll("[data-gov]").forEach(function (el) {
+      var u = el.dataset.gov, st = govSit(u);
+      el.classList.toggle("gov-eleito", st.tipo === "eleito1");
+      el.title = u.toUpperCase() + " — " + (st.tipo === "eleito1" ? "governador ELEITO no 1º turno: " + st.c.nome + " (" + st.c.partido + ")" :
+        st.tipo === "segundo" ? (st.c ? "2º turno — ELEITO: " + st.c.nome + " (" + st.c.partido + ")" : "2º TURNO" + (st.cs.length ? ": " + st.cs.map(function (c) { return c.nome; }).join(" × ") : "")) :
+        st.tipo === "apurando" ? "governador em apuração" : "sem boletim do ESTADOS.bat");
+    });
+  }
   function pintar() {
     if (!estado) return;
+    marcarGov();
     SAIDAS.forEach(function (S) {
       var e = estado[S.id], col = document.getElementById("col-" + S.id), pos = posicao(S.id);
       var txt = nomeTela(e.tela, S);
@@ -434,6 +471,7 @@
   // --------------------------------------------------------- situacao
   function idade(g) { return g ? Math.round((Date.now() - new Date(g).getTime()) / 1000) : null; }
   function situacao() {
+    marcarGov();
     var d = window.GCTSE_DADOS || {}, e = window.GCTSE_ESTADOS || {};
     var p = document.getElementById("stP"), s = document.getElementById("stE"), ip = idade(d.gravado_em), ie = idade(e.gravado_em);
     if (ip == null) { p.className = "st ruim"; p.textContent = "Presidente: coleta não rodou (abra o GRAFICOS.bat)"; }

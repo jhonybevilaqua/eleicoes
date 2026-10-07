@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 3.7.2 - apuracao em graficos (versao final)
+ gctse GRAFICOS 3.7.3 - apuracao em graficos (versao final)
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -312,6 +312,13 @@
                                   diferenca em pontos. Aparece no 2o turno.
    Evolucao minuto a minuto ..... no 2o turno grava sozinho desde o 1o
                                   boletim do TSE, com marca de VIRADA.
+
+   SELETORES DE ESTADO (Governador) no gerenciador - giro, "Estado em
+   destaque" do Resumo e estados do rodizio: VERDE = governador eleito no
+   1o turno; CINZA = vai ao 2o turno (ou ainda apurando). No 2o turno os
+   estados do 2o turno continuam CINZA mesmo depois de definidos, para
+   nao errar na hora de escolher. Mouse em cima: nome do eleito / "2o
+   TURNO: fulano x beltrano".
 
    GERENCIADOR: blocos por assunto (Presidente, Presidente | estado ou
    regiao, Apuracao, Governador e Senado, Camara, Comparativos) e o menu
