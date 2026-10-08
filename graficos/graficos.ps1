@@ -21,7 +21,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "3.7.3 - 07/10/2026"
+$Versao = "3.8 - 08/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -494,6 +494,10 @@ function Resumir-Boletim {
             pct_comparec   = Decimal-Ou-Nulo (Numero-De $e @('pc'))
             abstencao      = Inteiro-Ou-Nulo (Numero-De $e @('a'))
             pct_abstencao  = Decimal-Ou-Nulo (Numero-De $e @('pa'))
+            # eleitores em secoes ja totalizadas / ainda NAO totalizadas
+            # (TSE: est / esnt) - base do "Ainda da para virar?"
+            em_totalizadas = Inteiro-Ou-Nulo (Numero-De $e @('est'))
+            faltam         = Inteiro-Ou-Nulo (Numero-De $e @('esnt'))
         }
         votos      = [pscustomobject]@{
             validos = $validos; pct_validos = $pValidos

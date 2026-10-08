@@ -38,5 +38,26 @@ window.GCTSE_APRESENTACAO = {
   transicao_segundos: 0.6,
 
   // Barrinha fina embaixo mostrando o tempo ate o proximo grafico.
-  barra_progresso: false
+  barra_progresso: false,
+
+  // RODIZIOS PRONTOS (botoes no GERENCIADOR, bloco AUTOMATICO): um clique
+  // poe a Apresentacao automatica no ar com estas telas e este tempo.
+  // "presloc:sp" = Presidente | SP; "presloc:nordeste" = Presidente | Nordeste.
+  rodizios_prontos: [
+    { nome: "Abertura (17h)", tempo: 12,
+      h: ["apuracao-h", "presmapa-h", "pres2t-h", "evolucao-h", "turnos-h"],
+      v: ["apuracao-v", "presmapa-v", "pres2t-v", "evolucao-v", "turnos-v"] },
+    { nome: "Apuração", tempo: 12,
+      h: ["presmapa-h", "virar-h", "evolucao-h", "regioes-h", "gov2t-h", "margem-h", "viradas-h", "apuracao-h"],
+      v: ["presmapa-v", "virar-v", "evolucao-v", "regioes-v", "gov2t-v", "margem-v", "viradas-v", "apuracao-v"] },
+    { nome: "Fechamento", tempo: 15,
+      h: ["pres2t-h", "presmapa-h", "viradas-h", "ganho-h", "abstuf-h", "turnos-h", "governadores-h", "senadores1-h", "senadores2-h", "camara-h"],
+      v: ["pres2t-v", "presmapa-v", "viradas-v", "ganho-v", "abstuf-v", "turnos-v", "governadores-v", "senadores1-v", "senadores2-v", "camara-v"] }
+  ],
+
+  // FAVORITOS: atalhos no topo do GERENCIADOR (fica fixo no ar ao clicar).
+  favoritos: {
+    h: ["pres2t-h", "presmapa-h", "virar-h", "evolucao-h", "gov2t-h", "viradas-h", "margem-h", "apuracao-h"],
+    v: ["pres2t-v", "presmapa-v", "virar-v", "evolucao-v", "gov2t-v", "viradas-v", "margem-v", "apuracao-v"]
+  }
 };

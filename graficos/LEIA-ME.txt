@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 3.7.3 - apuracao em graficos (versao final)
+ gctse GRAFICOS 3.8 - apuracao em graficos (versao final)
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -22,6 +22,31 @@
    GIRO DOS ESTADOS (Governador e Senador, um estado por vez)
    RESUMO (7 telas de fechamento)
    GERENCIADOR (escolhe o que vai para as saidas SDI da DeckLink)
+
+ NOVO NA 3.8 - ANALISE DO 2o TURNO E OPERACAO
+   GERENCIADOR
+   - FAVORITOS no topo: 8 telas mais usadas (apresentacao-config.js,
+     "favoritos").
+   - RODIZIOS PRONTOS no bloco AUTOMATICO: "Abertura (17h)", "Apuracao",
+     "Fechamento". Um clique poe a Apresentacao no ar com aquelas telas
+     (fica verde o que esta no ar). Editar: apresentacao-config.js,
+     "rodizios_prontos" (telas e segundos de cada).
+   TELAS NOVAS (horizontal e vertical; so numeros do TSE)
+   - Ainda da para virar? ...... Brasil e 27 estados: vantagem do 1o x
+     eleitores em secoes ainda nao totalizadas (TSE: esnt). DECIDIDO =
+     nem todos os que faltam virariam; senao, "precisa X%" = o minimo dos
+     votos que faltam que o 2o colocado teria de ter. Do mais viravel ao
+     menos.
+   - Governadores - 2o turno .... os estados do 2o turno numa tela: os
+     dois, foto, %, barra e ELEITO quando o TSE declarar.
+   - Estados que viraram ........ Presidente: estados em que quem lidera
+     no 2o turno nao e quem liderava no 1o (contorno branco no mapa).
+   - Disputa mais apertada ...... os 10 estados com menor diferenca.
+   - Ganho de votos 1o -> 2o .... Brasil e regioes. So aparece com 100%
+     das urnas do 2o turno (antes disso a conta parece perda).
+   - Abstencao 1o x 2o por estado mapa de onde subiu/caiu e os maiores.
+   Viradas, ganho e abstencao precisam do 1o turno guardado (modo 2o
+   turno do config). Hoje mostram "disponivel no 2o turno".
 
  NOVO NA 3.7
    - Tela "Senadores eleitos (foto + partido)": os 2 eleitos de cada

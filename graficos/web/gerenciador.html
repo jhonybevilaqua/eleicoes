@@ -72,7 +72,9 @@
   .sec { margin-top: 12px; padding: 8px 10px 10px; border-left: 4px solid var(--tema-sec, #0f8f8f); background: var(--bt); border-radius: 0 6px 6px 0; }
   .sec > .grupo { margin: 0 0 6px; color: var(--tema-sec, #0f8f8f); font-size: 13px; }
   .sec.presidente { --tema-sec: #1f6fc0; } .sec.local { --tema-sec: #0f8f8f; } .sec.apuracao { --tema-sec: #128a12; }
-  .sec.estados { --tema-sec: #8a5a12; } .sec.camara { --tema-sec: #7a3fb0; } .sec.comparativos { --tema-sec: #c62828; } .sec.auto { --tema-sec: #5a6b80; }
+  .sec.estados { --tema-sec: #8a5a12; } .sec.fav { --tema-sec: #b8860b; }
+  .botoes.prontos button { font-weight: 700; }
+  .botoes.prontos button.ativo, .botoes.prontos button.ativo:hover { background: var(--verde); border-color: var(--verde-borda); color: #fff; } .sec.camara { --tema-sec: #7a3fb0; } .sec.comparativos { --tema-sec: #c62828; } .sec.auto { --tema-sec: #5a6b80; }
   :root.escuro .sec { background: #172234; }
   .sec button { background: var(--cartao); }
   .sec button:hover { background: var(--bt-hover); }
@@ -239,6 +241,7 @@
     }
     var lista = graficosDe(S), usados = {};
     usados["presloc-" + S.f] = 1;   // vai pelo menu de regioes e estados
+    function nomeTelaCurto(id) { if (/^presloc:/.test(id)) return "Presidente | " + id.slice(8).toUpperCase(); var g = lista.filter(function (x) { return x.id === id; })[0]; return g ? g.nome : id; }
     function itensDe(bases) {
       var out = [];
       bases.forEach(function (b) {
@@ -247,10 +250,28 @@
       });
       return out;
     }
+    // FAVORITOS (apresentacao-config.js): atalhos, sem tirar a tela do bloco dela
+    var favs = (((cfgA.favoritos || {})[S.f]) || []).map(function (id) { return lista.filter(function (x) { return x.id === id; })[0]; }).filter(Boolean);
+    if (favs.length) botoesEm(bloco("fav", "★ FAVORITOS"), favs.map(function (g) { return [g.id, g.nome]; }));
     var gA = bloco("auto", "AUTOMÁTICO");
     botoesEm(gA, [["apresentacao", "▶ Apresentação automática"]]);
+    // rodizios prontos: grava a lista no rodizio desta saida e poe no ar
+    var prontos = (cfgA.rodizios_prontos || []).map(function (rp) {
+      var ids = (rp[S.f] || []).filter(function (id) { return /^presloc:/.test(id) || lista.some(function (x) { return x.id === id; }); });
+      return { nome: rp.nome, ids: ids, tempo: Math.max(3, Math.min(300, +rp.tempo || 15)) };
+    }).filter(function (rp) { return rp.ids.length; });
+    if (prontos.length) {
+      var bxP = document.createElement("div"); bxP.className = "botoes prontos"; bxP.style.marginTop = "6px";
+      prontos.forEach(function (rp) {
+        var b = botao("▶ " + rp.nome + " (" + rp.ids.length + " telas)", function () {
+          pedir("/rodizio?saida=" + S.id + "&telas=" + encodeURIComponent(rp.ids.join(",")) + "&tempo=" + rp.tempo).then(function () { return definir(S.id, "apresentacao"); });
+        });
+        b.dataset.pronto = rp.ids.join(","); b.title = rp.ids.map(nomeTelaCurto).join(" › ") + " · " + rp.tempo + " s cada"; bxP.appendChild(b);
+      });
+      gA.appendChild(bxP);
+    }
     gA.appendChild(painelRodizio(S));
-    botoesEm(bloco("presidente", "PRESIDENTE"), itensDe(["presidente", "presmapa", "presmapa1t", "regioes", "pres2t", "evolucao", "estados", "lideranca"]));
+    botoesEm(bloco("presidente", "PRESIDENTE"), itensDe(["presidente", "presmapa", "presmapa1t", "regioes", "pres2t", "evolucao", "virar", "viradas", "margem", "estados", "lideranca"]));
     // Presidente | estado ou regiao (como no telao)
     var gL = bloco("local", "PRESIDENTE | ESTADO OU REGIÃO");
     var regs = document.createElement("div"); regs.className = "regs";
@@ -264,7 +285,7 @@
     gL.appendChild(regs);
     botoesEm(bloco("apuracao", "APURAÇÃO"), itensDe(["apuracao", "urnas"]));
     var gE = bloco("estados", "GOVERNADOR E SENADO");
-    botoesEm(gE, itensDe(["governadores", "govpartido", "senadores", "senadores1", "senadores2", "senado"]).concat([
+    botoesEm(gE, itensDe(["governadores", "gov2t", "govpartido", "senadores", "senadores1", "senadores2", "senado"]).concat([
       ["giro", "Giro dos estados", "uf:" + (ordem.indexOf(String(cfg.estado_destaque || "pr")) >= 0 ? String(cfg.estado_destaque || "pr") : ordem[0])],
       ["resumo", "Resumo (7 telas)", "tela:1"]]));
     botoesEm(bloco("camara", "CÂMARA DOS DEPUTADOS"), itensDe(["camara", "deputados", "mulheres"]).map(function (it) {
@@ -290,7 +311,7 @@
     dd0.textContent = "Estado = tela fixa com os 5 mais votados. Região = passa pelos estados da região (5 mais votados de cada), trocando a cada " +
       ((window.GCTSE_DEPUTADOS || {}).segundos || 8) + " s.";
     gD.appendChild(dd0);
-    botoesEm(bloco("comparativos", "COMPARATIVOS"), itensDe(["turnos", "abstencao", "abstencao-mapa", "comparativo", "comparecimento", "votos"]));
+    botoesEm(bloco("comparativos", "COMPARATIVOS"), itensDe(["turnos", "ganho", "abstuf", "abstencao", "abstencao-mapa", "comparativo", "comparecimento", "votos"]));
     var resto = lista.filter(function (g) { return !usados[g.id]; }).map(function (g) { return [g.id, g.nome]; });
     if (resto.length) botoesEm(bloco("auto", "OUTRAS TELAS"), resto);
     // controles do giro / resumo
@@ -435,6 +456,10 @@
   function pintar() {
     if (!estado) return;
     marcarGov();
+    SAIDAS.forEach(function (S) {
+      var e = estado[S.id] || {};
+      document.querySelectorAll("#col-" + S.id + " [data-pronto]").forEach(function (b) { b.classList.toggle("ativo", e.tela === "apresentacao" && e.rodizio === b.dataset.pronto); });
+    });
     SAIDAS.forEach(function (S) {
       var e = estado[S.id], col = document.getElementById("col-" + S.id), pos = posicao(S.id);
       var txt = nomeTela(e.tela, S);
