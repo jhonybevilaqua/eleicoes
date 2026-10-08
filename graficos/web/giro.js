@@ -17,6 +17,12 @@
   // ARTE da TV: fundo (web\arte\fundo-h.jpg / fundo-v.jpg) e logo ELEICOES
   // 2026 (web\arte\logo.png) no canto superior direito. Sem o arquivo,
   // fica o fundo liso de sempre e nenhuma logo.
+  // Fotos guardadas pelo GUARDAR-DADOS-TSE.bat (web\fotos-tse): usadas no
+  // lugar da do TSE quando existem (o TSE pode ficar lento ou fora no dia).
+  function viaLocal(url) {
+    var L = window.GCTSE_FOTOS_LOCAIS, m = L ? /\/fotos\/([a-z]{2})\/(\d+)\.jpe?g$/i.exec(url) : null;
+    return m && L[m[1].toLowerCase() + "/" + m[2]] ? L[m[1].toLowerCase() + "/" + m[2]] : url;
+  }
   function arteFundo(W, H) {
     var v = H > W ? "v" : "h";
     return '<image href="arte/fundo-' + v + '.jpg" data-arte="fundo-' + v + '" x="0" y="0" width="' + W + '" height="' + H +
@@ -133,8 +139,8 @@
     if (window.GCTSE_FOTOS_DO_TSE !== true) return "";   // chave em web\fotos-config.js
     var tse = D().tse;
     if (!tse || !tse.base || !cd || !cd.sqcand) return "";
-    if (FOTO.falhas >= 3 && FOTO.acertos === 0) return "";
-    var url = tse.base + "/" + tse.ciclo + "/" + (ele || tse.eleicao) + "/fotos/" + u + "/" + cd.sqcand + ".jpeg";
+    if (FOTO.falhas >= 3 && FOTO.acertos === 0 && !window.GCTSE_FOTOS_LOCAIS) return "";
+    var url = tse.base + "/" + tse.ciclo + "/" + (ele || tse.eleicao) + "/fotos/" + u + "/" + cd.sqcand + ".jpeg"; url = viaLocal(url);
     return FOTO.falhou[url] ? "" : url;
   }
   function foto(url, x, y, w, h) {
@@ -182,7 +188,11 @@
   }
   function bloco(x, y, w, h, titulo, c, k, u) {
     var sit = situacao(c);
-    if (sit.tipo !== "eleito" && sit.tipo !== "segundo") return emApuracao(x, y, w, h, titulo, c, sit, k, u);
+    // Disputa do 2o turno: sem "VAO AO 2o TURNO" - placar com barra. Com o
+    // config do 2o turno o boletim ja e o do 2o turno (ao vivo); antes disso,
+    // os numeros sao do 1o turno e o selo diz isso.
+    if (sit.tipo === "segundo") return emApuracao(x, y, w, h, titulo, c, { tipo: "andamento", texto: "1º TURNO" }, k, u);
+    if (sit.tipo !== "eleito") return emApuracao(x, y, w, h, titulo, c, sit, k, u);
     var eleito = sit.tipo === "eleito", cor = eleito ? C.verde : C.destaque;
     var o = r(x, y, w, h, C.painel, 8) + r(x, y, w, 8, cor, 4), px = x + 32 * k, pw = w - 64 * k;
     o += t(px, y + 54 * k, titulo, { s: Math.round(28 * k), b: true, ls: 2 });

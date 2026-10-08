@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 3.10 - apuracao em graficos (versao final)
+ gctse GRAFICOS 3.11 - apuracao em graficos (versao final)
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -22,6 +22,32 @@
    GIRO DOS ESTADOS (Governador e Senador, um estado por vez)
    RESUMO (7 telas de fechamento)
    GERENCIADOR (escolhe o que vai para as saidas SDI da DeckLink)
+
+ NOVO NA 3.11 - COPIA LOCAL DO TSE E TELAS NACIONAIS
+   GUARDAR-DADOS-TSE.bat (rode agora e de novo no sabado 24/10): guarda em
+     "tse-local" os boletins do 1o TURNO que o 2o turno usa (Presidente
+     Brasil e 27 estados; Governador, Senador, Deputado Federal e Estadual/
+     Distrital dos 27 estados), os de 2022 das comparacoes e a lista de
+     eleicoes; e em web\fotos-tse as fotos do Presidente (1o turno), dos
+     governadores e senadores eleitos (e dos que vao ao 2o turno) e dos
+     deputados federais eleitos. Arquivos do proprio TSE, sem alteracao.
+     Sem fotos: GUARDAR-DADOS-TSE.bat semfotos. Relatorio no
+     GUARDAR-DADOS-TSE.txt.
+   No dia: boletim do 1o turno/2022 que o TSE nao entregar (fora do ar, 404,
+     erro) sai da copia local, sozinho - o painel mostra em amarelo "usando
+     a COPIA LOCAL" e o log diz qual. Quando o TSE volta, volta ao TSE. O 2o
+     turno e SEMPRE ao vivo: se ele parar, o alarme "SEM RESPOSTA DO TSE"
+     continua valendo. Fotos guardadas sao usadas no lugar das do TSE.
+     A COPIA-DE-SEGURANCA leva a pasta tse-local junto.
+   ASSEMBLEIAS - BRASIL (menu ASSEMBLEIAS LEGISLATIVAS): soma nacional por
+     partido (ex.: quantos deputados estaduais o PL elegeu no Brasil todo).
+     Botao "todos os estados + BRASIL no fim": estado por estado (8 s) e o
+     resumo nacional no fim.
+   10 DEPUTADOS FEDERAIS MAIS VOTADOS (bloco CAMARA): Brasil todo, com
+     foto, partido, estado e votos (entre os eleitos marcados pelo TSE).
+   GIRO DO GOVERNADOR: tirado o "VAO AO 2o TURNO". Antes de 25/10 mostra o
+     placar do 1o turno (selo "1o TURNO"); com o config do 2o turno, a
+     apuracao do 2o turno ao vivo, ate "ELEITO NO 2o TURNO".
 
  NOVO NA 3.10 - PRESIDENTE ELEITO NO AR SOZINHO E VIGIA DA NOITE
    PRESIDENTE ELEITO: quando o TSE declara o eleito no boletim, o

@@ -21,6 +21,12 @@
   // ARTE da TV: fundo (web\arte\fundo-h.jpg / fundo-v.jpg) e logo ELEICOES
   // 2026 (web\arte\logo.png) no canto superior direito. Sem o arquivo,
   // fica o fundo liso de sempre e nenhuma logo.
+  // Fotos guardadas pelo GUARDAR-DADOS-TSE.bat (web\fotos-tse): usadas no
+  // lugar da do TSE quando existem (o TSE pode ficar lento ou fora no dia).
+  function viaLocal(url) {
+    var L = window.GCTSE_FOTOS_LOCAIS, m = L ? /\/fotos\/([a-z]{2})\/(\d+)\.jpe?g$/i.exec(url) : null;
+    return m && L[m[1].toLowerCase() + "/" + m[2]] ? L[m[1].toLowerCase() + "/" + m[2]] : url;
+  }
   function arteFundo(W, H) {
     var v = H > W ? "v" : "h";
     return '<image href="arte/fundo-' + v + '.jpg" data-arte="fundo-' + v + '" x="0" y="0" width="' + W + '" height="' + H +
@@ -177,8 +183,8 @@
     // fotos: o navegador nao deixa embutir imagem de outro site no PNG.
     if (window.GCTSE_FOTOS_DO_TSE !== true || window.__gctseSemFotos) return "";
     if (!tse || !tse.base || !c || !c.sqcand) return "";
-    if (FOTO.falhas >= 3 && FOTO.acertos === 0) return "";
-    var url = tse.base + "/" + tse.ciclo + "/" + tse.eleicao + "/fotos/br/" + c.sqcand + ".jpeg";
+    if (FOTO.falhas >= 3 && FOTO.acertos === 0 && !window.GCTSE_FOTOS_LOCAIS) return "";
+    var url = tse.base + "/" + tse.ciclo + "/" + tse.eleicao + "/fotos/br/" + c.sqcand + ".jpeg"; url = viaLocal(url);
     return FOTO.falhou[url] ? "" : url;
   }
   function foto(url, x, y, w, h) {
@@ -877,6 +883,90 @@
   G["assembleia-h"] = function () { return telaAsm(false); };
   G["assembleia-v"] = function () { return telaAsm(true); };
 
+  // ---- ASSEMBLEIAS: PANORAMA BRASIL (soma dos 27 estados, por partido) ------
+  function assembleiasBr() {
+    var a = (window.GCTSE_ESTADOS || {}).assembleia || {}, soma = {}, vagas = 0, eleitos = 0, ufs = 0, comEl = 0;
+    Object.keys(a).forEach(function (u) {
+      var x = a[u]; if (!x) return;
+      ufs++; vagas += +x.vagas || 0; eleitos += +x.eleitos || 0; if (+x.eleitos > 0) comEl++;
+      var ps = x.partidos || {};
+      Object.keys(ps).forEach(function (sg) { soma[sg] = (soma[sg] || 0) + (+ps[sg] || 0); });
+    });
+    var lista = Object.keys(soma).map(function (sg) { return { sigla: sg, em2027: soma[sg], atual: 0 }; })
+      .sort(function (p, q) { return (q.em2027 - p.em2027) || p.sigla.localeCompare(q.sigla); });
+    lista.forEach(function (p, i) { p.cor = corPartidoCamara(p.sigla, i); });
+    return { ps: lista, vagas: vagas, eleitos: eleitos, ufs: ufs, comEl: comEl, temAtual: false };
+  }
+  function subAsmBr(cm) {
+    if (!cm.eleitos) return "aguardando os deputados estaduais eleitos (ESTADOS.bat)";
+    var n = inteiro(cm.eleitos);
+    return n + " deputados estaduais e distritais eleitos" + (cm.comEl < 27 ? " · " + cm.comEl + " de 27 estados" : " · soma dos 27 estados");
+  }
+  function telaAsmBr(v) {
+    var cm = assembleiasBr(), W = v ? 540 : 1280, H = v ? 960 : 720, o, tit = "ASSEMBLEIAS LEGISLATIVAS";
+    var sl = !cm.eleitos ? { texto: "AGUARDANDO", cor: C.trilho } : (cm.comEl >= 27 && cm.eleitos >= cm.vagas ? { texto: "TOTALIZAÇÃO FINAL", cor: C.verde } : { texto: "PARCIAL", cor: C.vermelho });
+    var rod = "Fonte: TSE — deputados estaduais (cargo 7) e distritais do DF (cargo 8) eleitos, somados por partido";
+    // o hemiciclo vira por partido em proporcao (1.059 cadeiras nao cabem uma a uma)
+    if (!v) {
+      o = t(73, 57, tit + " — BRASIL", { s: 34, b: true, ls: 1, max: 667 }) + t(73, 85, subAsmBr(cm), { s: 18, c: C.apagado, max: 660 }) + seloH(W, sl);
+      if (!cm.eleitos) return svg(W, H, o + t(640, 380, "aguardando o ESTADOS.bat ler as Assembleias", { s: 22, c: C.apagado, a: "middle" }));
+      o += hemiciclo(385, 640, 320, 120, hemiCamara(cm), "em2027") + rotuloHemi(385, 640, "2027", cm.eleitos, 1.1);
+      o += tabelaCamara(745, 1207, 150, 32, cm, 20, 15, [1010, 1110, 1207]);
+      return svg(W, H, o + t(73, 700, rod, { s: 12, c: C.apagado2, max: 1134 }));
+    }
+    o = r(35, 48, 6, 38, C.destaque) + t(53, 80, "ASSEMBLEIAS — BRASIL", { s: 28, b: true, ls: 1, max: W - 88 }) + t(53, 106, subAsmBr(cm), { s: 13, c: C.apagado, max: W - 88 }) + seloV(W, sl);
+    if (!cm.eleitos) return svg(W, H, o + t(270, 480, "aguardando o ESTADOS.bat", { s: 18, c: C.apagado, a: "middle" }));
+    o += hemiciclo(270, 400, 232, 88, hemiCamara(cm), "em2027") + rotuloHemi(270, 400, "2027", cm.eleitos, 1);
+    o += tabelaCamara(40, 505, 448, 29, cm, 19, 15, [330, 420, 505]);
+    return svg(W, H, o + t(35, 950, "Fonte: TSE — deputados estaduais e distritais eleitos", { s: 11, c: C.apagado2, max: 470 }));
+  }
+  G["assembleias-h"] = function () { return telaAsmBr(false); };
+  G["assembleias-v"] = function () { return telaAsmBr(true); };
+
+  // ---- OS 10 DEPUTADOS FEDERAIS MAIS VOTADOS DO BRASIL ----------------------
+  // Eleitos marcados pelo TSE em cada estado (ESTADOS.bat), juntos e
+  // ordenados pelos votos nominais do proprio boletim.
+  function topDep(n) {
+    var cm = (window.GCTSE_ESTADOS || {}).camara || {}, todos = [], ufs = 0;
+    Object.keys(cm).forEach(function (u) { var l = comoLista((cm[u] || {}).lista); if (l.length) ufs++; l.forEach(function (c) { todos.push({ c: c, u: u }); }); });
+    todos.sort(function (a, b) { return ((+b.c.votos || 0) - (+a.c.votos || 0)) || String(a.c.nome).localeCompare(String(b.c.nome), "pt-BR"); });
+    return { lista: todos.slice(0, n), ufs: ufs, total: todos.length };
+  }
+  function telaTopDep(v) {
+    var T = topDep(10), W = v ? 540 : 1280, H = v ? 960 : 720, o, l = T.lista, max = l.length ? +l[0].c.votos || 1 : 1;
+    var sub = "Câmara dos Deputados · votos nominais" + (T.ufs && T.ufs < 27 ? " · " + T.ufs + " de 27 estados lidos" : "");
+    var sl = !T.ufs ? { texto: "AGUARDANDO", cor: C.trilho } : (T.ufs >= 27 ? { texto: "TOTALIZAÇÃO FINAL", cor: C.verde } : { texto: "PARCIAL", cor: C.vermelho });
+    if (!v) {
+      o = t(73, 57, "OS 10 DEPUTADOS FEDERAIS MAIS VOTADOS", { s: 32, b: true, ls: 1, max: 667 }) + t(73, 85, sub, { s: 17, c: C.apagado, max: 660 }) + seloH(W, sl);
+      if (!l.length) return svg(W, H, o + t(640, 380, "aguardando os deputados eleitos (ESTADOS.bat)", { s: 22, c: C.apagado, a: "middle" }));
+      l.forEach(function (it, i) {
+        var y = 106 + i * 58, c = it.c, cc = corPartidoCamara(c.partido, i);
+        o += r(73, y, 1134, 52, i % 2 ? "rgba(8,14,32,0.70)" : "rgba(8,14,32,0.86)", 6);
+        o += t(120, y + 36, (i + 1) + "º", { s: 24, b: true, a: "end", c: i < 3 ? "#ffd43b" : C.texto });
+        o += fotoDep(it.u, c, 134, y + 4, 33, 44);
+        o += r(178, y + 10, 5, 32, cc, 2);
+        o += t(193, y + 25, c.nome, { s: 21, b: true, max: 450 }) + t(193, y + 44, (c.partido || "") + "  ·  " + (DEP_UF[it.u] || it.u.toUpperCase()), { s: 13, c: C.apagado, max: 450 });
+        o += barraFina(680, y + 22, 330, (+c.votos || 0) / max, cc);
+        o += t(1190, y + 33, inteiro(c.votos), { s: 24, b: true, a: "end" }) + t(1190, y + 48, "votos", { s: 10, c: C.apagado, a: "end" });
+      });
+      return svg(W, H, o + t(73, 704, "Fonte: TSE — boletins de Deputado Federal dos 27 estados (entre os eleitos)", { s: 12, c: C.apagado2, max: 1134 }));
+    }
+    o = r(35, 48, 6, 38, C.destaque) + t(53, 80, "10 MAIS VOTADOS", { s: 30, b: true, ls: 1 }) + t(53, 106, "Deputados federais · Brasil", { s: 14, c: C.apagado }) + seloV(W, sl);
+    if (!l.length) return svg(W, H, o + t(270, 480, "aguardando os deputados eleitos", { s: 18, c: C.apagado, a: "middle" }));
+    l.forEach(function (it, i) {
+      var y = 164 + i * 77, c = it.c, cc = corPartidoCamara(c.partido, i);
+      o += r(35, y, 470, 71, i % 2 ? "rgba(8,14,32,0.70)" : "rgba(8,14,32,0.86)", 6);
+      o += t(72, y + 44, (i + 1) + "º", { s: 22, b: true, a: "end", c: i < 3 ? "#ffd43b" : C.texto });
+      o += fotoDep(it.u, c, 82, y + 8, 41, 55);
+      o += r(131, y + 12, 4, 46, cc, 2);
+      o += t(143, y + 30, c.nome, { s: 18, b: true, max: 350 }) + t(143, y + 50, (c.partido || "") + " · " + it.u.toUpperCase(), { s: 12, c: C.apagado, max: 200 });
+      o += t(495, y + 52, inteiro(c.votos) + " votos", { s: 15, b: true, a: "end" });
+    });
+    return svg(W, H, o + t(35, 950, "Fonte: TSE — entre os deputados federais eleitos", { s: 11, c: C.apagado2 }));
+  }
+  G["topdep-h"] = function () { return telaTopDep(false); };
+  G["topdep-v"] = function () { return telaTopDep(true); };
+
 
   // ---- Comparativo 2018 x 2022 x 2026: abstencao, brancos e nulos -----------
   // 2026 ao vivo (dados.js); 2022 do arquivo do TSE (estados.js), senao do
@@ -1162,7 +1252,7 @@
     var o = r(x, y, w, h, "#1c2a40", 4) + t(x + w / 2, y + h / 2 + w * 0.12, ini, { s: Math.round(w * 0.34), b: true, c: C.apagado2, a: "middle" });
     var tse = (window.GCTSE_ESTADOS || {}).tse;
     if (window.GCTSE_FOTOS_DO_TSE !== true || window.__gctseSemFotos || !tse || !tse.base || !c.sqcand) return o;
-    var url = tse.base + "/" + tse.ciclo + "/" + (tse.eleicao_camara || tse.eleicao) + "/fotos/" + u + "/" + c.sqcand + ".jpeg";
+    var url = tse.base + "/" + tse.ciclo + "/" + (tse.eleicao_camara || tse.eleicao) + "/fotos/" + u + "/" + c.sqcand + ".jpeg"; url = viaLocal(url);
     if (FOTO_DEP.falhou[url]) return o;
     return o + '<image href="' + esc(url) + '" x="' + x + '" y="' + y + '" width="' + w + '" height="' + h +
       '" preserveAspectRatio="xMidYMin slice" onload="__gctseFotoD(this,true)" onerror="__gctseFotoD(this,false)"/>';
@@ -1275,7 +1365,7 @@
     if (!ele || ele === (D().tse || {}).eleicao) return urlFoto(c);
     var tse = D().tse;
     if (window.GCTSE_FOTOS_DO_TSE !== true || window.__gctseSemFotos || !tse || !tse.base || !c || !c.sqcand) return "";
-    var url = tse.base + "/" + tse.ciclo + "/" + ele + "/fotos/br/" + c.sqcand + ".jpeg";
+    var url = tse.base + "/" + tse.ciclo + "/" + ele + "/fotos/br/" + c.sqcand + ".jpeg"; url = viaLocal(url);
     return FOTO.falhou[url] ? "" : url;
   }
   // Silhueta (sem foto) - desenho, nao imagem.
@@ -1573,7 +1663,7 @@
   function urlFotoGov(k, st) {
     var tse = E().tse;
     if (window.GCTSE_FOTOS_DO_TSE !== true || window.__gctseSemFotos || !tse || !tse.base || !st.c || !st.c.sqcand) return "";
-    var url = tse.base + "/" + tse.ciclo + "/" + (st.g.eleicao || tse.eleicao) + "/fotos/" + k + "/" + st.c.sqcand + ".jpeg";
+    var url = tse.base + "/" + tse.ciclo + "/" + (st.g.eleicao || tse.eleicao) + "/fotos/" + k + "/" + st.c.sqcand + ".jpeg"; url = viaLocal(url);
     return FOTO_DEP.falhou[url] ? "" : url;
   }
   function corGov(k, modoPartido) {
@@ -1969,7 +2059,7 @@
   function urlFotoSen(k, c) {
     var tse = E().tse;
     if (window.GCTSE_FOTOS_DO_TSE !== true || window.__gctseSemFotos || !tse || !tse.base || !c || !c.sqcand) return "";
-    var url = tse.base + "/" + tse.ciclo + "/" + (tse.eleicao_1turno || tse.eleicao) + "/fotos/" + k + "/" + c.sqcand + ".jpeg";
+    var url = tse.base + "/" + tse.ciclo + "/" + (tse.eleicao_1turno || tse.eleicao) + "/fotos/" + k + "/" + c.sqcand + ".jpeg"; url = viaLocal(url);
     return FOTO_DEP.falhou[url] ? "" : url;
   }
   // Mapa em blocos (cada estado um quadrado na posicao aproximada).
@@ -2791,6 +2881,8 @@
       { id: "govpres-h", nome: "Governador × Presidente no estado", f: "h" },
       { id: "perfilcamara-h", nome: "Perfil da nova Câmara", f: "h" },
       { id: "assembleia-h", nome: "Assembleia Legislativa (por estado)", f: "h" },
+      { id: "assembleias-h", nome: "Assembleias — Brasil (por partido)", f: "h" },
+      { id: "topdep-h", nome: "10 deputados federais mais votados", f: "h" },
       { id: "eleito-v", nome: "Presidente eleito", f: "v" },
       { id: "urnas-v", nome: "Urnas apuradas", f: "v" },
       { id: "votos-v", nome: "Brancos e nulos", f: "v" },
@@ -2827,7 +2919,9 @@
       { id: "decisivos-v", nome: "Estados decisivos (6 maiores eleitorados)", f: "v" },
       { id: "govpres-v", nome: "Governador × Presidente no estado", f: "v" },
       { id: "perfilcamara-v", nome: "Perfil da nova Câmara", f: "v" },
-      { id: "assembleia-v", nome: "Assembleia Legislativa (por estado)", f: "v" }
+      { id: "assembleia-v", nome: "Assembleia Legislativa (por estado)", f: "v" },
+      { id: "assembleias-v", nome: "Assembleias — Brasil (por partido)", f: "v" },
+      { id: "topdep-v", nome: "10 deputados federais mais votados", f: "v" }
     ],
     desenhar: function (id) { return G[id] ? G[id]() : null; },
     // Telas que trocam sozinhas (deputados): muda quando a tela da vez muda.

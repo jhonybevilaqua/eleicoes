@@ -21,7 +21,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "3.10 - 08/10/2026"
+$Versao = "3.11 - 08/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -333,7 +333,35 @@ $script:Ausentes = @{}     # url -> @{ vezes; pularAte } : recuo depois de 404
 $script:NumCiclo = 0
 $script:UltimoPedido = [datetime]::MinValue
 
+# COPIA LOCAL (GUARDAR-DADOS-TSE.bat): boletim que o TSE nao entregar (fora
+# do ar, 404, erro) e que estiver guardado em tse-local sai da copia - o
+# arquivo e o proprio do TSE. Volta ao TSE sozinho quando ele responder.
+$script:CopiaLocal = @{}      # url -> objeto lido do disco (le uma vez)
+$script:UsandoLocal = @{}     # url -> desde quando
+function Copia-Local([string] $Url) {
+    if (-not $Url.StartsWith($Base)) { return $null }
+    if ($script:CopiaLocal.ContainsKey($Url)) { return $script:CopiaLocal[$Url] }
+    $arq = Join-Path (Join-Path $Raiz "tse-local") (($Url.Substring($Base.Length).TrimStart('/')) -replace '/', [IO.Path]::DirectorySeparatorChar)
+    if (-not (Test-Path -LiteralPath $arq)) { return $null }
+    try { $obj = [IO.File]::ReadAllText($arq, [Text.Encoding]::UTF8) | ConvertFrom-Json } catch { return $null }
+    $script:CopiaLocal[$Url] = $obj
+    return $obj
+}
 function Obter-Boletim {
+    param([string] $Url)
+    $r = Obter-Boletim-Tse $Url
+    if ($null -ne $r) {
+        if ($script:UsandoLocal.ContainsKey($Url)) { $script:UsandoLocal.Remove($Url); Escrever-Log "TSE voltou a entregar: $Url" "OK" }
+        return $r
+    }
+    $loc = Copia-Local $Url
+    if ($null -ne $loc) {
+        if (-not $script:UsandoLocal.ContainsKey($Url)) { $script:UsandoLocal[$Url] = (Get-Date).ToString("HH:mm:ss"); Escrever-Log "TSE nao entregou - usando a COPIA LOCAL (GUARDAR-DADOS-TSE): $Url" "AVISO" }
+        return $loc
+    }
+    return $null
+}
+function Obter-Boletim-Tse {
     # Devolve o objeto do boletim, "SEM-MUDANCA" (304) ou $null.
     param([string] $Url)
     if ($script:Ausentes.ContainsKey($Url) -and $script:NumCiclo -lt $script:Ausentes[$Url].pularAte) { return $null }
@@ -702,6 +730,7 @@ function Gravar-Dados {
         ensaio        = $Ensaio
         pid           = $PID
         gravado_em    = (Get-Date).ToString("yyyy-MM-ddTHH:mm:ss")
+        copia_local   = $script:UsandoLocal.Count
         evolucao_novo_em = $(if ($script:EvolucaoNovoEm) { $script:EvolucaoNovoEm.ToString("yyyy-MM-ddTHH:mm:ss") } else { "" })
         recebendo_tse = (-not $script:Alarme)
         tse_nao_publicou = ($script:Alarme -and $script:ErroFoi404)

@@ -26,7 +26,7 @@
   #status { display: flex; gap: 10px; padding: 4px 20px 10px; flex-wrap: wrap; }
   .st { padding: 6px 12px; border-radius: 5px; font-weight: 700; font-size: 13px; }
   .st[hidden] { display: none; }
-  .ok { background: var(--ok-f); color: var(--ok-t); } .ruim { background: var(--ruim-f); color: var(--ruim-t); } .neutro { background: var(--neutro-f); color: var(--neutro-t); }
+  .ok { background: var(--ok-f); color: var(--ok-t); } .aviso { background: #fff3bf; color: #7a5200; } .ruim { background: var(--ruim-f); color: var(--ruim-t); } .neutro { background: var(--neutro-f); color: var(--neutro-t); }
   main { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 0 20px 20px; }
   @media (max-width: 1100px) { main { grid-template-columns: 1fr; } }
   .col { background: var(--cartao); border: 1px solid var(--linha); border-radius: 8px; padding: 14px; box-shadow: var(--sombra); }
@@ -142,7 +142,7 @@
   <a href="checklist.html" target="_blank">checklist do dia ↗</a>
   <span class="copia"><button id="copia" type="button" title="Guarda a pasta inteira (config, dados, evolução, logs) num .zip em copias-de-seguranca">💾 cópia de segurança</button> <span id="copiaMsg"></span></span>
   <button class="tema" id="tema" type="button">tema escuro</button></header>
-<div id="status"><span class="st neutro" id="stP">Presidente: …</span><span class="st neutro" id="stE">Estados: …</span><span class="st neutro" id="stEv" hidden></span><span class="st neutro" id="stG">Gerenciador: …</span><span class="st neutro" id="stOh" hidden></span><span class="st neutro" id="stOv" hidden></span></div>
+<div id="status"><span class="st neutro" id="stP">Presidente: …</span><span class="st neutro" id="stE">Estados: …</span><span class="st neutro" id="stEv" hidden></span><span class="st aviso" id="stCL" hidden></span><span class="st neutro" id="stG">Gerenciador: …</span><span class="st neutro" id="stOh" hidden></span><span class="st neutro" id="stOv" hidden></span></div>
 <div id="vigia"><span class="rot">PRESIDENTE ELEITO:</span>
   <button type="button" id="elAuto" title="Quando o TSE declarar o eleito, a tela 'Presidente eleito' vai ao ar sozinha nas duas saídas">no ar automático: …</button>
   <button type="button" id="elAgora">colocar no ar agora (H e V)</button>
@@ -422,7 +422,7 @@
     var ddG = document.createElement("div"); ddG.className = "dica";
     ddG.textContent = "Estado = governador daquele estado, fixo. Região = troca sozinha entre os estados da região a cada " + (cfg.tempo_auto_segundos || 10) + " s (setas ◀ ▶ abaixo).";
     gG.appendChild(ddG);
-    botoesEm(bloco("camara", "CÂMARA DOS DEPUTADOS"), itensDe(["camara", "deputados", "mulheres", "perfilcamara"]).map(function (it) {
+    botoesEm(bloco("camara", "CÂMARA DOS DEPUTADOS"), itensDe(["camara", "topdep", "deputados", "mulheres", "perfilcamara"]).map(function (it) {
       return /^deputados-/.test(it[0]) ? [it[0], it[1] + " (troca automática)", "", it[0] + "|"] : it;
     }));
     // Deputados federais | estado ou regiao: so os 5 mais votados de cada estado.
@@ -455,8 +455,16 @@
       aregs.appendChild(bx);
     });
     gAs.appendChild(aregs);
+    // Brasil (soma nacional por partido) e o rodizio "estado por estado e, no fim, o Brasil"
+    var bxAs = document.createElement("div"); bxAs.className = "botoes"; bxAs.style.marginTop = "8px";
+    var bBr = botao("BRASIL — total por partido", function () { definir(S.id, "assembleias-" + S.f, ""); }, "assembleias-" + S.f); bBr.style.fontWeight = "800"; bxAs.appendChild(bBr);
+    var idsAs = REGIOES_MENU.reduce(function (a, rg) { return a.concat(rg[2]); }, []).map(function (u) { return "assembleia:" + u; }).concat(["assembleias-" + S.f]);
+    var bTodos = botao("▶ todos os estados + BRASIL no fim (8 s cada)", function () { definir(S.id, "apresentacao", "", { telas: idsAs.join(","), tempo: 8 }); });
+    bTodos.dataset.pronto = idsAs.join(","); bxAs.appendChild(bTodos);
+    gAs.appendChild(bxAs);
     botoesEm(bloco("comparativos", "COMPARATIVOS"), itensDe(["turnos", "turno22", "ganho", "abstuf", "abstencao", "abstencao-mapa", "comparativo", "comparecimento", "votos"]));
     usados["assembleia-" + S.f] = 1;   // vai pelo menu de estados
+    usados["assembleias-" + S.f] = 1;
     var resto = lista.filter(function (g) { return !usados[g.id]; }).map(function (g) { return [g.id, g.nome]; });
     if (resto.length) botoesEm(bloco("auto", "OUTRAS TELAS"), resto);
     // controles do giro / resumo
@@ -681,6 +689,9 @@
       if (pctBr > 0 && pctBr < 100 && (iev == null || iev > 300)) { ev.className = "st ruim"; ev.textContent = "EVOLUÇÃO PAROU: " + pts.length + " pontos · nada novo há " + (iev == null ? "—" : Math.round(iev / 60) + " min"); }
       else { ev.className = "st ok"; ev.textContent = (pctBr >= 100 ? "EVOLUÇÃO GRAVADA: " : "GRAVANDO EVOLUÇÃO: ") + pts.length + " pontos · último " + ult; }
     }
+    // GUARDAR-DADOS-TSE: o TSE nao entregou algum boletim do 1o turno e a coleta usa a copia em disco
+    var cl = (+d.copia_local || 0) + (+e.copia_local || 0), stCL = document.getElementById("stCL");
+    stCL.hidden = !cl; stCL.textContent = "TSE sem alguns boletins do 1º turno: usando a CÓPIA LOCAL (" + cl + ")";
     var ens = document.getElementById("ensaio"); if (ens) ens.hidden = !(d.ensaio || e.ensaio);
   }
   function recarregar(arq) {

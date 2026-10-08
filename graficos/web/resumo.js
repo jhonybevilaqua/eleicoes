@@ -17,6 +17,12 @@
   // ARTE da TV: fundo (web\arte\fundo-h.jpg / fundo-v.jpg) e logo ELEICOES
   // 2026 (web\arte\logo.png) no canto superior direito. Sem o arquivo,
   // fica o fundo liso de sempre e nenhuma logo.
+  // Fotos guardadas pelo GUARDAR-DADOS-TSE.bat (web\fotos-tse): usadas no
+  // lugar da do TSE quando existem (o TSE pode ficar lento ou fora no dia).
+  function viaLocal(url) {
+    var L = window.GCTSE_FOTOS_LOCAIS, m = L ? /\/fotos\/([a-z]{2})\/(\d+)\.jpe?g$/i.exec(url) : null;
+    return m && L[m[1].toLowerCase() + "/" + m[2]] ? L[m[1].toLowerCase() + "/" + m[2]] : url;
+  }
   function arteFundo(W, H) {
     var v = H > W ? "v" : "h";
     return '<image href="arte/fundo-' + v + '.jpg" data-arte="fundo-' + v + '" x="0" y="0" width="' + W + '" height="' + H +
@@ -353,8 +359,8 @@
     if (window.GCTSE_FOTOS_DO_TSE !== true) return "";   // chave em web\fotos-config.js
     var tse = E().tse;
     if (!tse || !tse.base || !k || !k.sqcand) return "";
-    if (FOTO.falhas >= 3 && FOTO.acertos === 0) return "";
-    var url = tse.base + "/" + tse.ciclo + "/" + tse.eleicao + "/fotos/" + u + "/" + k.sqcand + ".jpeg";
+    if (FOTO.falhas >= 3 && FOTO.acertos === 0 && !window.GCTSE_FOTOS_LOCAIS) return "";
+    var url = tse.base + "/" + tse.ciclo + "/" + tse.eleicao + "/fotos/" + u + "/" + k.sqcand + ".jpeg"; url = viaLocal(url);
     return FOTO.falhou[url] ? "" : url;
   }
   // Presidente: mesma foto dos graficos do Presidente (dados.js, pasta
@@ -363,11 +369,11 @@
     if (window.GCTSE_FOTOS_DO_TSE !== true) return "";
     var tse = P().tse, br = P().br;
     if (!tse || !tse.base || !k) return "";
-    if (FOTO.falhas >= 3 && FOTO.acertos === 0) return "";
+    if (FOTO.falhas >= 3 && FOTO.acertos === 0 && !window.GCTSE_FOTOS_LOCAIS) return "";
     var sq = k.sqcand;
     lista(br && br.candidatos).forEach(function (n) { if (n.numero === k.numero && n.sqcand) sq = n.sqcand; });
     if (!sq) return "";
-    var url = tse.base + "/" + tse.ciclo + "/" + tse.eleicao + "/fotos/br/" + sq + ".jpeg";
+    var url = tse.base + "/" + tse.ciclo + "/" + tse.eleicao + "/fotos/br/" + sq + ".jpeg"; url = viaLocal(url);
     return FOTO.falhou[url] ? "" : url;
   }
   function foto(url, x, y, w, h) {
