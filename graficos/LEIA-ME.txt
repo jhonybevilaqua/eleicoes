@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 3.12 - apuracao em graficos (versao final)
+ gctse GRAFICOS 3.13 - apuracao em graficos (versao final)
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -22,6 +22,48 @@
    GIRO DOS ESTADOS (Governador e Senador, um estado por vez)
    RESUMO (7 telas de fechamento)
    GERENCIADOR (escolhe o que vai para as saidas SDI da DeckLink)
+
+ NOVO NA 3.13 - MAIS 10 GRAFICOS E COMPARATIVOS (2022 x 2026)
+   Todos com dado do TSE. Onde o grafico usa 2022 e o TSE nao entregou,
+   a tela diz "aguardando ..." em vez de inventar.
+   No gerenciador:
+   PRESIDENTE
+     De onde veio a vantagem ... saldo de votos que cada estado deu a cada
+                                 candidato, por regiao, exterior e Brasil.
+     Mudou de lado desde 2022 .. mapa: partido que lidera o estado no 2o
+                                 turno de 2026 x o que venceu em 2022
+                                 (hachurado = mudou). So no 2o turno.
+     Intensidade da vitoria .... mapa pela margem (ate 5, 5 a 15, 15 a 30,
+                                 mais de 30 pontos) e onde cada um foi
+                                 mais forte.
+     Concentracao do voto ...... em quantos estados cada candidato teve
+                                 70%+, 60-70%, 50-60%, abaixo de 50%.
+   COMPARATIVOS
+     Abstencao 2022 x 2026 ..... por estado, 2o turno x 2o turno.
+     Brancos e nulos 1o x 2o ... por estado, 1o turno x 2o turno de 2026.
+     Exterior: a caixa do total do exterior ganha a linha de 2022.
+   CAMARA
+     10 eleitos com menos votos  deputados federais eleitos com a menor
+                                 votacao nominal (sistema proporcional).
+   GOVERNADOR E SENADO
+     Governadores 2022 x 2026 .. eleitos por partido nas duas eleicoes,
+                                 saldo e estados que trocaram de partido.
+     Senado: votos por partido . soma dos votos para o Senado nos 27
+                                 estados e eleitos de cada partido.
+
+   DADOS DE 2022 NO TSE (a mesma base publica, ainda no ar):
+     Presidente 2022 ... eleicao 544 (1o turno) e 545 (2o turno) - ja
+                         conferidos (config\config.validacao-2022.yaml).
+     Governador 2022 ... 546 (1o turno) e 547 (2o turno). Se o TSE usar
+                         outro numero, acrescentar em config-graficos.json:
+                           "comparar_2022": { "eleicao_estaduais": "546",
+                                              "eleicao_estaduais_2turno": "547" }
+     Rode GUARDAR-DADOS-TSE.bat: a janela informa
+       "2022 Presidente 2o turno (eleicao 545): N de 29"
+       "2022 Governador (eleicoes 546/547): 1o turno N de 27 | 2o turno M"
+     e guarda uma copia local (vale se o TSE tirar do ar).
+     Referencia 2o turno 2022 (TSE): Lula 60.345.999 (50,90%) x
+     Bolsonaro 58.206.354 (49,10%).
 
  NOVO NA 3.12 - CAPITAIS, EXTERIOR, iPAD, TECLADO E ARQUIVO HISTORICO
    PRESIDENTE NAS CAPITAIS: as 27 capitais, quem lidera e por quanto,

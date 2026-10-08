@@ -104,10 +104,19 @@ function RespMunicipio([string] $uf, [string] $cd, [bool] $turno2) {
         $cs = @((Cand 13 900013 "CANDIDATO A" "PT" $va (100 * $va / $tot) "" "n"), (Cand 22 900022 "CANDIDATO B" "PL" $vb (100 * $vb / $tot) "" "n"), (Cand 30 900030 "CANDIDATO C" "NOVO" $vc (100 * $vc / $tot) "" "n"), (Cand 15 900015 "CANDIDATO D" "MDB" $vd (100 * $vd / $tot) "" "n"))
         return Boletim 1 1 $cs 100 "f" $te "04/10/2026" "23:50:00"
     }
-    $p = $(if ($uf -eq "zz") { [math]::Min(1.0, (FracGeral) * 1.6) } else { Progresso $uf }); $pst = 100 * [math]::Pow($p, 0.8); $vv = $te * 0.75 * $pst / 100
+    $p = $(if ($cd -eq "22022") { 1.0 } elseif ($uf -eq "zz") { [math]::Min(1.0, (FracGeral) * 1.6) } else { Progresso $uf }); $pst = 100 * [math]::Pow($p, 0.8); $vv = $te * 0.75 * $pst / 100
     $a = $base - 0.05 * (1 - $p)
     $cs = @((Cand 13 900013 "CANDIDATO A" "PT" ($vv * $a) (100 * $a) "" "n"), (Cand 22 900022 "CANDIDATO B" "PL" ($vv * (1 - $a)) (100 - 100 * $a) "" "n"))
     return Boletim 1 1 $cs $pst $(if ($pst -ge 99.99) { "f" } else { "p" }) $te "25/10/2026" (Relogio (FracGeral))
+}
+function Resp2022Gov([string] $uf, [bool] $turno2) {   # governadores de 2022 ficticios
+    $te = [long] ($ELEITORES[$uf] * 1000); $t = $te * 0.79 * 0.93; $sgA = $PARTIDOS[[int] (10 * (Rnd "x1$uf"))]; $sgB = $PARTIDOS[[int] (10 * (Rnd "x2$uf"))]
+    $vai2 = (Rnd "x3$uf") -lt 0.4
+    if (-not $turno2 -and $vai2) { $cs = @((Cand 11 1 "GOV 2022 A ($($uf.ToUpper()))" $sgA ($t * 0.45) 45 "2o turno" "n"), (Cand 22 2 "GOV 2022 B ($($uf.ToUpper()))" $sgB ($t * 0.40) 40 "2o turno" "n")) }
+    elseif (-not $turno2) { $cs = @((Cand 11 1 "GOV 2022 A ($($uf.ToUpper()))" $sgA ($t * 0.58) 58 "Eleito" "s"), (Cand 22 2 "GOV 2022 B ($($uf.ToUpper()))" $sgB ($t * 0.30) 30 "Nao eleito" "n")) }
+    elseif ($vai2) { $cs = @((Cand 11 1 "GOV 2022 A ($($uf.ToUpper()))" $sgA ($t * 0.48) 48 "Nao eleito" "n"), (Cand 22 2 "GOV 2022 B ($($uf.ToUpper()))" $sgB ($t * 0.52) 52 "Eleito" "s")) }
+    else { return $null }
+    return Boletim 3 1 $cs 100 "f" $te "30/10/2022" "20:00:00"
 }
 function RespGovernador([string] $uf, [bool] $turno2) {
     $te = [long] ($ELEITORES[$uf] * 1000); $sg1 = $PARTIDOS[[int] (10 * (Rnd "g1$uf"))]; $sg2 = $(if ($sg1 -eq "PT") { "PL" } else { "PT" })
@@ -161,7 +170,10 @@ while ($ouvinte.IsListening) {
             $ciclo = $m.Groups[1].Value; $ele = $m.Groups[2].Value; $abr = $m.Groups[3].Value.ToLower(); $cargo = [int] $m.Groups[4].Value
             if ($ciclo -eq "ele2022") { $ele = "x$ele" }   # 2022: so o 2o turno de Presidente (545)
             $ok = ($abr -eq "br" -or $ELEITORES.Contains($abr))
-            if ($abr -eq "zz" -and $cargo -eq 1 -and ($ele -eq "9257" -or $ele -eq "9262")) { $obj = RespMunicipio "zz" "00000" ($ele -eq "9262") }   # exterior (total)
+            if ($abr -eq "zz" -and $cargo -eq 1 -and $ele -eq "x545") { $obj = RespMunicipio "zz" "22022" $true }   # exterior 2022
+            elseif ($abr -ne "br" -and $ok -and $cargo -eq 3 -and $ele -eq "x546") { $obj = Resp2022Gov $abr $false }
+            elseif ($abr -ne "br" -and $ok -and $cargo -eq 3 -and $ele -eq "x547") { $obj = Resp2022Gov $abr $true }
+            elseif ($abr -eq "zz" -and $cargo -eq 1 -and ($ele -eq "9257" -or $ele -eq "9262")) { $obj = RespMunicipio "zz" "00000" ($ele -eq "9262") }   # exterior (total)
             elseif ($ok -and $cargo -eq 1 -and $ele -eq "x545") { $obj = Resp2022 $abr }
             elseif ($ok -and $cargo -eq 1 -and $ele -eq "9257") { $obj = RespPresidente $abr $false }
             elseif ($ok -and $cargo -eq 1 -and $ele -eq "9262") { $obj = RespPresidente $abr $true }

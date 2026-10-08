@@ -17,7 +17,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "3.12 - 08/10/2026"
+$Versao = "3.13 - 08/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -747,11 +747,63 @@ function Partidos-2022([object] $Obj) {
             foreach ($pa in $agr.par) {
                 $sg = Decodificar-Entidades "$(Obter-Campo $pa @('sg') '')"
                 if (-not $sg -or -not (Tem-Propriedade $pa "cand")) { continue }
-                foreach ($c in $pa.cand) { $v = Converter-Decimal (Obter-Campo $c @('pvap') ''); if ($null -ne $v) { $r[$sg] = $v; $r["_nome_$sg"] = Decodificar-Entidades "$(Obter-Campo $c @('nmu','nm') '')" } }
+                foreach ($c in $pa.cand) { $v = Converter-Decimal (Obter-Campo $c @('pvap') ''); if ($null -ne $v) { $r[$sg] = $v; $r["_nome_$sg"] = Decodificar-Entidades "$(Obter-Campo $c @('nmu','nm') '')"; $r["_votos_$sg"] = Converter-Inteiro (Obter-Campo $c @('vap') 0) } }
             }
         }
     }
+    # comparecimento, abstencao, brancos e nulos do mesmo boletim (2022 x 2026)
+    foreach ($par in @(@("_pc", @("pc")), @("_pa", @("pa")), @("_pvb", @("pvb")), @("_pvn", @("ptvn", "pvn")), @("_aptos", @("te")))) { $x = Campo-2022 $Obj $par[1]; if ($null -ne $x) { $r[$par[0]] = $x } }
     return $r
+}
+
+# --------------------------- GOVERNADORES ELEITOS EM 2022 (por partido)
+# Boletim de Governador de 2022 que o TSE mantem publicado: 1o turno
+# (comparar_2022.eleicao_estaduais, padrao 546) e, nos estados com 2o turno,
+# o 2o (comparar_2022.eleicao_estaduais_2turno, padrao 547). Eleito = marca
+# do proprio TSE. Sem o arquivo, a tela diz "2022 indisponivel".
+$script:Ref2022Gov = $null
+$script:Prox2022Gov = [datetime]::MinValue
+$Est2022 = "546"; $Est2022T2 = "547"
+if (Tem-Propriedade $cfg "comparar_2022") {
+    if ((Tem-Propriedade $cfg.comparar_2022 "eleicao_estaduais") -and $cfg.comparar_2022.eleicao_estaduais) { $Est2022 = "$($cfg.comparar_2022.eleicao_estaduais)" }
+    if ((Tem-Propriedade $cfg.comparar_2022 "eleicao_estaduais_2turno") -and $cfg.comparar_2022.eleicao_estaduais_2turno) { $Est2022T2 = "$($cfg.comparar_2022.eleicao_estaduais_2turno)" }
+}
+function Obter-2022([string] $Url) {
+    try {
+        $resp = Invoke-WebRequest -Uri $Url -Headers @{ "User-Agent" = "gctse-graficos/1.0"; "Accept" = "application/json,*/*" } -TimeoutSec 15 -UseBasicParsing
+        return (Ler-Texto-Resposta $resp) | ConvertFrom-Json
+    } catch { Fechar-Resposta $_; return (Copia-Local $Url) }
+}
+function Eleito-2022($Obj) {
+    $r = @{ eleito = $null; turno2 = $false }
+    if ($null -eq $Obj -or -not (Tem-Propriedade $Obj "carg")) { return $r }
+    foreach ($cg in $Obj.carg) { foreach ($agr in @($cg.agr)) { foreach ($pa in @($agr.par)) {
+        if ($null -eq $pa) { continue }
+        $sg = Decodificar-Entidades "$(Obter-Campo $pa @('sg') '')"
+        foreach ($c in @($pa.cand)) {
+            if ($null -eq $c) { continue }
+            $st = Decodificar-Entidades "$(Obter-Campo $c @('st') '')"
+            if ($st -match 'turno') { $r.turno2 = $true }
+            $el = $(if ($st) { ($st -match 'eleit') -and -not ($st -match 'n\S{1,2}o\s+eleit') -and -not ($st -match 'turno') } else { "$(Obter-Campo $c @('e') '')".ToLower() -eq "s" })
+            if ($el) { $r.eleito = [pscustomobject]@{ partido = $sg; nome = Decodificar-Entidades "$(Obter-Campo $c @('nmu','nm') '')"; pct = Converter-Decimal (Obter-Campo $c @('pvap') '') } }
+        } } } }
+    return $r
+}
+function Buscar-2022-Gov {
+    if ($null -ne $script:Ref2022Gov -and $script:Ref2022Gov.completo) { return }
+    if ((Get-Date) -lt $script:Prox2022Gov) { return }
+    $script:Prox2022Gov = (Get-Date).AddMinutes(10)
+    $e1 = "{0:000000}" -f ([int] $Est2022); $e2 = "{0:000000}" -f ([int] $Est2022T2)
+    $porUf = [ordered]@{}
+    foreach ($u in $UFs) {
+        $b1 = Obter-2022 "$Base/$Ciclo2022/$Est2022/dados/$u/$u-c0003-e$e1-u.json"
+        if ($null -eq $b1) { if ($u -eq "ac") { Escrever-Log "governadores de 2022 (TSE, eleicao $Est2022): nao encontrado - tento de novo em 10 min (outro codigo: comparar_2022.eleicao_estaduais no config)" "AVISO"; return }; continue }
+        $x = Eleito-2022 $b1; $turno = 1
+        if ($null -eq $x.eleito -and $x.turno2) { $x = Eleito-2022 (Obter-2022 "$Base/$Ciclo2022/$Est2022T2/dados/$u/$u-c0003-e$e2-u.json"); $turno = 2 }
+        if ($x.eleito) { $porUf[$u] = [pscustomobject]@{ partido = $x.eleito.partido; nome = $x.eleito.nome; pct = $x.eleito.pct; turno = $turno } }
+    }
+    $script:Ref2022Gov = [pscustomobject]@{ eleicao = $Est2022; eleicao_2turno = $Est2022T2; ufs = [pscustomobject] $porUf; completo = ($porUf.Count -ge 27) }
+    Escrever-Log ("governadores de 2022 (TSE): {0} de 27 estados" -f $porUf.Count) $(if ($porUf.Count -ge 27) { "OK" } else { "AVISO" })
 }
 function Buscar-2022-2T {
     if (-not $Eleicao1T) { return }                      # so no modo 2o turno
@@ -760,7 +812,7 @@ function Buscar-2022-2T {
     $script:Prox2022T2 = (Get-Date).AddMinutes(10)
     $e6 = "{0:000000}" -f ([int] $Eleicao2022T2)
     $porUf = [ordered]@{}; $br = $null
-    foreach ($abr in @("br") + $UFs) {
+    foreach ($abr in @("br") + $UFs + @("zz")) {
         $url = "$Base/$Ciclo2022/$Eleicao2022T2/dados/$abr/$abr-c0001-e$e6-u.json"
         try {
             $resp = Invoke-WebRequest -Uri $url -Headers @{ "User-Agent" = "gctse-graficos/1.0"; "Accept" = "application/json,*/*" } -TimeoutSec 15 -UseBasicParsing
@@ -769,8 +821,9 @@ function Buscar-2022-2T {
         if ($abr -eq "br") { if ($null -eq $ps -or $ps.Count -lt 2) { Escrever-Log "2o turno de 2022 (TSE, eleicao $Eleicao2022T2): nao encontrado - tento de novo em 10 min" "AVISO"; return }; $br = $ps }
         elseif ($null -ne $ps -and $ps.Count -ge 2) { $porUf[$abr] = [pscustomobject] $ps }
     }
-    $script:Ref2022T2 = [pscustomobject]@{ eleicao = $Eleicao2022T2; br = [pscustomobject] $br; ufs = [pscustomobject] $porUf; completo = ($porUf.Count -ge 27) }
-    Escrever-Log ("2o turno de 2022 (TSE) para comparacao: Brasil + {0} de 27 estados" -f $porUf.Count) $(if ($porUf.Count -ge 27) { "OK" } else { "AVISO" })
+    $nUf = @($porUf.Keys | Where-Object { $_ -ne "zz" }).Count
+    $script:Ref2022T2 = [pscustomobject]@{ eleicao = $Eleicao2022T2; br = [pscustomobject] $br; ufs = [pscustomobject] $porUf; completo = ($nUf -ge 27) }
+    Escrever-Log ("2o turno de 2022 (TSE) para comparacao: Brasil + {0} de 27 estados{1}" -f $nUf, $(if ($porUf.Contains("zz")) { " + exterior" } else { "" })) $(if ($nUf -ge 27) { "OK" } else { "AVISO" })
 }
 
 # ------------------------------------------------------------- gravar dados
@@ -812,6 +865,7 @@ function Gravar-Dados {
         turno         = $(if ($Eleicao1T) { 2 } else { 1 })
         ref2022       = $script:Ref2022
         ref2022_2t    = $script:Ref2022T2
+        ref2022_gov   = $script:Ref2022Gov
         ufs           = $porEstado
         camara        = [pscustomobject] $script:Camara
         camara_motivos = [pscustomobject] $script:CamaraMotivo
@@ -848,6 +902,7 @@ do {
         }
         try { Buscar-2022 } catch { Escrever-Log "2022: $($_.Exception.Message)" "AVISO" }
         try { Buscar-2022-2T } catch { Escrever-Log "2o turno de 2022: $($_.Exception.Message)" "AVISO" }
+        try { Buscar-2022-Gov } catch { Escrever-Log "governadores de 2022: $($_.Exception.Message)" "AVISO" }
         # Todos a cada 3 ciclos; estado que ainda nao tem eleitos, a CADA ciclo.
         $faltam = @($UFs | Where-Object { -not $script:Camara.ContainsKey($_) -or $script:Camara[$_].eleitos -le 0 })
         if (($script:NumCiclo % 3) -eq 1 -or $faltam.Count -gt 0) {

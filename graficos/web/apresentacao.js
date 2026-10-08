@@ -52,7 +52,7 @@
 
   function chave() {
     var d = window.GCTSE_GRAFICOS.dados(), e = window.GCTSE_ESTADOS || {};
-    return JSON.stringify([d.modo, d.br, d.ufs, d.capitais, d.exterior, d.exterior_total, d.cor_slot, d.cores, d.turno1, e.ufs, e.ref2022, e.ref2022_2t, e.camara, e.assembleia]);
+    return JSON.stringify([d.modo, d.br, d.ufs, d.capitais, d.exterior, d.exterior_total, d.cor_slot, d.cores, d.turno1, e.ufs, e.ref2022, e.ref2022_2t, e.ref2022_gov, e.camara, e.assembleia]);
   }
   function desenharEm(camada, id) {
     if (id.indexOf("resumo:") === 0) {
@@ -142,7 +142,7 @@
   mostrar(0);
   agendar();
   // estados.js so quando ha tela de estado/resumo/Camara/comparativo no rodizio
-  var usaEstados = ids.some(function (id) { return id.indexOf(":") > 0 || /^(camara|comparativo|deputados|governadores|govpartido|mulheres|senadores|gov2t|govpres|perfilcamara|assembleia|turno22|topdep)/.test(id); });
+  var usaEstados = ids.some(function (id) { return id.indexOf(":") > 0 || /^(camara|comparativo|deputados|governadores|govpartido|mulheres|senadores|gov2t|govpres|perfilcamara|assembleia|turno22|topdep|mudou22|abst22|menosvot|senvotos|gov22|exterior|excidades)/.test(id); });
   // Deputados troca de tela sozinho dentro do seu tempo no rodizio.
   var pagAtual = "";
   setInterval(function () {

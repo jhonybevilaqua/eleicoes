@@ -149,7 +149,17 @@ foreach ($u in $UFs) {
 Anotar "2022 (comparacoes) e lista de eleicoes..." "Cyan"
 [void] (Guardar (Url "ele2022" $E2022 "br" 1 "r" "dados-simplificados"))
 [void] (Guardar (Url "ele2022" $E2022 "br" 1))
-foreach ($abr in @("br") + $UFs) { [void] (Guardar (Url "ele2022" $E2022T2 $abr 1)) }
+$n22 = 0; foreach ($abr in @("br") + $UFs + @("zz")) { if (Guardar (Url "ele2022" $E2022T2 $abr 1)) { $n22++ } }
+Anotar ("   2022 Presidente 2o turno (eleicao {0}): {1} de 29 (Brasil, 27 estados, exterior)" -f $E2022T2, $n22)
+$G22 = "546"; $G22T2 = "547"
+if ($c22) { if ("$(Prop $c22 'eleicao_estaduais')") { $G22 = "$(Prop $c22 'eleicao_estaduais')" }; if ("$(Prop $c22 'eleicao_estaduais_2turno')") { $G22T2 = "$(Prop $c22 'eleicao_estaduais_2turno')" } }
+$ng = 0; $ng2 = 0
+foreach ($u in $UFs) {
+    $bol22 = Guardar (Url "ele2022" $G22 $u 3)
+    if ($bol22) { $ng++; if (@(Cands $bol22 | Where-Object { $_.turno2 }).Count) { if (Guardar (Url "ele2022" $G22T2 $u 3)) { $ng2++ } } }
+}
+Anotar ("   2022 Governador (eleicoes {0}/{1}): 1o turno {2} de 27 | 2o turno {3} estados" -f $G22, $G22T2, $ng, $ng2) $(if ($ng -lt 27) { "Yellow" } else { "Gray" })
+if ($ng -eq 0) { Anotar "   (governadores de 2022 nao vieram: confira o codigo com a engenharia e ponha em comparar_2022.eleicao_estaduais no config)" "Yellow" }
 [void] (Guardar "$Base/comum/config/ele-c.json")
 # ARQUIVO HISTORICO (ARQUIVO-HISTORICO-2026.bat, depois do 2o turno): o 2o
 # turno final tambem, e um .zip com tudo para 2028/2030.

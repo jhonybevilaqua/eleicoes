@@ -405,7 +405,7 @@
       gA.appendChild(bxP);
     }
     gA.appendChild(painelRodizio(S));
-    botoesEm(bloco("presidente", "PRESIDENTE"), itensDe(["eleito", "presidente", "presmapa", "presmapa1t", "regioes", "pres2t", "evolucao", "virar", "viradas", "margem", "decisivos", "capitais", "exterior", "excidades", "estados", "lideranca"]));
+    botoesEm(bloco("presidente", "PRESIDENTE"), itensDe(["eleito", "presidente", "presmapa", "presmapa1t", "regioes", "pres2t", "evolucao", "virar", "viradas", "margem", "decisivos", "saldo", "mudou22", "intensidade", "concentracao", "capitais", "exterior", "excidades", "estados", "lideranca"]));
     // Presidente | estado ou regiao (como no telao)
     var gL = bloco("local", "PRESIDENTE | ESTADO OU REGIÃO");
     var regs = document.createElement("div"); regs.className = "regs";
@@ -419,7 +419,7 @@
     gL.appendChild(regs);
     botoesEm(bloco("apuracao", "APURAÇÃO"), itensDe(["apuracao", "urnas"]));
     var gE = bloco("estados", "GOVERNADOR E SENADO");
-    botoesEm(gE, itensDe(["governadores", "gov2t", "govpartido", "govpres", "senadores", "senadores1", "senadores2", "senado"]).concat([
+    botoesEm(gE, itensDe(["governadores", "gov2t", "govpartido", "govpres", "gov22", "senvotos", "senadores", "senadores1", "senadores2", "senado"]).concat([
       ["giro", "Giro dos estados", "uf:" + (ordem.indexOf(String(cfg.estado_destaque || "pr")) >= 0 ? String(cfg.estado_destaque || "pr") : ordem[0])],
       ["resumo", "Resumo (7 telas)", "tela:1"]]));
     // GOVERNADOR | ESTADO OU REGIAO: giro so do Governador. Verde = governador
@@ -439,7 +439,7 @@
     var ddG = document.createElement("div"); ddG.className = "dica";
     ddG.textContent = "Estado = governador daquele estado, fixo. Região = troca sozinha entre os estados da região a cada " + (cfg.tempo_auto_segundos || 10) + " s (setas ◀ ▶ abaixo).";
     gG.appendChild(ddG);
-    botoesEm(bloco("camara", "CÂMARA DOS DEPUTADOS"), itensDe(["camara", "topdep", "deputados", "mulheres", "perfilcamara"]).map(function (it) {
+    botoesEm(bloco("camara", "CÂMARA DOS DEPUTADOS"), itensDe(["camara", "topdep", "menosvot", "deputados", "mulheres", "perfilcamara"]).map(function (it) {
       return /^deputados-/.test(it[0]) ? [it[0], it[1] + " (troca automática)", "", it[0] + "|"] : it;
     }));
     // Deputados federais | estado ou regiao: so os 5 mais votados de cada estado.
@@ -479,7 +479,7 @@
     var bTodos = botao("▶ todos os estados + BRASIL no fim (8 s cada)", function () { definir(S.id, "apresentacao", "", { telas: idsAs.join(","), tempo: 8 }); });
     bTodos.dataset.pronto = idsAs.join(","); bxAs.appendChild(bTodos);
     gAs.appendChild(bxAs);
-    botoesEm(bloco("comparativos", "COMPARATIVOS"), itensDe(["turnos", "turno22", "ganho", "abstuf", "abstencao", "abstencao-mapa", "comparativo", "comparecimento", "votos"]));
+    botoesEm(bloco("comparativos", "COMPARATIVOS"), itensDe(["turnos", "turno22", "abst22", "brnulos", "ganho", "abstuf", "abstencao", "abstencao-mapa", "comparativo", "comparecimento", "votos"]));
     usados["assembleia-" + S.f] = 1;   // vai pelo menu de estados
     usados["assembleias-" + S.f] = 1;
     var resto = lista.filter(function (g) { return !usados[g.id]; }).map(function (g) { return [g.id, g.nome]; });
