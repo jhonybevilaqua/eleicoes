@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 3.16 - apuracao em graficos (versao final)
+ gctse GRAFICOS 3.17 - apuracao em graficos (versao final)
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -22,6 +22,30 @@
    GIRO DOS ESTADOS (Governador e Senador, um estado por vez)
    RESUMO (7 telas de fechamento)
    GERENCIADOR (escolhe o que vai para as saidas SDI da DeckLink)
+
+ NOVO NA 3.17 - GERENCIADOR NOVO E DADOS DO TSE NUM CLIQUE
+   LAYOUT: uma faixa por saida - HORIZONTAL em cima, VERTICAL embaixo. Em
+   cada faixa, o monitor (no ar / previa) fica a esquerda e acompanha a
+   rolagem; os botoes ficam a direita em colunas (Favoritos e Automatico
+   numa linha larga no alto). Os controles do giro e dos deputados aparecem
+   embaixo do monitor.
+   BARRA FIXA no alto: "HORIZONTAL" / "VERTICAL" rolam ate a saida;
+   "as duas / so horizontal / so vertical" esconde a outra (fica lembrado);
+   a direita, o que esta no ar nas duas saidas.
+
+   DADOS DO TSE (botao "dados do TSE" na barra):
+     roda sozinho, numa janela minimizada e um depois do outro:
+       GUARDAR-DADOS-TSE, IMPORTAR-CANDIDATOS e IMPORTAR-PERFIL-ELEITOR
+     "ATUALIZAR TUDO" ou "rodar" em cada linha; mostra quando cada um rodou
+     pela ultima vez e o resultado. "Codigos do 2o turno" abre a janela do
+     CODIGOS-2-TURNO (ele pede S para gravar - de proposito).
+     AO ABRIR O GERENCIADOR: o que ainda nao existe nesta maquina e buscado
+     sozinho. Para desligar: "atualizar_dados_ao_abrir": false no
+     config-graficos.json. No ENSAIO nada e baixado.
+     O botao fica amarelo "(falta)" se algum dado nunca foi baixado.
+     Sem o gerenciador: ATUALIZAR-DADOS.bat (ou ATUALIZAR-DADOS.bat perfil).
+     GRAFICOS.bat e ESTADOS.bat (boletim ao vivo) continuam como sempre:
+     o GERENCIADOR.bat ja abre os dois e reabre se fecharem.
 
  NOVO NA 3.16 - IMPORTAR-PERFIL-ELEITOR MUITO MAIS RAPIDO
    O arquivo real do TSE (perfil_eleitorado_2026.zip, ~390 MB) tem

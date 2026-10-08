@@ -27,9 +27,38 @@
   .st { padding: 6px 12px; border-radius: 5px; font-weight: 700; font-size: 13px; }
   .st[hidden] { display: none; }
   .ok { background: var(--ok-f); color: var(--ok-t); } .aviso { background: #fff3bf; color: #7a5200; } .ruim { background: var(--ruim-f); color: var(--ruim-t); } .neutro { background: var(--neutro-f); color: var(--neutro-t); }
-  main { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 0 20px 20px; }
-  @media (max-width: 1100px) { main { grid-template-columns: 1fr; } }
-  .col { background: var(--cartao); border: 1px solid var(--linha); border-radius: 8px; padding: 14px; box-shadow: var(--sombra); }
+  /* Uma faixa por saida (horizontal em cima, vertical embaixo): monitor fixo
+     a esquerda (acompanha a rolagem) e os botoes em colunas a direita. */
+  main { display: grid; grid-template-columns: 1fr; gap: 16px; padding: 0 20px 20px; }
+  .col { background: var(--cartao); border: 1px solid var(--linha); border-radius: 8px; padding: 14px; box-shadow: var(--sombra);
+         display: grid; grid-template-columns: clamp(380px, 31vw, 600px) minmax(0, 1fr); gap: 18px; align-items: start; scroll-margin-top: 54px; }
+  .col.oculta { display: none; }
+  .col-mon { position: sticky; top: 52px; max-height: calc(100vh - 60px); overflow: auto; }
+  .col-cmd { columns: 3 330px; column-gap: 12px; }
+  .col-cmd > .sec { break-inside: avoid; margin: 0 0 12px; }
+  .col-cmd > .sec.fav, .col-cmd > .sec.auto { column-span: all; }
+  .col-cmd .regs { grid-template-columns: 112px 1fr; }
+  .col-cmd .regs .reg { font-size: 12px; letter-spacing: 0; padding: 7px 6px; }
+  .col-cmd button { padding: 7px 10px; font-size: 13.5px; }
+  .col-cmd .regs .ufs button { width: 42px; padding: 6px 0; }
+  @media (max-width: 1100px) { .col { grid-template-columns: 1fr; } .col-mon { position: static; max-height: none; } }
+  /* barra fixa no alto: ir para cada saida, mostrar/esconder, dados do TSE */
+  #nav { position: sticky; top: 0; z-index: 8; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 6px 20px; background: var(--fundo); border-bottom: 1px solid var(--linha); }
+  #nav .rot { font-size: 12px; font-weight: 800; letter-spacing: 1px; color: var(--apagado); }
+  #nav button { padding: 6px 12px; font-size: 13px; }
+  #nav button.ligado { background: var(--azul); border-color: var(--azul-borda); color: #fff; }
+  #nav .noarmini { font-size: 13px; color: var(--apagado); } #nav .noarmini b { color: var(--texto); }
+  #navDados.falta { background: #fff3bf; border-color: #d4a017; } #navDados.rodando { background: var(--azul); border-color: var(--azul-borda); color: #fff; }
+  #dadosTse { margin: 0 20px 12px; background: var(--cartao); border: 1px solid var(--linha); border-left: 4px solid #b8860b; border-radius: 6px; padding: 10px 14px; }
+  #dadosTse[hidden] { display: none; }
+  #dadosTse h3 { margin: 0 0 4px; font-size: 14px; letter-spacing: 1px; }
+  #dadosTse table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 8px 0; }
+  #dadosTse td { padding: 6px 8px; border-top: 1px solid var(--linha); vertical-align: middle; }
+  #dadosTse td:first-child { font-weight: 700; white-space: nowrap; } #dadosTse td.q { white-space: nowrap; }
+  #dadosTse .res { color: var(--apagado); font-size: 12px; }
+  #dadosTse .acoes { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  #dadosTse .msg { font-weight: 700; font-size: 13px; }
+  #dadosTse button.forte { background: var(--verde); border-color: var(--verde-borda); color: #fff; }
   .col h2 { margin: 0; font-size: 18px; letter-spacing: 1px; }
   .col .sub { color: var(--apagado); font-size: 13px; margin: 2px 0 10px; }
   .noar { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
@@ -166,6 +195,23 @@
   <tr><td><b>E</b></td><td>presidente eleito no ar nas duas saídas (pede confirmação)</td></tr>
   <tr><td><b>?</b></td><td>mostra/esconde esta ajuda</td></tr></table>
   <p class="dica">Não funcionam enquanto se digita num campo (ex.: tempo do rodízio).</p><button type="button" id="ajudaFechar">fechar</button></div></div>
+<div id="nav"><span class="rot">SAÍDAS:</span>
+  <button type="button" data-ir="h" title="rola até a saída horizontal">▣ HORIZONTAL</button>
+  <button type="button" data-ir="v" title="rola até a saída vertical">▯ VERTICAL</button>
+  <span class="rot" style="margin-left:10px">MOSTRAR:</span>
+  <button type="button" data-mostra="hv">as duas</button><button type="button" data-mostra="h">só horizontal</button><button type="button" data-mostra="v">só vertical</button>
+  <button type="button" id="navDados" style="margin-left:10px" title="baixar e importar os dados do TSE">📥 dados do TSE</button>
+  <span class="noarmini" style="margin-left:auto">no ar: H <b id="navH">…</b> · V <b id="navV">…</b></span></div>
+<div id="dadosTse" hidden><h3>📥 DADOS DO TSE (o que não vem no boletim ao vivo)</h3>
+  <div class="dica" style="margin:0">Roda numa janela minimizada, um depois do outro. GRAFICOS.bat e ESTADOS.bat continuam coletando normalmente. Ao abrir o gerenciador, o que ainda não existir nesta máquina é buscado sozinho.</div>
+  <table><tbody>
+    <tr><td>Cópia local do TSE</td><td>1º turno, 2022 e fotos dos eleitos guardados no disco (vale se o TSE sair do ar) — GUARDAR-DADOS-TSE</td><td class="q" id="dqTse">…</td><td><button type="button" data-rodar="tse">rodar</button></td></tr>
+    <tr><td>Candidatos (gênero)</td><td>deputadas, senadoras e perfil da Câmara — IMPORTAR-CANDIDATOS</td><td class="q" id="dqCandidatos">…</td><td><button type="button" data-rodar="candidatos">rodar</button></td></tr>
+    <tr><td>Perfil do eleitor</td><td>perfil do eleitorado; “quem foi às urnas” só depois que o TSE publicar — IMPORTAR-PERFIL-ELEITOR</td><td class="q" id="dqPerfil">…</td><td><button type="button" data-rodar="perfil">rodar</button></td></tr>
+    <tr><td>Códigos do 2º turno</td><td>lê do TSE os códigos do 2º turno e pede confirmação (S) antes de gravar — CODIGOS-2-TURNO</td><td class="q">—</td><td><button type="button" data-rodar="codigos">abrir janela</button></td></tr>
+  </tbody></table>
+  <div class="acoes"><button type="button" class="forte" data-rodar="tudo">▶ ATUALIZAR TUDO</button><span class="msg" id="dadosMsg"></span></div>
+  <div class="res" id="dadosRes"></div></div>
 <div id="ocorr"><details><summary>OCORRÊNCIAS DA NOITE (<span id="nOc">0</span>)</summary><ol id="listaOc"></ol></details></div>
 <div id="toasts"></div>
 <div id="eleitoAviso" hidden><div class="caixa"><h2>PRESIDENTE ELEITO</h2><div class="nome" id="elNome"></div><div class="msg" id="elMsg"></div>
@@ -343,7 +389,7 @@
   var cols = document.getElementById("colunas");
   SAIDAS.forEach(function (S) {
     var col = document.createElement("section"); col.className = "col"; col.id = "col-" + S.id;
-    col.innerHTML = '<h2>' + S.nome + '</h2><div class="sub">' + S.sub + '</div>' +
+    col.innerHTML = '<div class="col-mon"><h2>' + S.nome + '</h2><div class="sub">' + S.sub + '</div>' +
       '<div class="noar"><b>NO AR</b><span class="tela">…</span></div>' +
       '<div class="monitores' + (S.f === "v" ? " v" : "") + '"><div class="mon-pgm"><div class="rot pgm" hidden><b>NO AR</b></div>' +
       '<div class="previa" style="aspect-ratio:' + S.W + '/' + S.H + (S.f === "v" ? ';max-width:42%' : '') + '">' +
@@ -355,18 +401,20 @@
       '<button type="button" class="cortar" hidden disabled>✂ CORTAR ▶ NO AR</button><button type="button" class="descartar" hidden disabled>descartar</button></div>' +
       (S.id === "v" ? '<div class="grupo">GIRO DA TELA NA SAÍDA SDI (monitor em pé)</div><div class="botoes girar">' +
         '<button data-g="90">↻ 90° horário</button><button data-g="-90">↺ 90° anti-horário</button><button data-g="0">sem girar</button></div>' +
-        '<div class="dica">Imagem de cabeça para baixo no monitor em pé? Clique no outro sentido.</div>' : '');
+        '<div class="dica">Imagem de cabeça para baixo no monitor em pé? Clique no outro sentido.</div>' : '') +
+      '</div><div class="col-cmd"></div>';
+    var mon = col.querySelector(".col-mon"), cmd = col.querySelector(".col-cmd");
     function grupo(titulo, itens) {
       var g = document.createElement("div"); g.innerHTML = '<div class="grupo">' + titulo + '</div>';
       var bx = document.createElement("div"); bx.className = "botoes";
       itens.forEach(function (it) { bx.appendChild(botao(it[1], function () { definir(S.id, it[0], it[2]); }, it[0])); });
-      g.appendChild(bx); col.appendChild(g);
+      g.appendChild(bx); cmd.appendChild(g);
     }
     // Menu por assunto. Cada botao poe a tela fixa no ar desta saida.
     function bloco(classe, titulo) {
       var g = document.createElement("div"); g.className = "sec " + classe;
       g.innerHTML = '<div class="grupo">' + titulo + '</div>';
-      col.appendChild(g); return g;
+      cmd.appendChild(g); return g;
     }
     function botoesEm(g, itens) {
       var bx = document.createElement("div"); bx.className = "botoes";
@@ -510,7 +558,7 @@
     var dica = document.createElement("div"); dica.className = "dica";
     dica.textContent = "O giro automático troca a cada " + (cfg.tempo_auto_segundos || 10) + " s enquanto esta página estiver aberta.";
     ctl.appendChild(dica);
-    col.appendChild(ctl);
+    mon.appendChild(ctl);
     // controle dos deputados: estado + setas (sem troca automatica)
     var cd = document.createElement("div"); cd.className = "controle ctldep";
     var d1 = document.createElement("div"); d1.className = "linha";
@@ -522,7 +570,7 @@
     var dd = document.createElement("div"); dd.className = "dica";
     dd.textContent = "As setas passam de estado em estado (5 mais votados de cada). Escolha estado ou região no bloco DEPUTADOS FEDERAIS acima.";
     cd.appendChild(dd);
-    col.appendChild(cd);
+    mon.appendChild(cd);
     cols.appendChild(col);
     col.querySelectorAll(".girar button").forEach(function (b) { b.onclick = function () { pedir("/girar?graus=" + b.dataset.g); }; });
     col.querySelectorAll(".previa").forEach(function (q) {
@@ -538,6 +586,70 @@
     };
     ligarPrevia(S.id, previa[S.id]);
   });
+
+  // ------------------------------------------- barra fixa: ir / mostrar saidas
+  function mostrarSaidas(q) {
+    if (!/^(hv|h|v)$/.test(q)) q = "hv";
+    SAIDAS.forEach(function (S) { document.getElementById("col-" + S.id).classList.toggle("oculta", q.indexOf(S.id) < 0); });
+    document.querySelectorAll("#nav [data-mostra]").forEach(function (b) { b.classList.toggle("ligado", b.dataset.mostra === q); });
+    try { localStorage.setItem("gctse-mostrar", q); } catch (e) { }
+  }
+  document.querySelectorAll("#nav [data-mostra]").forEach(function (b) { b.onclick = function () { mostrarSaidas(b.dataset.mostra); }; });
+  document.querySelectorAll("#nav [data-ir]").forEach(function (b) {
+    b.onclick = function () {
+      var c = document.getElementById("col-" + b.dataset.ir);
+      if (c.classList.contains("oculta")) mostrarSaidas("hv");
+      c.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+  });
+  (function () { var q = "hv"; try { q = localStorage.getItem("gctse-mostrar") || "hv"; } catch (e) { } mostrarSaidas(q); })();
+
+  // ------------------------------------------------------- dados do TSE
+  var painelDados = document.getElementById("dadosTse"), botaoDados = document.getElementById("navDados"), dadosRodando = false;
+  function quandoTxt(iso) {
+    if (!iso) return '<span style="color:var(--ruim-t);font-weight:700">nunca rodou</span>';
+    var d = new Date(iso); if (isNaN(d)) return iso;
+    var dd = function (n) { return (n < 10 ? "0" : "") + n; };
+    return "última: " + dd(d.getDate()) + "/" + dd(d.getMonth() + 1) + " " + dd(d.getHours()) + ":" + dd(d.getMinutes());
+  }
+  function escH(x) { return String(x == null ? "" : x).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function mostrarDados(d) {
+    if (!d) return;
+    var a = d.arquivos || {};
+    document.getElementById("dqTse").innerHTML = quandoTxt(a.tse);
+    document.getElementById("dqCandidatos").innerHTML = quandoTxt(a.candidatos);
+    document.getElementById("dqPerfil").innerHTML = quandoTxt(a.perfil) + (a.perfil ? (a.comparecimento ? " · com “quem foi às urnas”" : " · sem “quem foi às urnas” (TSE publica depois)") : "");
+    dadosRodando = !!d.rodando;
+    var falta = !a.tse || !a.candidatos || !a.perfil;
+    botaoDados.classList.toggle("rodando", dadosRodando); botaoDados.classList.toggle("falta", !dadosRodando && falta);
+    botaoDados.textContent = dadosRodando ? "⏳ dados do TSE: " + (d.etapa || "rodando") : (falta ? "📥 dados do TSE (falta)" : "📥 dados do TSE");
+    painelDados.querySelectorAll("[data-rodar]").forEach(function (b) { b.disabled = dadosRodando && b.dataset.rodar !== "codigos"; });
+    var dm = document.getElementById("dadosMsg");
+    if (d.mensagem) dm.textContent = d.mensagem;
+    else if (dadosRodando) dm.textContent = "rodando: " + (d.etapa || "…");
+    else if (/^(rodando|iniciado|pedindo)/.test(dm.textContent)) dm.textContent = "";
+    var ex = d.execucao, linhas = [];
+    if (ex && ex.etapas) [].concat(ex.etapas).forEach(function (e) {
+      if (!e) return;
+      linhas.push("<b>" + escH(e.nome) + "</b>: " + escH(e.situacao) + (e.resumo ? " — " + escH(e.resumo) : ""));
+    });
+    document.getElementById("dadosRes").innerHTML = linhas.length ? "Última execução" + (ex.fim ? " (terminou " + quandoTxt(ex.fim).replace("última: ", "") + ")" : "") + ":<br>" + linhas.join("<br>") : "";
+  }
+  function lerDados(rodar) {
+    return fetch("/dados" + (rodar ? "?rodar=" + encodeURIComponent(rodar) + "&t=" : "?t=") + Date.now(), { cache: "no-store" })
+      .then(function (r) { return r.json(); }).then(mostrarDados).catch(function () { });
+  }
+  botaoDados.onclick = function () { painelDados.hidden = !painelDados.hidden; if (!painelDados.hidden) lerDados(); };
+  painelDados.querySelectorAll("[data-rodar]").forEach(function (b) {
+    b.onclick = function () {
+      var r = b.dataset.rodar;
+      if (r === "tudo" && !confirm("Atualizar todos os dados do TSE agora? (roda numa janela minimizada; as saídas continuam no ar)")) return;
+      document.getElementById("dadosMsg").textContent = "pedindo…"; lerDados(r);
+    };
+  });
+  lerDados();
+  setInterval(function () { if (dadosRodando || !painelDados.hidden) lerDados(); }, 4000);
+  setInterval(function () { if (!dadosRodando && painelDados.hidden) lerDados(); }, 30000);
 
   // Painel "escolher as telas do rodizio": graficos do Presidente, telas do
   // Resumo e Governador + Senador de cada estado (tela do giro).
@@ -660,6 +772,7 @@
       if (e.tela === "resumo" && pos.tela) txt += " — " + pos.tela + ". " + RESUMO[pos.tela - 1] + (pos.ufr ? " — " + pos.ufr.toUpperCase() : "");
       if (pos.ufr) ufResumo[S.id] = pos.ufr;
       col.querySelector(".noar .tela").textContent = txt + (e.quando ? "  (desde " + e.quando + ")" : "");
+      var nv = document.getElementById("nav" + S.id.toUpperCase()); if (nv) nv.textContent = txt;
       col.querySelectorAll(".botoes button[data-k], .regs button[data-k]").forEach(function (b) { b.classList.toggle("ativo", b.dataset.k === e.tela || b.dataset.k === e.tela + "|" + e.acao); });
       col.querySelectorAll(".girar button").forEach(function (b) { b.classList.toggle("ativo", String(estado.girar_v) === b.dataset.g); });
       var ctl = col.querySelector(".controle");

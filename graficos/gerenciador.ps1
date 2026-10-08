@@ -178,11 +178,13 @@ function Ler-Arquivo {
 $script:Ensaio = $false
 $script:EleitoAuto = $true
 $script:Reabrir = $true
+$script:DadosAoAbrir = $true
 try {
     foreach ($p in $cfg.PSObject.Properties) {
         if ($p.Name -eq "ensaio" -and $p.Value -eq $true) { $script:Ensaio = $true }
         if ($p.Name -eq "presidente_eleito_no_ar" -and $p.Value -eq $false) { $script:EleitoAuto = $false }
         if ($p.Name -eq "reabrir_coletas" -and $p.Value -eq $false) { $script:Reabrir = $false }
+        if ($p.Name -eq "atualizar_dados_ao_abrir" -and $p.Value -eq $false) { $script:DadosAoAbrir = $false }
     }
 } catch { }
 if ($script:Ensaio) { $script:Reabrir = $false }   # o ENSAIO.bat cuida das janelas dele
@@ -213,6 +215,31 @@ function Linha-Csv([string] $Arq, [string[]] $Campos) {
 }
 function Registrar-NoAr([string] $S, [string] $Tela, [string] $Acao, [string] $Origem) { Linha-Csv "no-ar" @($S, $Tela, $Acao, $Origem) }
 # tipo: eleito | virada | alerta | ok | info
+# Situacao dos dados que nao vem do boletim ao vivo (botao "dados do TSE"):
+# andamento do atualizar-dados.ps1 e quando cada arquivo foi gerado.
+function Ler-Situacao-Dados {
+    $o = [ordered]@{ rodando = $false; etapa = ""; execucao = $null; arquivos = [ordered]@{} }
+    $arqS = Join-Path $Raiz "atualizar-dados.json"
+    if (Test-Path $arqS) {
+        try {
+            $x = [IO.File]::ReadAllText($arqS) | ConvertFrom-Json
+            $o.execucao = $x
+            if ($x.rodando) {
+                $vivo = $false; try { $vivo = $null -ne (Get-Process -Id ([int] $x.pid) -ErrorAction Stop) } catch { }
+                $o.rodando = $vivo; $o.etapa = "$($x.etapa)"
+                if (-not $vivo) { $o.etapa = "" }
+            }
+        } catch { }
+    }
+    function Quando([string] $Arq) { if (Test-Path $Arq) { return (Get-Item $Arq).LastWriteTime.ToString("yyyy-MM-ddTHH:mm:ss") }; return $null }
+    $o.arquivos.tse = Quando (Join-Path $Raiz "GUARDAR-DADOS-TSE.txt")
+    $o.arquivos.candidatos = Quando (Join-Path $Web "candidatos-genero.js")
+    $o.arquivos.perfil = Quando (Join-Path $Web "perfil-eleitor.js")
+    $o.arquivos.comparecimento = $false
+    $pf = Join-Path $Web "perfil-eleitor.js"
+    if (Test-Path $pf) { try { $o.arquivos.comparecimento = ([IO.File]::ReadAllText($pf)).Contains('"comparecimento"') } catch { } }
+    return $o
+}
 function Evento([string] $Tipo, [string] $Texto) {
     $id = [DateTime]::Now.Ticks
     [void] $script:Estado.eventos.Add([ordered]@{ id = "$id"; hora = (Get-Date -Format "HH:mm:ss"); tipo = $Tipo; texto = $Texto })
@@ -395,6 +422,27 @@ Escrever-Log ("no ar agora: horizontal = {0} | vertical = {1}" -f $script:Estado
 Write-Host ""
 Write-Host "  Deixe esta janela ABERTA: sem ela as saidas param de trocar." -ForegroundColor Yellow
 Write-Host ""
+# Dados do TSE que nao vem do boletim ao vivo: se algum ainda nao existe
+# nesta maquina, ja busca sozinho (janela minimizada). Desligar no config:
+# "atualizar_dados_ao_abrir": false. Atualizar depois: botao "dados do TSE".
+if ($script:DadosAoAbrir -and -not $script:Ensaio) {
+    $faltam = @()
+    if (-not (Test-Path (Join-Path $Raiz "GUARDAR-DADOS-TSE.txt"))) { $faltam += "tse" }
+    if (-not (Test-Path (Join-Path $Web "candidatos-genero.js"))) { $faltam += "candidatos" }
+    if (-not (Test-Path (Join-Path $Web "perfil-eleitor.js"))) { $faltam += "perfil" }
+    if ($faltam.Count) {
+        $psExeD = "powershell"
+        if ($env:WINDIR -and (Test-Path (Join-Path $env:WINDIR "System32\WindowsPowerShell\v1.0\powershell.exe"))) { $psExeD = Join-Path $env:WINDIR "System32\WindowsPowerShell\v1.0\powershell.exe" } elseif (-not (Get-Command "powershell" -ErrorAction SilentlyContinue)) { $psExeD = "pwsh" }
+        $argsDA = @{ FilePath = $psExeD; WorkingDirectory = $Raiz; ArgumentList = @(@("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ('"' + (Join-Path $Raiz "atualizar-dados.ps1") + '"'), "-SemPausa") + $faltam) }
+        if ($env:OS -eq "Windows_NT") { $argsDA.WindowStyle = "Minimized" }
+        try {
+            $pDA = Start-Process @argsDA -PassThru
+            [IO.File]::WriteAllText((Join-Path $Raiz "atualizar-dados.json"), (([ordered]@{ rodando = $true; pid = $pDA.Id; inicio = (Get-Date).ToString("yyyy-MM-ddTHH:mm:ss"); etapa = "comecando..."; etapas = @() }) | ConvertTo-Json -Compress))
+            Escrever-Log ("dados do TSE ainda nao baixados nesta maquina ({0}): buscando sozinho, janela minimizada" -f ($faltam -join ", ")) "Cyan"
+            Evento "info" ("dados do TSE: buscando sozinho o que faltava ({0})" -f ($faltam -join ", "))
+        } catch { Escrever-Log "dados do TSE: nao consegui iniciar ($($_.Exception.Message))" "Yellow" }
+    }
+}
 if ($AbrirPagina) { try { Start-Process "http://localhost:$Porta/gerenciador.html" } catch { } }
 
 $script:Pedido = $null
@@ -508,13 +556,47 @@ while ($ouvinte.IsListening) {
                 Responder $ctx 400 "text/plain; charset=utf-8" ([Text.Encoding]::UTF8.GetBytes("pedido invalido"))
             }
         }
+        elseif ($caminho -eq "/dados") {
+            # DADOS DO TSE: roda o atualizar-dados.ps1 (guardar copia do TSE,
+            # importar candidatos e perfil do eleitor) numa janela minimizada.
+            # ?rodar=tudo|tse|candidatos|perfil  ou  ?rodar=codigos (abre a
+            # janela do CODIGOS-2-TURNO, que pede confirmacao). Sem ?rodar so
+            # devolve a situacao.
+            $rodar = "$($req.QueryString['rodar'])"; $msgD = ""
+            $stD = Ler-Situacao-Dados
+            if ($rodar) {
+                $psExe = "powershell"
+                if ($env:WINDIR -and (Test-Path (Join-Path $env:WINDIR "System32\WindowsPowerShell\v1.0\powershell.exe"))) { $psExe = Join-Path $env:WINDIR "System32\WindowsPowerShell\v1.0\powershell.exe" } elseif (-not (Get-Command "powershell" -ErrorAction SilentlyContinue)) { $psExe = "pwsh" }
+                if ($script:Ensaio) { $msgD = "no ENSAIO os dados do TSE nao sao baixados (use o gerenciador de verdade)" }
+                elseif ($rodar -eq "codigos") {
+                    try { Start-Process -FilePath (Join-Path $Raiz "CODIGOS-2-TURNO.bat") -WorkingDirectory $Raiz; $msgD = "janela CODIGOS DO 2o TURNO aberta: confira e responda S para gravar" }
+                    catch { $msgD = "nao abriu: $($_.Exception.Message)" }
+                    Escrever-Log "dados do TSE: CODIGOS-2-TURNO aberto pelo gerenciador" "Green"
+                }
+                elseif (@("tudo", "tse", "candidatos", "perfil") -notcontains $rodar) { $msgD = "pedido invalido" }
+                elseif ($stD.rodando) { $msgD = "ja esta rodando: " + $stD.etapa }
+                else {
+                    $argsD = @{ FilePath = $psExe; WorkingDirectory = $Raiz; ArgumentList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ('"' + (Join-Path $Raiz "atualizar-dados.ps1") + '"'), "-SemPausa", $rodar) }
+                    if ($env:OS -eq "Windows_NT") { $argsD.WindowStyle = "Minimized" }
+                    try {
+                        $pD = Start-Process @argsD -PassThru
+                        [IO.File]::WriteAllText((Join-Path $Raiz "atualizar-dados.json"), (([ordered]@{ rodando = $true; pid = $pD.Id; inicio = (Get-Date).ToString("yyyy-MM-ddTHH:mm:ss"); etapa = "comecando..."; etapas = @() }) | ConvertTo-Json -Compress))
+                        $msgD = "iniciado: $rodar"
+                        Evento "info" ("dados do TSE: atualizacao iniciada ({0})" -f $rodar)
+                    } catch { $msgD = "nao abriu: $($_.Exception.Message)" }
+                }
+                $stD = Ler-Situacao-Dados
+            }
+            $stD.mensagem = $msgD
+            Responder $ctx 200 "application/json; charset=utf-8" ([Text.Encoding]::UTF8.GetBytes(($stD | ConvertTo-Json -Depth 6 -Compress)))
+        }
         elseif ($caminho -eq "/copia") {
             # Copia de seguranca (copia-seguranca.ps1) num clique. ?ver=1 so
             # devolve como foi a ultima.
             $arqCopia = Join-Path $Raiz "copia-seguranca.json"
             if ("$($req.QueryString['ver'])" -ne "1") {
                 $psExe = "powershell"
-                if ($env:WINDIR -and (Test-Path (Join-Path $env:WINDIR "System32\WindowsPowerShell\v1.0\powershell.exe"))) { $psExe = Join-Path $env:WINDIR "System32\WindowsPowerShell\v1.0\powershell.exe" }
+                if ($env:WINDIR -and (Test-Path (Join-Path $env:WINDIR "System32\WindowsPowerShell\v1.0\powershell.exe"))) { $psExe = Join-Path $env:WINDIR "System32\WindowsPowerShell\v1.0\powershell.exe" } elseif (-not (Get-Command "powershell" -ErrorAction SilentlyContinue)) { $psExe = "pwsh" }
                 [IO.File]::WriteAllText($arqCopia, '{"ok":null,"mensagem":"copiando..."}')
                 $argsCopia = @{ FilePath = $psExe; WorkingDirectory = $Raiz; ArgumentList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ('"' + (Join-Path $Raiz "copia-seguranca.ps1") + '"'), "-SemPausa") }
                 if ($env:OS -eq "Windows_NT") { $argsCopia.WindowStyle = "Minimized" }
