@@ -439,7 +439,7 @@
     var ddG = document.createElement("div"); ddG.className = "dica";
     ddG.textContent = "Estado = governador daquele estado, fixo. Região = troca sozinha entre os estados da região a cada " + (cfg.tempo_auto_segundos || 10) + " s (setas ◀ ▶ abaixo).";
     gG.appendChild(ddG);
-    botoesEm(bloco("camara", "CÂMARA DOS DEPUTADOS"), itensDe(["camara", "topdep", "menosvot", "deputados", "mulheres", "perfilcamara"]).map(function (it) {
+    botoesEm(bloco("camara", "CÂMARA DOS DEPUTADOS"), itensDe(["camara", "topdep", "topfem", "menosvot", "deputados", "mulheres", "perfilcamara"]).map(function (it) {
       return /^deputados-/.test(it[0]) ? [it[0], it[1] + " (troca automática)", "", it[0] + "|"] : it;
     }));
     // Deputados federais | estado ou regiao: so os 5 mais votados de cada estado.

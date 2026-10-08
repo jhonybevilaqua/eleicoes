@@ -46,6 +46,33 @@ foreach ($o in ($onde | Select-Object -Unique)) {
     }
 }
 $arquivos = @($arquivos | Sort-Object FullName -Unique)
+
+# Sem o arquivo de um ano: baixa sozinho do TSE (Dados Abertos, endereco
+# oficial dos arquivos "Candidatos") para a pasta importar. Falhou: segue o
+# caminho manual (baixar no site e por na pasta importar).
+if (-not ($Caminhos -and @($Caminhos | Where-Object { $_ }).Count -gt 0)) {
+    $pastaImp = Join-Path $Raiz "importar"
+    foreach ($anoB in @("2026", "2022")) {
+        if (@($arquivos | Where-Object { $_.Name -match "(?i)^consulta_cand_$anoB" }).Count -gt 0) { continue }
+        $urlB = "https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_$anoB.zip"
+        $destB = Join-Path $pastaImp "consulta_cand_$anoB.zip"
+        $tmpB = "$destB.baixando"
+        Anotar "baixando do TSE: $urlB (pode levar alguns minutos)..." "Cyan"
+        try {
+            if (-not (Test-Path $pastaImp)) { New-Item -ItemType Directory -Path $pastaImp | Out-Null }
+            try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 } catch { }
+            $pp = $ProgressPreference; $ProgressPreference = "SilentlyContinue"
+            try { Invoke-WebRequest -Uri $urlB -OutFile $tmpB -UseBasicParsing -TimeoutSec 900 } finally { $ProgressPreference = $pp }
+            $zt = [IO.Compression.ZipFile]::OpenRead($tmpB); $zt.Dispose()   # confere se e um zip inteiro
+            Move-Item -LiteralPath $tmpB -Destination $destB -Force
+            $arquivos += @(Get-Item -LiteralPath $destB)
+            Anotar ("   baixado: consulta_cand_{0}.zip ({1} MB)" -f $anoB, [math]::Round((Get-Item $destB).Length / 1MB, 1)) "Green"
+        } catch {
+            Remove-Item -LiteralPath $tmpB -Force -ErrorAction SilentlyContinue
+            Anotar "   nao consegui baixar ($($_.Exception.Message)). Baixe na mao em dadosabertos.tse.jus.br > Candidatos $anoB e ponha na pasta importar." "Yellow"
+        }
+    }
+}
 if ($arquivos.Count -eq 0) {
     Anotar "Procurei em:" "Yellow"; foreach ($o in $onde) { Anotar "   $o" }
     Sair "nenhum consulta_cand_2026.zip (nem 2022). Baixe em dadosabertos.tse.jus.br > Candidatos 2026 (e 2022) e ponha na pasta importar." 1

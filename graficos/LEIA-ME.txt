@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 3.13 - apuracao em graficos (versao final)
+ gctse GRAFICOS 3.14 - apuracao em graficos (versao final)
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -22,6 +22,21 @@
    GIRO DOS ESTADOS (Governador e Senador, um estado por vez)
    RESUMO (7 telas de fechamento)
    GERENCIADOR (escolhe o que vai para as saidas SDI da DeckLink)
+
+ NOVO NA 3.14 - AS 10 DEPUTADAS MAIS VOTADAS
+   Gerenciador > CAMARA > "10 deputadas mais votadas": as mulheres eleitas
+   para a Camara com mais votos no Brasil (foto, partido, estado, votos) e
+   quantas mulheres foram eleitas no total.
+   Eleitas = eleitos do boletim do TSE (ESTADOS.bat); genero = arquivo
+   "Candidatos 2026" do TSE (o boletim de resultados NAO traz o genero).
+   Por isso esta tela, a "Bancada feminina" e o "Perfil da nova Camara"
+   ficam VAZIAS ate rodar o IMPORTAR-CANDIDATOS.bat.
+   IMPORTAR-CANDIDATOS.bat agora BAIXA SOZINHO do TSE o
+   consulta_cand_2026.zip e o consulta_cand_2022.zip (para a pasta
+   importar). Se o download falhar, a janela avisa: baixe na mao em
+   dadosabertos.tse.jus.br > Candidatos e ponha na pasta importar.
+   Depois de importar, clique de novo na tela no gerenciador.
+   No ENSAIO essas telas ficam vazias (o ensaio nao usa o arquivo real).
 
  NOVO NA 3.13 - MAIS 10 GRAFICOS E COMPARATIVOS (2022 x 2026)
    Todos com dado do TSE. Onde o grafico usa 2022 e o TSE nao entregou,

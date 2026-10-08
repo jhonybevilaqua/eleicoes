@@ -926,18 +926,28 @@
   // ---- OS 10 DEPUTADOS FEDERAIS MAIS VOTADOS DO BRASIL ----------------------
   // Eleitos marcados pelo TSE em cada estado (ESTADOS.bat), juntos e
   // ordenados pelos votos nominais do proprio boletim.
-  function topDep(n) {
+  // filtro opcional (c -> true/false): ex. so as mulheres (tela "10 deputadas")
+  function topDep(n, filtro) {
     var cm = (window.GCTSE_ESTADOS || {}).camara || {}, todos = [], ufs = 0;
-    Object.keys(cm).forEach(function (u) { var l = comoLista((cm[u] || {}).lista); if (l.length) ufs++; l.forEach(function (c) { todos.push({ c: c, u: u }); }); });
+    Object.keys(cm).forEach(function (u) { var l = comoLista((cm[u] || {}).lista); if (l.length) ufs++; l.forEach(function (c) { if (!filtro || filtro(c)) todos.push({ c: c, u: u }); }); });
     todos.sort(function (a, b) { return ((+b.c.votos || 0) - (+a.c.votos || 0)) || String(a.c.nome).localeCompare(String(b.c.nome), "pt-BR"); });
     return { lista: todos.slice(0, n), ufs: ufs, total: todos.length };
   }
-  function telaTopDep(v) {
-    var T = topDep(10), W = v ? 540 : 1280, H = v ? 960 : 720, o, l = T.lista, max = l.length ? +l[0].c.votos || 1 : 1;
-    var sub = "Câmara dos Deputados · votos nominais" + (T.ufs && T.ufs < 27 ? " · " + T.ufs + " de 27 estados lidos" : "");
+  // M = tela das mulheres: so as eleitas cujo registro no arquivo
+  // "Candidatos" do TSE (IMPORTAR-CANDIDATOS.bat) e FEMININO
+  function telaTopDep(v, M) {
+    var W = v ? 540 : 1280, H = v ? 960 : 720, fem = null;
+    if (M) {
+      var gen = window.GCTSE_GENERO, a26 = gen && gen.anos ? gen.anos["2026"] : null;
+      if (!a26) return semDados(W, H, v, "AS 10 DEPUTADAS MAIS VOTADAS", "importe o arquivo de candidatos do TSE (IMPORTAR-CANDIDATOS.bat)");
+      fem = {}; comoLista(a26.mulheres).forEach(function (q) { fem[q] = 1; });
+    }
+    var T = topDep(10, fem ? function (c) { return !!fem[c.sqcand]; } : null), o, l = T.lista, max = l.length ? +l[0].c.votos || 1 : 1;
+    var sub = M ? "Câmara dos Deputados · " + T.total + (T.total === 1 ? " mulher eleita" : " mulheres eleitas") + " · votos nominais" + (T.ufs && T.ufs < 27 ? " · " + T.ufs + " de 27 estados lidos" : "")
+      : "Câmara dos Deputados · votos nominais" + (T.ufs && T.ufs < 27 ? " · " + T.ufs + " de 27 estados lidos" : "");
     var sl = !T.ufs ? { texto: "AGUARDANDO", cor: C.trilho } : (T.ufs >= 27 ? { texto: "TOTALIZAÇÃO FINAL", cor: C.verde } : { texto: "PARCIAL", cor: C.vermelho });
     if (!v) {
-      o = t(73, 57, "OS 10 DEPUTADOS FEDERAIS MAIS VOTADOS", { s: 32, b: true, ls: 1, max: 667 }) + t(73, 85, sub, { s: 17, c: C.apagado, max: 660 }) + seloH(W, sl);
+      o = t(73, 57, M ? "AS 10 DEPUTADAS MAIS VOTADAS" : "OS 10 DEPUTADOS FEDERAIS MAIS VOTADOS", { s: 32, b: true, ls: 1, max: 667 }) + t(73, 85, sub, { s: 17, c: C.apagado, max: 660 }) + seloH(W, sl);
       if (!l.length) return svg(W, H, o + t(640, 380, "aguardando os deputados eleitos (ESTADOS.bat)", { s: 22, c: C.apagado, a: "middle" }));
       l.forEach(function (it, i) {
         var y = 106 + i * 58, c = it.c, cc = corPartidoCamara(c.partido, i);
@@ -949,9 +959,9 @@
         o += barraFina(680, y + 22, 330, (+c.votos || 0) / max, cc);
         o += t(1190, y + 33, inteiro(c.votos), { s: 24, b: true, a: "end" }) + t(1190, y + 48, "votos", { s: 10, c: C.apagado, a: "end" });
       });
-      return svg(W, H, o + t(73, 704, "Fonte: TSE — boletins de Deputado Federal dos 27 estados (entre os eleitos)", { s: 12, c: C.apagado2, max: 1134 }));
+      return svg(W, H, o + t(73, 704, M ? "Fonte: TSE — boletins de Deputado Federal (eleitas) e gênero do arquivo Candidatos 2026 (Dados Abertos)" : "Fonte: TSE — boletins de Deputado Federal dos 27 estados (entre os eleitos)", { s: 12, c: C.apagado2, max: 1134 }));
     }
-    o = r(35, 48, 6, 38, C.destaque) + t(53, 80, "10 MAIS VOTADOS", { s: 30, b: true, ls: 1 }) + t(53, 106, "Deputados federais · Brasil", { s: 14, c: C.apagado }) + seloV(W, sl);
+    o = r(35, 48, 6, 38, M ? COR_MULHER : C.destaque) + t(53, 80, M ? "10 DEPUTADAS" : "10 MAIS VOTADOS", { s: 30, b: true, ls: 1 }) + t(53, 106, M ? "as mulheres mais votadas · " + T.total + " eleitas" : "Deputados federais · Brasil", { s: 14, c: C.apagado }) + seloV(W, sl);
     if (!l.length) return svg(W, H, o + t(270, 480, "aguardando os deputados eleitos", { s: 18, c: C.apagado, a: "middle" }));
     l.forEach(function (it, i) {
       var y = 164 + i * 77, c = it.c, cc = corPartidoCamara(c.partido, i);
@@ -962,10 +972,12 @@
       o += t(143, y + 30, c.nome, { s: 18, b: true, max: 350 }) + t(143, y + 50, (c.partido || "") + " · " + it.u.toUpperCase(), { s: 12, c: C.apagado, max: 200 });
       o += t(495, y + 52, inteiro(c.votos) + " votos", { s: 15, b: true, a: "end" });
     });
-    return svg(W, H, o + t(35, 950, "Fonte: TSE — entre os deputados federais eleitos", { s: 11, c: C.apagado2 }));
+    return svg(W, H, o + t(35, 950, M ? "Fonte: TSE — eleitas + arquivo Candidatos 2026" : "Fonte: TSE — entre os deputados federais eleitos", { s: 11, c: C.apagado2 }));
   }
   G["topdep-h"] = function () { return telaTopDep(false); };
   G["topdep-v"] = function () { return telaTopDep(true); };
+  G["topfem-h"] = function () { return telaTopDep(false, true); };
+  G["topfem-v"] = function () { return telaTopDep(true, true); };
 
 
   // ---- Comparativo 2018 x 2022 x 2026: abstencao, brancos e nulos -----------
@@ -3272,8 +3284,8 @@
   // Tela no ar sem o dado de que ela depende (antes das 17h, boletim ainda nao
   // lido, coleta recem-aberta): em vez de numeros zerados, uma tela limpa
   // com o nome da tela. Volta sozinha quando o dado chega.
-  var SEM_PRESIDENTE = /^(senado|comparativo|mulheres|perfilcamara|camara|deputados|topdep|menosvot|senvotos|gov22|assembleia|assembleias|governadores|govpartido|gov2t|senadores|senadores1|senadores2)-/;
-  var DE_ESTADOS = /^(camara|deputados|topdep|menosvot|senvotos|gov22|assembleia|assembleias|governadores|govpartido|gov2t|senadores|senadores1|senadores2|govpres)-/;
+  var SEM_PRESIDENTE = /^(senado|comparativo|mulheres|perfilcamara|camara|deputados|topdep|topfem|menosvot|senvotos|gov22|assembleia|assembleias|governadores|govpartido|gov2t|senadores|senadores1|senadores2)-/;
+  var DE_ESTADOS = /^(camara|deputados|topdep|topfem|menosvot|senvotos|gov22|assembleia|assembleias|governadores|govpartido|gov2t|senadores|senadores1|senadores2|govpres)-/;
   function temPresidente() { var b = D().br; return !!(b && b.tem); }
   function temEstados() { return !!(window.GCTSE_ESTADOS && window.GCTSE_ESTADOS.gravado_em); }
   function telaAguardando(id) {
@@ -3344,6 +3356,7 @@
       { id: "assembleia-h", nome: "Assembleia Legislativa (por estado)", f: "h" },
       { id: "assembleias-h", nome: "Assembleias — Brasil (por partido)", f: "h" },
       { id: "topdep-h", nome: "10 deputados federais mais votados", f: "h" },
+      { id: "topfem-h", nome: "10 deputadas mais votadas", f: "h" },
       { id: "eleito-v", nome: "Presidente eleito", f: "v" },
       { id: "urnas-v", nome: "Urnas apuradas", f: "v" },
       { id: "votos-v", nome: "Brancos e nulos", f: "v" },
@@ -3394,7 +3407,8 @@
       { id: "perfilcamara-v", nome: "Perfil da nova Câmara", f: "v" },
       { id: "assembleia-v", nome: "Assembleia Legislativa (por estado)", f: "v" },
       { id: "assembleias-v", nome: "Assembleias — Brasil (por partido)", f: "v" },
-      { id: "topdep-v", nome: "10 deputados federais mais votados", f: "v" }
+      { id: "topdep-v", nome: "10 deputados federais mais votados", f: "v" },
+      { id: "topfem-v", nome: "10 deputadas mais votadas", f: "v" }
     ],
     desenhar: function (id) { return desenharTela(id); },
     // Telas que trocam sozinhas (deputados): muda quando a tela da vez muda.
