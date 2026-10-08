@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 3.15 - apuracao em graficos (versao final)
+ gctse GRAFICOS 3.16 - apuracao em graficos (versao final)
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -22,6 +22,15 @@
    GIRO DOS ESTADOS (Governador e Senador, um estado por vez)
    RESUMO (7 telas de fechamento)
    GERENCIADOR (escolhe o que vai para as saidas SDI da DeckLink)
+
+ NOVO NA 3.16 - IMPORTAR-PERFIL-ELEITOR MUITO MAIS RAPIDO
+   O arquivo real do TSE (perfil_eleitorado_2026.zip, ~390 MB) tem
+   milhoes de linhas. A leitura agora e feita por um trecho em C# que o
+   proprio Windows compila na hora: ~1 milhao de linhas em poucos segundos
+   (antes, varios minutos por milhao). A janela mostra "N linhas..." a
+   cada milhao e, no fim, "gravado web\perfil-eleitor.js".
+   So DEPOIS dessa mensagem clique de novo na tela no gerenciador.
+   O zip baixado fica na pasta importar: rodar de novo nao baixa de novo.
 
  NOVO NA 3.15 - BLOCO JORNALISMO NO GERENCIADOR
    Gerenciador > JORNALISMO (bloco dourado), pedidos da redacao:

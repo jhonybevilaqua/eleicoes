@@ -114,6 +114,65 @@ function Achar($Ix, [string[]] $Nomes) { foreach ($nm in $Nomes) { if ($Ix.Conta
 # agregado: tipo|ano|turno -> @{ total = long[2]; dims = @{ dim = @{ rotulo = long[2] } } }
 # long[0] = eleitores (eleitorado) ou aptos (comparecimento); long[1] = comparecimento
 $Agg = @{}
+
+# Leitura rapida: o laco das linhas em C# (compilado pelo proprio Windows na
+# hora); o arquivo do TSE tem milhoes de linhas e o PowerShell puro levaria
+# dezenas de minutos. Se a compilacao falhar, usa o laco em PowerShell.
+$script:Rapido = $false
+try {
+    if (-not ("GctsePerfil" -as [type])) {
+        Add-Type -Language CSharp -TypeDefinition @"
+using System;
+using System.IO;
+using System.Collections.Generic;
+public static class GctsePerfil {
+    static string[] Campos(string l) {
+        if (l.Length > 1 && l[0] == '"') return l.Substring(1, l.Length - 2).Split(new string[] { "\";\"" }, StringSplitOptions.None);
+        return l.Split(';');
+    }
+    static string Pega(string[] p, int i, string padrao) { return (i >= 0 && i < p.Length) ? p[i] : padrao; }
+    static long Num(string[] p, int i) { long x; if (i >= 0 && i < p.Length && long.TryParse(p[i], out x)) return x; return 0; }
+    // ix: ano, turno, sexo, idade, escolaridade, cor, qt0, qt1, abstencao
+    public static long Ler(TextReader rd, int[] ix, string anoArq, Dictionary<string, long[]> combo) {
+        long n = 0; string linha;
+        while ((linha = rd.ReadLine()) != null) {
+            n++;
+            if (n % 1000000 == 0) Console.WriteLine("   " + n.ToString("N0") + " linhas...");
+            string[] p = Campos(linha);
+            long q0 = Num(p, ix[6]), q1 = Num(p, ix[7]);
+            if (ix[6] < 0 && ix[8] >= 0) q0 = q1 + Num(p, ix[8]);
+            string k = Pega(p, ix[0], anoArq) + "|" + Pega(p, ix[1], "") + "\t" + Pega(p, ix[2], "") + "\t" + Pega(p, ix[3], "") + "\t" + Pega(p, ix[4], "") + "\t" + Pega(p, ix[5], "");
+            long[] v;
+            if (!combo.TryGetValue(k, out v)) { v = new long[2]; combo[k] = v; }
+            v[0] += q0; v[1] += q1;
+        }
+        return n;
+    }
+}
+"@
+    }
+    $script:Rapido = $true
+} catch { Anotar "aviso: leitura rapida indisponivel ($($_.Exception.Message)); usando a lenta (pode demorar)." "Yellow" }
+function Ler-Lento($Rd, [int[]] $Ix, [string] $AnoArq, $Combo) {
+    $n = 0
+    while ($null -ne ($linha = $Rd.ReadLine())) {
+        $n++
+        if ($n % 500000 -eq 0) { Write-Host ("   {0:N0} linhas..." -f $n) -ForegroundColor DarkGray }
+        $p = Campos $linha
+        $v = New-Object string[] 6
+        for ($j = 0; $j -lt 6; $j++) { $v[$j] = $(if ($Ix[$j] -ge 0 -and $Ix[$j] -lt $p.Count) { $p[$Ix[$j]] } else { "" }) }
+        if (-not $v[0]) { $v[0] = $AnoArq }
+        $q0 = [long] 0; $q1 = [long] 0; $x = [long] 0
+        if ($Ix[6] -ge 0 -and [long]::TryParse($p[$Ix[6]], [ref] $x)) { $q0 = $x }
+        if ($Ix[7] -ge 0 -and [long]::TryParse($p[$Ix[7]], [ref] $x)) { $q1 = $x }
+        if ($Ix[6] -lt 0 -and $Ix[8] -ge 0 -and [long]::TryParse($p[$Ix[8]], [ref] $x)) { $q0 = $q1 + $x }
+        $k = $v[0] + "|" + $v[1] + "`t" + $v[2] + "`t" + $v[3] + "`t" + $v[4] + "`t" + $v[5]
+        $cv = $null
+        if (-not $Combo.TryGetValue($k, [ref] $cv)) { $cv = (New-Object long[] 2); $Combo[$k] = $cv }
+        $cv[0] += $q0; $cv[1] += $q1
+    }
+    return $n
+}
 foreach ($a in $arquivos) {
     $mA = [regex]::Match($a.Name, $Padrao)
     $tipo = $(if ($mA.Groups[1].Value -match '(?i)compar') { "comparecimento" } else { "eleitorado" })
@@ -140,28 +199,23 @@ foreach ($a in $arquivos) {
             $dimsIx = [ordered]@{ genero = $iGen; idade = $iIda; escolaridade = $iEsc; raca = $iRac }
             Anotar ("lendo {0} ({1}) - colunas: sexo {2}, idade {3}, escolaridade {4}, cor/raca {5}" -f $f.nome, $tipo,
                 $(if ($iGen -ge 0) { "sim" } else { "NAO" }), $(if ($iIda -ge 0) { "sim" } else { "NAO" }), $(if ($iEsc -ge 0) { "sim" } else { "NAO" }), $(if ($iRac -ge 0) { "sim" } else { "NAO (o arquivo nao traz)" })) "Cyan"
-            $n = 0
-            while ($null -ne ($linha = $rd.ReadLine())) {
-                $n++
-                if ($n % 500000 -eq 0) { Write-Host ("   {0:N0} linhas..." -f $n) -ForegroundColor DarkGray }
-                $p = Campos $linha
-                $ano = $(if ($iAno -ge 0 -and $iAno -lt $p.Count) { $p[$iAno] } else { $anoArq })
-                $tur = $(if ($iTur -ge 0 -and $iTur -lt $p.Count) { $p[$iTur] } else { "" })
-                $q0 = [long] 0; $q1 = [long] 0; $x = [long] 0
-                if ($iQ0 -ge 0 -and [long]::TryParse($p[$iQ0], [ref] $x)) { $q0 = $x }
-                if ($iQ1 -ge 0 -and [long]::TryParse($p[$iQ1], [ref] $x)) { $q1 = $x }
-                if ($iQ0 -lt 0 -and $iAbs -ge 0 -and [long]::TryParse($p[$iAbs], [ref] $x)) { $q0 = $q1 + $x }
-                $chave = "$tipo|$ano|$tur"
+            $ixs = [int[]] @($iAno, $iTur, $iGen, $iIda, $iEsc, $iRac, $iQ0, $iQ1, $iAbs)
+            $combo = New-Object 'System.Collections.Generic.Dictionary[string,long[]]'
+            $t0 = Get-Date
+            if ($script:Rapido) { $n = [GctsePerfil]::Ler($rd, $ixs, $anoArq, $combo) }
+            else { $n = Ler-Lento $rd $ixs $anoArq $combo }
+            # junta no agregado: chave "ano|turno<TAB>sexo<TAB>idade<TAB>escol.<TAB>cor"
+            foreach ($kv in $combo.GetEnumerator()) {
+                $tab = $kv.Key.IndexOf("`t")
+                $chave = "$tipo|" + $kv.Key.Substring(0, $tab)
                 if (-not $Agg.ContainsKey($chave)) { $Agg[$chave] = @{ total = (New-Object long[] 2); combo = @{}; dimsIx = $dimsIx } }
-                $ag = $Agg[$chave]; $ag.total[0] += $q0; $ag.total[1] += $q1
-                # soma por combinacao (sexo|idade|escolaridade|cor): poucas mil
-                # combinacoes para milhoes de linhas - rapido mesmo no PowerShell 5
-                $ck = $(if ($iGen -ge 0) { $p[$iGen] } else { "" }) + "`t" + $(if ($iIda -ge 0) { $p[$iIda] } else { "" }) + "`t" + $(if ($iEsc -ge 0) { $p[$iEsc] } else { "" }) + "`t" + $(if ($iRac -ge 0) { $p[$iRac] } else { "" })
-                $cv = $ag.combo[$ck]
-                if ($null -eq $cv) { $cv = (New-Object long[] 2); $ag.combo[$ck] = $cv }
-                $cv[0] += $q0; $cv[1] += $q1
+                $ag = $Agg[$chave]; $resto = $kv.Key.Substring($tab + 1)
+                $ag.total[0] += $kv.Value[0]; $ag.total[1] += $kv.Value[1]
+                $cv = $ag.combo[$resto]
+                if ($null -eq $cv) { $cv = (New-Object long[] 2); $ag.combo[$resto] = $cv }
+                $cv[0] += $kv.Value[0]; $cv[1] += $kv.Value[1]
             }
-            Anotar ("   {0:N0} linhas lidas" -f $n)
+            Anotar ("   {0:N0} linhas lidas em {1:N0} s" -f $n, ((Get-Date) - $t0).TotalSeconds)
         } catch { Anotar ("{0}: {1}" -f $f.nome, $_.Exception.Message) "Yellow" }
         finally { $rd.Dispose() }
     }
