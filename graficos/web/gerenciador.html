@@ -20,7 +20,9 @@
   header { display: flex; align-items: baseline; gap: 16px; padding: 14px 20px 6px; flex-wrap: wrap; }
   h1 { margin: 0; font-size: 21px; }
   header a { color: var(--link); font-size: 14px; }
-  header .tema { margin-left: auto; padding: 5px 10px; font-size: 13px; }
+  header .tema { padding: 5px 10px; font-size: 13px; }
+  header .copia { margin-left: auto; font-size: 13px; } header .copia button { padding: 5px 10px; font-size: 13px; }
+  #copiaMsg.ok { color: var(--ok-t); font-weight: 700; } #copiaMsg.ruim { color: var(--ruim-t); font-weight: 700; }
   #status { display: flex; gap: 10px; padding: 4px 20px 10px; flex-wrap: wrap; }
   .st { padding: 6px 12px; border-radius: 5px; font-weight: 700; font-size: 13px; }
   .st[hidden] { display: none; }
@@ -83,16 +85,39 @@
   .regs .reg { font-weight: 800; letter-spacing: 1px; text-align: left; white-space: nowrap; }
   .regs .ufs { display: flex; flex-wrap: wrap; gap: 4px; }
   .regs .ufs button { width: 46px; padding: 6px 0; }
+  #ensaio { background: #c00000; color: #fff; font-weight: 800; letter-spacing: 1px; text-align: center; padding: 8px; position: sticky; top: 0; z-index: 9; }
+  #ensaio[hidden] { display: none; }
   .ctldep .depregs { margin-top: 6px; }
+  /* PREVIA (PVW) x NO AR (PGM): com a previa ligada, o clique so prepara a
+     tela; ela vai ao ar no CORTAR. */
+  .monitores { display: flex; gap: 10px; align-items: flex-start; }
+  .monitores > div { flex: 1 1 0; min-width: 0; }
+  .monitores.v.pvw-on > div { flex: 0 0 42%; }
+  .monitores [hidden] { display: none !important; }
+  .monitores .rot { font-size: 12px; font-weight: 800; letter-spacing: 1px; margin-bottom: 4px; color: var(--apagado); }
+  .monitores .rot.pgm b { background: var(--verm); color: #fff; padding: 1px 7px; border-radius: 3px; }
+  .monitores .rot.pvw b { background: var(--verde); color: #fff; padding: 1px 7px; border-radius: 3px; }
+  .monitores .pvwbox { outline: 3px solid var(--verde); }
+  .monitores .pvwvazio { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #8ea3bd; font-size: 13px; text-align: center; padding: 8px; }
+  .pvwctl { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: -4px 0 10px; }
+  .pvwctl .pvwnome { font-weight: 700; }
+  button.cortar { background: var(--verm); border-color: var(--verm-borda); color: #fff; font-weight: 800; letter-spacing: .5px; }
+  button.cortar:hover { background: var(--verm-borda); }
+  button.cortar:disabled { opacity: .45; cursor: default; }
+  button.pvwliga.ligado, button.pvwliga.ligado:hover { background: var(--verde); border-color: var(--verde-borda); color: #fff; }
+  button.pvw-marcado { outline: 3px solid var(--verde); outline-offset: 1px; }
   .ctldep .depregs button.ativo { background: var(--azul); border-color: var(--azul-borda); color: #fff; }
 </style>
 <script>try { if (localStorage.getItem("gctse-tema") === "escuro") document.documentElement.className = "escuro"; } catch (e) { }</script>
 </head>
 <body>
+<div id="ensaio" hidden>ENSAIO — DADOS FICTÍCIOS — ESTE GERENCIADOR NÃO VAI AO AR (o do ar é o da porta 8098)</div>
 <header><h1>gctse — GERENCIADOR DAS SAÍDAS</h1>
   <a href="index.html" target="_blank">situação completa, avisos de virada e cores ↗</a>
+  <a href="checklist.html" target="_blank">checklist do dia ↗</a>
+  <span class="copia"><button id="copia" type="button" title="Guarda a pasta inteira (config, dados, evolução, logs) num .zip em copias-de-seguranca">💾 cópia de segurança</button> <span id="copiaMsg"></span></span>
   <button class="tema" id="tema" type="button">tema escuro</button></header>
-<div id="status"><span class="st neutro" id="stP">Presidente: …</span><span class="st neutro" id="stE">Estados: …</span><span class="st neutro" id="stG">Gerenciador: …</span><span class="st neutro" id="stOh" hidden></span><span class="st neutro" id="stOv" hidden></span></div>
+<div id="status"><span class="st neutro" id="stP">Presidente: …</span><span class="st neutro" id="stE">Estados: …</span><span class="st neutro" id="stEv" hidden></span><span class="st neutro" id="stG">Gerenciador: …</span><span class="st neutro" id="stOh" hidden></span><span class="st neutro" id="stOv" hidden></span></div>
 <main id="colunas"></main>
 
 <script charset="utf-8" src="giro-config.js"></script>
@@ -149,7 +174,53 @@
   }
   function botao(txt, fn, extra) { var b = document.createElement("button"); b.textContent = txt; b.onclick = fn; if (extra) b.dataset.k = extra; return b; }
   function pedir(url) { return fetch(url + (url.indexOf("?") < 0 ? "?" : "&") + "t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (e) { estado = e; pintar(); }); }
-  function definir(s, tela, acao) { pararAuto(s); return pedir("/definir?saida=" + s + "&tela=" + encodeURIComponent(tela) + (acao ? "&acao=" + encodeURIComponent(acao) : "")); }
+  function definirJa(s, tela, acao) { pararAuto(s); return pedir("/definir?saida=" + s + "&tela=" + encodeURIComponent(tela) + (acao ? "&acao=" + encodeURIComponent(acao) : "")); }
+  function irAoAr(s, p) {
+    if (p.rod) return pedir("/rodizio?saida=" + s + "&telas=" + encodeURIComponent(p.rod.telas) + "&tempo=" + p.rod.tempo).then(function () { return definirJa(s, p.tela, p.acao); });
+    return definirJa(s, p.tela, p.acao);
+  }
+  // PREVIA (PVW): ligada, o clique so prepara (mostra ao lado do NO AR); o
+  // CORTAR manda ao ar. Desligada: vai direto, como sempre. Lembrada por saida.
+  var previa = { h: false, v: false }, pendente = { h: null, v: null };
+  try { previa.h = localStorage.getItem("gctse-previa-h") === "1"; previa.v = localStorage.getItem("gctse-previa-v") === "1"; } catch (e) { }
+  function definir(s, tela, acao, rod) {
+    var p = { tela: tela, acao: acao || "", rod: rod || null };
+    if (!previa[s]) return irAoAr(s, p);
+    pendente[s] = p; mostrarPrevia(s); return Promise.resolve();
+  }
+  function nomePendente(s, p) {
+    var S = SAIDAS.filter(function (x) { return x.id === s; })[0];
+    if (p.rod) { var b = document.querySelector('#col-' + s + ' [data-pronto="' + p.rod.telas + '"]'); return (b ? b.textContent.replace(/^▶ /, "") : "rodízio") + " · " + p.rod.tempo + " s cada"; }
+    var n = /^deputados-/.test(p.tela) ? "Deputados federais — " + (!p.acao ? "troca automática" : p.acao.indexOf("dep:r-") === 0 ? "região " + p.acao.slice(6).toUpperCase() : p.acao.slice(4, 6).toUpperCase())
+      : /^presloc-/.test(p.tela) ? "Presidente | " + (p.acao.slice(5).toUpperCase() || "estado ou região")
+      : p.tela === "giro" ? "Giro dos estados — " + p.acao.slice(3).toUpperCase()
+      : p.tela === "resumo" ? "Resumo (7 telas)" : p.tela === "apresentacao" ? "Apresentação automática" : nomeTela(p.tela, S);
+    return n;
+  }
+  function mostrarPrevia(s) {
+    var col = document.getElementById("col-" + s), p = pendente[s], f = col.querySelector(".pvwbox iframe");
+    col.querySelector(".pvwnome").textContent = p ? nomePendente(s, p) : "";
+    col.querySelector(".pvwvazio").hidden = !!p;
+    col.querySelector(".cortar").disabled = !p; col.querySelector(".descartar").disabled = !p;
+    var url = p ? "saida.html?saida=" + s + "&previa=1&tela=" + encodeURIComponent(p.tela) + "&acao=" + encodeURIComponent(p.acao) +
+      (p.rod ? "&rodizio=" + encodeURIComponent(p.rod.telas) + "&tempo=" + p.rod.tempo : "") : "about:blank";
+    if (f.getAttribute("src") !== url) f.setAttribute("src", url);
+    col.querySelectorAll(".pvw-marcado").forEach(function (b) { b.classList.remove("pvw-marcado"); });
+    if (p) col.querySelectorAll(".botoes button[data-k], .regs button[data-k], [data-pronto]").forEach(function (b) {
+      if (p.rod ? b.dataset.pronto === p.rod.telas : (b.dataset.k === p.tela + "|" + p.acao || (!p.acao && b.dataset.k === p.tela))) b.classList.add("pvw-marcado");
+    });
+  }
+  function ligarPrevia(s, on) {
+    previa[s] = on; if (!on) pendente[s] = null;
+    try { localStorage.setItem("gctse-previa-" + s, on ? "1" : "0"); } catch (e) { }
+    var col = document.getElementById("col-" + s);
+    col.querySelector(".mon-pvw").hidden = !on; col.querySelector(".rot.pgm").hidden = !on;
+    col.querySelector(".cortar").hidden = !on; col.querySelector(".descartar").hidden = !on;
+    var bl = col.querySelector(".pvwliga"); bl.classList.toggle("ligado", on); bl.textContent = "prévia antes do ar: " + (on ? "LIGADA" : "DESLIGADA");
+    col.querySelector(".mon-pgm .previa").style.maxWidth = on ? "none" : (s === "v" ? "42%" : "");
+    col.querySelector(".monitores").classList.toggle("pvw-on", on);
+    mostrarPrevia(s);
+  }
   function comandar(s, acao) { return pedir("/comando?saida=" + s + "&acao=" + encodeURIComponent(acao)); }
 
   // Posicao atual do giro / resumo (o gerenciador manda sempre a posicao exata).
@@ -217,8 +288,14 @@
     var col = document.createElement("section"); col.className = "col"; col.id = "col-" + S.id;
     col.innerHTML = '<h2>' + S.nome + '</h2><div class="sub">' + S.sub + '</div>' +
       '<div class="noar"><b>NO AR</b><span class="tela">…</span></div>' +
+      '<div class="monitores' + (S.f === "v" ? " v" : "") + '"><div class="mon-pgm"><div class="rot pgm" hidden><b>NO AR</b></div>' +
       '<div class="previa" style="aspect-ratio:' + S.W + '/' + S.H + (S.f === "v" ? ';max-width:42%' : '') + '">' +
-      '<iframe src="saida.html?saida=' + S.id + '" width="' + S.W + '" height="' + S.H + '"></iframe></div>' +
+      '<iframe src="saida.html?saida=' + S.id + '" width="' + S.W + '" height="' + S.H + '"></iframe></div></div>' +
+      '<div class="mon-pvw" hidden><div class="rot pvw"><b>PRÉVIA</b> <span class="pvwnome"></span></div>' +
+      '<div class="previa pvwbox" style="aspect-ratio:' + S.W + '/' + S.H + '"><div class="pvwvazio">clique numa tela: ela aparece aqui e só vai ao ar no CORTAR</div>' +
+      '<iframe width="' + S.W + '" height="' + S.H + '"></iframe></div></div></div>' +
+      '<div class="pvwctl"><button type="button" class="pvwliga">prévia antes do ar: DESLIGADA</button>' +
+      '<button type="button" class="cortar" hidden disabled>✂ CORTAR ▶ NO AR</button><button type="button" class="descartar" hidden disabled>descartar</button></div>' +
       (S.id === "v" ? '<div class="grupo">GIRO DA TELA NA SAÍDA SDI (monitor em pé)</div><div class="botoes girar">' +
         '<button data-g="90">↻ 90° horário</button><button data-g="-90">↺ 90° anti-horário</button><button data-g="0">sem girar</button></div>' +
         '<div class="dica">Imagem de cabeça para baixo no monitor em pé? Clique no outro sentido.</div>' : '');
@@ -264,14 +341,14 @@
       var bxP = document.createElement("div"); bxP.className = "botoes prontos"; bxP.style.marginTop = "6px";
       prontos.forEach(function (rp) {
         var b = botao("▶ " + rp.nome + " (" + rp.ids.length + " telas)", function () {
-          pedir("/rodizio?saida=" + S.id + "&telas=" + encodeURIComponent(rp.ids.join(",")) + "&tempo=" + rp.tempo).then(function () { return definir(S.id, "apresentacao"); });
+          definir(S.id, "apresentacao", "", { telas: rp.ids.join(","), tempo: rp.tempo });
         });
         b.dataset.pronto = rp.ids.join(","); b.title = rp.ids.map(nomeTelaCurto).join(" › ") + " · " + rp.tempo + " s cada"; bxP.appendChild(b);
       });
       gA.appendChild(bxP);
     }
     gA.appendChild(painelRodizio(S));
-    botoesEm(bloco("presidente", "PRESIDENTE"), itensDe(["presidente", "presmapa", "presmapa1t", "regioes", "pres2t", "evolucao", "virar", "viradas", "margem", "estados", "lideranca"]));
+    botoesEm(bloco("presidente", "PRESIDENTE"), itensDe(["presidente", "presmapa", "presmapa1t", "regioes", "pres2t", "evolucao", "virar", "viradas", "margem", "decisivos", "estados", "lideranca"]));
     // Presidente | estado ou regiao (como no telao)
     var gL = bloco("local", "PRESIDENTE | ESTADO OU REGIÃO");
     var regs = document.createElement("div"); regs.className = "regs";
@@ -285,10 +362,10 @@
     gL.appendChild(regs);
     botoesEm(bloco("apuracao", "APURAÇÃO"), itensDe(["apuracao", "urnas"]));
     var gE = bloco("estados", "GOVERNADOR E SENADO");
-    botoesEm(gE, itensDe(["governadores", "gov2t", "govpartido", "senadores", "senadores1", "senadores2", "senado"]).concat([
+    botoesEm(gE, itensDe(["governadores", "gov2t", "govpartido", "govpres", "senadores", "senadores1", "senadores2", "senado"]).concat([
       ["giro", "Giro dos estados", "uf:" + (ordem.indexOf(String(cfg.estado_destaque || "pr")) >= 0 ? String(cfg.estado_destaque || "pr") : ordem[0])],
       ["resumo", "Resumo (7 telas)", "tela:1"]]));
-    botoesEm(bloco("camara", "CÂMARA DOS DEPUTADOS"), itensDe(["camara", "deputados", "mulheres"]).map(function (it) {
+    botoesEm(bloco("camara", "CÂMARA DOS DEPUTADOS"), itensDe(["camara", "deputados", "mulheres", "perfilcamara"]).map(function (it) {
       return /^deputados-/.test(it[0]) ? [it[0], it[1] + " (troca automática)", "", it[0] + "|"] : it;
     }));
     // Deputados federais | estado ou regiao: so os 5 mais votados de cada estado.
@@ -296,7 +373,7 @@
     var dregs = document.createElement("div"); dregs.className = "regs";
     function irDep(v) {
       var e0 = estado && estado[S.id];
-      if (e0 && e0.tela === "deputados-" + S.f) comandar(S.id, "dep:" + v);   // ja no ar: troca sem recarregar
+      if (e0 && e0.tela === "deputados-" + S.f && !previa[S.id]) comandar(S.id, "dep:" + v);   // ja no ar: troca sem recarregar
       else definir(S.id, "deputados-" + S.f, "dep:" + v);
     }
     REGIOES_MENU.forEach(function (rg) {
@@ -352,9 +429,18 @@
     col.appendChild(cd);
     cols.appendChild(col);
     col.querySelectorAll(".girar button").forEach(function (b) { b.onclick = function () { pedir("/girar?graus=" + b.dataset.g); }; });
-    var q = col.querySelector(".previa"), f = q.querySelector("iframe");
-    function escala() { f.style.transform = "scale(" + (q.clientWidth / S.W) + ")"; }
-    new ResizeObserver(escala).observe(q); escala();
+    col.querySelectorAll(".previa").forEach(function (q) {
+      var f = q.querySelector("iframe");
+      function escala() { f.style.transform = "scale(" + (q.clientWidth / S.W) + ")"; }
+      new ResizeObserver(escala).observe(q); escala();
+    });
+    col.querySelector(".pvwliga").onclick = function () { ligarPrevia(S.id, !previa[S.id]); };
+    col.querySelector(".descartar").onclick = function () { pendente[S.id] = null; mostrarPrevia(S.id); };
+    col.querySelector(".cortar").onclick = function () {
+      var p = pendente[S.id]; if (!p) return;
+      pendente[S.id] = null; mostrarPrevia(S.id); irAoAr(S.id, p);
+    };
+    ligarPrevia(S.id, previa[S.id]);
   });
 
   // Painel "escolher as telas do rodizio": graficos do Presidente, telas do
@@ -507,6 +593,18 @@
     else if (ie > 120) { s.className = "st ruim"; s.textContent = "Estados: COLETA PAROU há " + ie + " s"; }
     else if (e.recebendo_tse === false) { s.className = "st ruim"; s.textContent = "Estados: SEM RESPOSTA DO TSE"; }
     else { s.className = "st ok"; s.textContent = "Estados: OK"; }
+    // Grafico minuto a minuto (evolucao): o GRAFICOS.bat grava um ponto a
+    // cada boletim novo do TSE. Vermelho = apuracao andando e nada gravado
+    // ha 5 min.
+    var ev = document.getElementById("stEv"), pts = d.evolucao && d.evolucao.pontos ? (Array.isArray(d.evolucao.pontos) ? d.evolucao.pontos : d.evolucao.pontos.value || []) : [];
+    var pctBr = d.br && d.br.tem && d.br.secoes ? d.br.secoes.pct : 0, iev = idade(d.evolucao_novo_em);
+    ev.hidden = ip == null || !(pctBr > 0) && !pts.length;
+    if (!ev.hidden) {
+      var ult = pts.length ? String(pts[pts.length - 1].t || "").substr(11, 5) : "—";
+      if (pctBr > 0 && pctBr < 100 && (iev == null || iev > 300)) { ev.className = "st ruim"; ev.textContent = "EVOLUÇÃO PAROU: " + pts.length + " pontos · nada novo há " + (iev == null ? "—" : Math.round(iev / 60) + " min"); }
+      else { ev.className = "st ok"; ev.textContent = (pctBr >= 100 ? "EVOLUÇÃO GRAVADA: " : "GRAVANDO EVOLUÇÃO: ") + pts.length + " pontos · último " + ult; }
+    }
+    var ens = document.getElementById("ensaio"); if (ens) ens.hidden = !(d.ensaio || e.ensaio);
   }
   function recarregar(arq) {
     var sc = document.createElement("script"); sc.charset = "utf-8"; sc.src = arq + "?t=" + Date.now();
@@ -530,6 +628,22 @@
       .then(function (e) { estado = e; pintar(); g.className = "st ok"; g.textContent = "Gerenciador: no ar"; situacaoObs(); })
       .catch(function () { g.className = "st ruim"; g.textContent = "Gerenciador: SEM CONEXÃO — a janela do GERENCIADOR fechou?"; });
   }
+  // Copia de seguranca num clique (gerenciador.ps1 -> copia-seguranca.ps1).
+  var bCopia = document.getElementById("copia"), mCopia = document.getElementById("copiaMsg");
+  function verCopia(tentativas) {
+    fetch("/copia?ver=1&t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (c) {
+      if (c.ok === null && tentativas > 0) { mCopia.className = ""; mCopia.textContent = "copiando…"; setTimeout(function () { verCopia(tentativas - 1); }, 2000); return; }
+      bCopia.disabled = false;
+      if (c.ok === true) { mCopia.className = "ok"; mCopia.textContent = "✔ " + c.arquivo + " (" + c.mensagem + ")"; }
+      else if (c.ok === false) { mCopia.className = "ruim"; mCopia.textContent = "FALHOU: " + c.mensagem + " — use o COPIA-DE-SEGURANCA.bat"; }
+      else { mCopia.className = "ruim"; mCopia.textContent = "sem resposta — use o COPIA-DE-SEGURANCA.bat"; }
+    }).catch(function () { bCopia.disabled = false; mCopia.className = "ruim"; mCopia.textContent = "gerenciador sem conexão — use o COPIA-DE-SEGURANCA.bat"; });
+  }
+  bCopia.onclick = function () {
+    bCopia.disabled = true; mCopia.className = ""; mCopia.textContent = "copiando…";
+    fetch("/copia?t=" + Date.now(), { cache: "no-store" }).then(function () { setTimeout(function () { verCopia(90); }, 1500); })
+      .catch(function () { bCopia.disabled = false; mCopia.className = "ruim"; mCopia.textContent = "gerenciador sem conexão — use o COPIA-DE-SEGURANCA.bat"; });
+  };
   var bTema = document.getElementById("tema");
   function nomeTema() { bTema.textContent = document.documentElement.className === "escuro" ? "tema claro" : "tema escuro"; }
   bTema.onclick = function () {

@@ -90,6 +90,7 @@
 
   function selo(u) {
     var g = cargo(u, "gov"), s = cargo(u, "sen");
+    if (ensaioAtivo()) return { texto: "ENSAIO — NÃO VAI AO AR", cor: C.vermelho };
     if (D().modo === "SIMULADO") return { texto: "SIMULADO — NÃO OFICIAL", cor: C.vermelho };
     if (g && s && g.andamento === "f" && s.andamento === "f") return { texto: "TOTALIZAÇÃO FINAL", cor: C.verde };
     var pg = g ? g.urnas_pct : 0, ps = s ? s.urnas_pct : 0;
@@ -225,9 +226,19 @@
     o += t(30, 950, "Fonte: TSE — " + hora(u), { s: 11, c: C.apagado2 });
     return svg(W, H, o);
   }
+  // ENSAIO (ENSAIO.bat): toda tela sai riscada - nunca confundir com o ar.
+  function ensaioAtivo() { return !!((window.GCTSE_DADOS || {}).ensaio || (window.GCTSE_ESTADOS || {}).ensaio); }
+  function marcaEnsaio(W, H) {
+    if (!ensaioAtivo()) return "";
+    var cx = W / 2, cy = H / 2, s = Math.round(Math.min(W, H) / 7.5);
+    return '<g pointer-events="none"><text x="' + cx + '" y="' + cy + '" text-anchor="middle" dominant-baseline="middle" font-size="' + s +
+      '" font-weight="800" fill="#ff2a2a" fill-opacity="0.22" transform="rotate(' + (W > H ? -18 : -55) + " " + cx + " " + cy + ')">ENSAIO</text>' +
+      '<rect x="0" y="' + (H - 30) + '" width="' + W + '" height="30" fill="#c00000"/>' +
+      '<text x="' + cx + '" y="' + (H - 9) + '" text-anchor="middle" font-size="17" font-weight="800" fill="#ffffff">ENSAIO — DADOS FICTÍCIOS — NÃO VAI AO AR</text></g>';
+  }
   function svg(W, H, corpo) {
     return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + " " + H + '" width="' + W + '" height="' + H +
-      '" font-family="' + FONTE + '">' + r(0, 0, W, H, C.fundo) + arteFundo(W, H) + corpo + arteLogo(W, H, W > H ? 73 : 30) + "</svg>";
+      '" font-family="' + FONTE + '">' + r(0, 0, W, H, C.fundo) + arteFundo(W, H) + corpo + marcaEnsaio(W, H) + arteLogo(W, H, W > H ? 73 : 30) + "</svg>";
   }
 
   // Texto comprido encolhe para caber; o selo cresce com o texto.

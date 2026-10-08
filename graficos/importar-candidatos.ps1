@@ -77,6 +77,21 @@ function Campos([string] $L) {
 }
 
 $anos = @{}   # ano -> dados
+# Perfil (tela "Perfil da nova Camara"): idade na posse, grau de instrucao,
+# cor/raca e se disputava a reeleicao - colunas do proprio arquivo do TSE.
+$script:RotGrau = New-Object System.Collections.Generic.List[string]
+$script:RotCor = New-Object System.Collections.Generic.List[string]
+function Indice($lista, [string] $v) { if (-not $v) { return -1 }; $i = $lista.IndexOf($v); if ($i -lt 0) { $lista.Add($v); $i = $lista.Count - 1 }; return $i }
+function Idade([string] $nrIdade, [string] $nasc, [string] $ano) {
+    $n = 0; if ([int]::TryParse($nrIdade, [ref] $n) -and $n -ge 18 -and $n -le 110) { return $n }
+    $d = [datetime]::MinValue
+    if ($ano -and [datetime]::TryParseExact($nasc, "dd/MM/yyyy", [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::None, [ref] $d)) {
+        $posse = New-Object DateTime(([int] $ano + 1), 2, 1)
+        $a = $posse.Year - $d.Year; if ($posse -lt $d.AddYears($a)) { $a-- }
+        if ($a -ge 18 -and $a -le 110) { return $a }
+    }
+    return -1
+}
 foreach ($a in $arquivos) {
     foreach ($f in (Fontes $a)) {
         $rd = Abrir $f
@@ -102,7 +117,11 @@ foreach ($a in $arquivos) {
                 $sit = (V $p "DS_SITUACAO_CANDIDATURA").ToUpper()
                 $tot = (V $p "DS_SIT_TOT_TURNO").ToUpper()
                 $eleito = ($tot -match 'ELEIT') -and -not ($tot -match 'N.O ELEIT')
-                $anos[$ano].cand[$sq] = [pscustomobject]@{ f = $fem; apto = ($sit -eq "" -or $sit -eq "APTO"); eleito = $eleito; sg = (V $p "SG_PARTIDO"); uf = (V $p "SG_UF") }
+                $grau = (V $p "DS_GRAU_INSTRUCAO").ToUpper(); $corR = (V $p "DS_COR_RACA").ToUpper()
+                if ($grau -match '^#' ) { $grau = "" }; if ($corR -match '^#') { $corR = "" }
+                $reel = (V $p "ST_REELEICAO").ToUpper()
+                $pf = @((Idade (V $p "NR_IDADE_DATA_POSSE") (V $p "DT_NASCIMENTO") $ano), (Indice $script:RotGrau $grau), (Indice $script:RotCor $corR), $(if ($reel -eq "S") { 1 } elseif ($reel -eq "N") { 0 } else { -1 }))
+                $anos[$ano].cand[$sq] = [pscustomobject]@{ f = $fem; apto = ($sit -eq "" -or $sit -eq "APTO"); eleito = $eleito; sg = (V $p "SG_PARTIDO"); uf = (V $p "SG_UF"); pf = $pf }
                 $usadas++
             }
             Anotar ("lido {0}: {1} linhas, {2} de Deputado Federal" -f $f.nome, $n, $usadas)
@@ -116,8 +135,11 @@ if ($anos.Count -eq 0) { Sair "nenhuma linha de Deputado Federal nos arquivos li
 $saida = [ordered]@{
     gerado_em = (Get-Date).ToString("yyyy-MM-ddTHH:mm:ss")
     fonte = "TSE - Portal de Dados Abertos, Candidatos (consulta_cand)"
+    rotulos_grau = @($script:RotGrau)
+    rotulos_cor = @($script:RotCor)
     anos = [ordered]@{}
 }
+$anoMaisNovo = ($anos.Keys | Sort-Object | Select-Object -Last 1)
 foreach ($ano in ($anos.Keys | Sort-Object)) {
     $cs = @($anos[$ano].cand.Values)
     $aptos = @($cs | Where-Object { $_.apto })
@@ -134,9 +156,18 @@ foreach ($ano in ($anos.Keys | Sort-Object)) {
         eleitas_por_partido = [pscustomobject] $porPartido
         mulheres = $fems
     }
+    # perfil por sqcand [idade, grau, cor, reeleicao]: do ano mais novo, de
+    # todos os aptos (a tela cruza com os eleitos do boletim ao vivo); dos
+    # anos anteriores, so dos eleitos (para comparar).
+    $perfil = [ordered]@{}
+    foreach ($kv in $anos[$ano].cand.GetEnumerator()) {
+        if (($ano -eq $anoMaisNovo -and $kv.Value.apto) -or $kv.Value.eleito) { $perfil[$kv.Key] = $kv.Value.pf }
+    }
+    $saida.anos[$ano].perfil = [pscustomobject] $perfil
+    Anotar ("{0}: perfil (idade, instrucao, cor/raca, reeleicao) de {1} candidatos" -f $ano, $perfil.Count)
     Anotar ("{0}: {1} candidaturas a Deputado Federal ({2} aptas), {3} de mulheres ({4} aptas); eleitos no arquivo: {5}, mulheres: {6}" -f $ano, $cs.Count, $aptos.Count, $saida.anos[$ano].candidaturas_mulheres, $saida.anos[$ano].aptas_mulheres, $el.Count, $elF.Count) "Cyan"
 }
 $destino = Join-Path $Raiz "web\candidatos-genero.js"
 $json = $saida | ConvertTo-Json -Depth 6 -Compress
 [IO.File]::WriteAllText($destino, "window.GCTSE_GENERO = $json;", (New-Object System.Text.UTF8Encoding($false)))
-Sair ("gravado web\candidatos-genero.js. No gerenciador, clique de novo na tela 'Camara: bancada feminina' para ela carregar.") 0
+Sair ("gravado web\candidatos-genero.js. No gerenciador, clique de novo nas telas 'Camara: bancada feminina' e 'Perfil da nova Camara' para carregar.") 0

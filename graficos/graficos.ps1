@@ -21,7 +21,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "3.8 - 08/10/2026"
+$Versao = "3.9 - 08/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -253,6 +253,10 @@ $Base    = "$($cfg.tse.base_url)".TrimEnd('/')
 $Ciclo   = "$($cfg.tse.ciclo)"
 $Eleicao = "$($cfg.tse.eleicao_presidente)"
 $Modo    = "OFICIAL"
+# ENSAIO (ENSAIO.bat): copia separada da pasta, TSE simulado local. Todas as
+# telas saem marcadas "ENSAIO - NAO VAI AO AR".
+$Ensaio = ((Tem-Propriedade $cfg "ensaio") -and $cfg.ensaio -eq $true)
+if ($Ensaio) { $Modo = "SIMULADO" }
 if ($Teste) {
     if (-not ((Tem-Propriedade $cfg.tse "base_url_simulado") -and $cfg.tse.base_url_simulado)) {
         Write-Host "Modo TESTE sem 'base_url_simulado' no config-graficos.json." -ForegroundColor Red
@@ -267,7 +271,7 @@ if ($Teste) {
 # (a cada 3 ciclos) para o mapa do 1o turno e as comparacoes.
 $Eleicao1T = ""
 if ((Tem-Propriedade $cfg.tse "eleicao_presidente_1turno") -and $cfg.tse.eleicao_presidente_1turno -and
-    "$($cfg.tse.eleicao_presidente_1turno)" -ne $Eleicao -and $Modo -eq "OFICIAL") { $Eleicao1T = "$($cfg.tse.eleicao_presidente_1turno)" }
+    "$($cfg.tse.eleicao_presidente_1turno)" -ne $Eleicao -and ($Modo -eq "OFICIAL" -or $Ensaio)) { $Eleicao1T = "$($cfg.tse.eleicao_presidente_1turno)" }
 $Intervalo = 20
 if (Tem-Propriedade $cfg "intervalo_segundos") { $Intervalo = [math]::Max(10, [int] $cfg.intervalo_segundos) }
 $PastaWeb = Join-Path $Raiz "web"
@@ -621,6 +625,7 @@ $ArquivoEvolucao = Join-Path $Raiz ("evolucao-{0}-{1}-{2}.json" -f $Ciclo, $Elei
 $script:Evolucao = New-Object System.Collections.ArrayList
 $script:EvolucaoNomes = [ordered]@{}
 $script:EvolucaoOrigem = ""
+$script:EvolucaoNovoEm = $null
 $script:EvolucaoLidaEm = [datetime]::MinValue
 # Le (ou rele) o arquivo. O IMPORTAR-EVOLUCAO.bat pode gravar nele com este
 # programa aberto: quando a data do arquivo muda, a lista e recarregada.
@@ -667,6 +672,7 @@ function Registrar-Evolucao {
             (($ultimoPt.c | ConvertTo-Json -Compress) -eq ([pscustomobject] $porCand | ConvertTo-Json -Compress))) { return }
     }
     [void] $script:Evolucao.Add([pscustomobject]@{ t = $marca; u = $b.secoes.pct; c = [pscustomobject] $porCand })
+    $script:EvolucaoNovoEm = Get-Date
     while ($script:Evolucao.Count -gt 3000) { $script:Evolucao.RemoveAt(0) }
     try {
         $objEv = [ordered]@{ ciclo = $Ciclo; eleicao = $Eleicao; modo = $Modo; origem = $script:EvolucaoOrigem; nomes = [pscustomobject] $script:EvolucaoNomes; pontos = @($script:Evolucao) }
@@ -693,8 +699,10 @@ function Gravar-Dados {
     $dados = [ordered]@{
         versao        = $Versao
         modo          = $Modo
+        ensaio        = $Ensaio
         pid           = $PID
         gravado_em    = (Get-Date).ToString("yyyy-MM-ddTHH:mm:ss")
+        evolucao_novo_em = $(if ($script:EvolucaoNovoEm) { $script:EvolucaoNovoEm.ToString("yyyy-MM-ddTHH:mm:ss") } else { "" })
         recebendo_tse = (-not $script:Alarme)
         tse_nao_publicou = ($script:Alarme -and $script:ErroFoi404)
         ultimo_tse    = $ult
@@ -781,6 +789,16 @@ do {
             if ($script:ErroFoi404) { $situ = "TSE: responde, mas sem boletim ha $(Segundos-Sem-Tse) s" }
         }
         Escrever-Log "$txt | estados com boletim: $comDado de 27 | $situ" $(if ($script:Alarme) { "ERRO" } else { "INFO" })
+        # Evolucao minuto a minuto: mostra que esta gravando; alerta se a
+        # apuracao anda (urnas < 100%) e nenhum ponto novo ha 5 minutos.
+        if ($script:Cache.ContainsKey("br") -and $script:Cache["br"].secoes.pct -gt 0) {
+            $semNovo = $(if ($script:EvolucaoNovoEm) { ((Get-Date) - $script:EvolucaoNovoEm).TotalMinutes } else { 999 })
+            if ($script:Cache["br"].secoes.pct -lt 100 -and $semNovo -gt 5) {
+                Escrever-Log ("EVOLUCAO: nenhum ponto novo ha {0:N0} min ({1} pontos gravados) - confira se o TSE esta atualizando" -f [math]::Min($semNovo, 999), $script:Evolucao.Count) "AVISO"
+            } else {
+                Escrever-Log ("GRAVANDO EVOLUCAO: {0} pontos (ultimo {1})" -f $script:Evolucao.Count, $(if ($script:Evolucao.Count) { "$($script:Evolucao[$script:Evolucao.Count - 1].t)".Substring(11, 5) } else { "-" }))
+            }
+        }
     } catch {
         Escrever-Log "erro no ciclo: $($_.Exception.Message)" "ERRO"
     }

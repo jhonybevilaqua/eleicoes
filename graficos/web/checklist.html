@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Checklist 2º turno</title>
+<style>
+  /* Folha A4 para imprimir (Ctrl+P). Na tela, a mesma folha centralizada. */
+  :root { --tinta: #111; --apagado: #555; --linha: #bbb; --faixa: #1f3b63; --alerta: #b00000; --fundo: #e9edf2; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fundo); color: var(--tinta); font: 9.6pt/1.24 'Segoe UI', Arial, sans-serif; }
+  .folha { width: 210mm; min-height: 297mm; margin: 12px auto; padding: 8mm 11mm; background: #fff; box-shadow: 0 1px 6px rgba(0,0,0,.2); }
+  @media (max-width: 230mm) { .folha { width: auto; min-height: 0; margin: 0; padding: 16px; } }
+  h1 { margin: 0; font-size: 16pt; letter-spacing: .5px; }
+  .sub { color: var(--apagado); font-size: 9pt; margin: 1px 0 5px; }
+  .campos { display: flex; gap: 18px; font-size: 10pt; margin-bottom: 6px; flex-wrap: wrap; }
+  .campos span { border-bottom: 1px solid var(--linha); min-width: 150px; display: inline-block; }
+  h2 { margin: 7px 0 3px; font-size: 10pt; background: var(--faixa); color: #fff; padding: 3px 8px; letter-spacing: .5px; }
+  h2 small { font-weight: 400; opacity: .85; }
+  ul { list-style: none; margin: 0; padding: 0; }
+  li { display: grid; grid-template-columns: 16px 1fr; gap: 7px; padding: 1.5px 0; border-bottom: 1px dotted #d6d6d6; }
+  li::before { content: ""; width: 12px; height: 12px; border: 1.6px solid var(--tinta); border-radius: 2px; margin-top: 2px; }
+  b.k { font-family: Consolas, 'Courier New', monospace; font-size: 8.8pt; background: #f0f0f0; padding: 0 3px; border-radius: 2px; font-weight: 700; }
+  .nota { color: var(--apagado); font-size: 9.5pt; }
+  table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 2px; }
+  td, th { border: 1px solid var(--linha); padding: 2px 6px; vertical-align: top; text-align: left; }
+  th { background: #f3f3f3; }
+  td:first-child { font-weight: 700; width: 34%; }
+  .alerta { color: var(--alerta); font-weight: 700; }
+  .rodape { margin-top: 8px; font-size: 9pt; color: var(--apagado); border-top: 1px solid var(--linha); padding-top: 4px; }
+  .imprimir { position: fixed; right: 14px; top: 12px; padding: 8px 14px; font: 600 14px 'Segoe UI', Arial, sans-serif; cursor: pointer; }
+  @media print {
+    @page { size: A4; margin: 0; }
+    body { background: #fff; }
+    .folha { margin: 0; box-shadow: none; }
+    .imprimir { display: none; }
+    h2 { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+<button class="imprimir" onclick="window.print()">Imprimir</button>
+<div class="folha">
+  <h1>CHECKLIST — 2º TURNO · 25/10/2026</h1>
+  <div class="sub">gctse GRÁFICOS · operação técnica · marcar cada item e anotar a hora</div>
+  <div class="campos">Responsável: <span></span> Operador gerenciador: <span></span> Início: <span style="min-width:60px"></span></div>
+
+  <h2>ANTES DO DIA <small>(até sexta 23/10)</small></h2>
+  <ul>
+    <li><div><b>ENSAIO.bat</b> com a equipe: noite simulada (dados fictícios, tudo riscado “ENSAIO”), gerenciador na porta <b class="k">8096</b>. Treinar: rodízios prontos, Governadores do 2º turno (cinza), Deputados por estado, Prévia → CORTAR. ENTER na janela do ensaio fecha tudo.</div></li>
+    <li><div>OBS das duas saídas abrindo sozinhos pelo <b>GERENCIADOR.bat</b> e canal da DeckLink conferido (ver OBS-DECKLINK.txt).</div></li>
+    <li><div><b>COPIA-DE-SEGURANCA.bat</b> rodado e o .zip copiado para pendrive / outra máquina.</div></li>
+  </ul>
+
+  <h2>CÓDIGOS DO 2º TURNO <small>(quando o TSE publicar; de novo no domingo de manhã)</small></h2>
+  <ul>
+    <li><div><b>CODIGOS-2-TURNO.bat</b>: lê a lista oficial do TSE e mostra o pleito de 25/10/2026. Responder <b>S</b> para gravar. Ele troca só <b class="k">eleicao_presidente</b> e <b class="k">eleicao_estaduais</b>; os do 1º turno (<b class="k">*_1turno</b>) e <b class="k">eleicao_camara</b> ficam como estão. Guarda o anterior em <b class="k">config-graficos.ANTES-2T.json</b>.</div></li>
+    <li><div>Se disser “ainda NÃO publicou”: nada foi alterado — rodar de novo mais tarde. <span class="alerta">Não digitar código na mão.</span></div></li>
+    <li><div>Anotar: Presidente 2º turno <span style="border-bottom:1px solid #999;display:inline-block;width:70px"></span> Governador 2º turno <span style="border-bottom:1px solid #999;display:inline-block;width:70px"></span></div></li>
+    <li><div>Depois de gravar: fechar e abrir de novo GRAFICOS.bat e ESTADOS.bat.</div></li>
+  </ul>
+
+  <h2>16h30 — ABRIR</h2>
+  <ul>
+    <li><div><b>GERENCIADOR.bat</b> (abre GRAFICOS.bat, ESTADOS.bat e os dois OBS). <span class="alerta">Não fechar nenhuma janela preta até o fim.</span></div></li>
+    <li><div>Gerenciador, faixa de status: <b>Presidente</b>, <b>Estados</b>, <b>Gerenciador</b> e os dois <b>OBS</b>. Antes das 17h o normal é “TSE ainda não publicou”.</div></li>
+    <li><div>Saídas no ar: rodízio <b>Abertura (17h)</b> (bloco AUTOMÁTICO).</div></li>
+    <li><div><b>COPIA-DE-SEGURANCA</b> (botão 💾 no alto do gerenciador).</div></li>
+  </ul>
+
+  <h2>17h — PRIMEIROS BOLETINS</h2>
+  <ul>
+    <li><div>Janela do GRAFICOS: “estados com boletim: <b>27 de 27</b>”. Menos que 27 por mais de 10 min: avisar a engenharia (o resto continua).</div></li>
+    <li><div>Janela do GRAFICOS e gerenciador: <b>GRAVANDO EVOLUÇÃO: N pontos</b> subindo. Ficou <span class="alerta">vermelho “EVOLUÇÃO PAROU”</span>: ver se o GRAFICOS.bat está aberto e se o TSE atualiza.</div></li>
+    <li><div>Janela do ESTADOS: “governador: 27/27” e os estados do 2º turno listados.</div></li>
+    <li><div>Trocar para o rodízio <b>Apuração</b>. Usar <b>Prévia</b> para conferir antes de <b>CORTAR</b> o que é escolhido na mão.</div></li>
+    <li><div>Cópia de segurança a cada hora: 18h <span>☐</span> 19h <span>☐</span> 20h <span>☐</span> 21h <span>☐</span> 22h <span>☐</span></div></li>
+  </ul>
+
+  <h2>SE ALGO SAIR DO LUGAR</h2>
+  <table>
+    <tr><th>O que aparece</th><th>O que fazer</th></tr>
+    <tr><td>Janela do GRAFICOS fechou</td><td>Abrir <b>GRAFICOS.bat</b> na hora. O minuto a minuto continua do arquivo; o trecho em que ficou fechado vira reta.</td></tr>
+    <tr><td>Janela do ESTADOS fechou</td><td>Abrir <b>ESTADOS.bat</b>. Governador/Senado/Câmara voltam no próximo ciclo (até 1 min).</td></tr>
+    <tr><td>Gerenciador “SEM CONEXÃO”</td><td>Abrir <b>GERENCIADOR.bat</b>. As saídas voltam no que estava no ar.</td></tr>
+    <tr><td>OBS “FECHADO”</td><td><b>ABRIR-OBS.bat</b>. Plano B: <b>ENDERECOS-OBS.bat</b> (endereços para colar na mão).</td></tr>
+    <tr><td>“SEM RESPOSTA DO TSE”</td><td>Não mexer no config. O programa tenta sozinho; a tela fica no último dado. Conferir a internet.</td></tr>
+    <tr><td>Janela preta parada (texto selecionado)</td><td>Um clique nela pausa o programa: apertar <b>ESC</b> na janela.</td></tr>
+    <tr><td>Tela com ENSAIO no ar</td><td><span class="alerta">Impossível pelo OBS (porta 8098).</span> Se aparecer, fechar as janelas “ENSAIO -” e o navegador da porta 8096.</td></tr>
+  </table>
+
+  <h2>FECHAMENTO</h2>
+  <ul>
+    <li><div>TSE declarou <b>ELEITO</b> (selo verde): rodízio <b>Fechamento</b>. “Ganho de votos” só aparece com 100% das urnas.</div></li>
+    <li><div>Cópia de segurança final e .zip no pendrive. Só depois fechar as janelas.</div></li>
+  </ul>
+  <div class="rodape">Números das telas: somente do TSE. Telas do ensaio: dados fictícios, nunca no ar. Dúvidas: LEIA-ME.txt.</div>
+</div>
+</body>
+</html>

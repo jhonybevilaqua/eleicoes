@@ -40,3 +40,9 @@ graficos/windows-antes.json
 graficos/gerenciador-estado.json
 graficos/ENDERECOS-OBS.txt
 graficos/obs-saidas.json
+
+# gctse GRAFICOS: pasta do ENSAIO.bat e copias de seguranca (geradas na maquina)
+graficos/ensaio/
+graficos/copias-de-seguranca/
+graficos/copia-seguranca.json
+graficos/config-graficos.ANTES-2T.json

@@ -79,6 +79,7 @@
 
   function selo() {
     var d = D(), b = br();
+    if (ensaioAtivo()) return { texto: "ENSAIO — NÃO VAI AO AR", cor: C.vermelho };
     if (d.modo === "SIMULADO") return { texto: "SIMULADO — NÃO OFICIAL", cor: C.vermelho };
     if (b && b.andamento === "f") return { texto: "TOTALIZAÇÃO FINAL", cor: C.verde };
     // Antes da 1a urna (arquivo do TSE ja publicado com tudo zerado, ou
@@ -117,14 +118,15 @@
       (rx ? ' rx="' + rx + '"' : "") + "/>";
   }
   // O selo tem a largura medida DEPOIS de desenhado (ver ajustarSelos).
+  var SELO_ENSAIO = { texto: "ENSAIO — NÃO VAI AO AR", cor: "#d03b3b" };
   function seloH(W, sl) {
-    var s = sl || selo();
+    var s = ensaioAtivo() ? SELO_ENSAIO : sl || selo();
     // a esquerda da logo (canto superior direito)
     return '<g data-selo="dir" data-x="' + (W - 73 - 200) + '">' + r(W - 520, 29, 247, 32, s.cor, 3) +
       t(W - 281, 51, s.texto, { s: 18, b: true, a: "end" }) + "</g>";
   }
   function seloV(W, sl) {
-    var s = sl || selo();
+    var s = ensaioAtivo() ? SELO_ENSAIO : sl || selo();
     return r(35, 127, W - 70, 26, s.cor, 2) + t(W / 2, 146, s.texto, { s: 16, b: true, a: "middle" });
   }
   function cabecalhoH(W, titulo, sub) {
@@ -134,9 +136,19 @@
     return r(35, 48, 6, 38, C.destaque) + t(53, 80, titulo, { s: 32, b: true, ls: 1, max: W - 53 - 35 }) +
       t(53, 106, sub, { s: 16, c: C.apagado, max: W - 53 - 35 }) + seloV(W);
   }
+  // ENSAIO (ENSAIO.bat): toda tela sai riscada - nunca confundir com o ar.
+  function ensaioAtivo() { return !!((window.GCTSE_DADOS || {}).ensaio || (window.GCTSE_ESTADOS || {}).ensaio); }
+  function marcaEnsaio(W, H) {
+    if (!ensaioAtivo()) return "";
+    var cx = W / 2, cy = H / 2, s = Math.round(Math.min(W, H) / 7.5);
+    return '<g pointer-events="none"><text x="' + cx + '" y="' + cy + '" text-anchor="middle" dominant-baseline="middle" font-size="' + s +
+      '" font-weight="800" fill="#ff2a2a" fill-opacity="0.22" transform="rotate(' + (W > H ? -18 : -55) + " " + cx + " " + cy + ')">ENSAIO</text>' +
+      '<rect x="0" y="' + (H - 30) + '" width="' + W + '" height="30" fill="#c00000"/>' +
+      '<text x="' + cx + '" y="' + (H - 9) + '" text-anchor="middle" font-size="17" font-weight="800" fill="#ffffff">ENSAIO — DADOS FICTÍCIOS — NÃO VAI AO AR</text></g>';
+  }
   function svg(W, H, corpo) {
     return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + " " + H + '" width="' + W + '" height="' + H +
-      '" font-family="' + FONTE + '">' + r(0, 0, W, H, C.fundo) + arteFundo(W, H) + corpo + arteLogo(W, H, 35 + (W > H ? 38 : 0)) + "</svg>";
+      '" font-family="' + FONTE + '">' + r(0, 0, W, H, C.fundo) + arteFundo(W, H) + corpo + marcaEnsaio(W, H) + arteLogo(W, H, 35 + (W > H ? 38 : 0)) + "</svg>";
   }
   function barra(x, y, w, h, frac, c) {
     frac = Math.max(0, Math.min(1, frac || 0));
@@ -274,10 +286,12 @@
 
   G["presidente-h"] = function () {
     var W = 1280, H = 720, b = br(), todos = candidatos(b), cs = linhasPresidente(todos, 6);
+    // 2o turno (so 2 candidatos): 2 linhas no meio, sem linhas vazias
+    var nl = todos.length >= 2 && todos.length < 6 ? todos.length : 6, passo = nl >= 6 ? 84.4 : Math.min(150, 506 / nl), y0 = 152 + (506 - passo * nl) / 2;
     var o = cabecalhoH(W, "PRESIDENTE — BRASIL", "% dos votos válidos  ·  " + subtitulo());
     o += t(727, 124, "50% DOS VÁLIDOS", { s: 13, b: true, c: C.apagado, a: "middle", ls: 1 });
-    for (var i = 0; i < 6; i++) {
-      var c = cs[i], cy = 152 + i * 84.4, url = c && !c.outros ? urlFoto(c) : "", dx = 0;
+    for (var i = 0; i < nl; i++) {
+      var c = cs[i], cy = y0 + i * passo, url = c && !c.outros ? urlFoto(c) : "", dx = 0;
       o += r(73, cy - 20, 6, 42, c ? cor(c) : C.outros, 1);
       if (url) { o += foto(url, 87, cy - 30, 54, 72); dx = 64; }
       o += t(93 + dx, cy + 3, c ? (c.outros ? c.nome : corta(c.nome, 22)) : "—", { s: 26, b: true, max: 320 - dx });
@@ -292,7 +306,7 @@
       { s: 14, c: C.apagado2 });
     var dif = diferenca(todos);
     if (dif) o += t(1200, 690, dif, { s: 18, b: true, a: "end", max: 760 });
-    o += t(727, 666, "▏ 50% dos válidos = vence no 1º turno", { s: 13, c: C.apagado2, a: "middle" });
+    o += t(727, 666, nl === 2 ? "▏ 50% dos válidos" : "▏ 50% dos válidos = vence no 1º turno", { s: 13, c: C.apagado2, a: "middle" });
     return svg(W, H, o);
   };
 
@@ -411,9 +425,10 @@
 
   G["presidente-v"] = function () {
     var W = 540, H = 960, b = br(), todos = candidatos(b), cs = linhasPresidente(todos, 5);
+    var nl = todos.length >= 2 && todos.length < 5 ? todos.length : 5, passo = nl >= 5 ? 134 : 180, y0 = 212 + (nl >= 5 ? 0 : (670 - passo * nl) / 2);
     var o = cabecalhoV(W, "PRESIDENTE", "% dos votos válidos · " + subtitulo());
-    for (var i = 0; i < 5; i++) {
-      var c = cs[i], y = 212 + i * 134, url = c && !c.outros ? urlFoto(c) : "", dx = 0;
+    for (var i = 0; i < nl; i++) {
+      var c = cs[i], y = y0 + i * passo, url = c && !c.outros ? urlFoto(c) : "", dx = 0;
       o += r(35, y - 18, 5, 34, c ? cor(c) : C.outros, 1);
       if (url) { o += foto(url, 47, y - 24, 45, 60); dx = 55; }
       o += t(51 + dx, y + 6, c ? (c.outros ? c.nome : corta(c.nome, 16)) : "—", { s: 26, b: true, max: 300 - dx });
@@ -423,7 +438,7 @@
       o += t(35, y + 74, c ? inteiro(c.votos) : "0", { s: 15, c: C.apagado });
       if (c && (c.eleito || c.segundo_turno)) o += etiqueta(505 - (c.eleito ? 74 : 86), y + 78, c);
     }
-    o += t(35, 862, "▏ 50% dos válidos = vence no 1º turno", { s: 13, c: C.apagado2 });
+    o += t(35, 862, nl === 2 ? "▏ 50% dos válidos" : "▏ 50% dos válidos = vence no 1º turno", { s: 13, c: C.apagado2 });
     var dif = diferenca(todos);
     if (dif) o += t(35, 892, dif, { s: 16, b: true, max: 470 });
     return svg(W, H, o + RODAPE_V());
@@ -1290,6 +1305,7 @@
   }
   function seloDe(f) {
     var b = f.br;
+    if (ensaioAtivo()) return { texto: "ENSAIO — NÃO VAI AO AR", cor: C.vermelho };
     if (D().modo === "SIMULADO") return { texto: "SIMULADO — NÃO OFICIAL", cor: C.vermelho };
     if (b && b.andamento === "f") return { texto: "TOTALIZAÇÃO FINAL", cor: C.verde };
     var p = b && b.secoes ? b.secoes.pct : null;
@@ -1769,6 +1785,128 @@
   }
   G["mulheres-h"] = function () { return telaFem(false); };
   G["mulheres-v"] = function () { return telaFem(true); };
+
+  // ---- PERFIL DA NOVA CAMARA: renovacao, idade, escolaridade, cor/raca ------
+  // Atributos de cada candidato: arquivo "Candidatos" do TSE (Dados Abertos),
+  // importado pelo IMPORTAR-CANDIDATOS.bat (web\candidatos-genero.js, campo
+  // perfil = [idade na posse, instrucao, cor/raca, disputava reeleicao]).
+  // Eleitos de 2026 = boletim do TSE ao vivo (estados.js), cruzados pelo
+  // sqcand. Ano anterior = eleitos daquele arquivo.
+  var FAIXAS_IDADE = [[0, 34, "até 34"], [35, 44, "35–44"], [45, 54, "45–54"], [55, 64, "55–64"], [65, 200, "65 ou mais"]];
+  var COR_PERFIL = "#2b84ff";
+  function somaPerfil(lista) {
+    var a = { n: 0, idN: 0, idS: 0, faixa: [0, 0, 0, 0, 0], grau: {}, grauN: 0, cor: {}, corN: 0, re: 0, novo: 0, reN: 0 };
+    lista.forEach(function (p) {
+      p = comoLista(p); if (p.length < 4) return;
+      a.n++;
+      var id = +p[0];
+      if (id >= 18) { a.idN++; a.idS += id; for (var i = 0; i < FAIXAS_IDADE.length; i++) if (id >= FAIXAS_IDADE[i][0] && id <= FAIXAS_IDADE[i][1]) { a.faixa[i]++; break; } }
+      if (+p[1] >= 0) { a.grau[p[1]] = (a.grau[p[1]] || 0) + 1; a.grauN++; }
+      if (+p[2] >= 0) { a.cor[p[2]] = (a.cor[p[2]] || 0) + 1; a.corN++; }
+      if (+p[3] === 1) { a.re++; a.reN++; } else if (+p[3] === 0) { a.novo++; a.reN++; }
+    });
+    return a;
+  }
+  function perfilCamara() {
+    var gen = window.GCTSE_GENERO;
+    if (!gen || !gen.anos) return null;
+    var anos = Object.keys(gen.anos).sort(), aN = anos[anos.length - 1], aA = anos.length > 1 ? anos[anos.length - 2] : null;
+    var pN = gen.anos[aN].perfil;
+    if (!pN) return { semPerfil: true };
+    var cm = E().camara || {}, ps = [], tot = 0, ufs = 0;
+    Object.keys(cm).forEach(function (u) {
+      var l = comoLista(cm[u].lista); if (!l.length) return; ufs++;
+      l.forEach(function (c) { tot++; var p = pN[String(c.sqcand)]; if (p) ps.push(p); });
+    });
+    var pA = aA && gen.anos[aA].perfil ? gen.anos[aA].perfil : null;
+    return { ano: aN, anoA: pA ? aA : null, eleitos: tot, ufs: ufs, achados: ps.length, n: somaPerfil(ps),
+      a: pA ? somaPerfil(Object.keys(pA).map(function (k) { return pA[k]; })) : null,
+      rg: comoLista(gen.rotulos_grau), rc: comoLista(gen.rotulos_cor) };
+  }
+  function rotuloPerfil(s) {
+    s = String(s || "").toLowerCase().replace(/^ensino /, "").replace("não divulgável", "não divulgada");
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+  // barra 2026 + traco branco na posicao do ano anterior
+  function barraPerfil(x, y, w, h, f, fA) {
+    var o = r(x, y, w, h, "rgba(255,255,255,0.10)", 3) + (f > 0 ? r(x, y, Math.max(4, w * Math.min(1, f)), h, COR_PERFIL, 3) : "");
+    if (fA != null) o += r(x + w * Math.min(1, fA) - 1.5, y - 4, 3, h + 8, "#ffffff", 0);
+    return o;
+  }
+  function pctDe(n, d) { return d ? 100 * n / d : 0; }
+  function categorias(cont, tot, contA, totA, rot, max) {
+    var ks = Object.keys(cont).sort(function (a, b) { return cont[b] - cont[a]; });
+    if (contA) Object.keys(contA).forEach(function (k) { if (ks.indexOf(k) < 0) ks.push(k); });
+    return ks.slice(0, max).map(function (k) { return { nome: rotuloPerfil(rot[+k]), f: tot ? (cont[k] || 0) / tot : 0, fA: contA && totA ? (contA[k] || 0) / totA : null }; });
+  }
+  function painelPerfil(x, y, w, h, titulo) { return r(x, y, w, h, "rgba(8,14,32,0.84)", 10) + t(x + 18, y + 28, titulo, { s: 14, b: true, c: "#c9d6e6", ls: 1 }); }
+  function linhasPerfil(x, y, w, passo, itens, fs) {
+    var o = "";
+    itens.forEach(function (it, i) {
+      var yy = y + i * passo;
+      o += t(x, yy, it.nome, { s: fs, b: true, max: w * 0.42 }) + t(x + w, yy, pct1(100 * it.f), { s: fs + 2, b: true, a: "end" });
+      o += barraPerfil(x + w * 0.44, yy - fs * 0.75, w * 0.40, fs * 0.8, it.f, it.fA);
+    });
+    return o;
+  }
+  function telaPerfil(v) {
+    var P = perfilCamara(), W = v ? 540 : 1280, H = v ? 960 : 720, o, tit = "PERFIL DA NOVA CÂMARA";
+    var cab = v ? r(35, 48, 6, 38, C.destaque) + t(53, 80, tit, { s: 26, b: true, ls: 1, max: 450 }) : t(73, 57, tit, { s: 36, b: true, ls: 1, max: 660 });
+    if (!P || P.semPerfil) return svg(W, H, cab + t(W / 2, H / 2 - 10, "falta o arquivo de candidatos do TSE", { s: v ? 18 : 24, c: C.apagado, a: "middle" }) +
+      t(W / 2, H / 2 + 22, "rode o IMPORTAR-CANDIDATOS.bat (consulta_cand_" + (P ? "" : "2026") + "…, Dados Abertos)", { s: v ? 12 : 16, c: C.apagado2, a: "middle", max: W - 60 }));
+    if (!P.achados) return svg(W, H, cab + t(W / 2, H / 2, P.eleitos ? "os eleitos do boletim não estão no arquivo de candidatos importado" : "aguardando os deputados eleitos (ESTADOS.bat)", { s: v ? 16 : 22, c: C.apagado, a: "middle", max: W - 60 }));
+    var n = P.n, a = P.a, sub = P.eleitos + " deputados federais eleitos" + (P.ufs < 27 ? " (" + P.ufs + " de 27 estados)" : "") + (P.anoA ? " · traço branco = eleitos de " + P.anoA : "");
+    var media = n.idN ? n.idS / n.idN : null, mediaA = a && a.idN ? a.idS / a.idN : null;
+    var fRe = pctDe(n.re, n.reN), fReA = a ? pctDe(a.re, a.reN) : null;
+    var sup = 0, supA = 0;
+    P.rg.forEach(function (rot, i) { if (/^SUPERIOR COMPLETO/.test(rot)) { sup += n.grau[i] || 0; if (a) supA += a.grau[i] || 0; } });
+    var graus = categorias(n.grau, n.grauN, a ? a.grau : null, a ? a.grauN : 0, P.rg, 4);
+    var cores = categorias(n.cor, n.corN, a ? a.cor : null, a ? a.corN : 0, P.rc, 6);
+    var faixas = FAIXAS_IDADE.map(function (fx, i) { return { nome: fx[2], f: n.idN ? n.faixa[i] / n.idN : 0, fA: a && a.idN ? a.faixa[i] / a.idN : null }; });
+    var rod = "Fonte: TSE — Dados Abertos (Candidatos: idade na posse, grau de instrução, cor/raça, reeleição) e boletim de resultados. Perfil de " + P.achados + " de " + P.eleitos + " eleitos. Reeleito = disputava a reeleição; novo = sem mandato atual (inclui ex-deputados).";
+    function comp(atual, ant, suf) { if (ant == null) return ""; var d = atual - ant; return P.anoA + ": " + pct1(ant).replace("%", suf || "%") + (Math.abs(d) >= 0.05 ? "  (" + (d > 0 ? "+" : "−") + Number(Math.abs(d)).toFixed(1).replace(".", ",") + " p.p.)" : ""); }
+    if (!v) {
+      o = cab + t(73, 85, sub, { s: 16, c: C.apagado, max: 660 }) + seloH(W, { texto: P.ufs >= 27 ? "513 CADEIRAS" : "PARCIAL", cor: P.ufs >= 27 ? C.verde : C.vermelho });
+      // renovacao
+      o += painelPerfil(73, 106, 556, 262, "RENOVAÇÃO");
+      o += t(93, 190, pct1(fRe), { s: 54, b: true }) + t(93, 216, n.re + " reeleitos", { s: 16, c: "#c9d6e6" });
+      o += t(609, 190, pct1(100 - fRe), { s: 54, b: true, a: "end", c: COR_PERFIL }) + t(609, 216, n.novo + " novos no mandato", { s: 16, c: "#c9d6e6", a: "end" });
+      o += r(93, 238, 516, 26, COR_PERFIL, 4) + r(93, 238, 516 * fRe / 100, 26, "#c9d6e6", 4);
+      if (fReA != null) o += r(93 + 516 * fReA / 100 - 1.5, 232, 3, 38, "#ffffff", 0);
+      o += t(93, 300, comp(fRe, fReA) ? "reeleitos em " + comp(fRe, fReA) : "", { s: 14, c: C.apagado, max: 516 });
+      o += t(93, 346, "reeleito = disputava a reeleição · novo = sem mandato atual", { s: 12, c: C.apagado2, max: 516 });
+      // idade
+      o += painelPerfil(651, 106, 556, 262, "IDADE NA POSSE");
+      o += t(671, 180, media ? Number(media).toFixed(1).replace(".", ",") : "—", { s: 44, b: true }) + t(671, 202, "anos, em média" + (mediaA ? " · " + P.anoA + ": " + Number(mediaA).toFixed(1).replace(".", ",") : ""), { s: 13, c: C.apagado });
+      o += linhasPerfil(671, 238, 516, 27, faixas, 14);
+      // escolaridade
+      o += painelPerfil(73, 384, 556, 288, "ESCOLARIDADE");
+      o += t(93, 460, pct1(pctDe(sup, n.grauN)), { s: 44, b: true }) + t(93, 482, "com superior completo" + (a ? " · " + P.anoA + ": " + pct1(pctDe(supA, a.grauN)) : ""), { s: 13, c: C.apagado });
+      o += linhasPerfil(93, 524, 516, 38, graus, 15);
+      // cor/raca
+      o += painelPerfil(651, 384, 556, 288, "COR / RAÇA (autodeclarada)");
+      o += linhasPerfil(671, 450, 516, 36, cores, 15);
+      return svg(W, H, o + t(73, 696, rod, { s: 10, c: C.apagado2, max: 1134 }) + t(73, 710, "▮ " + P.ano + "  ·  traço branco = " + (P.anoA || "—"), { s: 10, c: C.apagado2 }));
+    }
+    o = cab + t(53, 106, P.eleitos + " eleitos" + (P.anoA ? " · traço = " + P.anoA : ""), { s: 13, c: C.apagado, max: 450 }) + seloV(W, { texto: P.ufs >= 27 ? "513 CADEIRAS" : "PARCIAL", cor: P.ufs >= 27 ? C.verde : C.vermelho });
+    o += painelPerfil(35, 160, 470, 170, "RENOVAÇÃO");
+    o += t(55, 232, pct1(fRe), { s: 40, b: true }) + t(55, 254, n.re + " reeleitos", { s: 13, c: "#c9d6e6" });
+    o += t(485, 232, pct1(100 - fRe), { s: 40, b: true, a: "end", c: COR_PERFIL }) + t(485, 254, n.novo + " novos", { s: 13, c: "#c9d6e6", a: "end" });
+    o += r(55, 272, 430, 20, COR_PERFIL, 4) + r(55, 272, 430 * fRe / 100, 20, "#c9d6e6", 4);
+    if (fReA != null) o += r(55 + 430 * fReA / 100 - 1.5, 267, 3, 30, "#ffffff", 0);
+    o += t(55, 318, comp(fRe, fReA) ? "reeleitos em " + comp(fRe, fReA) : "", { s: 12, c: C.apagado, max: 430 });
+    o += painelPerfil(35, 342, 470, 210, "IDADE NA POSSE");
+    o += t(55, 406, media ? Number(media).toFixed(1).replace(".", ",") + " anos" : "—", { s: 30, b: true }) + t(485, 406, mediaA ? P.anoA + ": " + Number(mediaA).toFixed(1).replace(".", ",") : "", { s: 13, c: C.apagado, a: "end" });
+    o += linhasPerfil(55, 440, 430, 24, faixas, 13);
+    o += painelPerfil(35, 564, 470, 180, "ESCOLARIDADE");
+    o += t(55, 628, pct1(pctDe(sup, n.grauN)), { s: 30, b: true }) + t(175, 628, "com superior completo", { s: 13, c: C.apagado });
+    o += linhasPerfil(55, 660, 430, 22, graus, 13);
+    o += painelPerfil(35, 756, 470, 180, "COR / RAÇA");
+    o += linhasPerfil(55, 810, 430, 23, cores, 12);
+    return svg(W, H, o + t(35, 950, "Fonte: TSE — Dados Abertos (Candidatos) e boletim", { s: 10, c: C.apagado2 }));
+  }
+  G["perfilcamara-h"] = function () { return telaPerfil(false); };
+  G["perfilcamara-v"] = function () { return telaPerfil(true); };
 
   // ---- SENADORES ELEITOS: 2 por estado, foto + nome + partido, mapa em blocos
   // Boletim de Senador do TSE (estados.js, cargo 5; no 2o turno, o do 1o).
@@ -2307,6 +2445,143 @@
   G["abstuf-h"] = function () { return telaAbstUf(false); };
   G["abstuf-v"] = function () { return telaAbstUf(true); };
 
+  // ---- ESTADOS DECISIVOS: os 6 maiores eleitorados, placar ao vivo ----------
+  // Quais sao os 6: pelo eleitorado (aptos) que o proprio TSE publica no
+  // boletim de Presidente de cada estado - nada fixo no codigo.
+  function decisivos() {
+    var f = fontePres(false), f1 = fontePres(true);
+    return Object.keys(DEP_UF).map(function (k) { var x = f.uf(k); return { k: k, x: x, aptos: x && x.eleitorado ? +x.eleitorado.aptos || 0 : 0 }; })
+      .filter(function (s) { return s.aptos > 0; }).sort(function (a, b) { return b.aptos - a.aptos; }).slice(0, 6)
+      .map(function (s) {
+        s.cs = candidatos(s.x).slice(0, 2); s.l1 = f1.guardado ? liderF(f1, s.k) : null; s.l2 = liderF(f, s.k);
+        s.virou = !!(s.l1 && s.l2 && String(s.l1.numero) !== String(s.l2.numero));
+        return s;
+      });
+  }
+  function cartaoDecisivoV(s, x, y, w, h, aptosBr) {   // vertical: compacto, sem votos
+    var o = r(x, y, w, h, "rgba(8,14,32,0.84)", 8), urn = s.x && s.x.secoes ? s.x.secoes.pct : null;
+    o += t(x + 14, y + 22, DEP_UF[s.k], { s: 16, b: true, max: w - 130 }) + t(x + w - 12, y + 21, "urnas " + (urn == null ? "—" : pct(urn)), { s: 11, b: true, c: "#c9d6e6", a: "end" });
+    o += t(x + 14, y + 38, inteiro(s.aptos) + " eleitores" + (aptosBr ? " · " + pct1(100 * s.aptos / aptosBr) + " do Brasil" : ""), { s: 10, c: C.apagado, max: w - 28 });
+    s.cs.forEach(function (c, i) {
+      var yy = y + 60 + i * 30;
+      o += r(x + 14, yy - 13, 5, 26, cor(c), 2) + t(x + 26, yy, c.nome, { s: 14, b: true, max: w - 130 }) + t(x + w - 12, yy + 2, pct(c.pct), { s: 19, b: true, a: "end" });
+      o += barraFina(x + 26, yy + 6, w - 120, (c.pct || 0) / 100, cor(c));
+    });
+    if (!s.cs.length) o += t(x + w / 2, y + 74, "aguardando o boletim", { s: 13, c: C.apagado, a: "middle" });
+    if (s.l1) {
+      o += t(x + 14, y + h - 8, "1º turno: " + nomeCurto(s.l1) + " liderou com " + pct(s.l1.pct), { s: 10, c: C.apagado, max: w - 100 });
+      if (s.virou) o += r(x + w - 74, y + h - 21, 62, 17, "#ffffff", 3) + t(x + w - 43, y + h - 8, "VIROU", { s: 11, b: true, c: "#0b1220", a: "middle", ls: 1 });
+    }
+    return o;
+  }
+  function cartaoDecisivo(s, x, y, w, h, k2, aptosBr) {
+    var o = r(x, y, w, h, "rgba(8,14,32,0.84)", 8), urn = s.x && s.x.secoes ? s.x.secoes.pct : null;
+    o += t(x + 16, y + 30 * k2, DEP_UF[s.k], { s: Math.round(20 * k2), b: true, max: w - 165 });
+    o += t(x + w - 14, y + 28 * k2, "urnas " + (urn == null ? "—" : pct(urn)), { s: Math.round(13 * k2), b: true, c: "#c9d6e6", a: "end" });
+    o += t(x + 16, y + 50 * k2, inteiro(s.aptos) + " eleitores" + (aptosBr ? " · " + pct1(100 * s.aptos / aptosBr) + " do Brasil" : ""), { s: Math.round(12 * k2), c: C.apagado, max: w - 30 });
+    var lh = (h - 96 * k2) / 2;
+    s.cs.forEach(function (c, i) {
+      var yy = y + 62 * k2 + i * lh;
+      o += r(x + 16, yy + 4, 6, lh - 12, cor(c), 2);
+      o += t(x + 32, yy + lh * 0.42, c.nome, { s: Math.round(17 * k2), b: true, max: w - 160 });
+      o += t(x + w - 14, yy + lh * 0.48, pct(c.pct), { s: Math.round(26 * k2), b: true, a: "end" });
+      o += barraFina(x + 32, yy + lh * 0.62, w - 48, (c.pct || 0) / 100, cor(c));
+      o += t(x + 32, yy + lh * 0.62 + 24 * k2, inteiro(c.votos) + " votos", { s: Math.round(11 * k2), c: C.apagado });
+    });
+    if (!s.cs.length) o += t(x + w / 2, y + h / 2, "aguardando o boletim", { s: 15, c: C.apagado, a: "middle" });
+    var yb = y + h - 14 * k2;
+    if (s.l1) {
+      o += t(x + 16, yb, "1º turno: " + nomeCurto(s.l1) + " liderou com " + pct(s.l1.pct), { s: Math.round(12 * k2), c: C.apagado, max: w - 120 });
+      if (s.virou) o += r(x + w - 92, yb - 15 * k2, 78, 20 * k2, "#ffffff", 3) + t(x + w - 53, yb, "VIROU", { s: Math.round(12 * k2), b: true, c: "#0b1220", a: "middle", ls: 1 });
+    }
+    return o;
+  }
+  function telaDecisivos(v) {
+    var f = fontePres(false), ls = decisivos(), b = f.br, aptosBr = b && b.eleitorado ? +b.eleitorado.aptos || 0 : 0, o;
+    var soma = ls.reduce(function (a, s) { return a + s.aptos; }, 0);
+    var sub = "Presidente · " + turnoTxt(f) + " · os 6 maiores eleitorados" + (aptosBr && soma ? " = " + pct1(100 * soma / aptosBr) + " dos eleitores do Brasil" : "");
+    if (!v) {
+      var W = 1280, H = 720;
+      o = t(73, 57, "ESTADOS DECISIVOS", { s: 36, b: true, ls: 1 }) + t(73, 85, sub, { s: 16, c: C.apagado, max: 660 }) + seloH(W, seloDe(f));
+      if (!ls.length) return svg(W, H, o + t(640, 380, "aguardando os boletins dos estados", { s: 22, c: C.apagado, a: "middle" }));
+      ls.forEach(function (s, i) { o += cartaoDecisivo(s, 73 + (i % 3) * 382, 108 + Math.floor(i / 3) * 296, 370, 284, 1, aptosBr); });
+      return svg(W, H, o + t(73, 708, "Fonte: TSE — boletins de Presidente dos estados; eleitorado (aptos) do próprio TSE", { s: 11, c: C.apagado2 }));
+    }
+    var W2 = 540, H2 = 960;
+    o = r(35, 48, 6, 38, C.destaque) + t(53, 80, "ESTADOS DECISIVOS", { s: 28, b: true, ls: 1 }) + t(53, 106, "os 6 maiores eleitorados · " + turnoTxt(f), { s: 13, c: C.apagado, max: 450 }) + seloV(W2, seloDe(f));
+    if (!ls.length) return svg(W2, H2, o + t(270, 480, "aguardando os boletins", { s: 18, c: C.apagado, a: "middle" }));
+    ls.forEach(function (s, i) { o += cartaoDecisivoV(s, 35, 162 + i * 128, 470, 122, aptosBr); });
+    return svg(W2, H2, o + t(35, 948, "Fonte: TSE — Presidente por estado", { s: 10, c: C.apagado2 }));
+  }
+  G["decisivos-h"] = function () { return telaDecisivos(false); };
+  G["decisivos-v"] = function () { return telaDecisivos(true); };
+
+  // ---- GOVERNADOR ELEITO x PRESIDENTE MAIS VOTADO NO ESTADO ------------------
+  // So o fato: o partido do governador eleito e o partido do candidato a
+  // presidente mais votado no estado. "Mesmo partido" = siglas iguais; nada
+  // de apoio, alianca ou coligacao (isso o boletim do TSE nao traz).
+  function siglaP(c) { return String(c && c.partido || "").toUpperCase().replace(/\s+/g, ""); }
+  function govPres() {
+    var f = fontePres(false);
+    return Object.keys(DEP_UF).sort(function (a, b) { return DEP_UF[a].localeCompare(DEP_UF[b], "pt-BR"); }).map(function (k) {
+      var st = govEstado(k), lp = liderF(f, k), gv = (st.tipo === "eleito1" || st.tipo === "eleito2") && st.c ? st.c : null;
+      return { k: k, st: st, gov: gv, pres: lp, mesmo: !!(gv && lp && siglaP(gv) && siglaP(gv) === siglaP(lp)) };
+    });
+  }
+  function celulaGov(l, x, y, wmax, fs) {
+    if (l.gov) return r(x, y - fs - 4, 6, fs * 2 + 6, corPartidoCamara(l.gov.partido, 0), 2) + t(x + 12, y - 4, siglaP(l.gov), { s: fs, b: true, max: wmax - 12 }) +
+      t(x + 12, y + fs - 2, l.gov.nome, { s: fs - 3, c: "#c9d6e6", max: wmax - 12 });
+    if (l.st.tipo === "segundo") {
+      var cs = l.st.cs || [];
+      return t(x, y, "2º TURNO" + (cs.length === 2 ? ": " + siglaP(cs[0]) + " × " + siglaP(cs[1]) : ""), { s: fs - 1, b: true, c: "#7fb8ff", max: wmax });
+    }
+    return t(x, y, l.st.tipo === "apurando" ? "apurando" : "aguardando", { s: fs - 1, c: C.apagado, max: wmax });
+  }
+  function celulaPres(l, x, y, wmax, fs) {
+    if (!l.pres) return t(x, y, "aguardando", { s: fs - 1, c: C.apagado });
+    return r(x, y - fs - 4, 6, fs * 2 + 6, cor(l.pres), 2) + t(x + 12, y - 4, nomeCurto(l.pres), { s: fs, b: true, max: wmax - 12 }) +
+      t(x + 12, y + fs - 2, siglaP(l.pres) + " · " + pct(l.pres.pct), { s: fs - 3, c: "#c9d6e6", max: wmax - 12 });
+  }
+  function chipMesmo(x, y, fs) { return r(x - 4, y - fs - 2, fs * 8.4, fs + 7, "rgba(255,255,255,0.92)", 3) + t(x - 4 + fs * 4.2, y, "MESMO PARTIDO", { s: fs - 1, b: true, c: "#0b1220", a: "middle" }); }
+  function telaGovPres(v) {
+    var f = fontePres(false), ls = govPres(), o;
+    var comGov = ls.filter(function (l) { return l.gov && l.pres; }).length, mesmo = ls.filter(function (l) { return l.mesmo; }).length;
+    var resumo = comGov ? "mesmo partido em " + mesmo + " de " + comGov + " estados com governador eleito" : "aguardando governadores eleitos";
+    if (!v) {
+      var W = 1280, H = 720;
+      o = t(73, 57, "GOVERNADOR × PRESIDENTE", { s: 36, b: true, ls: 1 }) + t(73, 85, "governador eleito e o candidato a presidente mais votado no estado · " + turnoTxt(f), { s: 16, c: C.apagado, max: 660 }) + seloH(W, seloDe(f));
+      o += r(73, 100, 1134, 34, "rgba(8,14,32,0.84)", 6) + t(90, 123, resumo.toUpperCase(), { s: 15, b: true, ls: 1 });
+      [0, 1].forEach(function (col) {
+        var x = 73 + col * 575;
+        o += t(x + 6, 156, "ESTADO", { s: 10, b: true, c: C.apagado, ls: 1 }) + t(x + 128, 156, "GOVERNADOR", { s: 10, b: true, c: C.apagado, ls: 1 }) + t(x + 358, 156, "MAIS VOTADO P/ PRESIDENTE", { s: 10, b: true, c: C.apagado, ls: 1 });
+      });
+      ls.forEach(function (l, i) {
+        var col = i < 14 ? 0 : 1, li = col ? i - 14 : i, x = 73 + col * 575, y = 182 + li * 37;
+        o += r(x, y - 22, 559, 35, l.mesmo ? "rgba(255,255,255,0.13)" : (li % 2 ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.07)"), 3);
+        o += t(x + 6, y, DEP_UF[l.k], { s: 12, b: true, max: 116 });
+        o += celulaGov(l, x + 128, y, 222, 13);
+        o += celulaPres(l, x + 358, y, 112, 13);
+        if (l.mesmo) o += chipMesmo(x + 472, y + 1, 10);
+      });
+      return svg(W, H, o + t(73, 708, "Fonte: TSE. \"Mesmo partido\" = a sigla do governador eleito é a mesma do candidato a presidente mais votado no estado (não indica apoio).", { s: 11, c: C.apagado2, max: 1134 }));
+    }
+    var W2 = 540, H2 = 960;
+    o = r(35, 48, 6, 38, C.destaque) + t(53, 80, "GOVERNADOR × PRESIDENTE", { s: 24, b: true, ls: 1, max: 330 }) + t(53, 106, resumo, { s: 13, c: C.apagado, max: 450 }) + seloV(W2, seloDe(f));
+    o += t(41, 176, "UF", { s: 10, b: true, c: C.apagado }) + t(80, 176, "GOVERNADOR", { s: 10, b: true, c: C.apagado }) + t(300, 176, "PRESIDENTE (MAIS VOTADO)", { s: 10, b: true, c: C.apagado });
+    ls.forEach(function (l, i) {
+      var y = 200 + i * 27;
+      o += r(35, y - 18, 470, 24, l.mesmo ? "rgba(255,255,255,0.15)" : (i % 2 ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.07)"), 3);
+      o += t(41, y, l.k.toUpperCase(), { s: 12, b: true });
+      if (l.gov) o += r(80, y - 11, 5, 13, corPartidoCamara(l.gov.partido, 0), 2) + t(90, y, siglaP(l.gov) + " · " + nomeCurto(l.gov), { s: 11, b: true, max: 200 });
+      else o += t(80, y, l.st.tipo === "segundo" ? "2º TURNO" : "aguardando", { s: 10, b: true, c: l.st.tipo === "segundo" ? "#7fb8ff" : C.apagado });
+      if (l.pres) o += r(300, y - 11, 5, 13, cor(l.pres), 2) + t(310, y, nomeCurto(l.pres) + " " + pct(l.pres.pct), { s: 11, c: "#c9d6e6", max: l.mesmo ? 120 : 190 });
+      if (l.mesmo) o += t(499, y, "= PARTIDO", { s: 10, b: true, a: "end" });
+    });
+    return svg(W2, H2, o + t(35, 948, "Fonte: TSE · \"= partido\": mesma sigla do governador eleito e do mais votado (não indica apoio)", { s: 9, c: C.apagado2, max: 470 }));
+  }
+  G["govpres-h"] = function () { return telaGovPres(false); };
+  G["govpres-v"] = function () { return telaGovPres(true); };
+
   window.GCTSE_GRAFICOS = {
     lista: [
       { id: "presidente-h", nome: "Presidente — Brasil", f: "h" },
@@ -2340,6 +2615,9 @@
       { id: "margem-h", nome: "Disputa mais apertada", f: "h" },
       { id: "ganho-h", nome: "Ganho de votos 1º → 2º turno", f: "h" },
       { id: "abstuf-h", nome: "Abstenção 1º × 2º por estado", f: "h" },
+      { id: "decisivos-h", nome: "Estados decisivos (6 maiores eleitorados)", f: "h" },
+      { id: "govpres-h", nome: "Governador × Presidente no estado", f: "h" },
+      { id: "perfilcamara-h", nome: "Perfil da nova Câmara", f: "h" },
       { id: "urnas-v", nome: "Urnas apuradas", f: "v" },
       { id: "votos-v", nome: "Brancos e nulos", f: "v" },
       { id: "presidente-v", nome: "Presidente", f: "v" },
@@ -2370,7 +2648,10 @@
       { id: "viradas-v", nome: "Estados que viraram (1º → 2º)", f: "v" },
       { id: "margem-v", nome: "Disputa mais apertada", f: "v" },
       { id: "ganho-v", nome: "Ganho de votos 1º → 2º turno", f: "v" },
-      { id: "abstuf-v", nome: "Abstenção 1º × 2º por estado", f: "v" }
+      { id: "abstuf-v", nome: "Abstenção 1º × 2º por estado", f: "v" },
+      { id: "decisivos-v", nome: "Estados decisivos (6 maiores eleitorados)", f: "v" },
+      { id: "govpres-v", nome: "Governador × Presidente no estado", f: "v" },
+      { id: "perfilcamara-v", nome: "Perfil da nova Câmara", f: "v" }
     ],
     desenhar: function (id) { return G[id] ? G[id]() : null; },
     // Telas que trocam sozinhas (deputados): muda quando a tela da vez muda.

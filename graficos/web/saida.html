@@ -122,8 +122,11 @@
       if (s.aseq !== aseqAtual) { aseqAtual = s.aseq; if (s.acao) comando(s.acao); }
     }).catch(function () { /* gerenciador fechado: fica no que esta no ar */ });
   }
-  ler();
-  setInterval(ler, 700);
+  // PREVIA do gerenciador (?previa=1&tela=...&acao=...): mostra a tela
+  // escolhida ANTES de cortar para o ar, pelo mesmo endereco que vai ao ar.
+  // Nao le /estado: nao segue o que esta no ar.
+  if (q.get("previa") === "1") trocar(q.get("tela") || "", q.get("acao") || "", q.get("rodizio") || "", +q.get("tempo") || 0);
+  else { ler(); setInterval(ler, 700); }
   // Vigia: se a tela no ar sumir (pagina de erro, quadro vazio), recarrega.
   setInterval(function () {
     if (!pedidoAtual) return;

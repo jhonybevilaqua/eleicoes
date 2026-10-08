@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 3.8 - apuracao em graficos (versao final)
+ gctse GRAFICOS 3.9 - apuracao em graficos (versao final)
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -22,6 +22,49 @@
    GIRO DOS ESTADOS (Governador e Senador, um estado por vez)
    RESUMO (7 telas de fechamento)
    GERENCIADOR (escolhe o que vai para as saidas SDI da DeckLink)
+
+ NOVO NA 3.9 - OPERACAO DO 2o TURNO (25/10)
+   CHECKLIST DO DIA (1 folha A4): web\checklist.html - link "checklist do
+     dia" no alto do gerenciador. Ctrl+P imprime.
+   CODIGOS-2-TURNO.bat: le a lista de eleicoes do PROPRIO TSE
+     (comum/config/ele-c.json, o mesmo das tarjas) e mostra os codigos de
+     Presidente e Governador do pleito de 25/10/2026. Responda S para
+     gravar no config: troca so eleicao_presidente e eleicao_estaduais; os
+     *_1turno e eleicao_camara ficam. Guarda o anterior em
+     config-graficos.ANTES-2T.json. Sem o pleito publicado, NAO grava.
+   COPIA DE SEGURANCA: botao "copia de seguranca" no alto do gerenciador
+     ou COPIA-DE-SEGURANCA.bat. Zip da pasta inteira (config, dados lidos,
+     evolucao minuto a minuto, logs) em "copias-de-seguranca", com data e
+     hora no nome. Pode rodar com tudo aberto.
+   EVOLUCAO GRAVANDO: a janela do GRAFICOS.bat escreve "GRAVANDO EVOLUCAO:
+     N pontos" a cada ciclo; o gerenciador mostra o mesmo na faixa de
+     status. Vermelho "EVOLUCAO PAROU" = apuracao andando e nenhum ponto
+     novo ha 5 minutos.
+   PREVIA ANTES DO AR (gerenciador, em cada saida): botao "previa antes do
+     ar". Ligado, o clique numa tela so PREPARA: ela aparece ao lado do NO
+     AR (borda verde) e vai ao ar no "CORTAR". Desligado, como sempre (vai
+     direto). Setas do giro/resumo/deputados continuam diretas.
+   ENSAIO GERAL (ENSAIO.bat): treino da equipe com uma noite de 2o turno
+     SIMULADA - nomes e numeros FICTICIOS ("CANDIDATO A", "GOVERNADOR B
+     (SP)"), 0 a 100% em 20 min (ENSAIO.bat 40 = 40 min), virada no meio e
+     ELEITO no fim. Copia o sistema para a pasta "ensaio", liga um TSE
+     simulado local (porta 8799), as duas coletas e o gerenciador do ensaio
+     na porta 8096. O OBS usa a 8098: nada do ensaio chega na DeckLink. Toda
+     tela sai riscada "ENSAIO - DADOS FICTICIOS - NAO VAI AO AR". ENTER na
+     janela do ensaio fecha tudo o que ele abriu.
+   TELAS NOVAS (horizontal e vertical; so dados do TSE)
+   - Estados decisivos ........ os 6 maiores eleitorados (aptos do proprio
+     boletim do TSE) lado a lado: placar do 2o turno, urnas, % do
+     eleitorado do Brasil, quem liderou no 1o turno e "VIROU".
+   - Governador x Presidente .. em cada estado: partido do governador
+     eleito e o candidato a presidente mais votado. "MESMO PARTIDO" so
+     quando as siglas sao iguais (nao indica apoio - o TSE nao traz isso).
+   - Perfil da nova Camara .... dos 513 eleitos (boletim ao vivo): reeleitos
+     x novos no mandato, idade na posse, escolaridade e cor/raca; traco
+     branco = eleitos do ano anterior. Precisa do IMPORTAR-CANDIDATOS.bat
+     (consulta_cand_2026 e _2022, Dados Abertos do TSE) - o mesmo da
+     bancada feminina; rode de novo se ja tinha importado antes da 3.9.
+   - Presidente (Brasil): no 2o turno, so as 2 linhas (sem linhas vazias).
 
  NOVO NA 3.8 - ANALISE DO 2o TURNO E OPERACAO
    GERENCIADOR

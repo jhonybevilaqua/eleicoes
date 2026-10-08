@@ -17,7 +17,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "3.8 - 08/10/2026"
+$Versao = "3.9 - 08/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -262,6 +262,8 @@ $Eleicao1T = ""
 if ((Tem-Propriedade $cfg.tse "eleicao_estaduais_1turno") -and $cfg.tse.eleicao_estaduais_1turno -and
     "$($cfg.tse.eleicao_estaduais_1turno)" -ne $Eleicao) { $Eleicao1T = "$($cfg.tse.eleicao_estaduais_1turno)" }
 $Modo    = "OFICIAL"
+$Ensaio = ((Tem-Propriedade $cfg "ensaio") -and $cfg.ensaio -eq $true)   # ENSAIO.bat
+if ($Ensaio) { $Modo = "SIMULADO" }
 $Intervalo = 30
 if (Tem-Propriedade $cfg "intervalo_estados_segundos") { $Intervalo = [math]::Max(15, [int] $cfg.intervalo_estados_segundos) }
 $PastaWeb = Join-Path $Raiz "web"
@@ -716,6 +718,7 @@ function Gravar-Dados {
     $dados = [ordered]@{
         versao        = $Versao
         modo          = $Modo
+        ensaio        = $Ensaio
         pid           = $PID
         gravado_em    = (Get-Date).ToString("yyyy-MM-ddTHH:mm:ss")
         recebendo_tse = (-not $script:Alarme)

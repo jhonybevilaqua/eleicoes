@@ -1,4 +1,4 @@
-<#
+﻿<#
     gctse GRAFICOS - GERENCIADOR DAS SAIDAS (DeckLink via OBS)
 
     Servidor local (so nesta maquina) que:
@@ -218,6 +218,23 @@ while ($ouvinte.IsListening) {
             } else {
                 Responder $ctx 400 "text/plain; charset=utf-8" ([Text.Encoding]::UTF8.GetBytes("pedido invalido"))
             }
+        }
+        elseif ($caminho -eq "/copia") {
+            # Copia de seguranca (copia-seguranca.ps1) num clique. ?ver=1 so
+            # devolve como foi a ultima.
+            $arqCopia = Join-Path $Raiz "copia-seguranca.json"
+            if ("$($req.QueryString['ver'])" -ne "1") {
+                $psExe = "powershell"
+                if ($env:WINDIR -and (Test-Path (Join-Path $env:WINDIR "System32\WindowsPowerShell\v1.0\powershell.exe"))) { $psExe = Join-Path $env:WINDIR "System32\WindowsPowerShell\v1.0\powershell.exe" }
+                [IO.File]::WriteAllText($arqCopia, '{"ok":null,"mensagem":"copiando..."}')
+                $argsCopia = @{ FilePath = $psExe; WorkingDirectory = $Raiz; ArgumentList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ('"' + (Join-Path $Raiz "copia-seguranca.ps1") + '"'), "-SemPausa") }
+                if ($env:OS -eq "Windows_NT") { $argsCopia.WindowStyle = "Minimized" }
+                try { Start-Process @argsCopia }
+                catch { [IO.File]::WriteAllText($arqCopia, (([ordered]@{ ok = $false; mensagem = "nao abriu: $($_.Exception.Message)" }) | ConvertTo-Json -Compress)) }
+                Escrever-Log "copia de seguranca pedida pelo gerenciador" "Green"
+            }
+            $txt = $(if (Test-Path $arqCopia) { [IO.File]::ReadAllText($arqCopia) } else { '{"ok":null,"mensagem":"nenhuma copia ainda"}' })
+            Responder $ctx 200 "application/json; charset=utf-8" ([Text.Encoding]::UTF8.GetBytes($txt))
         }
         elseif ($caminho -eq "/girar") {
             # Como a tela VERTICAL vai girada na saida do OBS.

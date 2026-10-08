@@ -68,9 +68,19 @@
     return r(x, y, w, h, C.trilho, 4) + (frac > 0 ? r(x, y, Math.max(8, w * frac), h, c, 4) : "");
   }
   function lista(x) { return Array.isArray(x) ? x : (x && Array.isArray(x.value) ? x.value : []); }
+  // ENSAIO (ENSAIO.bat): toda tela sai riscada - nunca confundir com o ar.
+  function ensaioAtivo() { return !!((window.GCTSE_DADOS || {}).ensaio || (window.GCTSE_ESTADOS || {}).ensaio); }
+  function marcaEnsaio(W, H) {
+    if (!ensaioAtivo()) return "";
+    var cx = W / 2, cy = H / 2, s = Math.round(Math.min(W, H) / 7.5);
+    return '<g pointer-events="none"><text x="' + cx + '" y="' + cy + '" text-anchor="middle" dominant-baseline="middle" font-size="' + s +
+      '" font-weight="800" fill="#ff2a2a" fill-opacity="0.22" transform="rotate(' + (W > H ? -18 : -55) + " " + cx + " " + cy + ')">ENSAIO</text>' +
+      '<rect x="0" y="' + (H - 30) + '" width="' + W + '" height="30" fill="#c00000"/>' +
+      '<text x="' + cx + '" y="' + (H - 9) + '" text-anchor="middle" font-size="17" font-weight="800" fill="#ffffff">ENSAIO — DADOS FICTÍCIOS — NÃO VAI AO AR</text></g>';
+  }
   function svg(W, H, corpo) {
     return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + " " + H + '" width="' + W + '" height="' + H +
-      '" font-family="' + FONTE + '">' + r(0, 0, W, H, C.fundo) + arteFundo(W, H) + corpo + arteLogo(W, H, W > H ? 73 : 30) + "</svg>";
+      '" font-family="' + FONTE + '">' + r(0, 0, W, H, C.fundo) + arteFundo(W, H) + corpo + marcaEnsaio(W, H) + arteLogo(W, H, W > H ? 73 : 30) + "</svg>";
   }
 
   // ------------------------------------------------------------------ dados
@@ -97,6 +107,7 @@
 
   // Selo das telas de Governador/Senador e das de Presidente.
   function seloEstados() {
+    if (ensaioAtivo()) return { texto: "ENSAIO — NÃO VAI AO AR", cor: C.vermelho };
     var fim = true, algum = false, todas = true;
     UFS.forEach(function (u) {
       ["gov", "sen"].forEach(function (q) {
@@ -114,6 +125,7 @@
   // finais quando os 27 boletins de Presidente dos estados estao finalizados
   // - o do Brasil inclui o exterior, que pode fechar depois.
   function seloPresidenteEstados() {
+    if (ensaioAtivo()) return { texto: "ENSAIO — NÃO VAI AO AR", cor: C.vermelho };
     var b = P().br;
     if (b && b.tem && b.andamento === "f") return { texto: "TOTALIZAÇÃO FINAL", cor: C.verde };
     var fim = true;
@@ -122,6 +134,7 @@
     return seloPresidente();
   }
   function seloPresidente() {
+    if (ensaioAtivo()) return { texto: "ENSAIO — NÃO VAI AO AR", cor: C.vermelho };
     var b = P().br;
     if (b && b.tem && b.andamento === "f") return { texto: "TOTALIZAÇÃO FINAL", cor: C.verde };
     var p = b && b.tem && b.secoes ? b.secoes.pct : 0;
