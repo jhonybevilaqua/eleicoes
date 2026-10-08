@@ -43,7 +43,7 @@ function Boletim($cd, $nv, $cands, [double] $pst, $and, [long] $te, $dg, $hg) {
         carg = @([ordered]@{ cd = "$cd"; nv = "$nv"; agr = @([ordered]@{ par = $cands }) }) }
 }
 function Progresso([string] $uf) {   # 0..1 de quanto a apuracao do estado andou
-    $f = [math]::Min(1.0, ((Get-Date) - $Inicio).TotalMinutes / $Minutos)
+    $f = ((Get-Date) - $Inicio).TotalMinutes / $Minutos   # sem teto: o estado lento chega a 100% um pouco depois
     $vel = $(if ($RAPIDOS -contains $uf) { 1.35 } elseif ($NE -contains $uf) { 0.95 } else { 1.1 }) + 0.2 * (Rnd "v$uf")
     return [math]::Min(1.0, $f * $vel)
 }
@@ -72,11 +72,18 @@ function RespPresidente([string] $abr, [bool] $turno2) {
     }
     $te = 0; $va = 0; $vb = 0; $est = 0; $ufs = $(if ($abr -eq "br") { @($ELEITORES.Keys) } else { @($abr) })
     foreach ($u in $ufs) { $x = Pres2T $u; $te += $x.te; $va += $x.va; $vb += $x.vb; $est += $x.te * $x.pst / 100 }
-    $pst = $(if ($te) { 100 * $est / $te } else { 0 }); $fim = $pst -ge 99.999
+    $pst = $(if ($te) { 100 * $est / $te } else { 0 }); $fim = $pst -ge 99.99
     $tot = [math]::Max(1, $va + $vb); $pa = 100 * $va / $tot
     $stA = ""; $stB = ""; if ($fim) { if ($va -ge $vb) { $stA = "Eleito"; $stB = "Nao eleito" } else { $stB = "Eleito"; $stA = "Nao eleito" } }
     $cs = @((Cand 13 900013 "CANDIDATO A" "PT" $va $pa $stA $(if ($stA -eq "Eleito") { "s" } else { "n" })), (Cand 22 900022 "CANDIDATO B" "PL" $vb (100 - $pa) $stB $(if ($stB -eq "Eleito") { "s" } else { "n" })))
     return Boletim 1 1 $cs ([math]::Min(100, $pst)) $(if ($fim) { "f" } else { "p" }) $te "25/10/2026" (Relogio (FracGeral))
+}
+function Resp2022([string] $abr) {   # 2o turno de 2022 ficticio: A (PT) x B (PL)
+    $ufs = $(if ($abr -eq "br") { @($ELEITORES.Keys) } else { @($abr) }); $va = 0; $vb = 0; $te = 0
+    foreach ($u in $ufs) { $t = $ELEITORES[$u] * 1000 * 0.79 * 0.93; $l = (LulaFinal $u) - 0.02 + 0.04 * (Rnd "z$u"); $va += $t * $l; $vb += $t * (1 - $l); $te += $ELEITORES[$u] * 1000 }
+    $tot = $va + $vb
+    $cs = @((Cand 13 800013 "CANDIDATO X (2022)" "PT" $va (100 * $va / $tot) "Eleito" "s"), (Cand 22 800022 "CANDIDATO Y (2022)" "PL" $vb (100 * $vb / $tot) "Nao eleito" "n"))
+    return Boletim 1 1 $cs 100 "f" ([long] $te) "30/10/2022" "20:00:00"
 }
 function RespGovernador([string] $uf, [bool] $turno2) {
     $te = [long] ($ELEITORES[$uf] * 1000); $sg1 = $PARTIDOS[[int] (10 * (Rnd "g1$uf"))]; $sg2 = $(if ($sg1 -eq "PT") { "PL" } else { "PT" })
@@ -88,7 +95,7 @@ function RespGovernador([string] $uf, [bool] $turno2) {
         return Boletim 3 1 $cs 100 "f" $te "04/10/2026" "23:50:00"
     }
     if ($SEG2 -notcontains $uf) { return $null }
-    $p = Progresso $uf; $pst = 100 * [math]::Pow($p, 0.8); $a = 0.47 + 0.07 * (Rnd "g2$uf"); $vv = $t * $pst / 100; $fim = $pst -ge 99.999
+    $p = Progresso $uf; $pst = 100 * [math]::Pow($p, 0.8); $a = 0.47 + 0.07 * (Rnd "g2$uf"); $vv = $t * $pst / 100; $fim = $pst -ge 99.99
     $stA = ""; $stB = ""; if ($fim) { if ($a -ge 0.5) { $stA = "Eleito"; $stB = "Nao eleito" } else { $stB = "Eleito"; $stA = "Nao eleito" } }
     $cs = @((Cand 11 $sqA $nA $sg1 ($vv * $a) (100 * $a) $stA $(if ($stA -eq "Eleito") { "s" } else { "n" })), (Cand 22 $sqB $nB $sg2 ($vv * (1 - $a)) (100 - 100 * $a) $stB $(if ($stB -eq "Eleito") { "s" } else { "n" })))
     return Boletim 3 1 $cs $pst $(if ($fim) { "f" } else { "p" }) $te "25/10/2026" (Relogio (FracGeral))
@@ -101,17 +108,19 @@ function RespSenador([string] $uf) {
     }
     return Boletim 5 2 $cs 100 "f" $te "04/10/2026" "23:50:00"
 }
-function RespDeputados([string] $uf) {
+function RespDeputados([string] $uf, [int] $cargo = 6) {
     $te = [long] ($ELEITORES[$uf] * 1000); $nv = $(if ($VAGAS.ContainsKey($uf)) { $VAGAS[$uf] } else { 8 }); $i = [array]::IndexOf(@($ELEITORES.Keys), $uf)
+    # estaduais: o triplo da bancada federal ate 36, depois +1 por deputado federal acima de 12
+    if ($cargo -ne 6) { $nv = $(if ($nv -le 12) { 3 * $nv } else { 36 + $nv - 12 }); $i += 100 * $cargo }
     $par = @{}
     for ($j = 0; $j -lt $nv + 6; $j++) {
         $sg = $PARTIDOS[[int] (10 * (Rnd "d$j$uf"))]; $votos = [long] (300000 * [math]::Pow(0.93, $j) * (0.5 + (Rnd "dv$j$uf")))
         $st = $(if ($j -lt $nv) { if ($j % 5 -eq 4) { "Eleito por media" } else { "Eleito por QP" } } else { "Suplente" })
         if (-not $par.ContainsKey($sg)) { $par[$sg] = New-Object System.Collections.ArrayList }
-        [void] $par[$sg].Add([ordered]@{ n = "$(1000 + $j)"; sqcand = "$(500000 + 1000 * $i + $j)"; nm = ("DEPUTADO {0:00} ({1})" -f ($j + 1), $uf.ToUpper()); nmu = ("DEPUTADO {0:00} ({1})" -f ($j + 1), $uf.ToUpper()); e = $(if ($j -lt $nv) { "s" } else { "n" }); st = $st; vap = "$votos"; pvap = "1,00" })
+        [void] $par[$sg].Add([ordered]@{ n = "$(1000 + $j)"; sqcand = "$(500000 + 1000 * $i + $j)"; nm = ("{2} {0:00} ({1})" -f ($j + 1), $uf.ToUpper(), $(if ($cargo -eq 6) { "DEPUTADO" } else { "DEP. ESTADUAL" })); nmu = ("{2} {0:00} ({1})" -f ($j + 1), $uf.ToUpper(), $(if ($cargo -eq 6) { "DEPUTADO" } else { "DEP. ESTADUAL" })); e = $(if ($j -lt $nv) { "s" } else { "n" }); st = $st; vap = "$votos"; pvap = "1,00" })
     }
     $cs = @(); foreach ($k in $par.Keys) { $cs += [ordered]@{ sg = $k; cand = @($par[$k]) } }
-    return Boletim 6 $nv $cs 100 "f" $te "04/10/2026" "23:50:00"
+    return Boletim $cargo $nv $cs 100 "f" $te "04/10/2026" "23:50:00"
 }
 
 $ouvinte = New-Object System.Net.HttpListener
@@ -119,20 +128,23 @@ $ouvinte.Prefixes.Add("http://localhost:$Porta/"); $ouvinte.Prefixes.Add("http:/
 $ouvinte.Start()
 Write-Host "TSE SIMULADO DO ENSAIO em http://localhost:$Porta/  (apuracao do 2o turno em $Minutos min)" -ForegroundColor Yellow
 Write-Host "NAO E DADO REAL. Feche esta janela para encerrar o ensaio." -ForegroundColor Yellow
-$re = [regex] '/ele2026/(\d+)/dados/(\w+)/\w+-c(\d{4})-e\d{6}-u\.json$'
+$re = [regex] '/(ele20\d\d)/(\d+)/dados/(\w+)/\w+-c(\d{4})-e\d{6}-u\.json$'
 while ($ouvinte.IsListening) {
     $ctx = $ouvinte.GetContext(); $resp = $ctx.Response
     try {
         $m = $re.Match($ctx.Request.Url.AbsolutePath); $obj = $null
         if ($m.Success) {
-            $ele = $m.Groups[1].Value; $abr = $m.Groups[2].Value.ToLower(); $cargo = [int] $m.Groups[3].Value
+            $ciclo = $m.Groups[1].Value; $ele = $m.Groups[2].Value; $abr = $m.Groups[3].Value.ToLower(); $cargo = [int] $m.Groups[4].Value
+            if ($ciclo -eq "ele2022") { $ele = "x$ele" }   # 2022: so o 2o turno de Presidente (545)
             $ok = ($abr -eq "br" -or $ELEITORES.Contains($abr))
-            if ($ok -and $cargo -eq 1 -and $ele -eq "9257") { $obj = RespPresidente $abr $false }
+            if ($ok -and $cargo -eq 1 -and $ele -eq "x545") { $obj = Resp2022 $abr }
+            elseif ($ok -and $cargo -eq 1 -and $ele -eq "9257") { $obj = RespPresidente $abr $false }
             elseif ($ok -and $cargo -eq 1 -and $ele -eq "9262") { $obj = RespPresidente $abr $true }
             elseif ($abr -ne "br" -and $ok -and $cargo -eq 3 -and $ele -eq "9259") { $obj = RespGovernador $abr $false }
             elseif ($abr -ne "br" -and $ok -and $cargo -eq 3 -and $ele -eq "9263") { $obj = RespGovernador $abr $true }
             elseif ($abr -ne "br" -and $ok -and $cargo -eq 5 -and $ele -eq "9259") { $obj = RespSenador $abr }
             elseif ($abr -ne "br" -and $ok -and $cargo -eq 6 -and $ele -eq "9259") { $obj = RespDeputados $abr }
+            elseif ($abr -ne "br" -and $ok -and (($cargo -eq 7 -and $abr -ne "df") -or ($cargo -eq 8 -and $abr -eq "df")) -and $ele -eq "9259") { $obj = RespDeputados $abr $cargo }
         }
         if ($ctx.Request.Url.AbsolutePath -match '/comum/config/ele-c\.json$') {   # lista de eleicoes (CODIGOS-2-TURNO.bat)
             function Ele($cd, $nm, $cargos) { return [ordered]@{ cd = $cd; nm = $nm; abr = @([ordered]@{ cd = "BR"; cp = @($cargos | ForEach-Object { [ordered]@{ cd = "$_" } }) }) } }

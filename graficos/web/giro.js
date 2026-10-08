@@ -98,6 +98,16 @@
     if (pg >= 100 && ps >= 100) return { texto: "100% DAS URNAS", cor: C.verde };
     return { texto: "PARCIAL", cor: C.vermelho };
   }
+  function seloGov(u) {
+    var g = cargo(u, "gov");
+    if (ensaioAtivo()) return { texto: "ENSAIO — NÃO VAI AO AR", cor: C.vermelho };
+    if (D().modo === "SIMULADO") return { texto: "SIMULADO — NÃO OFICIAL", cor: C.vermelho };
+    if (g && g.andamento === "f") return { texto: "TOTALIZAÇÃO FINAL", cor: C.verde };
+    var pg = g ? g.urnas_pct : 0;
+    if (!(pg > 0)) return { texto: "AGUARDANDO APURAÇÃO", cor: C.trilho };
+    if (pg >= 100) return { texto: "100% DAS URNAS", cor: C.verde };
+    return { texto: "PARCIAL", cor: C.vermelho };
+  }
   function hora(u) {
     var g = cargo(u, "gov"), s = cargo(u, "sen"), h = (g && g.hora) || (s && s.hora) || "";
     h = String(h).slice(0, 5);
@@ -119,12 +129,12 @@
     var refazer = (window.GCTSE_GIRO_CONTROLE && window.GCTSE_GIRO_CONTROLE.redesenhar) || window.__gctseRedesenhar;
     if (refazer) { clearTimeout(FOTO.timer); FOTO.timer = setTimeout(refazer, 300); }
   };
-  function urlFoto(u, cd) {
+  function urlFoto(u, cd, ele) {
     if (window.GCTSE_FOTOS_DO_TSE !== true) return "";   // chave em web\fotos-config.js
     var tse = D().tse;
     if (!tse || !tse.base || !cd || !cd.sqcand) return "";
     if (FOTO.falhas >= 3 && FOTO.acertos === 0) return "";
-    var url = tse.base + "/" + tse.ciclo + "/" + tse.eleicao + "/fotos/" + u + "/" + cd.sqcand + ".jpeg";
+    var url = tse.base + "/" + tse.ciclo + "/" + (ele || tse.eleicao) + "/fotos/" + u + "/" + cd.sqcand + ".jpeg";
     return FOTO.falhou[url] ? "" : url;
   }
   function foto(url, x, y, w, h) {
@@ -146,6 +156,8 @@
     var cor = sit.tipo === "eleito" ? C.verde : (sit.tipo === "segundo" ? C.destaque : C.trilho);
     return r(xd - w, y - 25 * k, w, h, cor, 4) + t(xd - w / 2, y - 1 * k, txt, { s: Math.round(18 * k), b: true, a: "middle", ls: 1 });
   }
+  // Governador: eleicao do proprio boletim (1o ou 2o turno); Senador: 1o turno.
+  function eleDe(c, titulo) { var tse = D().tse || {}; return (c && c.eleicao) || (titulo === "SENADOR" ? tse.eleicao_1turno : "") || tse.eleicao; }
   function emApuracao(x, y, w, h, titulo, c, sit, k, u) {
     var o = r(x, y, w, h, C.painel, 8), px = x + 32 * k, pw = w - 64 * k;
     o += t(px, y + 52 * k, titulo, { s: Math.round(28 * k), b: true, ls: 2 });
@@ -154,7 +166,7 @@
     if (!cs.length) return o + t(px, y + 140 * k, "aguardando boletim do TSE", { s: Math.round(22 * k), c: C.apagado });
     var top = cs[0].pct > 0 ? cs[0].pct : 100, ly = y + 110 * k, passo = Math.min(170 * k, (y + h - ly - 10) / 2);
     cs.forEach(function (cd, i) {
-      var yy = ly + i * passo, url = urlFoto(u, cd), dx = 0;
+      var yy = ly + i * passo, url = urlFoto(u, cd, eleDe(c, titulo)), dx = 0;
       if (url) {
         var fh = 94 * k, fw = fh * 3 / 4;
         o += foto(url, px, yy + 12 * k, fw, fh);
@@ -178,7 +190,7 @@
       { s: Math.round(26 * k), b: true, ls: 3, c: eleito ? "#3fd13f" : "#5fb0f0" });
     var lst = sit.lista.slice(0, 2), passo = (lst.length > 1 ? 150 : 200) * k;
     lst.forEach(function (cd, i) {
-      var yy = y + 130 * k + i * passo, url = urlFoto(u, cd), dx = 0;
+      var yy = y + 130 * k + i * passo, url = urlFoto(u, cd, eleDe(c, titulo)), dx = 0;
       if (url) {
         var fw = (lst.length > 1 ? 84 : 120) * k, fh = fw * 4 / 3;
         o += foto(url, px, yy + 14 * k, fw, fh);
@@ -226,6 +238,55 @@
     o += t(30, 950, "Fonte: TSE — " + hora(u), { s: 11, c: C.apagado2 });
     return svg(W, H, o);
   }
+  // GIRO DO GOVERNADOR (?so=gov): so o Governador, grande. Eleito: foto,
+  // nome, "ELEITO NO 1o/2o TURNO", % e o 2o colocado. Sem eleito ainda: os
+  // dois primeiros com barra (o mesmo bloco do giro, maior).
+  function inteiro(n) { return n == null || isNaN(n) ? "—" : Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
+  function silhueta(x, y, w, h) {
+    return r(x, y, w, h, "#22324a", 6) + '<circle cx="' + (x + w / 2) + '" cy="' + (y + h * 0.36) + '" r="' + (w * 0.2) + '" fill="#5b6c86"/>' +
+      '<path d="M' + (x + w * 0.16) + " " + (y + h) + " Q" + (x + w * 0.16) + " " + (y + h * 0.62) + " " + (x + w / 2) + " " + (y + h * 0.62) +
+      " Q" + (x + w * 0.84) + " " + (y + h * 0.62) + " " + (x + w * 0.84) + " " + (y + h) + ' Z" fill="#5b6c86"/>';
+  }
+  function govGrande(u, x, y, w, h, v) {
+    var g = cargo(u, "gov"), sit = situacao(g);
+    if (sit.tipo !== "eleito") return bloco(x, y, w, h, "GOVERNADOR", g, v ? 1 : 1.15, u);
+    var c = sit.lista[0], outro = g.candidatos.filter(function (k) { return k !== c; }).sort(function (a, b) { return (b.votos || 0) - (a.votos || 0); })[0];
+    var turno = +g.turno === 2 ? "2º" : "1º", url = urlFoto(u, c, eleDe(g, "GOVERNADOR"));
+    var o = r(x, y, w, h, C.painel, 8) + r(x, y, w, 8, C.verde, 4);
+    var fw = v ? 240 : 300, fh = fw * 4 / 3, fx = v ? x + (w - fw) / 2 : x + 40, fy = y + 40;
+    o += url ? foto(url, fx, fy, fw, fh) : silhueta(fx, fy, fw, fh);
+    var tx = v ? x + w / 2 : x + 40 + fw + 44, a = v ? "middle" : "start", tw = v ? w - 40 : w - fw - 124, ty = v ? fy + fh + 50 : y + 110;
+    o += t(tx, ty, "GOVERNADOR ELEITO NO " + turno + " TURNO", { s: v ? 20 : 26, b: true, ls: 2, c: "#3fd13f", a: a, max: tw });
+    o += t(tx, ty + (v ? 58 : 80), c.nome, { s: v ? 40 : 60, b: true, a: a, max: tw, nome: true });
+    o += t(tx, ty + (v ? 94 : 126), c.partido, { s: v ? 22 : 30, c: C.apagado, a: a, max: tw });
+    o += t(tx, ty + (v ? 176 : 250), pct(c.pct), { s: v ? 64 : 88, b: true, a: a });
+    o += t(tx, ty + (v ? 206 : 286), "dos votos válidos" + (c.votos ? "  ·  " + inteiro(c.votos) + " votos" : ""), { s: v ? 16 : 20, c: C.apagado, a: a, max: tw });
+    if (outro) {
+      var oy = y + h - (v ? 30 : 34);
+      o += r(x + 32, oy - (v ? 34 : 40), w - 64, 1, "rgba(255,255,255,0.15)");
+      o += t(x + 32, oy, outro.nome + "  ·  " + outro.partido, { s: v ? 16 : 22, b: true, c: "#c9d6e6", max: w - 240 }) + t(x + w - 32, oy, pct(outro.pct), { s: v ? 18 : 24, b: true, c: "#c9d6e6", a: "end" });
+    }
+    return o;
+  }
+  function telaGovH(u) {
+    var W = 1280, H = 720, s = seloGov(u), o = "", g = cargo(u, "gov");
+    o += t(73, 76, NOMES[u] || u.toUpperCase(), { s: 52, b: true, ls: 1, max: W - 73 - 580 });
+    o += t(73, 112, linhaUrnas(g, null, false), { s: 20, c: C.apagado, max: W - 73 - 380 });
+    o += '<g data-selo="1" data-x="' + (W - 73 - 200) + '">' + r(W - 540, 27, 267, 36, s.cor, 3) +
+      t(W - 281, 52, s.texto, { s: 20, b: true, a: "end" }) + "</g>";
+    o += govGrande(u, 73, 146, 1134, 528, false);
+    o += t(73, 702, "Fonte: TSE — " + hora(u), { s: 13, c: C.apagado2 });
+    return svg(W, H, o);
+  }
+  function telaGovV(u) {
+    var W = 540, H = 960, s = seloGov(u), o = "", g = cargo(u, "gov");
+    o += t(30, 66, NOMES[u] || u.toUpperCase(), { s: 38, b: true, max: W - 60 });
+    o += t(30, 94, linhaUrnas(g, null, true), { s: 15, c: C.apagado, max: W - 60 });
+    o += r(30, 108, W - 60, 28, s.cor, 2) + t(W / 2, 128, s.texto, { s: 16, b: true, a: "middle" });
+    o += govGrande(u, 30, 150, W - 60, 776, true);
+    o += t(30, 950, "Fonte: TSE — " + hora(u), { s: 11, c: C.apagado2 });
+    return svg(W, H, o);
+  }
   // ENSAIO (ENSAIO.bat): toda tela sai riscada - nunca confundir com o ar.
   function ensaioAtivo() { return !!((window.GCTSE_DADOS || {}).ensaio || (window.GCTSE_ESTADOS || {}).ensaio); }
   function marcaEnsaio(W, H) {
@@ -269,5 +330,7 @@
     }
   }
 
-  window.GCTSE_GIRO_TELA = { telaH: telaH, telaV: telaV, ajustar: ajustar, nomes: NOMES, dados: D };
+  var SO_GOV = false; try { SO_GOV = new URLSearchParams(location.search).get("so") === "gov"; } catch (e) { }
+  window.GCTSE_GIRO_TELA = { telaH: SO_GOV ? telaGovH : telaH, telaV: SO_GOV ? telaGovV : telaV, telaGovH: telaGovH, telaGovV: telaGovV,
+    ajustar: ajustar, nomes: NOMES, dados: D, soGov: SO_GOV };
 })();

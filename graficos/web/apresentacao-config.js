@@ -51,13 +51,13 @@ window.GCTSE_APRESENTACAO = {
       h: ["presmapa-h", "virar-h", "evolucao-h", "decisivos-h", "regioes-h", "gov2t-h", "margem-h", "viradas-h", "apuracao-h"],
       v: ["presmapa-v", "virar-v", "evolucao-v", "decisivos-v", "regioes-v", "gov2t-v", "margem-v", "viradas-v", "apuracao-v"] },
     { nome: "Fechamento", tempo: 15,
-      h: ["pres2t-h", "presmapa-h", "viradas-h", "ganho-h", "abstuf-h", "turnos-h", "governadores-h", "govpres-h", "senadores1-h", "senadores2-h", "camara-h"],
-      v: ["pres2t-v", "presmapa-v", "viradas-v", "ganho-v", "abstuf-v", "turnos-v", "governadores-v", "govpres-v", "senadores1-v", "senadores2-v", "camara-v"] }
+      h: ["eleito-h", "pres2t-h", "presmapa-h", "viradas-h", "ganho-h", "abstuf-h", "turnos-h", "governadores-h", "govpres-h", "senadores1-h", "senadores2-h", "camara-h"],
+      v: ["eleito-v", "pres2t-v", "presmapa-v", "viradas-v", "ganho-v", "abstuf-v", "turnos-v", "governadores-v", "govpres-v", "senadores1-v", "senadores2-v", "camara-v"] }
   ],
 
   // FAVORITOS: atalhos no topo do GERENCIADOR (fica fixo no ar ao clicar).
   favoritos: {
-    h: ["pres2t-h", "presmapa-h", "virar-h", "evolucao-h", "gov2t-h", "viradas-h", "margem-h", "apuracao-h"],
-    v: ["pres2t-v", "presmapa-v", "virar-v", "evolucao-v", "gov2t-v", "viradas-v", "margem-v", "apuracao-v"]
+    h: ["eleito-h", "pres2t-h", "presmapa-h", "virar-h", "evolucao-h", "gov2t-h", "viradas-h", "margem-h", "apuracao-h"],
+    v: ["eleito-v", "pres2t-v", "presmapa-v", "virar-v", "evolucao-v", "gov2t-v", "viradas-v", "margem-v", "apuracao-v"]
   }
 };

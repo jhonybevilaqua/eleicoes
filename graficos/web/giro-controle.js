@@ -10,6 +10,9 @@
   var ordem = (cfg.ordem || []).map(function (u) { return String(u).toLowerCase().trim(); })
     .filter(function (u) { return T.nomes[u]; });
   if (!ordem.length) ordem = Object.keys(T.nomes);
+  // ?ordem=pr,rs,sc (regiao escolhida no gerenciador): so esses estados
+  var soEstes = (q.get("ordem") || "").toLowerCase().split(",").filter(function (u) { return T.nomes[u]; });
+  if (soEstes.length) ordem = soEstes;
   var transicao = parseFloat(cfg.transicao_segundos);
   if (!(transicao >= 0)) transicao = 0.5;
   var tempoAuto = parseFloat(cfg.tempo_auto_segundos);
@@ -95,6 +98,7 @@
   }, { passive: true });
 
   mostrar(atual);
+  if (q.get("auto") === "1") { auto = true; reagendar(); }   // regiao: troca sozinha entre os estados dela
   setInterval(recarregar, 3000);
   // Comandos vindos do GERENCIADOR (sem aviso na tela: a saida esta no ar).
   window.GCTSE_GIRO_CONTROLE = {

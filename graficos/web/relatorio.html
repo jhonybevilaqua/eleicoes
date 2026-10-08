@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Relatório da noite</title>
+<style>
+  /* Relatorio da noite (gerenciador.ps1 -> /relatorio-dados). Ctrl+P imprime em A4. */
+  :root { --tinta: #111; --apagado: #5a6470; --linha: #cfd5dc; --faixa: #1f3b63; --ruim: #b00000; --bom: #11621a; --fundo: #e9edf2; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fundo); color: var(--tinta); font: 10.5pt/1.35 'Segoe UI', Arial, sans-serif; }
+  .folha { width: 210mm; margin: 12px auto; padding: 10mm 12mm; background: #fff; box-shadow: 0 1px 6px rgba(0,0,0,.2); }
+  @media (max-width: 230mm) { .folha { width: auto; margin: 0; padding: 16px; } }
+  h1 { margin: 0; font-size: 17pt; } .sub { color: var(--apagado); font-size: 9.5pt; margin: 2px 0 10px; }
+  h2 { font-size: 10.5pt; background: var(--faixa); color: #fff; padding: 3px 8px; margin: 14px 0 6px; letter-spacing: .5px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  @media (max-width: 600px) { .kpis { grid-template-columns: repeat(2, 1fr); } }
+  .kpi { border: 1px solid var(--linha); border-radius: 6px; padding: 6px 8px; }
+  .kpi b { display: block; font-size: 16pt; font-variant-numeric: tabular-nums; }
+  .kpi span { color: var(--apagado); font-size: 8.5pt; text-transform: uppercase; letter-spacing: .5px; }
+  .kpi.ruim b { color: var(--ruim); } .kpi.bom b { color: var(--bom); }
+  table { width: 100%; border-collapse: collapse; font-size: 9pt; }
+  td, th { border-bottom: 1px solid var(--linha); padding: 2px 5px; text-align: left; vertical-align: top; }
+  th { background: #f2f4f7; } td.n { text-align: right; font-variant-numeric: tabular-nums; }
+  .t-alerta { color: var(--ruim); font-weight: 700; } .t-eleito { color: var(--bom); font-weight: 800; } .t-virada { color: #8a5a00; font-weight: 700; }
+  .vazio { color: var(--apagado); font-style: italic; }
+  .barra { display: flex; gap: 8px; align-items: center; position: fixed; right: 12px; top: 10px; }
+  .barra button, .barra input { font: 600 13px 'Segoe UI', Arial, sans-serif; padding: 6px 10px; }
+  @media print { @page { size: A4; margin: 10mm; } body { background: #fff; } .folha { margin: 0; padding: 0; box-shadow: none; width: auto; } .barra { display: none; } }
+</style>
+</head>
+<body>
+<div class="barra"><label>noite de <input type="date" id="dia"></label><button id="atualizar">atualizar</button><button onclick="window.print()">Imprimir</button></div>
+<div class="folha">
+  <h1>RELATÓRIO DA NOITE — GRÁFICOS DA APURAÇÃO</h1>
+  <div class="sub" id="sub">carregando…</div>
+  <h2>APURAÇÃO (horário do TSE)</h2><div class="kpis" id="kApur"></div>
+  <h2>OPERAÇÃO</h2><div class="kpis" id="kOper"></div>
+  <h2>TELAS MAIS EXIBIDAS</h2><div id="telas"></div>
+  <h2>VIRADAS NA LIDERANÇA (Presidente)</h2><div id="viradas"></div>
+  <h2>OCORRÊNCIAS</h2><div id="ocorr"></div>
+  <h2>CÓPIAS DE SEGURANÇA</h2><div id="copias"></div>
+  <div class="sub" style="margin-top:12px">Fontes: boletins do TSE (gravados pelo GRAFICOS.bat), registro do gerenciador (logs\no-ar-*.csv e logs\ocorrencias-*.csv) e pasta copias-de-seguranca.</div>
+</div>
+<script charset="utf-8" src="graficos.js"></script>
+<script>
+(function () {
+  "use strict";
+  function el(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function arr(x) { return Array.isArray(x) ? x : (x && Array.isArray(x.value) ? x.value : (x ? [x] : [])); }
+  function kpi(txt, rot, cls) { return '<div class="kpi ' + (cls || "") + '"><b>' + esc(txt) + "</b><span>" + esc(rot) + "</span></div>"; }
+  function hm(t) { return t ? String(t).substr(11, 5) : "—"; }
+  function quando(l) { var p = l.split(";"); return new Date(p[0] + "T" + p[1]); }
+  function min(ms) { var m = Math.round(ms / 60000); return m < 60 ? m + " min" : Math.floor(m / 60) + " h " + (m % 60) + " min"; }
+  var EXTRA = { apresentacao: "Apresentação automática (rodízio)", giro: "Giro dos estados (Gov. + Senado)", girogov: "Governador (giro / estado)", resumo: "Resumo (7 telas)" };
+  function nomeTela(k) {
+    var l = (window.GCTSE_GRAFICOS && window.GCTSE_GRAFICOS.lista) || [], g = l.filter(function (x) { return x.id === k + "-h"; })[0];
+    return EXTRA[k] || (g ? g.nome : k);
+  }
+  function carregar() {
+    var q = el("dia").value ? "?dia=" + el("dia").value : "";
+    fetch("/relatorio-dados" + q, { cache: "no-store" }).then(function (r) { return r.json(); }).then(montar)
+      .catch(function () { el("sub").textContent = "Sem conexão com o gerenciador: abra esta página pelo gerenciador (GERENCIADOR.bat aberto)."; });
+  }
+  function montar(R) {
+    var dias = arr(R.dias), noar = arr(R.no_ar).filter(Boolean), oc = arr(R.ocorrencias).filter(Boolean);
+    el("sub").textContent = "Registros de " + dias.map(function (d) { return d.split("-").reverse().join("/"); }).join(" e ") + " · gerado em " + String(R.gerado || "").replace("T", " ");
+    // apuracao: marcos pela evolucao minuto a minuto (hora do TSE)
+    var ev = R.evolucao, pts = ev ? arr(ev.pontos) : [], marco = function (p) { for (var i = 0; i < pts.length; i++) if (+pts[i].u >= p) return pts[i]; return null; };
+    var p0 = pts.filter(function (x) { return +x.u > 0; })[0], el2 = R.eleito || {};
+    var elOc = oc.filter(function (l) { return l.split(";")[2] === "eleito"; })[0];
+    el("kApur").innerHTML = kpi(p0 ? hm(p0.t) : "—", "1º boletim com urnas") + kpi(hm((marco(50) || {}).t), "50% das urnas") + kpi(hm((marco(90) || {}).t), "90% das urnas") +
+      kpi(hm((marco(100) || {}).t), "100% das urnas") + kpi(el2.nome || "—", "presidente eleito", el2.nome ? "bom" : "") +
+      kpi(elOc ? elOc.split(";")[1].substr(0, 5) : (el2.quando ? String(el2.quando).substr(0, 5) : "—"), "eleito declarado (relógio local)") +
+      kpi(el2.feito ? (el2.cortou ? "SIM" : "NÃO") : "—", "eleito no ar pelo sistema") + kpi(String(pts.length), "pontos no minuto a minuto");
+    // operacao: paradas (alerta "PAROU" -> "voltou"), reaberturas, TSE sem resposta, cortes
+    var parado = 0, inicio = {}, nPar = 0;
+    oc.forEach(function (l) {
+      var c = l.split(";"), tx = c[3] || "", k = /PRESIDENTE|Presidente/.test(tx) ? "P" : "E";
+      if (c[2] === "alerta" && /PAROU/.test(tx)) { inicio[k] = quando(l); nPar++; }
+      if (c[2] === "ok" && /coleta .* voltou/.test(tx) && inicio[k]) { parado += quando(l) - inicio[k]; inicio[k] = null; }
+    });
+    var reab = oc.filter(function (l) { return /REABERTO/.test(l); }).length, semTse = oc.filter(function (l) { return /TSE SEM RESPOSTA/.test(l); }).length;
+    var auto = noar.filter(function (l) { return /automatico/.test(l); }).length;
+    el("kOper").innerHTML = kpi(String(noar.length), "trocas de tela no ar") + kpi(String(auto), "trocas automáticas") +
+      kpi(String(nPar), "vezes que uma coleta parou", nPar ? "ruim" : "bom") + kpi(nPar ? min(parado) : "0 min", "coleta parada (total)", parado ? "ruim" : "bom") +
+      kpi(String(reab), "coletas reabertas sozinhas") + kpi(String(semTse), "quedas de resposta do TSE", semTse ? "ruim" : "bom") +
+      kpi(String(oc.filter(function (l) { return l.split(";")[2] === "virada"; }).length), "viradas registradas") + kpi(String(arr(R.copias).length), "cópias de segurança");
+    // telas: vezes e tempo no ar (ate a proxima troca da mesma saida)
+    var porSaida = { h: [], v: [] }, t = {};
+    noar.forEach(function (l) { var c = l.split(";"); if (porSaida[c[2]]) porSaida[c[2]].push({ q: quando(l), tela: c[3] }); });
+    ["h", "v"].forEach(function (s) {
+      var L = porSaida[s];
+      L.forEach(function (x, i) {
+        var fim = i + 1 < L.length ? L[i + 1].q : null, nome = x.tela.replace(/-(h|v)$/, "");
+        t[nome] = t[nome] || { n: 0, ms: 0 }; t[nome].n++; if (fim) t[nome].ms += fim - x.q;
+      });
+    });
+    var ks = Object.keys(t).sort(function (a, b) { return t[b].ms - t[a].ms || t[b].n - t[a].n; });
+    el("telas").innerHTML = ks.length ? "<table><tr><th>tela</th><th style='text-align:right'>vezes no ar</th><th style='text-align:right'>tempo no ar (H + V)</th></tr>" +
+      ks.slice(0, 15).map(function (k) { return "<tr><td>" + esc(nomeTela(k)) + "</td><td class=n>" + t[k].n + "</td><td class=n>" + (t[k].ms ? min(t[k].ms) : "—") + "</td></tr>"; }).join("") + "</table>"
+      : '<div class="vazio">nenhuma troca registrada</div>';
+    var vr = oc.filter(function (l) { return l.split(";")[2] === "virada"; });
+    el("viradas").innerHTML = vr.length ? "<table>" + vr.map(function (l) { var c = l.split(";"); return "<tr><td style='width:70px'>" + esc(c[1]) + "</td><td>" + esc(c.slice(3).join(";")) + "</td></tr>"; }).join("") + "</table>" : '<div class="vazio">nenhuma</div>';
+    el("ocorr").innerHTML = oc.length ? "<table><tr><th>data</th><th>hora</th><th>tipo</th><th>o que aconteceu</th></tr>" + oc.filter(function (l) { return l.split(";")[2] !== "virada"; }).map(function (l) {
+      var c = l.split(";"); return "<tr><td>" + esc(c[0].split("-").reverse().join("/")) + "</td><td>" + esc(c[1]) + "</td><td class='t-" + esc(c[2]) + "'>" + esc(c[2]) + "</td><td>" + esc(c.slice(3).join(";")) + "</td></tr>";
+    }).join("") + "</table>" : '<div class="vazio">nenhuma ocorrência registrada</div>';
+    el("copias").innerHTML = arr(R.copias).length ? "<table>" + arr(R.copias).map(function (n) { return "<tr><td>" + esc(n) + "</td></tr>"; }).join("") + "</table>" : '<div class="vazio">nenhuma cópia nestes dias</div>';
+  }
+  el("atualizar").onclick = carregar;
+  carregar();
+})();
+</script>
+</body>
+</html>

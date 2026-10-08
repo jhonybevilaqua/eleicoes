@@ -51,6 +51,9 @@
       if (tempo >= 3) p.push("tempo=" + tempo);
       return "apresentacao-" + sufixo + ".html" + (p.length ? "?" + p.join("&") : "");
     }
+    // giro so do Governador: "uf:pr" (estado fixo) ou "reg:pr,rs,sc" (troca entre eles)
+    if (tela === "girogov") return "giro-estados-" + sufixo + ".html?so=gov" + (acao.indexOf("uf:") === 0 ? "&uf=" + encodeURIComponent(acao.slice(3)) :
+      acao.indexOf("reg:") === 0 ? "&ordem=" + encodeURIComponent(acao.slice(4)) + "&auto=1" : "");
     if (tela === "giro") return "giro-estados-" + sufixo + ".html" + (acao.indexOf("uf:") === 0 ? "?uf=" + encodeURIComponent(acao.slice(3)) : "");
     if (tela === "resumo") {
       if (acao.indexOf("estado:") === 0) return "resumo-" + sufixo + ".html?tela=estado&uf=" + encodeURIComponent(acao.slice(7));

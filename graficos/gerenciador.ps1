@@ -85,7 +85,7 @@ if (Test-Path $ArqEstado) {
             if ($null -ne $x -and "$($x.tela)" -match '^[a-z0-9-]{1,40}$') {
                 $script:Estado[$s].tela = "$($x.tela)"
                 $script:Estado[$s].seq = [int] $x.seq + 1
-                if ("$($x.acao)" -match '^[a-z0-9:-]{1,30}$') { $script:Estado[$s].acao = "$($x.acao)" }
+                if ("$($x.acao)" -match '^[a-z0-9:,-]{1,40}$') { $script:Estado[$s].acao = "$($x.acao)" }
                 foreach ($p in $x.PSObject.Properties) {
                     if ($p.Name -eq "rodizio" -and "$($p.Value)" -match '^[a-z0-9:,-]{0,800}$') { $script:Estado[$s].rodizio = "$($p.Value)" }
                     if ($p.Name -eq "tempo" -and "$($p.Value)" -match '^\d{1,3}$' -and [int] $p.Value -ge 3 -and [int] $p.Value -le 300) { $script:Estado[$s].tempo = [int] $p.Value }
@@ -165,6 +165,176 @@ function Ler-Arquivo {
     } finally { $fs.Dispose() }
 }
 
+# ------------------------------------------------------- vigia da noite
+# A cada 3 s le web\dados.js e web\estados.js e:
+#  - PRESIDENTE ELEITO: quando o TSE declara, avisa no painel e (se ligado)
+#    poe a tela "Presidente eleito" no ar nas DUAS saidas, sozinho - mesmo
+#    com a pagina do gerenciador fechada. Uma vez por eleicao.
+#  - VIRADA: quem lidera Presidente no Brasil ou num estado mudou.
+#  - COLETA PAROU / TSE SEM RESPOSTA, e reabre GRAFICOS.bat / ESTADOS.bat
+#    se a janela foi fechada.
+# Tudo vai para o painel (eventos) e para logs\ocorrencias-AAAA-MM-DD.csv;
+# cada troca do que vai ao ar, para logs\no-ar-AAAA-MM-DD.csv (relatorio).
+$script:Ensaio = $false
+$script:EleitoAuto = $true
+$script:Reabrir = $true
+try {
+    foreach ($p in $cfg.PSObject.Properties) {
+        if ($p.Name -eq "ensaio" -and $p.Value -eq $true) { $script:Ensaio = $true }
+        if ($p.Name -eq "presidente_eleito_no_ar" -and $p.Value -eq $false) { $script:EleitoAuto = $false }
+        if ($p.Name -eq "reabrir_coletas" -and $p.Value -eq $false) { $script:Reabrir = $false }
+    }
+} catch { }
+if ($script:Ensaio) { $script:Reabrir = $false }   # o ENSAIO.bat cuida das janelas dele
+$script:Estado.eleito = [ordered]@{ auto = $script:EleitoAuto; feito = ""; nome = ""; quando = ""; cortou = $false }
+$script:Estado.eventos = New-Object System.Collections.ArrayList
+$script:Estado.ensaio = $script:Ensaio
+if (Test-Path $ArqEstado) {
+    try {
+        $lidoEl = (Get-Content $ArqEstado -Raw -Encoding UTF8 | ConvertFrom-Json).PSObject.Properties | Where-Object { $_.Name -eq "eleito" } | Select-Object -First 1
+        if ($lidoEl -and $lidoEl.Value) {
+            foreach ($p in $lidoEl.Value.PSObject.Properties) {
+                if ($p.Name -eq "auto") { $script:Estado.eleito.auto = [bool] $p.Value }
+                if (@("feito", "nome", "quando") -contains $p.Name -and "$($p.Value)" -match '^[^<>]{0,80}$') { $script:Estado.eleito[$p.Name] = "$($p.Value)" }
+                if ($p.Name -eq "cortou") { $script:Estado.eleito.cortou = [bool] $p.Value }
+            }
+        }
+    } catch { }
+}
+
+function Linha-Csv([string] $Arq, [string[]] $Campos) {
+    try {
+        if (-not (Test-Path "logs")) { New-Item -ItemType Directory -Path "logs" | Out-Null }
+        $caminho = Join-Path "logs" ("{0}-{1}.csv" -f $Arq, (Get-Date -Format "yyyy-MM-dd"))
+        if (-not (Test-Path $caminho)) { Add-Content -Path $caminho -Value "data;hora;$(if ($Arq -eq 'no-ar') { 'saida;tela;acao;origem' } else { 'tipo;texto' })" -Encoding UTF8 }
+        $limpos = @($Campos | ForEach-Object { "$_" -replace '[;\r\n]', ' ' })
+        Add-Content -Path $caminho -Value ((@((Get-Date -Format "yyyy-MM-dd"), (Get-Date -Format "HH:mm:ss")) + $limpos) -join ";") -Encoding UTF8
+    } catch { }
+}
+function Registrar-NoAr([string] $S, [string] $Tela, [string] $Acao, [string] $Origem) { Linha-Csv "no-ar" @($S, $Tela, $Acao, $Origem) }
+# tipo: eleito | virada | alerta | ok | info
+function Evento([string] $Tipo, [string] $Texto) {
+    $id = [DateTime]::Now.Ticks
+    [void] $script:Estado.eventos.Add([ordered]@{ id = "$id"; hora = (Get-Date -Format "HH:mm:ss"); tipo = $Tipo; texto = $Texto })
+    while ($script:Estado.eventos.Count -gt 40) { $script:Estado.eventos.RemoveAt(0) }
+    Linha-Csv "ocorrencias" @($Tipo, $Texto)
+    Escrever-Log ("{0}: {1}" -f $Tipo.ToUpper(), $Texto) $(if ($Tipo -eq "alerta") { "Red" } elseif ($Tipo -eq "eleito") { "Green" } else { "Yellow" })
+}
+function Por-No-Ar([string] $S, [string] $Tela, [string] $Acao, [string] $Origem) {
+    $script:Estado[$S].tela = $Tela
+    $script:Estado[$S].seq = [int] $script:Estado[$S].seq + 1
+    $script:Estado[$S].acao = $Acao
+    $script:Estado[$S].quando = (Get-Date -Format "HH:mm:ss")
+    Registrar-NoAr $S $Tela $Acao $Origem
+}
+
+function Ler-Js([string] $Nome) {
+    # "window.GCTSE_X = {...};" -> objeto (le mesmo com o coletor gravando)
+    $arq = Join-Path $Web $Nome
+    if (-not (Test-Path $arq)) { return $null }
+    $txt = [Text.Encoding]::UTF8.GetString((Ler-Arquivo $arq))
+    $i = $txt.IndexOf("{"); $f = $txt.LastIndexOf("}")
+    if ($i -lt 0 -or $f -le $i) { return $null }
+    return $txt.Substring($i, $f - $i + 1) | ConvertFrom-Json
+}
+function Prop($o, [string] $n) { if ($null -eq $o) { return $null }; $p = $o.PSObject.Properties[$n]; if ($p) { return $p.Value }; return $null }
+function Lista-De($x) { if ($null -eq $x) { return @() }; $v = Prop $x "value"; if ($x -isnot [array] -and $null -ne $v) { return @($v) }; return @($x) }
+function Lider($ab) {
+    if ($null -eq $ab -or -not (Prop $ab "tem")) { return $null }
+    $cs = @(Lista-De (Prop $ab "candidatos") | Where-Object { $null -ne $_ -and [double] (Prop $_ "votos") -gt 0 } | Sort-Object { [double] (Prop $_ "votos") } -Descending)
+    if ($cs.Count -lt 2) { return $null }
+    return $cs[0]
+}
+function Coletor-Aberto([string] $Ps1) {
+    $alvo = [regex]::Escape((Join-Path $Raiz $Ps1))
+    try {
+        $ps = @(Get-CimInstance Win32_Process -Filter "Name='powershell.exe' OR Name='pwsh.exe'" -ErrorAction Stop | Where-Object { $_.CommandLine -match $alvo })
+        return $ps.Count -gt 0
+    } catch { }
+    try { return @(Get-Process -ErrorAction SilentlyContinue | Where-Object { $c = $null; try { $c = $_.CommandLine } catch { }; $c -and $c -match $alvo }).Count -gt 0 } catch { return $true }
+}
+$script:Vigia = @{ prox = [datetime]::MinValue; lidoP = [datetime]::MinValue; lidoE = [datetime]::MinValue; lideres = @{}; parouP = $false; parouE = $false
+    semTse = $false; viSemEleito = $false; reabriuP = [datetime]::MinValue; reabriuE = [datetime]::MinValue; nomes = @{} }
+function Vigiar-Coleta([string] $Qual, [string] $Js, [string] $Ps1, [string] $Bat, [int] $Limite) {
+    $arq = Join-Path $Web $Js
+    if (-not (Test-Path $arq)) { return }
+    $idade = ((Get-Date) - (Get-Item $arq).LastWriteTime).TotalSeconds
+    $chave = "parou$Qual"; $chaveR = "reabriu$Qual"
+    if ($idade -gt $Limite -and -not $script:Vigia[$chave]) {
+        $script:Vigia[$chave] = $true
+        Evento "alerta" ("COLETA {0} PAROU ha {1:N0} s ({2})" -f $(if ($Qual -eq "P") { "DE PRESIDENTE" } else { "DOS ESTADOS" }), $idade, $Bat)
+    } elseif ($idade -le $Limite -and $script:Vigia[$chave]) {
+        $script:Vigia[$chave] = $false
+        Evento "ok" ("coleta {0} voltou" -f $(if ($Qual -eq "P") { "de Presidente" } else { "dos estados" }))
+    }
+    if ($script:Vigia[$chave] -and $script:Reabrir -and ((Get-Date) - $script:Vigia[$chaveR]).TotalSeconds -gt 120) {
+        $script:Vigia[$chaveR] = Get-Date
+        if (Coletor-Aberto $Ps1) { Evento "alerta" ("a janela do {0} esta aberta mas nao grava: clique nela e aperte ESC (ou feche e abra de novo)" -f $Bat) }
+        else {
+            try { Start-Process -FilePath (Join-Path $Raiz $Bat) -WorkingDirectory $Raiz; Evento "info" ("{0} estava fechado: REABERTO sozinho" -f $Bat) }
+            catch { Evento "alerta" ("nao consegui reabrir o {0}: {1}" -f $Bat, $_.Exception.Message) }
+        }
+    }
+}
+function Vigiar {
+    if ((Get-Date) -lt $script:Vigia.prox) { return }
+    $script:Vigia.prox = (Get-Date).AddSeconds(3)
+    Vigiar-Coleta "P" "dados.js" "graficos.ps1" "GRAFICOS.bat" 90
+    Vigiar-Coleta "E" "estados.js" "estados.ps1" "ESTADOS.bat" 150
+    $arq = Join-Path $Web "dados.js"
+    if (-not (Test-Path $arq)) { return }
+    $quando = (Get-Item $arq).LastWriteTime
+    if ($quando -eq $script:Vigia.lidoP) { return }
+    $d = $null
+    try { $d = Ler-Js "dados.js" } catch { return }   # gravando neste instante: proxima volta
+    if ($null -eq $d) { return }
+    $script:Vigia.lidoP = $quando
+    # TSE sem resposta (depois de publicar; antes das 17h e normal)
+    $semTse = ((Prop $d "recebendo_tse") -eq $false) -and -not (Prop $d "tse_nao_publicou")
+    if ($semTse -and -not $script:Vigia.semTse) { Evento "alerta" "TSE SEM RESPOSTA (Presidente) - a tela fica no ultimo dado" }
+    elseif (-not $semTse -and $script:Vigia.semTse) { Evento "ok" "TSE respondendo de novo" }
+    $script:Vigia.semTse = $semTse
+    $br = Prop $d "br"
+    if ($null -eq $br -or -not (Prop $br "tem")) { return }
+    $eleicao = "$(Prop (Prop $d 'tse') 'eleicao')"
+    $cs = @(Lista-De (Prop $br "candidatos") | Where-Object { $null -ne $_ })
+    $el = @($cs | Where-Object { (Prop $_ "eleito") -eq $true }) | Select-Object -First 1
+    $pctBr = [double] (Prop (Prop $br "secoes") "pct")
+    # ---- PRESIDENTE ELEITO
+    if ($null -eq $el) { $script:Vigia.viSemEleito = $true }
+    elseif ($script:Estado.eleito.feito -ne $eleicao) {
+        $nome = "$(Prop $el 'nome')"; $pctV = ([double] (Prop $el 'pct')).ToString("0.00", [Globalization.CultureInfo]::InvariantCulture).Replace(".", ",")
+        $script:Estado.eleito.feito = $eleicao; $script:Estado.eleito.nome = $nome; $script:Estado.eleito.quando = (Get-Date -Format "HH:mm:ss"); $script:Estado.eleito.cortou = $false
+        # corte automatico so se o eleito apareceu com o gerenciador aberto
+        # (reabrir o programa no dia seguinte nao tira nada do ar)
+        if ($script:Estado.eleito.auto -and $script:Vigia.viSemEleito) {
+            Por-No-Ar "h" "eleito-h" "" "automatico (eleito)"; Por-No-Ar "v" "eleito-v" "" "automatico (eleito)"
+            $script:Estado.eleito.cortou = $true
+            Evento "eleito" ("PRESIDENTE ELEITO: {0} ({1}%) - NO AR nas duas saidas (automatico)" -f $nome, $pctV)
+        } else {
+            Evento "eleito" ("PRESIDENTE ELEITO: {0} ({1}%) - coloque no ar pelo painel" -f $nome, $pctV)
+        }
+        Salvar-Estado
+    }
+    # ---- VIRADAS (Brasil e estados), com a apuracao ja andando
+    $abs = New-Object System.Collections.ArrayList
+    [void] $abs.Add(@("br", $br))
+    $ufs = Prop $d "ufs"
+    if ($ufs) { foreach ($p in $ufs.PSObject.Properties) { [void] $abs.Add(@($p.Name, $p.Value)) } }
+    foreach ($par in $abs) {
+        $k = $par[0]; $ab = $par[1]; $l = Lider $ab
+        if ($null -eq $l) { continue }
+        $num = "$(Prop $l 'numero')"; $script:Vigia.nomes[$num] = "$(Prop $l 'nome')"
+        $pctAb = [double] (Prop (Prop $ab "secoes") "pct")
+        $chaveL = "$eleicao|$k"
+        if ($script:Vigia.lideres.ContainsKey($chaveL) -and $script:Vigia.lideres[$chaveL] -ne $num -and $pctAb -ge 1) {
+            $antes = $script:Vigia.nomes[$script:Vigia.lideres[$chaveL]]
+            Evento "virada" ("VIROU {0}: {1} passou {2} ({3}% das urnas)" -f $(if ($k -eq "br") { "NO BRASIL" } else { $k.ToUpper() }), "$(Prop $l 'nome')", $antes, $pctAb.ToString("0.0", [Globalization.CultureInfo]::InvariantCulture).Replace(".", ","))
+        }
+        $script:Vigia.lideres[$chaveL] = $num
+    }
+}
+
 # ------------------------------------------------------------------ servidor
 
 # O HttpListener casa pelo cabecalho Host: registra localhost e 127.0.0.1.
@@ -188,16 +358,48 @@ Write-Host "  Deixe esta janela ABERTA: sem ela as saidas param de trocar." -For
 Write-Host ""
 if ($AbrirPagina) { try { Start-Process "http://localhost:$Porta/gerenciador.html" } catch { } }
 
+$script:Pedido = $null
 while ($ouvinte.IsListening) {
     $ctx = $null
     try {
-        $ctx = $ouvinte.GetContext()
+        # espera um pedido sem parar a vigia (a cada 3 s, mesmo sem pagina aberta)
+        if ($null -eq $script:Pedido) { $script:Pedido = $ouvinte.GetContextAsync() }
+        if (-not $script:Pedido.Wait(1000)) { try { Vigiar } catch { Escrever-Log "vigia: $($_.Exception.Message)" "Red" }; continue }
+        $ctx = $script:Pedido.Result; $script:Pedido = $null
         $req = $ctx.Request
         $caminho = $req.Url.AbsolutePath
 
         if ($caminho -eq "/estado") {
             Checar-Obs
+            try { Vigiar } catch { }
             Responder-Json $ctx $script:Estado
+        }
+        elseif ($caminho -eq "/eleito") {
+            # ?auto=1|0 liga/desliga o corte automatico; ?ar=1 poe a tela do
+            # Presidente eleito no ar nas duas saidas agora.
+            $a = "$($req.QueryString['auto'])"; $ar = "$($req.QueryString['ar'])"
+            if ($a -eq "1" -or $a -eq "0") { $script:Estado.eleito.auto = ($a -eq "1"); Evento "info" ("Presidente eleito automatico no ar: {0}" -f $(if ($a -eq "1") { "LIGADO" } else { "DESLIGADO" })) }
+            if ($ar -eq "1") { Por-No-Ar "h" "eleito-h" "" "painel (eleito)"; Por-No-Ar "v" "eleito-v" "" "painel (eleito)"; $script:Estado.eleito.cortou = $true; Evento "info" "Presidente eleito NO AR nas duas saidas (painel)" }
+            Salvar-Estado
+            Responder-Json $ctx $script:Estado
+        }
+        elseif ($caminho -eq "/relatorio-dados") {
+            # Relatorio da noite: o que foi ao ar, ocorrencias, evolucao e copias
+            # (hoje e ontem - a noite passa da meia-noite).
+            $dias = @((Get-Date).AddDays(-1).ToString("yyyy-MM-dd"), (Get-Date).ToString("yyyy-MM-dd"))
+            $q = "$($req.QueryString['dia'])"; if ($q -match '^\d{4}-\d{2}-\d{2}$') { $dias = @($q, ([datetime]::ParseExact($q, "yyyy-MM-dd", $null)).AddDays(1).ToString("yyyy-MM-dd")) }
+            $rel = [ordered]@{ dias = $dias; no_ar = @(); ocorrencias = @(); evolucao = $null; copias = @(); eleito = $script:Estado.eleito; gerado = (Get-Date).ToString("yyyy-MM-ddTHH:mm:ss") }
+            foreach ($dia in $dias) {
+                foreach ($par in @(@("no-ar", "no_ar"), @("ocorrencias", "ocorrencias"))) {
+                    $arqL = Join-Path (Join-Path $Raiz "logs") ("{0}-{1}.csv" -f $par[0], $dia)
+                    if (Test-Path $arqL) { $rel[$par[1]] += @([IO.File]::ReadAllLines($arqL, [Text.Encoding]::UTF8) | Select-Object -Skip 1) }
+                }
+            }
+            $ev = @(Get-ChildItem -Path $Raiz -Filter "evolucao-*.json" -File -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1)
+            if ($ev.Count) { try { $rel.evolucao = Get-Content $ev[0].FullName -Raw -Encoding UTF8 | ConvertFrom-Json } catch { } }
+            $pc = Join-Path $Raiz "copias-de-seguranca"
+            if (Test-Path $pc) { $rel.copias = @(Get-ChildItem -Path $pc -Filter "*.zip" -File | Where-Object { $n = $_.Name; @($dias | Where-Object { $n -like "*$_*" }).Count -gt 0 } | ForEach-Object { $_.Name }) }
+            Responder $ctx 200 "application/json; charset=utf-8" ([Text.Encoding]::UTF8.GetBytes(($rel | ConvertTo-Json -Depth 8 -Compress)))
         }
         elseif ($caminho -eq "/rodizio") {
             # Telas da apresentacao automatica de uma saida (vazio = as do
@@ -251,12 +453,13 @@ while ($ouvinte.IsListening) {
         elseif ($caminho -eq "/definir") {
             # Troca o que vai ao ar numa saida.
             $s = "$($req.QueryString['saida'])"; $tela = "$($req.QueryString['tela'])"; $acao = "$($req.QueryString['acao'])"
-            if (($s -eq "h" -or $s -eq "v") -and $tela -match '^[a-z0-9-]{1,40}$' -and ($acao -eq "" -or $acao -match '^[a-z0-9:-]{1,30}$')) {
+            if (($s -eq "h" -or $s -eq "v") -and $tela -match '^[a-z0-9-]{1,40}$' -and ($acao -eq "" -or $acao -match '^[a-z0-9:,-]{1,40}$')) {
                 $script:Estado[$s].tela = $tela
                 $script:Estado[$s].seq = [int] $script:Estado[$s].seq + 1
                 $script:Estado[$s].acao = $acao
                 $script:Estado[$s].quando = (Get-Date -Format "HH:mm:ss")
                 Salvar-Estado
+                Registrar-NoAr $s $tela $acao "painel"
                 Escrever-Log ("NO AR - saida {0}: {1}" -f $(if ($s -eq "h") { "HORIZONTAL" } else { "VERTICAL" }), $tela) "Green"
                 Responder-Json $ctx $script:Estado
             } else {
@@ -267,7 +470,7 @@ while ($ouvinte.IsListening) {
             # Comando para o giro / resumo que esta no ar (proximo, anterior,
             # uf:pr, tela:3, auto).
             $s = "$($req.QueryString['saida'])"; $acao = "$($req.QueryString['acao'])"
-            if (($s -eq "h" -or $s -eq "v") -and $acao -match '^[a-z0-9:-]{1,30}$') {
+            if (($s -eq "h" -or $s -eq "v") -and $acao -match '^[a-z0-9:,-]{1,40}$') {
                 $script:Estado[$s].acao = $acao
                 $script:Estado[$s].aseq = [int] $script:Estado[$s].aseq + 1
                 Escrever-Log ("comando - saida {0}: {1}" -f $(if ($s -eq "h") { "HORIZONTAL" } else { "VERTICAL" }), $acao)

@@ -87,6 +87,31 @@
   .regs .ufs button { width: 46px; padding: 6px 0; }
   #ensaio { background: #c00000; color: #fff; font-weight: 800; letter-spacing: 1px; text-align: center; padding: 8px; position: sticky; top: 0; z-index: 9; }
   #ensaio[hidden] { display: none; }
+  /* VIGIA DA NOITE: eleito, viradas, quedas (gerenciador.ps1) */
+  #vigia { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 0 20px 10px; }
+  #vigia .rot { font-size: 12px; font-weight: 800; letter-spacing: 1px; color: var(--apagado); }
+  #vigia button { padding: 6px 10px; font-size: 13px; }
+  #vigia button.ligado { background: var(--verde); border-color: var(--verde-borda); color: #fff; }
+  #ocorr { padding: 0 20px 12px; }
+  #ocorr details { background: var(--cartao); border: 1px solid var(--linha); border-radius: 6px; padding: 6px 10px; }
+  #ocorr summary { cursor: pointer; font-weight: 700; font-size: 13px; }
+  #ocorr ol { margin: 6px 0 0; padding: 0; list-style: none; max-height: 180px; overflow: auto; font-size: 13px; }
+  #ocorr li { padding: 2px 0; border-bottom: 1px dotted var(--linha); }
+  .tp-alerta { color: var(--ruim-t); font-weight: 700; } .tp-eleito { color: var(--ok-t); font-weight: 800; } .tp-virada { color: #b8860b; font-weight: 700; }
+  #toasts { position: fixed; right: 16px; top: 16px; z-index: 30; display: flex; flex-direction: column; gap: 8px; width: min(440px, 90vw); }
+  .toast { background: #14202e; color: #fff; border-left: 8px solid #2f8fdd; border-radius: 6px; padding: 10px 12px; box-shadow: 0 4px 16px rgba(0,0,0,.35); font-weight: 700; font-size: 14px; cursor: pointer; }
+  .toast.alerta { border-color: #e03131; } .toast.virada { border-color: #f5b400; } .toast.ok { border-color: #2f9e44; }
+  .toast small { display: block; opacity: .7; font-weight: 400; }
+  #eleitoAviso { position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; }
+  #eleitoAviso[hidden] { display: none; }
+  #eleitoAviso .caixa { background: #0d6b16; color: #fff; border-radius: 12px; padding: 28px 34px; max-width: 760px; width: 92vw; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,.5); }
+  #eleitoAviso h2 { margin: 0 0 6px; font-size: 20px; letter-spacing: 3px; }
+  #eleitoAviso .nome { font-size: 40px; font-weight: 900; margin: 6px 0; }
+  #eleitoAviso .msg { font-size: 17px; margin: 10px 0 18px; }
+  #eleitoAviso button { font-size: 17px; padding: 12px 18px; margin: 4px; }
+  #eleitoAviso button.forte { background: #fff; color: #0d6b16; border-color: #fff; font-weight: 900; }
+  body.alarme { box-shadow: inset 0 0 0 8px #e03131; animation: pisca 1s step-start infinite; }
+  @keyframes pisca { 50% { box-shadow: inset 0 0 0 8px transparent; } }
   .ctldep .depregs { margin-top: 6px; }
   /* PREVIA (PVW) x NO AR (PGM): com a previa ligada, o clique so prepara a
      tela; ela vai ao ar no CORTAR. */
@@ -118,6 +143,16 @@
   <span class="copia"><button id="copia" type="button" title="Guarda a pasta inteira (config, dados, evolução, logs) num .zip em copias-de-seguranca">💾 cópia de segurança</button> <span id="copiaMsg"></span></span>
   <button class="tema" id="tema" type="button">tema escuro</button></header>
 <div id="status"><span class="st neutro" id="stP">Presidente: …</span><span class="st neutro" id="stE">Estados: …</span><span class="st neutro" id="stEv" hidden></span><span class="st neutro" id="stG">Gerenciador: …</span><span class="st neutro" id="stOh" hidden></span><span class="st neutro" id="stOv" hidden></span></div>
+<div id="vigia"><span class="rot">PRESIDENTE ELEITO:</span>
+  <button type="button" id="elAuto" title="Quando o TSE declarar o eleito, a tela 'Presidente eleito' vai ao ar sozinha nas duas saídas">no ar automático: …</button>
+  <button type="button" id="elAgora">colocar no ar agora (H e V)</button>
+  <span class="rot" style="margin-left:14px">SOM:</span>
+  <button type="button" id="som">🔔 …</button><button type="button" id="silenciar">silenciar 5 min</button>
+  <a href="relatorio.html" target="_blank" style="margin-left:auto">relatório da noite ↗</a></div>
+<div id="ocorr"><details><summary>OCORRÊNCIAS DA NOITE (<span id="nOc">0</span>)</summary><ol id="listaOc"></ol></details></div>
+<div id="toasts"></div>
+<div id="eleitoAviso" hidden><div class="caixa"><h2>PRESIDENTE ELEITO</h2><div class="nome" id="elNome"></div><div class="msg" id="elMsg"></div>
+  <button type="button" class="forte" id="elPor">COLOCAR NO AR NAS DUAS SAÍDAS</button><button type="button" id="elOk">OK, ciente</button></div></div>
 <main id="colunas"></main>
 
 <script charset="utf-8" src="giro-config.js"></script>
@@ -168,6 +203,8 @@
     if (id === "giro") return "Giro dos estados";
     if (id === "resumo") return "Resumo (7 telas)";
     if (/^deputados-/.test(id)) { var pdn = posDep(S.id); return "Deputados federais — " + (!pdn ? "troca automática" : pdn.regiao ? "região " + pdn.nome : pdn.uf.toUpperCase() + " (5 mais votados)"); }
+    if (id === "girogov") { var ag = estado && estado[S.id] ? String(estado[S.id].acao || "") : ""; return "Governador — " + (ag.indexOf("uf:") === 0 ? ag.slice(3).toUpperCase() : ag.indexOf("reg:") === 0 ? "região (" + ag.slice(4).toUpperCase() + ")" : "giro"); }
+    if (/^assembleia-/.test(id)) { var aa = estado && estado[S.id] ? String(estado[S.id].acao || "") : ""; return "Assembleia Legislativa — " + (aa.indexOf("alvo:") === 0 ? aa.slice(5).toUpperCase() : "SP"); }
     if (/^presloc-/.test(id)) { var a = estado && estado[S.id] ? String(estado[S.id].acao || "") : ""; return "Presidente | " + (a.indexOf("alvo:") === 0 ? a.slice(5).toUpperCase() : "estado ou região"); }
     var g = window.GCTSE_GRAFICOS.lista.filter(function (x) { return x.id === id; })[0];
     return g ? g.nome : id;
@@ -194,6 +231,8 @@
     var n = /^deputados-/.test(p.tela) ? "Deputados federais — " + (!p.acao ? "troca automática" : p.acao.indexOf("dep:r-") === 0 ? "região " + p.acao.slice(6).toUpperCase() : p.acao.slice(4, 6).toUpperCase())
       : /^presloc-/.test(p.tela) ? "Presidente | " + (p.acao.slice(5).toUpperCase() || "estado ou região")
       : p.tela === "giro" ? "Giro dos estados — " + p.acao.slice(3).toUpperCase()
+      : p.tela === "girogov" ? "Governador — " + (p.acao.indexOf("reg:") === 0 ? "região (" + p.acao.slice(4).toUpperCase() + ")" : p.acao.slice(3).toUpperCase())
+      : /^assembleia-/.test(p.tela) ? "Assembleia Legislativa — " + p.acao.slice(5).toUpperCase()
       : p.tela === "resumo" ? "Resumo (7 telas)" : p.tela === "apresentacao" ? "Apresentação automática" : nomeTela(p.tela, S);
     return n;
   }
@@ -240,6 +279,7 @@
   function acaoResumo(s, n) { return n === TELA_ESTADO ? "estado:" + ufResumo[s] : "tela:" + n; }
   function passo(s, d) {
     var e = estado[s];
+    if (e.tela === "girogov") return comandar(s, d > 0 ? "proximo" : "anterior");
     if (e.tela === "giro") {
       var i = ordem.indexOf(posicao(s).uf); if (i < 0) i = 0; else i = (i + d + ordem.length) % ordem.length;
       return comandar(s, "uf:" + ordem[i]);
@@ -348,7 +388,7 @@
       gA.appendChild(bxP);
     }
     gA.appendChild(painelRodizio(S));
-    botoesEm(bloco("presidente", "PRESIDENTE"), itensDe(["presidente", "presmapa", "presmapa1t", "regioes", "pres2t", "evolucao", "virar", "viradas", "margem", "decisivos", "estados", "lideranca"]));
+    botoesEm(bloco("presidente", "PRESIDENTE"), itensDe(["eleito", "presidente", "presmapa", "presmapa1t", "regioes", "pres2t", "evolucao", "virar", "viradas", "margem", "decisivos", "estados", "lideranca"]));
     // Presidente | estado ou regiao (como no telao)
     var gL = bloco("local", "PRESIDENTE | ESTADO OU REGIÃO");
     var regs = document.createElement("div"); regs.className = "regs";
@@ -365,6 +405,23 @@
     botoesEm(gE, itensDe(["governadores", "gov2t", "govpartido", "govpres", "senadores", "senadores1", "senadores2", "senado"]).concat([
       ["giro", "Giro dos estados", "uf:" + (ordem.indexOf(String(cfg.estado_destaque || "pr")) >= 0 ? String(cfg.estado_destaque || "pr") : ordem[0])],
       ["resumo", "Resumo (7 telas)", "tela:1"]]));
+    // GOVERNADOR | ESTADO OU REGIAO: giro so do Governador. Verde = governador
+    // ja eleito; branco = disputando o 2o turno (ou apurando).
+    var gG = bloco("estados", "GOVERNADOR | ESTADO OU REGIÃO — só o governador");
+    gG.appendChild(legendaGov());
+    var gregs = document.createElement("div"); gregs.className = "regs";
+    REGIOES_MENU.forEach(function (rg) {
+      var acR = "reg:" + rg[2].join(",");
+      var bR = botao(rg[0], function () { definir(S.id, "girogov", acR); }, "girogov|" + acR);
+      bR.className = "reg"; bR.title = "troca sozinha entre os estados da região"; gregs.appendChild(bR);
+      var bx = document.createElement("div"); bx.className = "ufs";
+      rg[2].forEach(function (u) { var b = botao(u.toUpperCase(), function () { definir(S.id, "girogov", "uf:" + u); }, "girogov|uf:" + u); b.dataset.gov = u; bx.appendChild(b); });
+      gregs.appendChild(bx);
+    });
+    gG.appendChild(gregs);
+    var ddG = document.createElement("div"); ddG.className = "dica";
+    ddG.textContent = "Estado = governador daquele estado, fixo. Região = troca sozinha entre os estados da região a cada " + (cfg.tempo_auto_segundos || 10) + " s (setas ◀ ▶ abaixo).";
+    gG.appendChild(ddG);
     botoesEm(bloco("camara", "CÂMARA DOS DEPUTADOS"), itensDe(["camara", "deputados", "mulheres", "perfilcamara"]).map(function (it) {
       return /^deputados-/.test(it[0]) ? [it[0], it[1] + " (troca automática)", "", it[0] + "|"] : it;
     }));
@@ -388,7 +445,18 @@
     dd0.textContent = "Estado = tela fixa com os 5 mais votados. Região = passa pelos estados da região (5 mais votados de cada), trocando a cada " +
       ((window.GCTSE_DEPUTADOS || {}).segundos || 8) + " s.";
     gD.appendChild(dd0);
-    botoesEm(bloco("comparativos", "COMPARATIVOS"), itensDe(["turnos", "ganho", "abstuf", "abstencao", "abstencao-mapa", "comparativo", "comparecimento", "votos"]));
+    // ASSEMBLEIAS LEGISLATIVAS | ESTADO: bancadas por partido (dep. estaduais; DF: distritais)
+    var gAs = bloco("camara", "ASSEMBLEIAS LEGISLATIVAS | ESTADO — bancadas por partido");
+    var aregs = document.createElement("div"); aregs.className = "regs";
+    REGIOES_MENU.forEach(function (rg) {
+      var lb = document.createElement("span"); lb.className = "reg"; lb.textContent = rg[0]; lb.style.cssText = "font-weight:800;letter-spacing:1px;padding:6px 4px"; aregs.appendChild(lb);
+      var bx = document.createElement("div"); bx.className = "ufs";
+      rg[2].forEach(function (u) { var b = botao(u.toUpperCase(), function () { definir(S.id, "assembleia-" + S.f, "alvo:" + u); }, "assembleia-" + S.f + "|alvo:" + u); b.dataset.asm = u; bx.appendChild(b); });
+      aregs.appendChild(bx);
+    });
+    gAs.appendChild(aregs);
+    botoesEm(bloco("comparativos", "COMPARATIVOS"), itensDe(["turnos", "turno22", "ganho", "abstuf", "abstencao", "abstencao-mapa", "comparativo", "comparecimento", "votos"]));
+    usados["assembleia-" + S.f] = 1;   // vai pelo menu de estados
     var resto = lista.filter(function (g) { return !usados[g.id]; }).map(function (g) { return [g.id, g.nome]; });
     if (resto.length) botoesEm(bloco("auto", "OUTRAS TELAS"), resto);
     // controles do giro / resumo
@@ -530,7 +598,16 @@
     d.innerHTML = '<span><i class="gov-eleito"></i>governador eleito no 1º turno</span><span><i style="background:var(--bt);border-color:var(--bt-borda)"></i>2º turno (ou ainda apurando)</span>';
     return d;
   }
+  function marcarAsm() {
+    var e = window.GCTSE_ESTADOS || {}, a = e.assembleia || {}, mot = e.assembleia_motivos || {};
+    document.querySelectorAll("[data-asm]").forEach(function (b) {
+      var u = b.dataset.asm, x = a[u], tem = !!(x && x.eleitos > 0);
+      b.style.borderStyle = tem ? "" : "dashed"; b.style.opacity = tem ? 1 : 0.55;
+      b.title = u.toUpperCase() + (tem ? " — " + x.eleitos + " de " + x.vagas + " cadeiras" : " — sem eleitos ainda: " + (mot[u] || "o ESTADOS.bat ainda não leu este estado"));
+    });
+  }
   function marcarGov() {
+    marcarAsm();
     document.querySelectorAll("[data-gov]").forEach(function (el) {
       var u = el.dataset.gov, st = govSit(u);
       el.classList.toggle("gov-eleito", st.tipo === "eleito1");
@@ -558,7 +635,7 @@
       col.querySelectorAll(".botoes button[data-k], .regs button[data-k]").forEach(function (b) { b.classList.toggle("ativo", b.dataset.k === e.tela || b.dataset.k === e.tela + "|" + e.acao); });
       col.querySelectorAll(".girar button").forEach(function (b) { b.classList.toggle("ativo", String(estado.girar_v) === b.dataset.g); });
       var ctl = col.querySelector(".controle");
-      ctl.classList.toggle("on", e.tela === "giro" || e.tela === "resumo");
+      ctl.classList.toggle("on", e.tela === "giro" || e.tela === "girogov" || e.tela === "resumo");
       ctl.querySelector(".uf:not(.ufr)").style.display = e.tela === "giro" ? "flex" : "none";
       ctl.querySelector(".tl").style.display = e.tela === "resumo" ? "flex" : "none";
       ctl.querySelector(".ufr").style.display = e.tela === "resumo" ? "flex" : "none";
@@ -625,7 +702,7 @@
   function lerEstado() {
     var g = document.getElementById("stG");
     fetch("/estado?t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.json(); })
-      .then(function (e) { estado = e; pintar(); g.className = "st ok"; g.textContent = "Gerenciador: no ar"; situacaoObs(); })
+      .then(function (e) { estado = e; pintar(); g.className = "st ok"; g.textContent = "Gerenciador: no ar"; situacaoObs(); try { vigia(e); } catch (x) { } })
       .catch(function () { g.className = "st ruim"; g.textContent = "Gerenciador: SEM CONEXÃO — a janela do GERENCIADOR fechou?"; });
   }
   // Copia de seguranca num clique (gerenciador.ps1 -> copia-seguranca.ps1).
@@ -644,6 +721,80 @@
     fetch("/copia?t=" + Date.now(), { cache: "no-store" }).then(function () { setTimeout(function () { verCopia(90); }, 1500); })
       .catch(function () { bCopia.disabled = false; mCopia.className = "ruim"; mCopia.textContent = "gerenciador sem conexão — use o COPIA-DE-SEGURANCA.bat"; });
   };
+  // ------------------------------------------------ vigia: eventos, eleito, som
+  var ctxA = null, mudoAte = 0;
+  function audio() {
+    if (!ctxA) { try { ctxA = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { } }
+    if (ctxA && ctxA.state === "suspended") { try { ctxA.resume(); } catch (e) { } }
+    return ctxA;
+  }
+  function bip(freq, dur, quando) {
+    var a = audio(); if (!a || a.state !== "running") return false;
+    var o = a.createOscillator(), g = a.createGain(), t0 = a.currentTime + (quando || 0);
+    o.type = "square"; o.frequency.value = freq; g.gain.value = 0.07; o.connect(g); g.connect(a.destination); o.start(t0); o.stop(t0 + dur);
+    return true;
+  }
+  function somAlerta() { if (Date.now() < mudoAte) return; bip(880, 0.18); bip(660, 0.18, 0.25); }
+  function somEleito() { bip(523, 0.2); bip(659, 0.2, 0.22); bip(784, 0.2, 0.44); bip(1047, 0.5, 0.66); }
+  var bSom = document.getElementById("som");
+  function pintarSom() {
+    var a = ctxA, ok = a && a.state === "running";
+    bSom.textContent = ok ? (Date.now() < mudoAte ? "🔕 silenciado" : "🔔 som ligado") : "🔈 clique aqui para ligar o som";
+    bSom.classList.toggle("ligado", !!ok && Date.now() >= mudoAte);
+  }
+  document.addEventListener("click", function () { audio(); setTimeout(pintarSom, 200); });
+  bSom.onclick = function () { mudoAte = 0; audio(); setTimeout(function () { pintarSom(); bip(880, 0.12); }, 150); };
+  document.getElementById("silenciar").onclick = function () { mudoAte = Date.now() + 5 * 60000; pintarSom(); };
+  // Alarme: enquanto houver aviso vermelho na faixa de status, bipa a cada 8 s e a borda pisca.
+  setInterval(function () {
+    var ruim = [].some.call(document.querySelectorAll("#status .st.ruim"), function (x) { return !x.hidden; });
+    document.body.classList.toggle("alarme", ruim && Date.now() >= mudoAte);
+    if (ruim) somAlerta();
+    pintarSom();
+  }, 8000);
+  var vistos = null, toasts = document.getElementById("toasts");
+  function toast(ev) {
+    var d = document.createElement("div"); d.className = "toast " + ev.tipo;
+    d.innerHTML = "<small>" + ev.hora + "</small>"; d.appendChild(document.createTextNode(ev.texto));
+    d.onclick = function () { d.remove(); };
+    toasts.insertBefore(d, toasts.firstChild);
+    setTimeout(function () { d.remove(); }, ev.tipo === "alerta" ? 60000 : 20000);
+    while (toasts.children.length > 5) toasts.lastChild.remove();
+  }
+  function comoArr(x) { return Array.isArray(x) ? x : (x && Array.isArray(x.value) ? x.value : []); }
+  function ackEleito() { try { return localStorage.getItem("gctse-eleito-ok") || ""; } catch (e) { return ""; } }
+  function avisoEleito(el, tocar) {
+    var box = document.getElementById("eleitoAviso");
+    if (!el || !el.feito || ackEleito() === el.feito) { box.hidden = true; return; }
+    if (box.hidden && tocar) somEleito();
+    document.getElementById("elNome").textContent = el.nome;
+    document.getElementById("elMsg").textContent = el.cortou ? "Declarado pelo TSE às " + el.quando + ". A tela 'Presidente eleito' JÁ ESTÁ NO AR nas duas saídas (automático)."
+      : "Declarado pelo TSE às " + el.quando + ". Ainda NÃO foi ao ar.";
+    document.getElementById("elPor").hidden = !!el.cortou;
+    box.hidden = false;
+  }
+  document.getElementById("elOk").onclick = function () { try { localStorage.setItem("gctse-eleito-ok", (estado.eleito || {}).feito || ""); } catch (e) { } document.getElementById("eleitoAviso").hidden = true; };
+  document.getElementById("elPor").onclick = function () { pararAuto("h"); pararAuto("v"); pedir("/eleito?ar=1").then(function () { avisoEleito(estado.eleito, false); }); };
+  document.getElementById("elAgora").onclick = function () { if (confirm("Colocar a tela 'Presidente eleito' no ar nas DUAS saídas agora?")) { pararAuto("h"); pararAuto("v"); pedir("/eleito?ar=1"); } };
+  document.getElementById("elAuto").onclick = function () { pedir("/eleito?auto=" + ((estado.eleito || {}).auto ? "0" : "1")); };
+  function vigia(e) {
+    var evs = comoArr(e.eventos), el = e.eleito || null;
+    if (vistos === null) { vistos = {}; evs.forEach(function (x) { vistos[x.id] = 1; }); }
+    else evs.forEach(function (x) {
+      if (vistos[x.id]) return; vistos[x.id] = 1;
+      toast(x);
+      if (x.tipo === "alerta" || x.tipo === "virada") { if (Date.now() >= mudoAte) bip(x.tipo === "alerta" ? 880 : 740, 0.15); }
+    });
+    var ol = document.getElementById("listaOc"); document.getElementById("nOc").textContent = evs.length;
+    if (ol.dataset.n !== String(evs.length) + (evs.length ? evs[evs.length - 1].id : "")) {
+      ol.dataset.n = String(evs.length) + (evs.length ? evs[evs.length - 1].id : "");
+      ol.innerHTML = "";
+      evs.slice().reverse().forEach(function (x) { var li = document.createElement("li"); li.innerHTML = "<b>" + x.hora + "</b> "; var sp = document.createElement("span"); sp.className = "tp-" + x.tipo; sp.textContent = x.texto; li.appendChild(sp); ol.appendChild(li); });
+    }
+    var bA = document.getElementById("elAuto");
+    if (el) { bA.textContent = "no ar automático: " + (el.auto ? "LIGADO" : "DESLIGADO"); bA.classList.toggle("ligado", !!el.auto); }
+    avisoEleito(el, true);
+  }
   var bTema = document.getElementById("tema");
   function nomeTema() { bTema.textContent = document.documentElement.className === "escuro" ? "tema claro" : "tema escuro"; }
   bTema.onclick = function () {

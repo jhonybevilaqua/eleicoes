@@ -17,7 +17,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "3.9 - 08/10/2026"
+$Versao = "3.10 - 08/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -561,29 +561,35 @@ function Ler-Abrangencia {
 # grande) e, com o resultado final, o TSE responde "sem mudanca" (304).
 $script:Camara = @{}
 $script:CamaraMotivo = [ordered]@{}   # estado sem eleitos na tela -> por que (vai para o log e o gerenciador)
+# ASSEMBLEIAS LEGISLATIVAS: o mesmo, cargo 7 (Deputado Estadual) e, no DF,
+# cargo 8 (Deputado Distrital). Mesmo pleito e mesmo codigo da Camara.
+$script:Assembleia = @{}
+$script:AssembleiaMotivo = [ordered]@{}
 function Ler-Camara {
-    param([string] $Abr)
-    $url = Montar-Url $Abr 6 $EleicaoCamara
+    param([string] $Abr, [int] $Cargo = 6)
+    $alvo = $script:Camara; $motivos = $script:CamaraMotivo; $nomeCargo = "Deputado Federal"
+    if ($Cargo -ne 6) { $alvo = $script:Assembleia; $motivos = $script:AssembleiaMotivo; $nomeCargo = $(if ($Cargo -eq 8) { "Deputado Distrital" } else { "Deputado Estadual" }) }
+    $url = Montar-Url $Abr $Cargo $EleicaoCamara
     $bruto = Obter-Boletim $url
     # "sem mudanca" (304) sem nunca ter guardado este estado: pede de novo sem cache
-    if ("$bruto" -eq "SEM-MUDANCA" -and -not $script:Camara.ContainsKey($Abr)) {
+    if ("$bruto" -eq "SEM-MUDANCA" -and -not $alvo.ContainsKey($Abr)) {
         if ($script:ETags.ContainsKey($url)) { $script:ETags.Remove($url) }
         $bruto = Obter-Boletim $url
     }
     if ("$bruto" -eq "SEM-MUDANCA") { return }
     if ($null -eq $bruto) {
-        if ($script:Ausentes.ContainsKey($url)) { $script:CamaraMotivo[$Abr] = "TSE ainda nao publicou o arquivo (404)" }
-        else { $script:CamaraMotivo[$Abr] = "sem resposta do TSE ($($script:UltimoErro))" }
+        if ($script:Ausentes.ContainsKey($url)) { $motivos[$Abr] = "TSE ainda nao publicou o arquivo (404)" }
+        else { $motivos[$Abr] = "sem resposta do TSE ($($script:UltimoErro))" }
         return
     }
     $fase = "$(Obter-Campo $bruto @('f') '')".ToUpper()
-    if ($fase -eq "S" -or $fase -eq "T") { $script:CamaraMotivo[$Abr] = "boletim de simulado/teste (fase $fase) - ignorado"; return }
+    if ($fase -eq "S" -or $fase -eq "T") { $motivos[$Abr] = "boletim de simulado/teste (fase $fase) - ignorado"; return }
     $porPartido = [ordered]@{}
     $vagas = 0; $eleitos = 0
     $listaEleitos = New-Object System.Collections.ArrayList   # tela "Deputados federais eleitos"
     if (Tem-Propriedade $bruto "carg") {
         foreach ($cg in $bruto.carg) {
-            if ("$(Obter-Campo $cg @('cd') '')" -ne "6") { continue }
+            if ("$(Obter-Campo $cg @('cd') '')" -ne "$Cargo") { continue }
             $vagas = Converter-Inteiro (Obter-Campo $cg @('nv') 0)
             if (-not (Tem-Propriedade $cg "agr")) { continue }
             foreach ($agr in $cg.agr) {
@@ -618,14 +624,14 @@ function Ler-Camara {
     if (Tem-Propriedade $bruto "s") { $pctUrnas = Converter-Decimal $bruto.s.pst }
     $nCand = 0
     if (Tem-Propriedade $bruto "carg") { foreach ($cg in $bruto.carg) { if ((Tem-Propriedade $cg "agr")) { foreach ($agr in $cg.agr) { if (Tem-Propriedade $agr "par") { foreach ($pa in $agr.par) { if (Tem-Propriedade $pa "cand") { $nCand += @($pa.cand).Count } } } } } } }
-    if ($eleitos -gt 0) { if ($script:CamaraMotivo.Contains($Abr)) { $script:CamaraMotivo.Remove($Abr) } }
-    elseif ($nCand -eq 0) { $script:CamaraMotivo[$Abr] = "arquivo do TSE sem candidatos de Deputado Federal (cargo 6)" }
-    else { $script:CamaraMotivo[$Abr] = "o TSE ainda nao marcou eleitos ($nCand candidatos lidos, nenhum com situacao Eleito)" }
-    $script:Camara[$Abr] = [pscustomobject]@{
+    if ($eleitos -gt 0) { if ($motivos.Contains($Abr)) { $motivos.Remove($Abr) } }
+    elseif ($nCand -eq 0) { $motivos[$Abr] = "arquivo do TSE sem candidatos de $nomeCargo (cargo $Cargo)" }
+    else { $motivos[$Abr] = "o TSE ainda nao marcou eleitos ($nCand candidatos lidos, nenhum com situacao Eleito)" }
+    $alvo[$Abr] = [pscustomobject]@{
         vagas = $vagas; eleitos = $eleitos; urnas_pct = $pctUrnas
         andamento = "$(Obter-Campo $bruto @('and') '')".ToLower()
         partidos = [pscustomobject] $porPartido
-        lista = @($listaEleitos | Sort-Object -Property @{Expression = "votos"; Descending = $true}, nome)
+        lista = @($listaEleitos | Sort-Object -Property @{Expression = "votos"; Descending = $true}, nome | Select-Object -First $(if ($Cargo -eq 6) { 100000 } else { 5 }))
     }
 }
 
@@ -692,6 +698,51 @@ function Buscar-2022 {
     Escrever-Log "2022 (TSE) para comparacao: ainda nao encontrado - tento de novo em 10 min" "AVISO"
 }
 
+# --------------------------------- 2o TURNO DE 2022 (Presidente), por estado
+# Para a tela "2o turno: 2022 x 2026": % de cada partido no 2o turno de 2022
+# (Brasil e 27 estados), do boletim que o TSE mantem publicado. Codigo da
+# eleicao: comparar_2022.eleicao_2turno no config (padrao 545). So no modo 2o
+# turno; tenta a cada 10 min ate ter os 28; sem o do Brasil, nem pede os estados.
+$script:Ref2022T2 = $null
+$script:Prox2022T2 = [datetime]::MinValue
+$Eleicao2022T2 = "545"
+if ((Tem-Propriedade $cfg "comparar_2022") -and (Tem-Propriedade $cfg.comparar_2022 "eleicao_2turno") -and $cfg.comparar_2022.eleicao_2turno) { $Eleicao2022T2 = "$($cfg.comparar_2022.eleicao_2turno)" }
+function Partidos-2022([object] $Obj) {
+    $r = [ordered]@{}
+    if (-not (Tem-Propriedade $Obj "carg")) { return $r }
+    foreach ($cg in $Obj.carg) {
+        if (-not (Tem-Propriedade $cg "agr")) { continue }
+        foreach ($agr in $cg.agr) {
+            if (-not (Tem-Propriedade $agr "par")) { continue }
+            foreach ($pa in $agr.par) {
+                $sg = Decodificar-Entidades "$(Obter-Campo $pa @('sg') '')"
+                if (-not $sg -or -not (Tem-Propriedade $pa "cand")) { continue }
+                foreach ($c in $pa.cand) { $v = Converter-Decimal (Obter-Campo $c @('pvap') ''); if ($null -ne $v) { $r[$sg] = $v; $r["_nome_$sg"] = Decodificar-Entidades "$(Obter-Campo $c @('nmu','nm') '')" } }
+            }
+        }
+    }
+    return $r
+}
+function Buscar-2022-2T {
+    if (-not $Eleicao1T) { return }                      # so no modo 2o turno
+    if ($null -ne $script:Ref2022T2 -and $script:Ref2022T2.completo) { return }
+    if ((Get-Date) -lt $script:Prox2022T2) { return }
+    $script:Prox2022T2 = (Get-Date).AddMinutes(10)
+    $e6 = "{0:000000}" -f ([int] $Eleicao2022T2)
+    $porUf = [ordered]@{}; $br = $null
+    foreach ($abr in @("br") + $UFs) {
+        $url = "$Base/$Ciclo2022/$Eleicao2022T2/dados/$abr/$abr-c0001-e$e6-u.json"
+        try {
+            $resp = Invoke-WebRequest -Uri $url -Headers @{ "User-Agent" = "gctse-graficos/1.0"; "Accept" = "application/json,*/*" } -TimeoutSec 15 -UseBasicParsing
+            $ps = Partidos-2022 ((Ler-Texto-Resposta $resp) | ConvertFrom-Json)
+        } catch { Fechar-Resposta $_; $ps = $null }
+        if ($abr -eq "br") { if ($null -eq $ps -or $ps.Count -lt 2) { Escrever-Log "2o turno de 2022 (TSE, eleicao $Eleicao2022T2): nao encontrado - tento de novo em 10 min" "AVISO"; return }; $br = $ps }
+        elseif ($null -ne $ps -and $ps.Count -ge 2) { $porUf[$abr] = [pscustomobject] $ps }
+    }
+    $script:Ref2022T2 = [pscustomobject]@{ eleicao = $Eleicao2022T2; br = [pscustomobject] $br; ufs = [pscustomobject] $porUf; completo = ($porUf.Count -ge 27) }
+    Escrever-Log ("2o turno de 2022 (TSE) para comparacao: Brasil + {0} de 27 estados" -f $porUf.Count) $(if ($porUf.Count -ge 27) { "OK" } else { "AVISO" })
+}
+
 # ------------------------------------------------------------- gravar dados
 
 function Gravar-Dados {
@@ -729,9 +780,12 @@ function Gravar-Dados {
         tse           = [pscustomobject]@{ base = $Base; ciclo = $Ciclo; eleicao = $Eleicao; eleicao_camara = $EleicaoCamara; eleicao_1turno = $(if ($Eleicao1T) { $Eleicao1T } else { $Eleicao }) }
         turno         = $(if ($Eleicao1T) { 2 } else { 1 })
         ref2022       = $script:Ref2022
+        ref2022_2t    = $script:Ref2022T2
         ufs           = $porEstado
         camara        = [pscustomobject] $script:Camara
         camara_motivos = [pscustomobject] $script:CamaraMotivo
+        assembleia    = [pscustomobject] $script:Assembleia
+        assembleia_motivos = [pscustomobject] $script:AssembleiaMotivo
     }
     $json = $dados | ConvertTo-Json -Depth 8 -Compress
     $conteudo = "window.GCTSE_ESTADOS = $json;"
@@ -762,6 +816,7 @@ do {
             }
         }
         try { Buscar-2022 } catch { Escrever-Log "2022: $($_.Exception.Message)" "AVISO" }
+        try { Buscar-2022-2T } catch { Escrever-Log "2o turno de 2022: $($_.Exception.Message)" "AVISO" }
         # Todos a cada 3 ciclos; estado que ainda nao tem eleitos, a CADA ciclo.
         $faltam = @($UFs | Where-Object { -not $script:Camara.ContainsKey($_) -or $script:Camara[$_].eleitos -le 0 })
         if (($script:NumCiclo % 3) -eq 1 -or $faltam.Count -gt 0) {
@@ -773,6 +828,18 @@ do {
                 Escrever-Log ("camara: {0}/27 estados com eleitos, {1} deputados federais eleitos (de {2} vagas lidas)" -f $comEleitos, $nE, $nV) $(if ($comEleitos -lt 27) { "AVISO" } else { "INFO" })
                 foreach ($k in $script:CamaraMotivo.Keys) { Escrever-Log ("   camara {0}: {1}" -f $k.ToUpper(), $script:CamaraMotivo[$k]) "AVISO" }
             } catch { Escrever-Log "camara: $($_.Exception.Message)" "AVISO" }
+        }
+        # Assembleias (cargo 7; DF cargo 8): a cada 3 ciclos, ou a cada ciclo
+        # enquanto faltar estado com eleitos.
+        $faltamA = @($UFs | Where-Object { -not $script:Assembleia.ContainsKey($_) -or $script:Assembleia[$_].eleitos -le 0 })
+        if (($script:NumCiclo % 3) -eq 2 -or ($faltamA.Count -gt 0 -and ($script:NumCiclo % 3) -ne 1)) {
+            try {
+                $lerA = $(if (($script:NumCiclo % 3) -eq 2) { $UFs } else { $faltamA })
+                foreach ($u in $lerA) { Ler-Camara $u $(if ($u -eq "df") { 8 } else { 7 }) }
+                $nE = 0; $nV = 0; $comEleitos = 0
+                foreach ($k in $script:Assembleia.Keys) { $nE += $script:Assembleia[$k].eleitos; $nV += $script:Assembleia[$k].vagas; if ($script:Assembleia[$k].eleitos -gt 0) { $comEleitos++ } }
+                Escrever-Log ("assembleias: {0}/27 estados com eleitos, {1} deputados estaduais/distritais eleitos (de {2} vagas lidas)" -f $comEleitos, $nE, $nV) $(if ($comEleitos -lt 27) { "AVISO" } else { "INFO" })
+            } catch { Escrever-Log "assembleias: $($_.Exception.Message)" "AVISO" }
         }
         Conferir-Recebimento
         Gravar-Dados

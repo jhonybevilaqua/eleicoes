@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 3.9 - apuracao em graficos (versao final)
+ gctse GRAFICOS 3.10 - apuracao em graficos (versao final)
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -22,6 +22,52 @@
    GIRO DOS ESTADOS (Governador e Senador, um estado por vez)
    RESUMO (7 telas de fechamento)
    GERENCIADOR (escolhe o que vai para as saidas SDI da DeckLink)
+
+ NOVO NA 3.10 - PRESIDENTE ELEITO NO AR SOZINHO E VIGIA DA NOITE
+   PRESIDENTE ELEITO: quando o TSE declara o eleito no boletim, o
+     gerenciador (a janela preta, mesmo com a pagina fechada) poe a tela
+     "Presidente eleito" no ar nas DUAS saidas e o painel mostra um aviso
+     verde com som. Uma vez por eleicao. Botoes no alto do painel:
+     "no ar automatico: LIGADO/DESLIGADO" e "colocar no ar agora (H e V)".
+     Seguranca: se o programa for aberto com o eleito JA declarado (dia
+     seguinte, reinicio), so avisa - nao tira nada do ar sozinho.
+     config-graficos.json (opcional): "presidente_eleito_no_ar": false
+     comeca desligado.
+   AVISOS NO PAINEL (canto direito) e "OCORRENCIAS DA NOITE": viradas na
+     lideranca de Presidente (Brasil e estados), coleta parada, TSE sem
+     resposta, eleito. Com SOM (clique em "ligar o som" ao abrir o painel;
+     "silenciar 5 min"). Enquanto houver aviso vermelho na faixa de status,
+     bipa a cada 8 s e a borda da pagina pisca.
+   REABRIR SOZINHO: se a janela do GRAFICOS.bat ou do ESTADOS.bat for
+     fechada, o gerenciador percebe (arquivo parado) e abre de novo. Se a
+     janela estiver aberta mas parada (clique nela = modo Selecionar),
+     avisa para apertar ESC. Desligar: "reabrir_coletas": false no config.
+   RELATORIO DA NOITE (link no painel; Ctrl+P): 1o boletim, 50%, 90%,
+     100%, eleito declarado e se foi ao ar pelo sistema, trocas de tela,
+     tempo de coleta parada, quedas do TSE, viradas, telas mais exibidas e
+     copias de seguranca. Registros em logs\no-ar-AAAA-MM-DD.csv e
+     logs\ocorrencias-AAAA-MM-DD.csv (abrem no Excel).
+   GOVERNADOR | ESTADO OU REGIAO (painel): giro so do Governador. Estado =
+     governador daquele estado, fixo; regiao = troca sozinha entre os
+     estados dela. Botoes VERDES = governador ja eleito; BRANCOS = disputa
+     o 2o turno. Tela: foto grande, "GOVERNADOR ELEITO NO 1o/2o TURNO", %,
+     votos e o 2o colocado; sem eleito ainda, os dois com barra.
+   ASSEMBLEIAS LEGISLATIVAS | ESTADO (painel, bloco Camara): bancadas por
+     partido de cada estado (deputados estaduais; no DF, distritais), no
+     desenho da Camara. O ESTADOS.bat le o cargo 7 (DF: 8) do mesmo pleito
+     da Camara. Botao tracejado = estado sem eleitos ainda (motivo ao passar
+     o mouse). No rodizio: "assembleia:pr"; governador: "gov:pr".
+   2o TURNO: 2022 x 2026 (Comparativos): % de cada partido no 2o turno de
+     2022 e agora, Brasil e 27 estados. O ESTADOS.bat le o 2o turno de 2022
+     que o TSE mantem publicado (eleicao 545; outro codigo:
+     "comparar_2022": { "eleicao_2turno": "..." } no config). Compara o
+     partido, nao o candidato. So no modo 2o turno.
+   CHECKLIST: campos das funcoes da equipe, maquina reserva, eleito e
+     relatorio.
+   MAQUINA RESERVA: copie a pasta inteira (com o config) para um 2o PC. No
+     dia, deixe so GRAFICOS.bat e ESTADOS.bat abertos nele (coletando,
+     inclusive o minuto a minuto). Se o PC principal travar: GERENCIADOR.bat
+     na reserva e passe a DeckLink/OBS para ela.
 
  NOVO NA 3.9 - OPERACAO DO 2o TURNO (25/10)
    CHECKLIST DO DIA (1 folha A4): web\checklist.html - link "checklist do
