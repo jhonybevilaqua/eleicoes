@@ -49,6 +49,20 @@
   #nav button.ligado { background: var(--azul); border-color: var(--azul-borda); color: #fff; }
   #nav .noarmini { font-size: 13px; color: var(--apagado); } #nav .noarmini b { color: var(--texto); }
   #navDados.falta { background: #fff3bf; border-color: #d4a017; } #navDados.rodando { background: var(--azul); border-color: var(--azul-borda); color: #fff; }
+  /* ACESSOS: quem comanda de outro aparelho (iPad, PC da producao) */
+  #acessos { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 0 20px 10px; }
+  #acessos[hidden] { display: none; }
+  #acessos .rot { font-size: 12px; font-weight: 800; letter-spacing: 1px; color: var(--apagado); }
+  #acessos .ac { display: inline-flex; gap: 4px; align-items: center; background: var(--cartao); border: 1px solid var(--linha); border-radius: 6px; padding: 3px 6px 3px 8px; font-size: 13px; }
+  #acessos .ac i { width: 9px; height: 9px; border-radius: 50%; background: #9aa5b4; display: inline-block; margin-right: 2px; } #acessos .ac i.on { background: #2f9e44; }
+  #acessos .ac small { color: var(--apagado); } #acessos .ac button { padding: 3px 7px; font-size: 12px; }
+  #acessos .ac button.ligado { background: var(--azul); border-color: var(--azul-borda); color: #fff; }
+  #acessos .ac button.ligado.blq { background: var(--verm); border-color: var(--verm-borda); }
+  #travar.ligado { background: var(--verm); border-color: var(--verm-borda); color: #fff; }
+  #voce { padding: 8px 20px; font-weight: 800; letter-spacing: .5px; color: #fff; background: #1f6fc0; }
+  #voce.sugerir { background: #b8860b; } #voce.bloqueado { background: #6b7a8c; }
+  #voce[hidden] { display: none; }
+  body.remoto .so-local { display: none !important; }
   #dadosTse { margin: 0 20px 12px; background: var(--cartao); border: 1px solid var(--linha); border-left: 4px solid #b8860b; border-radius: 6px; padding: 10px 14px; }
   #dadosTse[hidden] { display: none; }
   #dadosTse h3 { margin: 0 0 4px; font-size: 14px; letter-spacing: 1px; }
@@ -171,20 +185,23 @@
 </head>
 <body>
 <div id="ensaio" hidden>ENSAIO — DADOS FICTÍCIOS — ESTE GERENCIADOR NÃO VAI AO AR (o do ar é o da porta 8098)</div>
+<div id="voce" hidden></div>
 <header><h1>gctse — GERENCIADOR DAS SAÍDAS</h1>
   <a href="index.html" target="_blank">situação completa, avisos de virada e cores ↗</a>
   <a href="checklist.html" target="_blank">checklist do dia ↗</a>
-  <span class="copia"><button id="copia" type="button" title="Guarda a pasta inteira (config, dados, evolução, logs) num .zip em copias-de-seguranca">💾 cópia de segurança</button> <span id="copiaMsg"></span></span>
+  <span class="copia so-local"><button id="copia" type="button" title="Guarda a pasta inteira (config, dados, evolução, logs) num .zip em copias-de-seguranca">💾 cópia de segurança</button> <span id="copiaMsg"></span></span>
   <button class="tema" id="tema" type="button">tema escuro</button></header>
 <div id="status"><span class="st neutro" id="stP">Presidente: …</span><span class="st neutro" id="stE">Estados: …</span><span class="st neutro" id="stEv" hidden></span><span class="st aviso" id="stCL" hidden></span><span class="st neutro" id="stG">Gerenciador: …</span><span class="st neutro" id="stOh" hidden></span><span class="st neutro" id="stOv" hidden></span></div>
 <div id="vigia"><span class="rot">PRESIDENTE ELEITO:</span>
-  <button type="button" id="elAuto" title="Quando o TSE declarar o eleito, a tela 'Presidente eleito' vai ao ar sozinha nas duas saídas">no ar automático: …</button>
+  <button type="button" class="so-local" id="elAuto" title="Quando o TSE declarar o eleito, a tela 'Presidente eleito' vai ao ar sozinha nas duas saídas">no ar automático: …</button>
   <button type="button" id="elAgora">colocar no ar agora (H e V)</button>
   <span class="rot" style="margin-left:14px">SOM:</span>
   <button type="button" id="som">🔔 …</button><button type="button" id="silenciar">silenciar 5 min</button>
   <span class="rot" id="rotIpad" style="margin-left:14px" hidden>iPAD:</span><button type="button" id="ipadModo" hidden>…</button>
   <span class="rot" style="margin-left:14px">TECLADO:</span><button type="button" id="tecAlvo" title="tecla H, V ou B troca">saída H</button><button type="button" id="tecAjuda">? atalhos</button>
   <a href="relatorio.html" target="_blank" style="margin-left:auto">relatório da noite ↗</a></div>
+<div id="acessos" class="so-local" hidden><span class="rot">ACESSOS (iPad / outros PCs):</span><span id="listaAcessos" style="display:contents"></span>
+  <button type="button" id="travar" title="Trava na hora TODOS os comandos que vêm de outros aparelhos (eles continuam vendo)">🔒 travar remotos</button></div>
 <div id="ajudaTec" hidden><div class="caixa"><h3>ATALHOS DE TECLADO</h3>
   <table><tr><td><b>H</b> / <b>V</b> / <b>B</b></td><td>saída que o teclado comanda: horizontal, vertical ou as duas (B)</td></tr>
   <tr><td><b>1</b> a <b>9</b></td><td>favorito 1 a 9 (a ordem do bloco ★ FAVORITOS)</td></tr>
@@ -200,9 +217,9 @@
   <button type="button" data-ir="v" title="rola até a saída vertical">▯ VERTICAL</button>
   <span class="rot" style="margin-left:10px">MOSTRAR:</span>
   <button type="button" data-mostra="hv">as duas</button><button type="button" data-mostra="h">só horizontal</button><button type="button" data-mostra="v">só vertical</button>
-  <button type="button" id="navDados" style="margin-left:10px" title="baixar e importar os dados do TSE">📥 dados do TSE</button>
+  <button type="button" class="so-local" id="navDados" style="margin-left:10px" title="baixar e importar os dados do TSE">📥 dados do TSE</button>
   <span class="noarmini" style="margin-left:auto">no ar: H <b id="navH">…</b> · V <b id="navV">…</b></span></div>
-<div id="dadosTse" hidden><h3>📥 DADOS DO TSE (o que não vem no boletim ao vivo)</h3>
+<div id="dadosTse" class="so-local" hidden><h3>📥 DADOS DO TSE (o que não vem no boletim ao vivo)</h3>
   <div class="dica" style="margin:0">Roda numa janela minimizada, um depois do outro. GRAFICOS.bat e ESTADOS.bat continuam coletando normalmente. Ao abrir o gerenciador, o que ainda não existir nesta máquina é buscado sozinho.</div>
   <table><tbody>
     <tr><td>Cópia local do TSE</td><td>1º turno, 2022 e fotos dos eleitos guardados no disco (vale se o TSE sair do ar) — GUARDAR-DADOS-TSE</td><td class="q" id="dqTse">…</td><td><button type="button" data-rodar="tse">rodar</button></td></tr>
@@ -273,11 +290,17 @@
     return g ? g.nome : id;
   }
   function botao(txt, fn, extra) { var b = document.createElement("button"); b.textContent = txt; b.onclick = fn; if (extra) b.dataset.k = extra; return b; }
-  function pedir(url) { return fetch(url + (url.indexOf("?") < 0 ? "?" : "&") + "t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (e) { estado = e; pintar(); }); }
-  function definirJa(s, tela, acao) { pararAuto(s); return pedir("/definir?saida=" + s + "&tela=" + encodeURIComponent(tela) + (acao ? "&acao=" + encodeURIComponent(acao) : "")); }
+  function pedir(url) {
+    return fetch(url + (url.indexOf("?") < 0 ? "?" : "&") + "t=" + Date.now(), { cache: "no-store", credentials: "same-origin" }).then(function (r) {
+      if (r.ok) return r.json().then(function (e) { estado = e; pintar(); if (e.voce && !e.voce.local && e.voce.modo === "sugerir" && /^\/(definir|ipad)/.test(url)) toast({ tipo: "ok", hora: new Date().toTimeString().slice(0, 8), texto: "SUGESTÃO enviada ao operador do exibidor" }); });
+      // recusado (modo do usuario remoto, travado, so no exibidor): avisa e nao mexe no estado
+      return r.text().then(function (t) { var m = t; try { m = JSON.parse(t).erro || t; } catch (x) { } toast({ tipo: "alerta", hora: new Date().toTimeString().slice(0, 8), texto: "NÃO FOI: " + m }); });
+    });
+  }
+  function definirJa(s, tela, acao, de) { pararAuto(s); return pedir("/definir?saida=" + s + "&tela=" + encodeURIComponent(tela) + (acao ? "&acao=" + encodeURIComponent(acao) : "") + (de ? "&de=" + encodeURIComponent(de) : "")); }
   function irAoAr(s, p) {
-    if (p.rod) return pedir("/rodizio?saida=" + s + "&telas=" + encodeURIComponent(p.rod.telas) + "&tempo=" + p.rod.tempo).then(function () { return definirJa(s, p.tela, p.acao); });
-    return definirJa(s, p.tela, p.acao);
+    if (p.rod) return pedir("/rodizio?saida=" + s + "&telas=" + encodeURIComponent(p.rod.telas) + "&tempo=" + p.rod.tempo).then(function () { return definirJa(s, p.tela, p.acao, p.de); });
+    return definirJa(s, p.tela, p.acao, p.de);
   }
   // PREVIA (PVW): ligada, o clique so prepara (mostra ao lado do NO AR); o
   // CORTAR manda ao ar. Desligada: vai direto, como sempre. Lembrada por saida.
@@ -399,9 +422,9 @@
       '<iframe width="' + S.W + '" height="' + S.H + '"></iframe></div></div></div>' +
       '<div class="pvwctl"><button type="button" class="pvwliga">prévia antes do ar: DESLIGADA</button>' +
       '<button type="button" class="cortar" hidden disabled>✂ CORTAR ▶ NO AR</button><button type="button" class="descartar" hidden disabled>descartar</button></div>' +
-      (S.id === "v" ? '<div class="grupo">GIRO DA TELA NA SAÍDA SDI (monitor em pé)</div><div class="botoes girar">' +
+      (S.id === "v" ? '<div class="so-local"><div class="grupo">GIRO DA TELA NA SAÍDA SDI (monitor em pé)</div><div class="botoes girar">' +
         '<button data-g="90">↻ 90° horário</button><button data-g="-90">↺ 90° anti-horário</button><button data-g="0">sem girar</button></div>' +
-        '<div class="dica">Imagem de cabeça para baixo no monitor em pé? Clique no outro sentido.</div>' : '') +
+        '<div class="dica">Imagem de cabeça para baixo no monitor em pé? Clique no outro sentido.</div></div>' : '') +
       '</div><div class="col-cmd"></div>';
     var mon = col.querySelector(".col-mon"), cmd = col.querySelector(".col-cmd");
     function grupo(titulo, itens) {
@@ -846,7 +869,7 @@
   function lerEstado() {
     var g = document.getElementById("stG");
     fetch("/estado?t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.json(); })
-      .then(function (e) { estado = e; pintar(); g.className = "st ok"; g.textContent = "Gerenciador: no ar"; situacaoObs(); try { vigia(e); } catch (x) { } try { ipad(e); } catch (x) { } })
+      .then(function (e) { estado = e; pintar(); g.className = "st ok"; g.textContent = "Gerenciador: no ar"; situacaoObs(); try { vigia(e); } catch (x) { } try { acessos(e); } catch (x) { } if (!e.voce || e.voce.local) { try { ipad(e); } catch (x) { } } })
       .catch(function () { g.className = "st ruim"; g.textContent = "Gerenciador: SEM CONEXÃO — a janela do GERENCIADOR fechou?"; });
   }
   // Copia de seguranca num clique (gerenciador.ps1 -> copia-seguranca.ps1).
@@ -943,7 +966,7 @@
   var bIpad = document.getElementById("ipadModo"), vistoSug = { h: null, v: null };
   bIpad.onclick = function () { pedir("/ipadmodo?m=" + (estado && estado.ipad === "ar" ? "sugerir" : "ar")); };
   function ipad(e) {
-    var on = !!e.rede; bIpad.hidden = !on; document.getElementById("rotIpad").hidden = !on;
+    var on = !!e.rede; bIpad.hidden = true; document.getElementById("rotIpad").hidden = true;   // agora no bloco ACESSOS
     if (on) { bIpad.textContent = e.ipad === "ar" ? "vai DIRETO ao ar" : "só SUGERE (cai na prévia)"; bIpad.classList.toggle("ligado", e.ipad !== "ar"); bIpad.title = "Endereço no iPad: " + comoArr(e.ipad_enderecos).join("  ou  "); }
     ["h", "v"].forEach(function (s) {
       var sg = e["sugestao_" + s];
@@ -951,12 +974,46 @@
       if (!sg || !sg.id || vistoSug[s] === sg.id) return;
       vistoSug[s] = sg.id;
       if (!previa[s]) ligarPrevia(s, true);
-      pendente[s] = { tela: sg.tela, acao: sg.acao || "", rod: sg.rod ? { telas: sg.rod, tempo: +sg.tempo || 12 } : null };
+      pendente[s] = { tela: sg.tela, acao: sg.acao || "", rod: sg.rod ? { telas: sg.rod, tempo: +sg.tempo || 12 } : null, de: sg.quem || "iPad" };
       mostrarPrevia(s);
-      toast({ tipo: "info", hora: sg.hora, texto: "iPad sugere na saída " + (s === "h" ? "HORIZONTAL" : "VERTICAL") + ": " + nomePendente(s, pendente[s]) + " — está na PRÉVIA, aperte CORTAR" });
+      toast({ tipo: "info", hora: sg.hora, texto: (sg.quem || "iPad") + " sugere na saída " + (s === "h" ? "HORIZONTAL" : "VERTICAL") + ": " + nomePendente(s, pendente[s]) + " — está na PRÉVIA, aperte CORTAR" });
       bip(660, 0.12); bip(880, 0.12, 0.15);
     });
   }
+  // ------------------------------------------------ acessos (varios usuarios)
+  var MODOS_AC = [["direto", "direto ao ar"], ["sugerir", "sugere"], ["bloqueado", "bloqueado"]];
+  function acessos(e) {
+    var v = e.voce || { local: true }, us = comoArr(e.usuarios);
+    document.body.classList.toggle("remoto", !v.local);
+    var bv = document.getElementById("voce");
+    if (!v.local) {
+      bv.hidden = false; bv.className = v.modo;
+      bv.textContent = "CONECTADO COMO " + String(v.nome).toUpperCase() + " — " + (v.modo === "direto" ? "seus comandos vão DIRETO AO AR no exibidor" :
+        v.modo === "sugerir" ? "você SUGERE: a tela cai na prévia do operador do exibidor, que corta" : (v.travado ? "o operador TRAVOU os comandos — só visualização" : "só visualização (o operador pode liberar)"));
+      return;
+    }
+    bv.hidden = true;
+    var box = document.getElementById("acessos"); box.hidden = !(e.rede && us.length);
+    if (box.hidden) return;
+    var lst = document.getElementById("listaAcessos"); lst.innerHTML = "";
+    us.forEach(function (u) {
+      var sp = document.createElement("span"); sp.className = "ac";
+      sp.title = (u.online ? "conectado" : "desconectado") + (u.ip ? " · " + u.ip : "") + (u.ultimo ? " · último: " + u.ultimo : "");
+      sp.innerHTML = '<i class="' + (u.online ? "on" : "") + '"></i><b></b> <small>(' + (u.tela === "gerenciador" ? "PC" : "iPad") + ")</small>";
+      sp.querySelector("b").textContent = u.nome;
+      MODOS_AC.forEach(function (m) {
+        var b = document.createElement("button"); b.type = "button"; b.textContent = m[1];
+        if (u.modo === m[0]) b.className = "ligado" + (m[0] === "bloqueado" ? " blq" : "");
+        b.onclick = function () { pedir("/acesso?nome=" + encodeURIComponent(u.nome) + "&modo=" + m[0]); };
+        sp.appendChild(b);
+      });
+      lst.appendChild(sp);
+    });
+    var bt = document.getElementById("travar");
+    bt.classList.toggle("ligado", !!e.travado);
+    bt.textContent = e.travado ? "🔒 REMOTOS TRAVADOS — clique para liberar" : "🔒 travar remotos";
+  }
+  document.getElementById("travar").onclick = function () { pedir("/acesso?travar=" + (estado && estado.travado ? "0" : "1")); };
   // ------------------------------------------------ atalhos de teclado
   var tecAlvo = "h"; try { tecAlvo = localStorage.getItem("gctse-tec-alvo") || "h"; } catch (e) { }
   var bTec = document.getElementById("tecAlvo");

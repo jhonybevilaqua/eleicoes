@@ -4,7 +4,8 @@ rem Uma vez, COMO ADMINISTRADOR: libera a porta do gerenciador (8098) para a
 rem rede interna (iPad no Wi-Fi da emissora) e abre o firewall SO para redes
 rem privadas/dominio. Depois, no config-graficos.json:
 rem    "acesso_rede": true,
-rem    "senha_controle": "uma senha de 4+ caracteres"
+rem    "senha_controle": "uma senha de 4+ caracteres"   (um iPad so)
+rem ou "usuarios": [ ... ]  (varias pessoas, cada uma com sua senha - LEIA-ME 3.18)
 rem e reabra o GERENCIADOR.bat. Desfazer: LIBERAR-IPAD.bat desfazer
 net session >nul 2>&1
 if errorlevel 1 (

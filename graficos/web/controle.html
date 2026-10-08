@@ -17,6 +17,7 @@
   .noar b { color: #fff; }
   .modo { font-size: 13px; padding: 4px 10px; border-radius: 12px; background: #3a2a00; color: #ffd43b; font-weight: 700; }
   .modo.ar { background: #3a0d0d; color: #ffb3b3; }
+  .modo.blq { background: #2a3140; color: #c9d6e6; }
   .alvo button { min-width: 108px; }
   .alvo button.on { background: var(--azul); border-color: #7fb8ff; }
   main { padding: 10px 14px; }
@@ -65,10 +66,14 @@
     var ps = saidas().map(function (s) {
       var tela = /-$/.test(base) ? base + s : base, q = "/ipad?saida=" + s + "&tela=" + encodeURIComponent(tela) + (acao ? "&acao=" + encodeURIComponent(acao) : "");
       if (rodPor) q += "&rod=" + encodeURIComponent(rodPor[s] || "") + "&tempo=" + (tempo || 0);
-      return fetch(q + "&t=" + Date.now(), { cache: "no-store", credentials: "same-origin" }).then(function (r) { if (!r.ok) throw r.status; return r.json(); });
+      return fetch(q + "&t=" + Date.now(), { cache: "no-store", credentials: "same-origin" }).then(function (r) {
+        if (r.ok) return r.json();
+        // 423 = recusado (modo do usuario / travado pelo operador): mostra o motivo
+        return r.text().then(function (t) { var m = r.status; try { m = JSON.parse(t).erro || m; } catch (x) { } throw m; });
+      });
     });
-    Promise.all(ps).then(function (e) { estado = e[e.length - 1]; pintar(); toast((estado.ipad === "ar" ? "NO AR: " : "SUGESTÃO ENVIADA ao operador: ") + rotulo); })
-      .catch(function (x) { toast(x === 401 ? "senha expirada — recarregue a página" : "falhou — o gerenciador está aberto?"); });
+    Promise.all(ps).then(function (e) { estado = e[e.length - 1]; pintar(); toast((modoAtual() === "direto" ? "NO AR: " : "SUGESTÃO ENVIADA ao operador: ") + rotulo); })
+      .catch(function (x) { toast(x === 401 ? "senha expirada — recarregue a página" : typeof x === "string" ? "NÃO FOI: " + x : "falhou — o gerenciador está aberto?"); });
   }
   function bt(txt, fn, cls, chave) { var b = document.createElement("button"); b.textContent = txt; b.onclick = fn; if (cls) b.className = cls; if (chave) b.dataset.k = chave; return b; }
   function secao(tit, cls) { var s = document.createElement("section"); s.innerHTML = "<h2>" + tit + "</h2>"; var g = document.createElement("div"); g.className = cls || "grade"; s.appendChild(g); document.getElementById("m").appendChild(s); return { s: s, g: g }; }
@@ -114,11 +119,15 @@
     var cs = Array.isArray(g.candidatos) ? g.candidatos : ((g.candidatos || {}).value || []);
     return cs.some(function (c) { return c.eleito; }) && +g.turno !== 2;
   }
+  // modo deste aparelho (cada usuario tem o seu; o operador muda no exibidor)
+  function modoAtual() { var v = estado && estado.voce; if (v && v.modo) return v.modo; return estado && estado.ipad === "ar" ? "direto" : "sugerir"; }
   function pintar() {
     [].forEach.call(document.querySelectorAll(".alvo button"), function (b) { b.classList.toggle("on", b.dataset.a === alvo); });
     [].forEach.call(document.querySelectorAll("[data-gov]"), function (b) { b.classList.toggle("gov-eleito", govEleito(b.dataset.gov)); });
     if (!estado) return;
-    var m = document.getElementById("modo"); m.textContent = estado.ipad === "ar" ? "VAI DIRETO AO AR" : "SUGERE (o operador corta)"; m.className = "modo" + (estado.ipad === "ar" ? " ar" : "");
+    var m = document.getElementById("modo"), md = modoAtual(), v = estado.voce || {};
+    m.textContent = (v.nome && !v.local ? String(v.nome).toUpperCase() + " · " : "") + (md === "direto" ? "VAI DIRETO AO AR" : md === "sugerir" ? "SUGERE (o operador corta)" : (v.travado ? "TRAVADO PELO OPERADOR" : "SÓ VISUALIZAÇÃO"));
+    m.className = "modo" + (md === "direto" ? " ar" : md === "bloqueado" ? " blq" : "");
     function txt(s) { var e = estado[s] || {}; return e.tela === "apresentacao" ? "apresentação automática" : (nome(e.tela) + (e.acao ? " · " + String(e.acao).replace(/^(alvo|uf|dep|reg):/, "").toUpperCase() : "")); }
     document.getElementById("noar").innerHTML = "no ar — <b>H:</b> " + txt("h") + " &nbsp; <b>V:</b> " + txt("v");
     var noAr = saidas().map(function (s) { return String((estado[s] || {}).tela || "").replace(/-(h|v)$/, "-"); });

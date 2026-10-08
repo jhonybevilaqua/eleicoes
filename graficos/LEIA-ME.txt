@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 3.17 - apuracao em graficos (versao final)
+ gctse GRAFICOS 3.18 - apuracao em graficos (versao final)
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -22,6 +22,40 @@
    GIRO DOS ESTADOS (Governador e Senador, um estado por vez)
    RESUMO (7 telas de fechamento)
    GERENCIADOR (escolhe o que vai para as saidas SDI da DeckLink)
+
+ NOVO NA 3.18 - VARIOS USUARIOS (apresentador, produtor, operador)
+   Todos comandam o MESMO exibidor (o PC do GERENCIADOR.bat, onde estao o
+   OBS e a DeckLink). Funciona so na REDE INTERNA da emissora: nao precisa
+   de hospedagem nem de internet para isso.
+   1. LIBERAR-IPAD.bat uma vez no exibidor (como administrador).
+   2. config-graficos.json:
+        "acesso_rede": true,
+        "usuarios": [
+          { "nome": "Apresentador", "senha": "SENHA1", "tela": "controle",    "modo": "sugerir" },
+          { "nome": "Produtor",     "senha": "SENHA2", "tela": "gerenciador", "modo": "direto" }
+        ]
+      senha: 4 a 32 caracteres, DIFERENTE para cada pessoa (e o que
+      identifica quem e quem). tela: "controle" = botoes grandes (iPad,
+      celular); "gerenciador" = o gerenciador completo (outro PC).
+      modo: "direto" = vai ao ar | "sugerir" = cai na PREVIA do operador,
+      que corta | "bloqueado" = so ve.
+      A "senha_controle" antiga continua valendo: vira o usuario "iPad".
+   3. Reabra o GERENCIADOR.bat. Cada pessoa abre http://IP-DO-EXIBIDOR:8098
+      (a janela do gerenciador mostra o IP), digita a SUA senha e cai na
+      tela dela. Fica lembrado 30 dias naquele aparelho.
+   NO EXIBIDOR (operador), linha ACESSOS: quem esta conectado (bolinha
+   verde), e o modo de cada um - muda na hora com um clique (fica
+   lembrado). "TRAVAR REMOTOS" trava todos de uma vez (eles continuam
+   vendo e recebem "o operador travou"). Sugestao chega na PREVIA com o
+   nome de quem pediu ("Produtor sugere..."), com som; CORTAR poe no ar.
+   Quem entra de outro aparelho NAO ve nem usa: dados do TSE, copia de
+   seguranca, girar a vertical, eleito automatico e ACESSOS.
+   O log do que foi ao ar (logs\no-ar-*.csv e relatorio da noite) diz quem
+   mandou: "painel - Produtor", "ipad - Apresentador",
+   "painel (sugestao de Apresentador)".
+   Rede: o exibidor com IP fixo (reserva no roteador) e iPad/PCs no mesmo
+   Wi-Fi/rede da emissora. Fora da emissora (casa): so com VPN da TI - nao
+   abra a porta do gerenciador para a internet.
 
  NOVO NA 3.17 - GERENCIADOR NOVO E DADOS DO TSE NUM CLIQUE
    LAYOUT: uma faixa por saida - HORIZONTAL em cima, VERTICAL embaixo. Em
