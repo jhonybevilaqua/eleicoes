@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 3.14 - apuracao em graficos (versao final)
+ gctse GRAFICOS 3.15 - apuracao em graficos (versao final)
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -22,6 +22,38 @@
    GIRO DOS ESTADOS (Governador e Senador, um estado por vez)
    RESUMO (7 telas de fechamento)
    GERENCIADOR (escolhe o que vai para as saidas SDI da DeckLink)
+
+ NOVO NA 3.15 - BLOCO JORNALISMO NO GERENCIADOR
+   Gerenciador > JORNALISMO (bloco dourado), pedidos da redacao:
+     10 deputadas mais votadas .. (saiu do bloco Camara e veio para ca)
+     10 senadoras mais votadas .. candidatas ao Senado com mais votos no
+                                  Brasil, com a marca ELEITA.
+     Perfil do eleitorado ....... QUEM PODE VOTAR: idade, sexo,
+                                  escolaridade e cor/raca (% dos eleitores).
+     Quem foi as urnas .......... % que COMPARECEU em cada grupo (idade,
+                                  sexo, escolaridade, cor/raca); a linha
+                                  amarela e a media do Brasil.
+
+   DEPUTADAS E SENADORAS: genero vem do arquivo "Candidatos" do TSE.
+     Rode de novo o IMPORTAR-CANDIDATOS.bat (a 3.15 le tambem o Senado;
+     a importacao antiga nao tinha as senadoras - a tela avisa).
+
+   PERFIL DO ELEITOR: IMPORTAR-PERFIL-ELEITOR.bat (novo). Le dois arquivos
+   do TSE (Dados Abertos) e grava web\perfil-eleitor.js:
+     perfil_eleitorado_2026.zip ........... ja publicado (quem pode votar)
+     perfil_comparecimento_abstencao_2026.zip  o TSE publica DEPOIS da
+                                            eleicao (quem foi as urnas):
+                                            na noite a tela "Quem foi as
+                                            urnas" fica "aguardando"; rode
+                                            de novo nos dias seguintes.
+   Ele tenta baixar sozinho para a pasta importar; se nao conseguir, baixe
+   em dadosabertos.tse.jus.br e ponha na pasta importar. Arquivo grande:
+   a leitura leva alguns minutos (a janela mostra o andamento).
+   A janela diz se o arquivo traz cor/raca. Cor/raca e AUTODECLARADA e boa
+   parte do eleitorado nao informou: a tela mostra o % entre quem declarou
+   e quantos declararam.
+   CLASSE SOCIAL / RENDA: o TSE NAO coleta. Nao existe na base do TSE -
+   so em pesquisas (Datafolha, Quaest etc.) ou IBGE, com a fonte delas.
 
  NOVO NA 3.14 - AS 10 DEPUTADAS MAIS VOTADAS
    Gerenciador > CAMARA > "10 deputadas mais votadas": as mulheres eleitas

@@ -37,7 +37,7 @@ if (Test-Path $Dest) {
 }
 New-Item -ItemType Directory -Path $Dest | Out-Null
 Set-Content -Path (Join-Path $Dest $Marca) -Value "Pasta criada pelo ENSAIO.bat - apagada e recriada a cada ensaio. Nao guarde nada aqui." -Encoding ASCII
-$fora = @("ENSAIO.bat", "ensaio.ps1", "web\dados.js", "web\estados.js", "web\candidatos-genero.js", "gerenciador-estado.json", "obs-saidas.json", $Marca)
+$fora = @("ENSAIO.bat", "ensaio.ps1", "web\dados.js", "web\estados.js", "web\candidatos-genero.js", "web\perfil-eleitor.js", "gerenciador-estado.json", "obs-saidas.json", $Marca)
 $pastasFora = @("ensaio", "logs", "importar", "obs", "copias-de-seguranca", "tse-local", "arquivo-historico")
 foreach ($item in Get-ChildItem -LiteralPath $Raiz -Recurse -Force) {
     $rel = $item.FullName.Substring($Raiz.Length).TrimStart('\', '/')

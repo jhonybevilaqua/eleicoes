@@ -216,7 +216,7 @@ if ($Historico) {
         $tmpArq = Join-Path $env:TEMP ("gctse-arquivo-" + (Get-Date -Format "yyyyMMddHHmmss"))
         New-Item -ItemType Directory -Path $tmpArq | Out-Null
         foreach ($item in @("tse-local", "web\fotos-tse", "logs")) { $o3 = Join-Path $Raiz $item; if (Test-Path $o3) { Copy-Item -LiteralPath $o3 -Destination (Join-Path $tmpArq ($item -replace '\\', '_')) -Recurse -Force } }
-        foreach ($arqX in @(Get-ChildItem -Path $Raiz -Filter "evolucao-*.json" -File) + @(Get-Item (Join-Path $Raiz "config-graficos.json")) + @(Get-ChildItem -Path (Join-Path $Raiz "web") -Include "dados.js", "estados.js", "candidatos-genero.js" -File -Recurse -Depth 0 -ErrorAction SilentlyContinue)) { Copy-Item -LiteralPath $arqX.FullName -Destination $tmpArq -Force }
+        foreach ($arqX in @(Get-ChildItem -Path $Raiz -Filter "evolucao-*.json" -File) + @(Get-Item (Join-Path $Raiz "config-graficos.json")) + @(Get-ChildItem -Path (Join-Path $Raiz "web") -Include "dados.js", "estados.js", "candidatos-genero.js", "perfil-eleitor.js" -File -Recurse -Depth 0 -ErrorAction SilentlyContinue)) { Copy-Item -LiteralPath $arqX.FullName -Destination $tmpArq -Force }
         $zipArq = Join-Path $pastaArq ("GCTSE-ARQUIVO-ELEICOES-{0}.zip" -f (Get-Date -Format "yyyy-MM-dd_HH'h'mm"))
         [IO.Compression.ZipFile]::CreateFromDirectory($tmpArq, $zipArq)
         Remove-Item -LiteralPath $tmpArq -Recurse -Force

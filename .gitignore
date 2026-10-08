@@ -50,3 +50,8 @@ graficos/tse-local/
 graficos/web/fotos-tse/
 graficos/GUARDAR-DADOS-TSE.txt
 graficos/arquivo-historico/
+
+# gerados pelos importadores (dados do TSE baixados na maquina da emissora)
+graficos/web/candidatos-genero.js
+graficos/web/perfil-eleitor.js
+graficos/importar/

@@ -979,6 +979,141 @@
   G["topfem-h"] = function () { return telaTopDep(false, true); };
   G["topfem-v"] = function () { return telaTopDep(true, true); };
 
+  // ---- JORNALISMO: AS 10 SENADORAS MAIS VOTADAS ------------------------------
+  // Candidatas ao Senado (boletim de Senador do TSE, ESTADOS.bat) cujo
+  // registro no arquivo "Candidatos" do TSE e FEMININO (IMPORTAR-CANDIDATOS).
+  function telaTopSenFem(v) {
+    var W = v ? 540 : 1280, H = v ? 960 : 720, tit = "AS 10 SENADORAS MAIS VOTADAS";
+    var gen = window.GCTSE_GENERO, a26 = gen && gen.anos ? gen.anos["2026"] : null;
+    if (!a26) return semDados(W, H, v, v ? "10 SENADORAS" : tit, "importe o arquivo de candidatos do TSE (IMPORTAR-CANDIDATOS.bat)");
+    if (!a26.mulheres_senado) return semDados(W, H, v, v ? "10 SENADORAS" : tit, "rode de novo o IMPORTAR-CANDIDATOS.bat (agora ele lê também o Senado)");
+    var fem = {}; comoLista(a26.mulheres_senado).forEach(function (q) { fem[q] = 1; });
+    var u = (window.GCTSE_ESTADOS || {}).ufs || {}, todas = [], ufs = 0, nEl = 0;
+    Object.keys(DEP_UF).forEach(function (k) {
+      var s0 = u[k] && u[k].sen && u[k].sen.tem ? u[k].sen : null; if (!s0) return; ufs++;
+      comoLista(s0.candidatos).forEach(function (c) { if (fem[c.sqcand]) { todas.push({ c: c, u: k }); if (c.eleito) nEl++; } });
+    });
+    todas.sort(function (a, b) { return ((+b.c.votos || 0) - (+a.c.votos || 0)) || String(a.c.nome).localeCompare(String(b.c.nome), "pt-BR"); });
+    var l = todas.slice(0, 10), max = l.length ? +l[0].c.votos || 1 : 1, o;
+    var sl = !ufs ? { texto: "AGUARDANDO", cor: C.trilho } : (ufs >= 27 ? { texto: "1º TURNO · FINAL", cor: C.verde } : { texto: "PARCIAL", cor: C.vermelho });
+    if (!ufs) return semDados(W, H, v, v ? "10 SENADORAS" : tit, "aguardando o boletim de Senador (ESTADOS.bat)");
+    var sub = "Senado · " + todas.length + " candidatas · " + nEl + (nEl === 1 ? " eleita" : " eleitas") + (ufs < 27 ? " · " + ufs + " de 27 estados" : "");
+    function tag(x, y, c, a) { return c.eleito ? r(a === "end" ? x - 74 : x, y - 15, 74, 20, C.verde, 3) + t(a === "end" ? x - 37 : x + 37, y, "ELEITA", { s: 12, b: true, a: "middle" }) : ""; }
+    if (!v) {
+      o = t(73, 57, tit, { s: 32, b: true, ls: 1, max: 667 }) + t(73, 85, sub, { s: 17, c: C.apagado, max: 660 }) + seloH(W, sl);
+      if (!l.length) o += t(640, 380, "nenhuma candidata com votos ainda", { s: 22, c: C.apagado, a: "middle" });
+      l.forEach(function (it, i) {
+        var y = 106 + i * 58, c = it.c, cc = corPartidoCamara(c.partido, i);
+        o += r(73, y, 1134, 52, i % 2 ? "rgba(8,14,32,0.70)" : "rgba(8,14,32,0.86)", 6);
+        o += t(120, y + 36, (i + 1) + "º", { s: 24, b: true, a: "end", c: i < 3 ? "#ffd43b" : C.texto });
+        o += fotoDep(it.u, c, 134, y + 4, 33, 44) + r(178, y + 10, 5, 32, cc, 2);
+        o += t(193, y + 25, c.nome, { s: 21, b: true, max: 400 }) + t(193, y + 44, (c.partido || "") + "  ·  " + (DEP_UF[it.u] || it.u.toUpperCase()), { s: 13, c: C.apagado, max: 400 });
+        o += tag(600, y + 31, c, "start");
+        o += barraFina(690, y + 22, 320, (+c.votos || 0) / max, cc);
+        o += t(1190, y + 33, inteiro(c.votos), { s: 24, b: true, a: "end" }) + t(1190, y + 48, "votos" + (c.pct != null ? " · " + pct1(+c.pct) : ""), { s: 10, c: C.apagado, a: "end" });
+      });
+      return svg(W, H, o + t(73, 704, "Fonte: TSE — boletins de Senador dos 27 estados e gênero do arquivo Candidatos 2026 (Dados Abertos) · % dos votos válidos no estado", { s: 12, c: C.apagado2, max: 1134 }));
+    }
+    o = r(35, 48, 6, 38, COR_MULHER) + t(53, 80, "10 SENADORAS", { s: 30, b: true, ls: 1 }) + t(53, 106, "as mulheres mais votadas · " + nEl + (nEl === 1 ? " eleita" : " eleitas"), { s: 14, c: C.apagado }) + seloV(W, sl);
+    l.forEach(function (it, i) {
+      var y = 164 + i * 77, c = it.c, cc = corPartidoCamara(c.partido, i);
+      o += r(35, y, 470, 71, i % 2 ? "rgba(8,14,32,0.70)" : "rgba(8,14,32,0.86)", 6);
+      o += t(72, y + 44, (i + 1) + "º", { s: 22, b: true, a: "end", c: i < 3 ? "#ffd43b" : C.texto });
+      o += fotoDep(it.u, c, 82, y + 8, 41, 55) + r(131, y + 12, 4, 46, cc, 2);
+      o += t(143, y + 30, c.nome, { s: 18, b: true, max: 350 }) + t(143, y + 50, (c.partido || "") + " · " + it.u.toUpperCase(), { s: 12, c: C.apagado, max: 200 });
+      o += tag(495, y + 28, c, "end") + t(495, y + 56, inteiro(c.votos) + " votos", { s: 15, b: true, a: "end" });
+    });
+    return svg(W, H, o + t(35, 950, "Fonte: TSE — Senado + arquivo Candidatos 2026", { s: 11, c: C.apagado2 }));
+  }
+  G["topsenfem-h"] = function () { return telaTopSenFem(false); };
+  G["topsenfem-v"] = function () { return telaTopSenFem(true); };
+
+  // ---- JORNALISMO: PERFIL DO ELEITOR -----------------------------------------
+  // web\perfil-eleitor.js, gravado pelo IMPORTAR-PERFIL-ELEITOR.bat a partir
+  // dos arquivos do TSE (Dados Abertos): perfil do eleitorado (quem pode
+  // votar) e comparecimento/abstencao por perfil (quem foi as urnas - o TSE
+  // publica depois da eleicao). Classe social/renda: o TSE nao coleta.
+  function semAcento(x) { return String(x || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase(); }
+  var GRUPOS_IDADE = [["16 e 17", 16, 17], ["18 a 24", 18, 24], ["25 a 34", 25, 34], ["35 a 44", 35, 44], ["45 a 59", 45, 59], ["60 a 69", 60, 69], ["70 ou mais", 70, 999]];
+  var GRUPO_P = {
+    idade: function (rot) { var m = /(\d+)/.exec(rot); if (!m) return null; var n = +m[1]; for (var i = 0; i < GRUPOS_IDADE.length; i++) if (n >= GRUPOS_IDADE[i][1] && n <= GRUPOS_IDADE[i][2]) return GRUPOS_IDADE[i][0]; return null; },
+    escolaridade: function (rot) { var x = semAcento(rot); return /ANALFABETO|LE E ESCREVE/.test(x) ? "Sem ensino formal" : /FUNDAMENTAL/.test(x) ? "Fundamental" : /MEDIO/.test(x) ? "Ensino médio" : /SUPERIOR/.test(x) ? "Superior" : null; },
+    genero: function (rot) { var x = semAcento(rot); return /^FEM/.test(x) ? "Mulheres" : /^MASC/.test(x) ? "Homens" : null; },
+    raca: function (rot) { var x = semAcento(rot); return /^BRANC/.test(x) ? "Branca" : /^PARD/.test(x) ? "Parda" : /^PRET/.test(x) ? "Preta" : /^AMAREL/.test(x) ? "Amarela" : /^INDIGEN/.test(x) ? "Indígena" : null; }
+  };
+  var ORDEM_P = {
+    idade: GRUPOS_IDADE.map(function (g) { return g[0]; }),
+    escolaridade: ["Sem ensino formal", "Fundamental", "Ensino médio", "Superior"],
+    genero: ["Mulheres", "Homens"], raca: ["Branca", "Parda", "Preta", "Amarela", "Indígena"]
+  };
+  // -> { itens: [{ rot, a, c }], inf: soma dos informados, tot: soma de tudo } ou null
+  function agruparPerfil(dims, d) {
+    var m = dims && dims[d]; if (!m) return null;
+    var g = {}, inf = 0, tot = 0;
+    Object.keys(m).forEach(function (rot) {
+      var q = comoLista(m[rot]), a = +q[0] || 0, c = +q[1] || 0, k = GRUPO_P[d](rot); tot += a;
+      if (!k) return; inf += a; if (!g[k]) g[k] = { rot: k, a: 0, c: 0 }; g[k].a += a; g[k].c += c;
+    });
+    return { itens: ORDEM_P[d].filter(function (k) { return g[k]; }).map(function (k) { return g[k]; }), inf: inf, tot: tot };
+  }
+  function perfilDe(tipo) {
+    var P = window.GCTSE_PERFIL, x = P && P[tipo]; if (!x || !x.turnos) return null;
+    var ks = Object.keys(x.turnos).sort(), tu = ks[ks.length - 1], b = x.turnos[tu];
+    return { ano: x.ano, turno: +tu, total: comoLista(b.total), dims: b.dims || {} };
+  }
+  // cor na hora de desenhar (COR_MULHER e COR_PERFIL sao definidos mais abaixo)
+  function corEleitor(rot) { return rot === "Mulheres" ? COR_MULHER : rot === "Homens" ? "#2b84ff" : COR_PERFIL; }
+  // painel de barras: comp = mostra taxa de comparecimento (c/a), senao % do total informado
+  function painelEleitor(x, y, w, h, titulo, G0, comp, ref, k, nota) {
+    var o = r(x, y, w, h, "rgba(8,14,32,0.84)", 8) + t(x + 16 * k, y + 26 * k, titulo, { s: Math.round(14 * k), b: true, c: "#c9d6e6", ls: 2 });
+    if (!G0 || !G0.itens.length) return o + t(x + 16 * k, y + 62 * k, nota || "o arquivo do TSE não traz este dado", { s: Math.round(14 * k), c: C.apagado, max: w - 32 * k });
+    var n = G0.itens.length, topo = y + 44 * k, rodape = nota ? 26 * k : 8 * k, passo = Math.min(40 * k, (h - (topo - y) - rodape) / n);
+    var vals = G0.itens.map(function (it) { return comp ? (it.a ? 100 * it.c / it.a : 0) : (G0.inf ? 100 * it.a / G0.inf : 0); });
+    var max = comp ? 100 : Math.max.apply(null, vals.concat([1])), xb = x + 16 * k + 150 * k, wb = w - 32 * k - 150 * k - 70 * k;
+    G0.itens.forEach(function (it, i) {
+      var yy = topo + i * passo + passo / 2, cr = corEleitor(it.rot);
+      o += t(x + 16 * k, yy + 6 * k, it.rot, { s: Math.round(15 * k), b: true, max: 145 * k });
+      o += r(xb, yy - 8 * k, wb, 16 * k, "rgba(255,255,255,0.10)", 4) + r(xb, yy - 8 * k, Math.max(4, wb * vals[i] / max), 16 * k, cr, 4);
+      o += t(x + w - 16 * k, yy + 6 * k, pct1(vals[i]), { s: Math.round(16 * k), b: true, a: "end" });
+    });
+    if (comp && ref > 0) { var xr = xb + wb * ref / 100; o += r(xr - 1, topo - 4 * k, 2, n * passo + 4 * k, "#ffd43b", 0); }
+    if (nota) o += t(x + 16 * k, y + h - 10 * k, nota, { s: Math.round(11 * k), c: C.apagado, max: w - 32 * k });
+    return o;
+  }
+  function telaPerfilEleitor(v, comp) {
+    var W = v ? 540 : 1280, H = v ? 960 : 720, o;
+    var tit = comp ? "QUEM FOI ÀS URNAS" : "PERFIL DO ELEITORADO";
+    var Pf = perfilDe(comp ? "comparecimento" : "eleitorado");
+    if (!Pf) return semDados(W, H, v, tit, comp ? "o TSE publica o comparecimento por perfil depois da eleição · rode o IMPORTAR-PERFIL-ELEITOR.bat" : "rode o IMPORTAR-PERFIL-ELEITOR.bat (perfil do eleitorado do TSE)");
+    var gI = agruparPerfil(Pf.dims, "idade"), gS = agruparPerfil(Pf.dims, "genero"), gE = agruparPerfil(Pf.dims, "escolaridade"), gR = agruparPerfil(Pf.dims, "raca");
+    var tot = +Pf.total[0] || 0, cmp = +Pf.total[1] || 0, ref = comp && tot ? 100 * cmp / tot : 0;
+    var turnoTxt0 = Pf.turno ? Pf.turno + "º turno de " + Pf.ano : Pf.ano;
+    var sub = comp ? "comparecimento por perfil · " + turnoTxt0 + " · " + pct1(ref) + " do eleitorado votou (" + inteiro(cmp) + " de " + inteiro(tot) + ")"
+      : "quem pode votar · " + inteiro(tot) + " eleitores aptos · " + Pf.ano;
+    var notaR = gR && gR.tot ? pct1(100 * gR.inf / gR.tot) + " dos eleitores declararam cor/raça ao TSE" : null;
+    var nRaca = gR ? notaR : "o arquivo do TSE não traz cor/raça";
+    var sl = { texto: "DADOS ABERTOS TSE", cor: C.trilho };
+    var fonte = "Fonte: TSE — Dados Abertos, " + (comp ? "comparecimento e abstenção por perfil" : "perfil do eleitorado") + " " + Pf.ano + " · " + (comp ? "barras = % que compareceu em cada grupo; linha amarela = média" : "% dos eleitores com o dado informado") + " · renda/classe social: o TSE não coleta";
+    if (!v) {
+      o = t(73, 57, tit, { s: 34, b: true, ls: 1, max: 660 }) + t(73, 85, sub, { s: 16, c: C.apagado, max: 680 }) + seloH(W, sl);
+      o += painelEleitor(73, 104, 560, 330, "IDADE", gI, comp, ref, 1);
+      o += painelEleitor(73, 446, 560, 236, "ESCOLARIDADE", gE, comp, ref, 1);
+      o += painelEleitor(647, 104, 560, 140, "SEXO", gS, comp, ref, 1);
+      o += painelEleitor(647, 256, 560, 426, "COR / RAÇA" + (comp ? "" : " (entre quem declarou)"), gR, comp, ref, 1, nRaca);
+      return svg(W, H, o + t(73, 704, fonte, { s: 11, c: C.apagado2, max: 1134 }));
+    }
+    o = r(35, 48, 6, 38, C.destaque) + t(53, 80, tit, { s: 26, b: true, ls: 1, max: 450 }) + t(53, 106, comp ? turnoTxt0 + " · " + pct1(ref) + " votou" : inteiro(tot) + " eleitores aptos", { s: 14, c: C.apagado, max: 450 }) + seloV(W, sl);
+    o += painelEleitor(35, 160, 470, 260, "IDADE", gI, comp, ref, 0.85);
+    o += painelEleitor(35, 430, 470, 110, "SEXO", gS, comp, ref, 0.85);
+    o += painelEleitor(35, 550, 470, 175, "ESCOLARIDADE", gE, comp, ref, 0.85);
+    o += painelEleitor(35, 735, 470, 195, "COR / RAÇA", gR, comp, ref, 0.85, nRaca);
+    return svg(W, H, o + t(35, 950, "Fonte: TSE — Dados Abertos · renda: o TSE não coleta", { s: 10, c: C.apagado2 }));
+  }
+  G["perfileleitor-h"] = function () { return telaPerfilEleitor(false, false); };
+  G["perfileleitor-v"] = function () { return telaPerfilEleitor(true, false); };
+  G["foiurnas-h"] = function () { return telaPerfilEleitor(false, true); };
+  G["foiurnas-v"] = function () { return telaPerfilEleitor(true, true); };
+
 
   // ---- Comparativo 2018 x 2022 x 2026: abstencao, brancos e nulos -----------
   // 2026 ao vivo (dados.js); 2022 do arquivo do TSE (estados.js), senao do
@@ -3284,8 +3419,8 @@
   // Tela no ar sem o dado de que ela depende (antes das 17h, boletim ainda nao
   // lido, coleta recem-aberta): em vez de numeros zerados, uma tela limpa
   // com o nome da tela. Volta sozinha quando o dado chega.
-  var SEM_PRESIDENTE = /^(senado|comparativo|mulheres|perfilcamara|camara|deputados|topdep|topfem|menosvot|senvotos|gov22|assembleia|assembleias|governadores|govpartido|gov2t|senadores|senadores1|senadores2)-/;
-  var DE_ESTADOS = /^(camara|deputados|topdep|topfem|menosvot|senvotos|gov22|assembleia|assembleias|governadores|govpartido|gov2t|senadores|senadores1|senadores2|govpres)-/;
+  var SEM_PRESIDENTE = /^(senado|comparativo|mulheres|perfilcamara|camara|deputados|topdep|topfem|topsenfem|perfileleitor|foiurnas|menosvot|senvotos|gov22|assembleia|assembleias|governadores|govpartido|gov2t|senadores|senadores1|senadores2)-/;
+  var DE_ESTADOS = /^(camara|deputados|topdep|topfem|topsenfem|menosvot|senvotos|gov22|assembleia|assembleias|governadores|govpartido|gov2t|senadores|senadores1|senadores2|govpres)-/;
   function temPresidente() { var b = D().br; return !!(b && b.tem); }
   function temEstados() { return !!(window.GCTSE_ESTADOS && window.GCTSE_ESTADOS.gravado_em); }
   function telaAguardando(id) {
@@ -3357,6 +3492,9 @@
       { id: "assembleias-h", nome: "Assembleias — Brasil (por partido)", f: "h" },
       { id: "topdep-h", nome: "10 deputados federais mais votados", f: "h" },
       { id: "topfem-h", nome: "10 deputadas mais votadas", f: "h" },
+      { id: "topsenfem-h", nome: "10 senadoras mais votadas", f: "h" },
+      { id: "perfileleitor-h", nome: "Perfil do eleitorado", f: "h" },
+      { id: "foiurnas-h", nome: "Quem foi às urnas (perfil)", f: "h" },
       { id: "eleito-v", nome: "Presidente eleito", f: "v" },
       { id: "urnas-v", nome: "Urnas apuradas", f: "v" },
       { id: "votos-v", nome: "Brancos e nulos", f: "v" },
@@ -3408,7 +3546,10 @@
       { id: "assembleia-v", nome: "Assembleia Legislativa (por estado)", f: "v" },
       { id: "assembleias-v", nome: "Assembleias — Brasil (por partido)", f: "v" },
       { id: "topdep-v", nome: "10 deputados federais mais votados", f: "v" },
-      { id: "topfem-v", nome: "10 deputadas mais votadas", f: "v" }
+      { id: "topfem-v", nome: "10 deputadas mais votadas", f: "v" },
+      { id: "topsenfem-v", nome: "10 senadoras mais votadas", f: "v" },
+      { id: "perfileleitor-v", nome: "Perfil do eleitorado", f: "v" },
+      { id: "foiurnas-v", nome: "Quem foi às urnas (perfil)", f: "v" }
     ],
     desenhar: function (id) { return desenharTela(id); },
     // Telas que trocam sozinhas (deputados): muda quando a tela da vez muda.

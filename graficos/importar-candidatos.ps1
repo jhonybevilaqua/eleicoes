@@ -128,19 +128,22 @@ foreach ($a in $arquivos) {
             foreach ($c in @("SQ_CANDIDATO", "SG_PARTIDO")) { if (-not $ix.ContainsKey($c)) { throw "coluna $c nao encontrada" } }
             if (-not ($ix.ContainsKey("DS_GENERO") -or $ix.ContainsKey("CD_GENERO"))) { throw "coluna DS_GENERO nao encontrada" }
             function V($p, [string] $n) { if ($ix.ContainsKey($n) -and $ix[$n] -lt $p.Count) { return $p[$ix[$n]].Trim() } return "" }
-            $n = 0; $usadas = 0
+            $n = 0; $usadas = 0; $sens = 0
             while ($null -ne ($linha = $rd.ReadLine())) {
                 $n++
                 $p = Campos $linha
                 $cargoCd = V $p "CD_CARGO"; $cargoDs = (V $p "DS_CARGO").ToUpper()
-                if (-not ($cargoCd -eq "6" -or $cargoDs -eq "DEPUTADO FEDERAL")) { continue }
+                $ehSen = ($cargoCd -eq "5" -or $cargoDs -eq "SENADOR")
+                if (-not ($ehSen -or $cargoCd -eq "6" -or $cargoDs -eq "DEPUTADO FEDERAL")) { continue }
                 $turno = V $p "NR_TURNO"; if ($turno -and $turno -ne "1") { continue }
                 $ano = V $p "ANO_ELEICAO"
                 if (-not $ano) { $m = [regex]::Match($a.Name, '(20\d\d)'); $ano = $m.Value }
-                if (-not $anos.ContainsKey($ano)) { $anos[$ano] = @{ cand = @{} } }
+                if (-not $anos.ContainsKey($ano)) { $anos[$ano] = @{ cand = @{}; senF = @{}; senN = 0 } }
                 $sq = V $p "SQ_CANDIDATO"
                 $gen = (V $p "DS_GENERO").ToUpper(); $cdg = V $p "CD_GENERO"
                 $fem = ($gen -match '^FEM') -or ($cdg -eq "4")
+                # Senado: so o sqcand das mulheres (tela "10 senadoras mais votadas")
+                if ($ehSen) { $anos[$ano].senN++; if ($fem) { $anos[$ano].senF[$sq] = 1 }; $sens++; continue }
                 $sit = (V $p "DS_SITUACAO_CANDIDATURA").ToUpper()
                 $tot = (V $p "DS_SIT_TOT_TURNO").ToUpper()
                 $eleito = ($tot -match 'ELEIT') -and -not ($tot -match 'N.O ELEIT')
@@ -151,7 +154,7 @@ foreach ($a in $arquivos) {
                 $anos[$ano].cand[$sq] = [pscustomobject]@{ f = $fem; apto = ($sit -eq "" -or $sit -eq "APTO"); eleito = $eleito; sg = (V $p "SG_PARTIDO"); uf = (V $p "SG_UF"); pf = $pf }
                 $usadas++
             }
-            Anotar ("lido {0}: {1} linhas, {2} de Deputado Federal" -f $f.nome, $n, $usadas)
+            Anotar ("lido {0}: {1} linhas, {2} de Deputado Federal, {3} de Senador" -f $f.nome, $n, $usadas, $sens)
         } catch { Anotar ("{0}: {1}" -f $f.nome, $_.Exception.Message) "Yellow" }
         finally { $rd.Dispose() }
     }
@@ -182,7 +185,9 @@ foreach ($ano in ($anos.Keys | Sort-Object)) {
         eleitos = $el.Count; eleitas = $elF.Count
         eleitas_por_partido = [pscustomobject] $porPartido
         mulheres = $fems
+        mulheres_senado = @($anos[$ano].senF.Keys)
     }
+    Anotar ("{0}: {1} candidaturas ao Senado, {2} de mulheres" -f $ano, $anos[$ano].senN, $anos[$ano].senF.Count) "Cyan"
     # perfil por sqcand [idade, grau, cor, reeleicao]: do ano mais novo, de
     # todos os aptos (a tela cruza com os eleitos do boletim ao vivo); dos
     # anos anteriores, so dos eleitos (para comparar).
@@ -197,4 +202,4 @@ foreach ($ano in ($anos.Keys | Sort-Object)) {
 $destino = Join-Path $Raiz "web\candidatos-genero.js"
 $json = $saida | ConvertTo-Json -Depth 6 -Compress
 [IO.File]::WriteAllText($destino, "window.GCTSE_GENERO = $json;", (New-Object System.Text.UTF8Encoding($false)))
-Sair ("gravado web\candidatos-genero.js. No gerenciador, clique de novo nas telas 'Camara: bancada feminina' e 'Perfil da nova Camara' para carregar.") 0
+Sair ("gravado web\candidatos-genero.js. No gerenciador, clique de novo nas telas 'Camara: bancada feminina', 'Perfil da nova Camara' e as telas do Jornalismo para carregar.") 0

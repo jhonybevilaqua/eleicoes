@@ -76,7 +76,7 @@
   .sec.presidente { --tema-sec: #1f6fc0; } .sec.local { --tema-sec: #0f8f8f; } .sec.apuracao { --tema-sec: #128a12; }
   .sec.estados { --tema-sec: #8a5a12; } .sec.fav { --tema-sec: #b8860b; }
   .botoes.prontos button { font-weight: 700; }
-  .botoes.prontos button.ativo, .botoes.prontos button.ativo:hover { background: var(--verde); border-color: var(--verde-borda); color: #fff; } .sec.camara { --tema-sec: #7a3fb0; } .sec.comparativos { --tema-sec: #c62828; } .sec.auto { --tema-sec: #5a6b80; }
+  .botoes.prontos button.ativo, .botoes.prontos button.ativo:hover { background: var(--verde); border-color: var(--verde-borda); color: #fff; } .sec.camara { --tema-sec: #7a3fb0; } .sec.comparativos { --tema-sec: #c62828; } .sec.jornalismo { --tema-sec: #b8860b; } .sec.auto { --tema-sec: #5a6b80; }
   :root.escuro .sec { background: #172234; }
   .sec button { background: var(--cartao); }
   .sec button:hover { background: var(--bt-hover); }
@@ -439,7 +439,7 @@
     var ddG = document.createElement("div"); ddG.className = "dica";
     ddG.textContent = "Estado = governador daquele estado, fixo. Região = troca sozinha entre os estados da região a cada " + (cfg.tempo_auto_segundos || 10) + " s (setas ◀ ▶ abaixo).";
     gG.appendChild(ddG);
-    botoesEm(bloco("camara", "CÂMARA DOS DEPUTADOS"), itensDe(["camara", "topdep", "topfem", "menosvot", "deputados", "mulheres", "perfilcamara"]).map(function (it) {
+    botoesEm(bloco("camara", "CÂMARA DOS DEPUTADOS"), itensDe(["camara", "topdep", "menosvot", "deputados", "mulheres", "perfilcamara"]).map(function (it) {
       return /^deputados-/.test(it[0]) ? [it[0], it[1] + " (troca automática)", "", it[0] + "|"] : it;
     }));
     // Deputados federais | estado ou regiao: so os 5 mais votados de cada estado.
@@ -480,6 +480,9 @@
     bTodos.dataset.pronto = idsAs.join(","); bxAs.appendChild(bTodos);
     gAs.appendChild(bxAs);
     botoesEm(bloco("comparativos", "COMPARATIVOS"), itensDe(["turnos", "turno22", "abst22", "brnulos", "ganho", "abstuf", "abstencao", "abstencao-mapa", "comparativo", "comparecimento", "votos"]));
+    // JORNALISMO: pedidos da redacao. Genero = IMPORTAR-CANDIDATOS.bat;
+    // perfil do eleitor = IMPORTAR-PERFIL-ELEITOR.bat (Dados Abertos do TSE).
+    botoesEm(bloco("jornalismo", "JORNALISMO"), itensDe(["topfem", "topsenfem", "perfileleitor", "foiurnas"]));
     usados["assembleia-" + S.f] = 1;   // vai pelo menu de estados
     usados["assembleias-" + S.f] = 1;
     var resto = lista.filter(function (g) { return !usados[g.id]; }).map(function (g) { return [g.id, g.nome]; });

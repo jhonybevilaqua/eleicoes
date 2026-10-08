@@ -142,7 +142,7 @@
   mostrar(0);
   agendar();
   // estados.js so quando ha tela de estado/resumo/Camara/comparativo no rodizio
-  var usaEstados = ids.some(function (id) { return id.indexOf(":") > 0 || /^(camara|comparativo|deputados|governadores|govpartido|mulheres|senadores|gov2t|govpres|perfilcamara|assembleia|turno22|topdep|topfem|mudou22|abst22|menosvot|senvotos|gov22|exterior|excidades)/.test(id); });
+  var usaEstados = ids.some(function (id) { return id.indexOf(":") > 0 || /^(camara|comparativo|deputados|governadores|govpartido|mulheres|senadores|gov2t|govpres|perfilcamara|assembleia|turno22|topdep|topfem|topsenfem|mudou22|abst22|menosvot|senvotos|gov22|exterior|excidades)/.test(id); });
   // Deputados troca de tela sozinho dentro do seu tempo no rodizio.
   var pagAtual = "";
   setInterval(function () {
