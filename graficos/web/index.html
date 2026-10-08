@@ -58,11 +58,14 @@ No switcher, use o caminho de cada gráfico como <b>fonte de navegador</b> (1280
 <section id="viradas"><h2>Avisos de virada <span class="f">(só aqui na página do operador · não vai ao ar)</span>
   <button id="limparViradas" type="button">limpar</button></h2>
   <div id="listaViradas"><span class="f">nenhuma virada até agora</span></div></section>
+<section id="semPais" hidden><h2>Cidades do exterior sem país <span class="f">(só aqui · acrescente em web\exterior-paises.js e aperte F5 nas telas)</span></h2>
+  <div id="listaSemPais" class="f"></div></section>
 <section id="cores"><h2>Cores dos candidatos <span class="f">(só aqui na página do operador)</span></h2>
   <div id="tabcores"></div>
   <p class="f">Para usar a cor do partido: <b>config-graficos.json</b>, em <b>"cores"</b>, número de urna → cor. Ex.: <code>"cores": { "13": "#d03b3b" }</code>. Salve e reabra o GRAFICOS.bat.</p></section>
 <main id="lista"></main>
 <script charset="utf-8" src="mapa-brasil.js"></script>
+<script charset="utf-8" src="exterior-paises.js"></script>
 <script charset="utf-8" src="graficos.js"></script>
 <script charset="utf-8" src="dados.js"></script>
 <script charset="utf-8" src="estados.js"></script>
@@ -88,6 +91,11 @@ No switcher, use o caminho de cada gráfico como <b>fonte de navegador</b> (1280
 
   // Situacao da coleta: idade do dados.js e se o TSE esta respondendo.
   function situacao() {
+    try {
+      var sp = window.GCTSE_EXTERIOR_SEM_PAIS ? window.GCTSE_EXTERIOR_SEM_PAIS() : [];
+      document.getElementById("semPais").hidden = !sp.length;
+      document.getElementById("listaSemPais").textContent = sp.join(" · ");
+    } catch (e) { }
     var d = window.GCTSE_DADOS || {}, el = document.getElementById("situacao");
     document.getElementById("versao").textContent = d.versao ? "versão " + d.versao : "";
     if (!d.gravado_em) { el.className = "ruim"; el.textContent = "A COLETA NÃO RODOU AINDA — abra o GRAFICOS.bat"; return; }

@@ -17,7 +17,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "3.11 - 08/10/2026"
+$Versao = "3.12 - 08/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -333,6 +333,7 @@ $script:CopiaLocal = @{}      # url -> objeto lido do disco (le uma vez)
 $script:UsandoLocal = @{}     # url -> desde quando
 function Copia-Local([string] $Url) {
     if (-not $Url.StartsWith($Base)) { return $null }
+    if ($Eleicao1T -and $Url.Contains("/$Eleicao/dados/")) { return $null }   # 2o turno: sempre ao vivo
     if ($script:CopiaLocal.ContainsKey($Url)) { return $script:CopiaLocal[$Url] }
     $arq = Join-Path (Join-Path $Raiz "tse-local") (($Url.Substring($Base.Length).TrimStart('/')) -replace '/', [IO.Path]::DirectorySeparatorChar)
     if (-not (Test-Path -LiteralPath $arq)) { return $null }

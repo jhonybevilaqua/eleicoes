@@ -15,7 +15,7 @@
     Os arquivos sao os do proprio TSE, sem nenhuma alteracao.
     Pode rodar de novo quantas vezes quiser (atualiza a copia).
 #>
-param([switch] $SemFotos, [switch] $SemPausa)
+param([switch] $SemFotos, [switch] $SemPausa, [switch] $Historico)
 $ErrorActionPreference = "Stop"
 $Raiz = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $Raiz
@@ -66,6 +66,11 @@ function Baixar([string] $U, [string] $Destino) {
         return $null
     }
 }
+function Copia-Json([string] $U) {   # le da copia ja guardada
+    $arq = Join-Path $Local (($U.Substring($Base.Length).TrimStart('/')) -replace '/', [IO.Path]::DirectorySeparatorChar)
+    if (-not (Test-Path -LiteralPath $arq)) { return $null }
+    try { return [IO.File]::ReadAllText($arq, [Text.Encoding]::UTF8) | ConvertFrom-Json } catch { return $null }
+}
 function Guardar([string] $U) {
     $rel = $U.Substring($Base.Length).TrimStart('/')
     $b = Baixar $U (Join-Path $Local ($rel -replace '/', [IO.Path]::DirectorySeparatorChar))
@@ -84,12 +89,51 @@ function Cands($obj) {
     return $out
 }
 
+# municipios do TSE: capitais e cidades do exterior (ZZ)
+function Municipios($obj) {
+    $out = New-Object System.Collections.ArrayList
+    function Vis($o, [string] $uf, $saida) {
+        if ($null -eq $o) { return }
+        if ($o -is [array]) { foreach ($x in $o) { Vis $x $uf $saida }; return }
+        if ($o -isnot [System.Management.Automation.PSCustomObject]) { return }
+        $n = @($o.PSObject.Properties | ForEach-Object { $_.Name })
+        if ($n -contains "cd" -and $n -contains "mu") { Vis $o.mu ("$($o.cd)".ToLower()) $saida; return }
+        if ($uf -and $n -contains "cd" -and $n -contains "nm") { [void] $saida.Add([pscustomobject]@{ uf = $uf; cd = "$($o.cd)"; nm = "$($o.nm)"; c = "$(Prop $o 'c')" }); return }
+        foreach ($p in $o.PSObject.Properties) { if ($p.Value -is [array] -or $p.Value -is [System.Management.Automation.PSCustomObject]) { Vis $p.Value $uf $saida } }
+    }
+    Vis $obj "" $out
+    return $out
+}
+$NomesCap = @{ ac = "RIO BRANCO"; al = "MACEIO"; ap = "MACAPA"; am = "MANAUS"; ba = "SALVADOR"; ce = "FORTALEZA"; df = "BRASILIA"; es = "VITORIA"; go = "GOIANIA"
+    ma = "SAO LUIS"; mt = "CUIABA"; ms = "CAMPO GRANDE"; mg = "BELO HORIZONTE"; pa = "BELEM"; pb = "JOAO PESSOA"; pr = "CURITIBA"; pe = "RECIFE"; pi = "TERESINA"
+    rj = "RIO DE JANEIRO"; rn = "NATAL"; rs = "PORTO ALEGRE"; ro = "PORTO VELHO"; rr = "BOA VISTA"; sc = "FLORIANOPOLIS"; sp = "SAO PAULO"; se = "ARACAJU"; to = "PALMAS" }
+function SemAcento([string] $t) {
+    $n = $t.Normalize([Text.NormalizationForm]::FormD); $sb = New-Object Text.StringBuilder
+    foreach ($ch in $n.ToCharArray()) { if ([Globalization.CharUnicodeInfo]::GetUnicodeCategory($ch) -ne [Globalization.UnicodeCategory]::NonSpacingMark) { [void] $sb.Append($ch) } }
+    return $sb.ToString().ToUpper().Trim()
+}
+function Guardar-Municipios([string] $ele, [string] $rotulo) {
+    $e6 = "{0:000000}" -f [int] $ele
+    $cfgMun = Guardar "$Base/$Ciclo/$ele/config/mun-e$e6-cm.json"
+    if ($null -eq $cfgMun) { Anotar "   $rotulo : lista de municipios do TSE nao veio - capitais e exterior por cidade ficam sem copia" "Yellow"; return }
+    $ms = Municipios $cfgMun; $nCap = 0; $nExt = 0
+    foreach ($u in $UFs) {
+        $c = @($ms | Where-Object { $_.uf -eq $u -and $_.c -eq "S" }) | Select-Object -First 1
+        if ($null -eq $c) { $c = @($ms | Where-Object { $_.uf -eq $u -and (SemAcento $_.nm) -eq $NomesCap[$u] }) | Select-Object -First 1 }
+        if ($c -and (Guardar "$Base/$Ciclo/$ele/dados/$u/$u$($c.cd)-c0001-e$e6-u.json")) { $nCap++ }
+    }
+    foreach ($m in @($ms | Where-Object { $_.uf -eq "zz" })) { if (Guardar "$Base/$Ciclo/$ele/dados/zz/zz$($m.cd)-c0001-e$e6-u.json") { $nExt++ } }
+    Anotar ("   {0}: capitais {1}/27 | cidades do exterior {2}" -f $rotulo, $nCap, $nExt)
+}
+
 $fotos = New-Object System.Collections.ArrayList   # @(ele, uf, sq)
 Anotar "Presidente (1o turno): Brasil e 27 estados..." "Cyan"
-foreach ($abr in @("br") + $UFs) {
+foreach ($abr in @("br") + $UFs + @("zz")) {
     $o = Guardar (Url $Ciclo $Pres1T $abr 1)
     if ($abr -eq "br" -and $o) { foreach ($c in (Cands $o)) { [void] $fotos.Add(@($Pres1T, "br", $c.sq)) } }
 }
+Anotar "Presidente (1o turno): capitais e cidades do exterior..." "Cyan"
+Guardar-Municipios $Pres1T "1o turno"
 Anotar "Governador e Senador (1o turno): 27 estados..." "Cyan"
 foreach ($u in $UFs) {
     $g = Guardar (Url $Ciclo $Est1T $u 3); $s = Guardar (Url $Ciclo $Est1T $u 5)
@@ -107,6 +151,20 @@ Anotar "2022 (comparacoes) e lista de eleicoes..." "Cyan"
 [void] (Guardar (Url "ele2022" $E2022 "br" 1))
 foreach ($abr in @("br") + $UFs) { [void] (Guardar (Url "ele2022" $E2022T2 $abr 1)) }
 [void] (Guardar "$Base/comum/config/ele-c.json")
+# ARQUIVO HISTORICO (ARQUIVO-HISTORICO-2026.bat, depois do 2o turno): o 2o
+# turno final tambem, e um .zip com tudo para 2028/2030.
+$Pres2T = Cod "eleicao_presidente" ""; $Est2T = Cod "eleicao_estaduais" ""
+if ($Historico) {
+    if ($Pres2T -and $Pres2T -ne $Pres1T) {
+        Anotar "ARQUIVO: Presidente 2o turno ($Pres2T) - Brasil, estados, exterior, capitais e cidades do exterior..." "Cyan"
+        foreach ($abr in @("br") + $UFs + @("zz")) { $o2 = Guardar (Url $Ciclo $Pres2T $abr 1); if ($abr -eq "br" -and $o2) { foreach ($c in (Cands $o2)) { [void] $fotos.Add(@($Pres2T, "br", $c.sq)) } } }
+        Guardar-Municipios $Pres2T "2o turno"
+    } else { Anotar "ARQUIVO: o config ainda esta no 1o turno - so o 1o turno vai para o arquivo." "Yellow" }
+    if ($Est2T -and $Est2T -ne $Est1T) {
+        Anotar "ARQUIVO: Governador 2o turno ($Est2T)..." "Cyan"
+        foreach ($u in $UFs) { $g1 = Copia-Json (Url $Ciclo $Est1T $u 3); if ($g1 -and @(Cands $g1 | Where-Object { $_.turno2 }).Count) { $g2 = Guardar (Url $Ciclo $Est2T $u 3); if ($g2) { foreach ($c in (Cands $g2)) { if ($c.eleito) { [void] $fotos.Add(@($Est2T, $u, $c.sq)) } } } } }
+    }
+}
 $nDados = $script:Ok
 
 $nFotos = 0
@@ -141,5 +199,19 @@ $info = [ordered]@{ guardado_em = (Get-Date).ToString("yyyy-MM-ddTHH:mm:ss"); ba
 if (-not (Test-Path $Local)) { New-Item -ItemType Directory -Path $Local -Force | Out-Null }
 [IO.File]::WriteAllText((Join-Path $Local "guardado.json"), ($info | ConvertTo-Json), (New-Object Text.UTF8Encoding($false)))
 try { [IO.File]::WriteAllLines((Join-Path $Raiz "GUARDAR-DADOS-TSE.txt"), $script:Diag, (New-Object Text.UTF8Encoding($true))) } catch { }
+if ($Historico) {
+    try {
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        $pastaArq = Join-Path $Raiz "arquivo-historico"; if (-not (Test-Path $pastaArq)) { New-Item -ItemType Directory -Path $pastaArq | Out-Null }
+        $tmpArq = Join-Path $env:TEMP ("gctse-arquivo-" + (Get-Date -Format "yyyyMMddHHmmss"))
+        New-Item -ItemType Directory -Path $tmpArq | Out-Null
+        foreach ($item in @("tse-local", "web\fotos-tse", "logs")) { $o3 = Join-Path $Raiz $item; if (Test-Path $o3) { Copy-Item -LiteralPath $o3 -Destination (Join-Path $tmpArq ($item -replace '\\', '_')) -Recurse -Force } }
+        foreach ($arqX in @(Get-ChildItem -Path $Raiz -Filter "evolucao-*.json" -File) + @(Get-Item (Join-Path $Raiz "config-graficos.json")) + @(Get-ChildItem -Path (Join-Path $Raiz "web") -Include "dados.js", "estados.js", "candidatos-genero.js" -File -Recurse -Depth 0 -ErrorAction SilentlyContinue)) { Copy-Item -LiteralPath $arqX.FullName -Destination $tmpArq -Force }
+        $zipArq = Join-Path $pastaArq ("GCTSE-ARQUIVO-ELEICOES-{0}.zip" -f (Get-Date -Format "yyyy-MM-dd_HH'h'mm"))
+        [IO.Compression.ZipFile]::CreateFromDirectory($tmpArq, $zipArq)
+        Remove-Item -LiteralPath $tmpArq -Recurse -Force
+        Anotar ("ARQUIVO HISTORICO: {0}  ({1:N1} MB) - guarde fora desta maquina (rede, nuvem, HD externo)." -f $zipArq, ((Get-Item $zipArq).Length / 1MB)) "Green"
+    } catch { Anotar "ARQUIVO HISTORICO: falhou ao montar o .zip: $($_.Exception.Message)" "Red" }
+}
 Anotar "Pronto. Os coletores usam esta copia sozinhos se o TSE falhar. Dica: rode de novo no sabado 24/10 e leve junto na COPIA-DE-SEGURANCA." "Green"
 if (-not $SemPausa) { Read-Host "ENTER para fechar" | Out-Null }

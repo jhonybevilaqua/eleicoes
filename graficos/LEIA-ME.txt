@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 3.11 - apuracao em graficos (versao final)
+ gctse GRAFICOS 3.12 - apuracao em graficos (versao final)
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -22,6 +22,53 @@
    GIRO DOS ESTADOS (Governador e Senador, um estado por vez)
    RESUMO (7 telas de fechamento)
    GERENCIADOR (escolhe o que vai para as saidas SDI da DeckLink)
+
+ NOVO NA 3.12 - CAPITAIS, EXTERIOR, iPAD, TECLADO E ARQUIVO HISTORICO
+   PRESIDENTE NAS CAPITAIS: as 27 capitais, quem lidera e por quanto,
+     urnas de cada uma e, no 2o turno, "VIROU" (outro liderava no 1o turno);
+     no alto, em quantas capitais cada candidato lidera. Boletim de cada
+     capital (municipio do TSE), lido pelo GRAFICOS.bat a cada 2 ciclos.
+   BRASILEIROS NO EXTERIOR: total do exterior (boletim ZZ do TSE: %, votos,
+     comparecimento, abstencao; no 2o turno, o 1o turno ao lado) e os paises
+     com mais votos, quem venceu em cada um e "vence em N paises".
+     "Exterior: por cidade" mostra as cidades com mais votos.
+     ATENCAO: o TSE publica o exterior por CIDADE. O pais de cada cidade vem
+     da tabela web\exterior-paises.js (geografia, da emissora - os votos
+     sao so do TSE). Cidade fora da tabela entra em "OUTROS PAISES" e aparece
+     na index.html ("cidades do exterior sem pais"): acrescente na tabela.
+     As cidades do exterior sao lidas 30 por ciclo, em rodizio.
+     Lista de municipios: {eleicao}/config/mun-e{eleicao}-cm.json (TSE).
+     Rode o GUARDAR-DADOS-TSE.bat: o relatorio dele diz "capitais 27/27 |
+     cidades do exterior N" - confirma que o TSE publica no formato esperado.
+   TELA "AGUARDANDO O TSE" AUTOMATICA: tela no ar sem o dado dela (antes
+     das 17h, coleta recem-aberta) mostra o nome da tela e "AGUARDANDO O
+     TSE" em vez de numeros zerados; troca sozinha quando o dado chega.
+   ATALHOS DE TECLADO no gerenciador (tecla ? mostra): H/V/B escolhe a
+     saida (B = as duas), 1-9 = favoritos, A = apresentacao automatica,
+     P = previa liga/desliga, ESPACO = CORTAR, setas = anterior/proximo,
+     E = presidente eleito nas duas (pede confirmacao).
+   CONTROLE PELO iPAD (apresentador no estudio):
+     1. LIBERAR-IPAD.bat uma vez (pede administrador): libera a porta para
+        a rede interna e o firewall (so redes privada/dominio - se o Wi-Fi
+        da emissora estiver como "Publica" no Windows, mude para Privada).
+     2. config-graficos.json: "acesso_rede": true, "senha_controle": "1234"
+        (sua senha, 4+ caracteres). Reabra o GERENCIADOR.bat: a janela mostra
+        o endereco (http://IP-DO-PC:8098/controle.html).
+     3. No iPad (mesmo Wi-Fi): abra o endereco, digite a senha (fica
+        lembrada 30 dias). Botoes grandes: saida H, V ou AS DUAS; presidente
+        eleito, favoritos, rodizios, Presidente/Governador/Deputados/
+        Assembleia por estado e todas as telas.
+     No gerenciador, botao "iPAD": "vai DIRETO ao ar" ou "so SUGERE" (o
+     pedido do iPad cai na PREVIA do operador, com aviso e som, e so vai ao
+     ar no CORTAR). Pela rede o iPad so troca telas: copia, girar, eleito
+     automatico etc. ficam so no PC. Sem senha no config, o iPad nao liga.
+   ARQUIVO HISTORICO 2026: ARQUIVO-HISTORICO-2026.bat DEPOIS do resultado
+     final do 2o turno: guarda o 1o e o 2o turno completos do TSE (Brasil,
+     estados, capitais, exterior, governadores, Camara, Assembleias, 2022,
+     fotos), a evolucao minuto a minuto, logs e os dados das telas num .zip
+     em "arquivo-historico" - base para 2028 e 2030. Guarde fora do PC.
+   GUARDAR-DADOS-TSE agora guarda tambem capitais e exterior do 1o turno.
+     A copia local NUNCA e usada para o 2o turno (sempre ao vivo).
 
  NOVO NA 3.11 - COPIA LOCAL DO TSE E TELAS NACIONAIS
    GUARDAR-DADOS-TSE.bat (rode agora e de novo no sabado 24/10): guarda em

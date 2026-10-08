@@ -85,6 +85,30 @@ function Resp2022([string] $abr) {   # 2o turno de 2022 ficticio: A (PT) x B (PL
     $cs = @((Cand 13 800013 "CANDIDATO X (2022)" "PT" $va (100 * $va / $tot) "Eleito" "s"), (Cand 22 800022 "CANDIDATO Y (2022)" "PL" $vb (100 * $vb / $tot) "Nao eleito" "n"))
     return Boletim 1 1 $cs 100 "f" ([long] $te) "30/10/2022" "20:00:00"
 }
+# municipios do ensaio: as 27 capitais (codigos ficticios) e 12 cidades no exterior
+$CAP = [ordered]@{ ac = "RIO BRANCO"; al = "MACEIÓ"; ap = "MACAPÁ"; am = "MANAUS"; ba = "SALVADOR"; ce = "FORTALEZA"; df = "BRASÍLIA"; es = "VITÓRIA"; go = "GOIÂNIA"
+    ma = "SÃO LUÍS"; mt = "CUIABÁ"; ms = "CAMPO GRANDE"; mg = "BELO HORIZONTE"; pa = "BELÉM"; pb = "JOÃO PESSOA"; pr = "CURITIBA"; pe = "RECIFE"; pi = "TERESINA"
+    rj = "RIO DE JANEIRO"; rn = "NATAL"; rs = "PORTO ALEGRE"; ro = "PORTO VELHO"; rr = "BOA VISTA"; sc = "FLORIANÓPOLIS"; sp = "SÃO PAULO"; se = "ARACAJU"; to = "PALMAS" }
+$EXT = @("LISBOA", "PORTO", "MIAMI", "BOSTON", "NOVA YORK", "TÓQUIO", "NAGOIA", "LONDRES", "MADRI", "BUENOS AIRES", "ASSUNÇÃO", "ZURIQUE")
+function RespMunConfig {
+    $abr = @()
+    $k = 0; foreach ($u in $CAP.Keys) { $k++; $abr += [ordered]@{ cd = $u.ToUpper(); ds = "UF $($u.ToUpper())"; mu = @([ordered]@{ cd = "{0:00000}" -f (90000 + $k); cdi = ""; nm = $CAP[$u]; c = "S"; z = @() }, [ordered]@{ cd = "{0:00000}" -f (91000 + $k); cdi = ""; nm = "INTERIOR $($u.ToUpper())"; c = "N"; z = @() }) } }
+    $i = 0; $abr += [ordered]@{ cd = "ZZ"; ds = "EXTERIOR"; mu = @($EXT | ForEach-Object { $i++; [ordered]@{ cd = "{0:00000}" -f (29000 + $i); cdi = ""; nm = $_; c = "N"; z = @() } }) }
+    return [ordered]@{ dg = "04/10/2026"; abr = $abr }
+}
+function RespMunicipio([string] $uf, [string] $cd, [bool] $turno2) {
+    $chave = "$uf$cd"; $te = [long] (40000 + 400000 * (Rnd "t$chave")); if ($uf -ne "zz") { $te = [long] ($ELEITORES[$uf] * 1000 * (0.15 + 0.2 * (Rnd "c$chave"))) }
+    $base = $(if ($uf -eq "zz") { 0.30 + 0.35 * (Rnd "e$chave") } else { (LulaFinal $uf) + 0.08 * (Rnd "m$chave") - 0.04 })
+    if (-not $turno2) {
+        $t = $te * 0.75; $va = $t * $base * 0.9; $vb = $t * (1 - $base) * 0.9; $vc = $t * 0.06; $vd = $t * 0.04; $tot = $va + $vb + $vc + $vd
+        $cs = @((Cand 13 900013 "CANDIDATO A" "PT" $va (100 * $va / $tot) "" "n"), (Cand 22 900022 "CANDIDATO B" "PL" $vb (100 * $vb / $tot) "" "n"), (Cand 30 900030 "CANDIDATO C" "NOVO" $vc (100 * $vc / $tot) "" "n"), (Cand 15 900015 "CANDIDATO D" "MDB" $vd (100 * $vd / $tot) "" "n"))
+        return Boletim 1 1 $cs 100 "f" $te "04/10/2026" "23:50:00"
+    }
+    $p = $(if ($uf -eq "zz") { [math]::Min(1.0, (FracGeral) * 1.6) } else { Progresso $uf }); $pst = 100 * [math]::Pow($p, 0.8); $vv = $te * 0.75 * $pst / 100
+    $a = $base - 0.05 * (1 - $p)
+    $cs = @((Cand 13 900013 "CANDIDATO A" "PT" ($vv * $a) (100 * $a) "" "n"), (Cand 22 900022 "CANDIDATO B" "PL" ($vv * (1 - $a)) (100 - 100 * $a) "" "n"))
+    return Boletim 1 1 $cs $pst $(if ($pst -ge 99.99) { "f" } else { "p" }) $te "25/10/2026" (Relogio (FracGeral))
+}
 function RespGovernador([string] $uf, [bool] $turno2) {
     $te = [long] ($ELEITORES[$uf] * 1000); $sg1 = $PARTIDOS[[int] (10 * (Rnd "g1$uf"))]; $sg2 = $(if ($sg1 -eq "PT") { "PL" } else { "PT" })
     $nA = "GOVERNADOR A ($($uf.ToUpper()))"; $nB = "GOVERNADOR B ($($uf.ToUpper()))"; $sqA = 70000 + 2 * [array]::IndexOf(@($ELEITORES.Keys), $uf); $sqB = $sqA + 1
@@ -137,7 +161,8 @@ while ($ouvinte.IsListening) {
             $ciclo = $m.Groups[1].Value; $ele = $m.Groups[2].Value; $abr = $m.Groups[3].Value.ToLower(); $cargo = [int] $m.Groups[4].Value
             if ($ciclo -eq "ele2022") { $ele = "x$ele" }   # 2022: so o 2o turno de Presidente (545)
             $ok = ($abr -eq "br" -or $ELEITORES.Contains($abr))
-            if ($ok -and $cargo -eq 1 -and $ele -eq "x545") { $obj = Resp2022 $abr }
+            if ($abr -eq "zz" -and $cargo -eq 1 -and ($ele -eq "9257" -or $ele -eq "9262")) { $obj = RespMunicipio "zz" "00000" ($ele -eq "9262") }   # exterior (total)
+            elseif ($ok -and $cargo -eq 1 -and $ele -eq "x545") { $obj = Resp2022 $abr }
             elseif ($ok -and $cargo -eq 1 -and $ele -eq "9257") { $obj = RespPresidente $abr $false }
             elseif ($ok -and $cargo -eq 1 -and $ele -eq "9262") { $obj = RespPresidente $abr $true }
             elseif ($abr -ne "br" -and $ok -and $cargo -eq 3 -and $ele -eq "9259") { $obj = RespGovernador $abr $false }
@@ -146,6 +171,10 @@ while ($ouvinte.IsListening) {
             elseif ($abr -ne "br" -and $ok -and $cargo -eq 6 -and $ele -eq "9259") { $obj = RespDeputados $abr }
             elseif ($abr -ne "br" -and $ok -and (($cargo -eq 7 -and $abr -ne "df") -or ($cargo -eq 8 -and $abr -eq "df")) -and $ele -eq "9259") { $obj = RespDeputados $abr $cargo }
         }
+        $mm = [regex]::Match($ctx.Request.Url.AbsolutePath, '/ele2026/(\d+)/config/mun-e\d{6}-cm\.json$')
+        if ($mm.Success -and @("9257", "9262") -contains $mm.Groups[1].Value) { $obj = RespMunConfig }
+        $mb = [regex]::Match($ctx.Request.Url.AbsolutePath, '/ele2026/(\d+)/dados/(\w\w)/(\w\w)(\d{5})-c0001-e\d{6}-u\.json$')
+        if ($mb.Success -and @("9257", "9262") -contains $mb.Groups[1].Value) { $obj = RespMunicipio $mb.Groups[3].Value.ToLower() $mb.Groups[4].Value ($mb.Groups[1].Value -eq "9262") }
         if ($ctx.Request.Url.AbsolutePath -match '/comum/config/ele-c\.json$') {   # lista de eleicoes (CODIGOS-2-TURNO.bat)
             function Ele($cd, $nm, $cargos) { return [ordered]@{ cd = $cd; nm = $nm; abr = @([ordered]@{ cd = "BR"; cp = @($cargos | ForEach-Object { [ordered]@{ cd = "$_" } }) }) } }
             $obj = [ordered]@{ c = "ele2026"; pl = @(

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Controle das telas</title>
+<style>
+  /* Controle pelo iPad (gerenciador.ps1, rota /ipad). Botoes grandes, tema escuro de estudio. */
+  :root { --fundo: #0b1220; --cartao: #131c2c; --linha: #22304a; --texto: #fff; --apagado: #8ea3bd; --azul: #1f6fc0; --verde: #128a12; --verm: #c62828; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; background: var(--fundo); color: var(--texto); font: 17px 'Segoe UI', -apple-system, Arial, sans-serif; padding-bottom: 40px; }
+  header { position: sticky; top: 0; z-index: 5; background: #0d1626; border-bottom: 1px solid var(--linha); padding: 10px 14px; }
+  .linha { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  h1 { font-size: 18px; margin: 0 12px 0 0; letter-spacing: 1px; }
+  .noar { font-size: 14px; color: var(--apagado); margin-top: 6px; }
+  .noar b { color: #fff; }
+  .modo { font-size: 13px; padding: 4px 10px; border-radius: 12px; background: #3a2a00; color: #ffd43b; font-weight: 700; }
+  .modo.ar { background: #3a0d0d; color: #ffb3b3; }
+  .alvo button { min-width: 108px; }
+  .alvo button.on { background: var(--azul); border-color: #7fb8ff; }
+  main { padding: 10px 14px; }
+  section { background: var(--cartao); border: 1px solid var(--linha); border-radius: 10px; margin-top: 12px; padding: 10px 12px 12px; }
+  section h2 { margin: 2px 0 8px; font-size: 13px; letter-spacing: 1.5px; color: var(--apagado); }
+  .grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+  .ufs { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 6px; }
+  button { background: #22314a; color: #fff; border: 1px solid #2c3f5e; border-radius: 10px; padding: 16px 10px; font: 700 16px 'Segoe UI', -apple-system, Arial, sans-serif; cursor: pointer; text-align: center; }
+  button:active { transform: scale(0.97); }
+  .ufs button { padding: 14px 0; }
+  button.reg { background: #172438; color: #c9d6e6; }
+  button.eleito { background: var(--verde); border-color: #6be06b; font-size: 20px; }
+  button.gov-eleito { background: #134a1c; border-color: #3fbf4f; color: #d8ffd8; }
+  button.no-ar { outline: 3px solid #ff5c5c; outline-offset: 1px; }
+  details summary { cursor: pointer; font-weight: 700; color: var(--apagado); padding: 4px 0; }
+  #toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); background: #fff; color: #0b1220; padding: 12px 18px; border-radius: 10px; font-weight: 800; box-shadow: 0 6px 24px rgba(0,0,0,.5); opacity: 0; transition: opacity .25s; max-width: 92vw; text-align: center; }
+  #toast.on { opacity: 1; }
+  .leg { font-size: 12px; color: var(--apagado); margin: 0 0 6px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="linha"><h1>CONTROLE DAS TELAS</h1><span class="modo" id="modo">…</span></div>
+  <div class="linha alvo" style="margin-top:8px"><button data-a="h">HORIZONTAL</button><button data-a="v">VERTICAL</button><button data-a="a">AS DUAS</button></div>
+  <div class="noar" id="noar">no ar: …</div>
+</header>
+<main id="m"></main>
+<div id="toast"></div>
+<script charset="utf-8" src="apresentacao-config.js"></script>
+<script charset="utf-8" src="deputados-config.js"></script>
+<script charset="utf-8" src="graficos.js"></script>
+<script charset="utf-8" src="estados.js"></script>
+<script>
+(function () {
+  "use strict";
+  var cfgA = window.GCTSE_APRESENTACAO || {}, LISTA = (window.GCTSE_GRAFICOS || {}).lista || [], estado = null;
+  var REG = [["NORTE", "norte", ["ac", "am", "ap", "pa", "ro", "rr", "to"]], ["NORDESTE", "nordeste", ["al", "ba", "ce", "ma", "pb", "pe", "pi", "rn", "se"]],
+    ["CENTRO-OESTE", "centro-oeste", ["df", "go", "ms", "mt"]], ["SUDESTE", "sudeste", ["es", "mg", "rj", "sp"]], ["SUL", "sul", ["pr", "rs", "sc"]]];
+  var alvo = "h"; try { alvo = localStorage.getItem("gctse-ipad-alvo") || "h"; } catch (e) { }
+  function saidas() { return alvo === "a" ? ["h", "v"] : [alvo]; }
+  function nome(id) { var g = LISTA.filter(function (x) { return x.id === id; })[0]; return g ? g.nome : id; }
+  var tToast = null;
+  function toast(txt) { var t = document.getElementById("toast"); t.textContent = txt; t.className = "on"; clearTimeout(tToast); tToast = setTimeout(function () { t.className = ""; }, 2500); }
+  // envia para cada saida escolhida; base "x" vira "x-h"/"x-v"; tela sem sufixo (giro, apresentacao) vai igual
+  function enviar(base, acao, rotulo, rodPor, tempo) {
+    var ps = saidas().map(function (s) {
+      var tela = /-$/.test(base) ? base + s : base, q = "/ipad?saida=" + s + "&tela=" + encodeURIComponent(tela) + (acao ? "&acao=" + encodeURIComponent(acao) : "");
+      if (rodPor) q += "&rod=" + encodeURIComponent(rodPor[s] || "") + "&tempo=" + (tempo || 0);
+      return fetch(q + "&t=" + Date.now(), { cache: "no-store", credentials: "same-origin" }).then(function (r) { if (!r.ok) throw r.status; return r.json(); });
+    });
+    Promise.all(ps).then(function (e) { estado = e[e.length - 1]; pintar(); toast((estado.ipad === "ar" ? "NO AR: " : "SUGESTÃO ENVIADA ao operador: ") + rotulo); })
+      .catch(function (x) { toast(x === 401 ? "senha expirada — recarregue a página" : "falhou — o gerenciador está aberto?"); });
+  }
+  function bt(txt, fn, cls, chave) { var b = document.createElement("button"); b.textContent = txt; b.onclick = fn; if (cls) b.className = cls; if (chave) b.dataset.k = chave; return b; }
+  function secao(tit, cls) { var s = document.createElement("section"); s.innerHTML = "<h2>" + tit + "</h2>"; var g = document.createElement("div"); g.className = cls || "grade"; s.appendChild(g); document.getElementById("m").appendChild(s); return { s: s, g: g }; }
+  function porRegiao(tit, fnReg, fnUf, legenda, marcarGov) {
+    var sx = secao(tit, "x");
+    if (legenda) { var l = document.createElement("div"); l.className = "leg"; l.textContent = legenda; sx.s.insertBefore(l, sx.g); }
+    REG.forEach(function (rg) {
+      var d = document.createElement("div"); d.className = "ufs"; d.style.marginBottom = "6px";
+      if (fnReg) d.appendChild(bt(rg[0].slice(0, 6), function () { fnReg(rg); }, "reg"));
+      rg[2].forEach(function (u) { var b = bt(u.toUpperCase(), function () { fnUf(u); }); if (marcarGov) b.dataset.gov = u; d.appendChild(b); });
+      sx.g.appendChild(d);
+    });
+    return sx;
+  }
+  // ---- montar
+  var sEl = secao("PRESIDENTE ELEITO");
+  sEl.g.appendChild(bt("★ PRESIDENTE ELEITO", function () { if (confirm("Colocar a tela PRESIDENTE ELEITO no ar?")) enviar("eleito-", "", "Presidente eleito"); }, "eleito"));
+  var favs = (cfgA.favoritos || {}).h || [], sF = secao("FAVORITOS");
+  favs.forEach(function (id) { var base = id.replace(/-h$/, "-"); sF.g.appendChild(bt(nome(id), function () { enviar(base, "", nome(id)); }, "", base)); });
+  sF.g.appendChild(bt("▶ Apresentação automática", function () { enviar("apresentacao", "", "Apresentação automática"); }));
+  var sR = secao("RODÍZIOS PRONTOS");
+  (cfgA.rodizios_prontos || []).forEach(function (rp) {
+    sR.g.appendChild(bt("▶ " + rp.nome, function () { enviar("apresentacao", "", "rodízio " + rp.nome, { h: (rp.h || []).join(","), v: (rp.v || []).join(",") }, rp.tempo || 12); }));
+  });
+  porRegiao("PRESIDENTE | REGIÃO OU ESTADO", function (rg) { enviar("presloc-", "alvo:" + rg[1], "Presidente | " + rg[0]); }, function (u) { enviar("presloc-", "alvo:" + u, "Presidente | " + u.toUpperCase()); });
+  porRegiao("GOVERNADOR | ESTADO", function (rg) { enviar("girogov", "reg:" + rg[2].join(","), "Governador | " + rg[0]); }, function (u) { enviar("girogov", "uf:" + u, "Governador | " + u.toUpperCase()); },
+    "verde = governador já eleito · escuro = disputa o 2º turno", true);
+  porRegiao("DEPUTADOS FEDERAIS | ESTADO (5 mais votados)", function (rg) { enviar("deputados-", "dep:r-" + rg[1], "Deputados | " + rg[0]); }, function (u) { enviar("deputados-", "dep:" + u + ":0", "Deputados | " + u.toUpperCase()); });
+  var sA = porRegiao("ASSEMBLEIA LEGISLATIVA | ESTADO", null, function (u) { enviar("assembleia-", "alvo:" + u, "Assembleia | " + u.toUpperCase()); });
+  sA.g.appendChild(bt("BRASIL — total por partido", function () { enviar("assembleias-", "", "Assembleias — Brasil"); }));
+  var sT = document.createElement("section"); sT.innerHTML = "<details><summary>TODAS AS TELAS</summary><div class='grade' id='todas' style='margin-top:8px'></div></details>"; document.getElementById("m").appendChild(sT);
+  LISTA.filter(function (g) { return g.f === "h" && !/^(presloc|assembleia)-/.test(g.id); }).forEach(function (g) {
+    var base = g.id.replace(/-h$/, "-"); document.getElementById("todas").appendChild(bt(g.nome, function () { enviar(base, "", g.nome); }, "", base));
+  });
+  // ---- alvo (saida)
+  [].forEach.call(document.querySelectorAll(".alvo button"), function (b) {
+    b.onclick = function () { alvo = b.dataset.a; try { localStorage.setItem("gctse-ipad-alvo", alvo); } catch (e) { } pintar(); };
+  });
+  // ---- estado
+  function govEleito(u) {
+    var x = ((window.GCTSE_ESTADOS || {}).ufs || {})[u], g = x && x.gov && x.gov.tem ? x.gov : null;
+    if (!g) return false;
+    var cs = Array.isArray(g.candidatos) ? g.candidatos : ((g.candidatos || {}).value || []);
+    return cs.some(function (c) { return c.eleito; }) && +g.turno !== 2;
+  }
+  function pintar() {
+    [].forEach.call(document.querySelectorAll(".alvo button"), function (b) { b.classList.toggle("on", b.dataset.a === alvo); });
+    [].forEach.call(document.querySelectorAll("[data-gov]"), function (b) { b.classList.toggle("gov-eleito", govEleito(b.dataset.gov)); });
+    if (!estado) return;
+    var m = document.getElementById("modo"); m.textContent = estado.ipad === "ar" ? "VAI DIRETO AO AR" : "SUGERE (o operador corta)"; m.className = "modo" + (estado.ipad === "ar" ? " ar" : "");
+    function txt(s) { var e = estado[s] || {}; return e.tela === "apresentacao" ? "apresentação automática" : (nome(e.tela) + (e.acao ? " · " + String(e.acao).replace(/^(alvo|uf|dep|reg):/, "").toUpperCase() : "")); }
+    document.getElementById("noar").innerHTML = "no ar — <b>H:</b> " + txt("h") + " &nbsp; <b>V:</b> " + txt("v");
+    var noAr = saidas().map(function (s) { return String((estado[s] || {}).tela || "").replace(/-(h|v)$/, "-"); });
+    [].forEach.call(document.querySelectorAll("button[data-k]"), function (b) { b.classList.toggle("no-ar", noAr.indexOf(b.dataset.k) >= 0); });
+  }
+  function ler() {
+    fetch("/estado?t=" + Date.now(), { cache: "no-store", credentials: "same-origin" }).then(function (r) { if (r.status === 401) location.reload(); return r.json(); })
+      .then(function (e) { estado = e; pintar(); }).catch(function () { document.getElementById("noar").textContent = "sem conexão com o gerenciador"; });
+  }
+  function recarregarEstados() { var sc = document.createElement("script"); sc.src = "estados.js?t=" + Date.now(); sc.onload = function () { sc.remove(); pintar(); }; sc.onerror = function () { sc.remove(); }; document.head.appendChild(sc); }
+  ler(); setInterval(ler, 2000); setInterval(recarregarEstados, 10000); pintar();
+})();
+</script>
+</body>
+</html>

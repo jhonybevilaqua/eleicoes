@@ -21,7 +21,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "3.11 - 08/10/2026"
+$Versao = "3.12 - 08/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -340,6 +340,7 @@ $script:CopiaLocal = @{}      # url -> objeto lido do disco (le uma vez)
 $script:UsandoLocal = @{}     # url -> desde quando
 function Copia-Local([string] $Url) {
     if (-not $Url.StartsWith($Base)) { return $null }
+    if ($Eleicao1T -and $Url.Contains("/$Eleicao/dados/")) { return $null }   # 2o turno: sempre ao vivo
     if ($script:CopiaLocal.ContainsKey($Url)) { return $script:CopiaLocal[$Url] }
     $arq = Join-Path (Join-Path $Raiz "tse-local") (($Url.Substring($Base.Length).TrimStart('/')) -replace '/', [IO.Path]::DirectorySeparatorChar)
     if (-not (Test-Path -LiteralPath $arq)) { return $null }
@@ -594,7 +595,7 @@ function Ler-Abrangencia {
 # 1o turno guardado (so no 2o turno): resumo enxuto de Brasil e estados.
 $script:Turno1 = [ordered]@{}
 function Ler-Turno1 {
-    foreach ($abr in @("br") + $UFs) {
+    foreach ($abr in @("br") + $UFs + @("zz")) {
         $bruto = Obter-Boletim (Montar-Url $abr $Eleicao1T)
         if ($null -eq $bruto -or "$bruto" -eq "SEM-MUDANCA") { continue }
         $r = Resumir-Boletim $bruto "t1-$abr"
@@ -605,6 +606,97 @@ function Ler-Turno1 {
             candidatos = @($r.candidatos | Select-Object -First 8)
         }
     }
+}
+
+# ------------------------------------- CAPITAIS e EXTERIOR (Presidente)
+# Lista de municipios do TSE: {ciclo}/{eleicao}/config/mun-e{eleicao}-cm.json
+# (especificacao do TSE 2026). Boletim do municipio:
+# dados/{uf}/{uf}{codigo TSE}-c0001-e{eleicao}-u.json. Exterior = "uf" zz;
+# cada cidade no exterior e um "municipio" dela. Capital: marca do TSE no
+# arquivo (c = S) ou, sem ela, o nome da capital de cada estado.
+$NomesCapitais = @{ ac = "RIO BRANCO"; al = "MACEIO"; ap = "MACAPA"; am = "MANAUS"; ba = "SALVADOR"; ce = "FORTALEZA"; df = "BRASILIA"
+    es = "VITORIA"; go = "GOIANIA"; ma = "SAO LUIS"; mt = "CUIABA"; ms = "CAMPO GRANDE"; mg = "BELO HORIZONTE"; pa = "BELEM"
+    pb = "JOAO PESSOA"; pr = "CURITIBA"; pe = "RECIFE"; pi = "TERESINA"; rj = "RIO DE JANEIRO"; rn = "NATAL"; rs = "PORTO ALEGRE"
+    ro = "PORTO VELHO"; rr = "BOA VISTA"; sc = "FLORIANOPOLIS"; sp = "SAO PAULO"; se = "ARACAJU"; to = "PALMAS" }
+function Sem-Acento([string] $T) {
+    $n = $T.Normalize([Text.NormalizationForm]::FormD); $sb = New-Object Text.StringBuilder
+    foreach ($ch in $n.ToCharArray()) { if ([Globalization.CharUnicodeInfo]::GetUnicodeCategory($ch) -ne [Globalization.UnicodeCategory]::NonSpacingMark) { [void] $sb.Append($ch) } }
+    return $sb.ToString().ToUpper().Trim()
+}
+$script:Mun = $null                 # @{ capitais = @{uf=@{cd;nome}}; exterior = @(@{cd;nome;pais}) }
+$script:ProxMun = [datetime]::MinValue
+$script:Capitais = [ordered]@{}     # uf -> resumo do boletim da capital
+$script:Capitais1T = [ordered]@{}   # uf -> lider do 1o turno na capital (2o turno)
+$script:Exterior = [ordered]@{}     # cd -> resumo da cidade
+$script:ExteriorVez = 0
+function Visitar-Mun($o, [string] $uf, $saida) {
+    if ($null -eq $o) { return }
+    if ($o -is [array]) { foreach ($x in $o) { Visitar-Mun $x $uf $saida }; return }
+    if ($o -isnot [System.Management.Automation.PSCustomObject]) { return }
+    $nomes = @($o.PSObject.Properties | ForEach-Object { $_.Name })
+    if ($nomes -contains "cd" -and $nomes -contains "mu") { Visitar-Mun $o.mu ("$($o.cd)".ToLower()) $saida; return }
+    if ($uf -and $nomes -contains "cd" -and $nomes -contains "nm") {
+        $pais = ""
+        foreach ($p in $o.PSObject.Properties) { if ($p.Name -match '^(pa[ií]s|nmpais|nmp|ps)$' -and "$($p.Value)") { $pais = Decodificar-Entidades "$($p.Value)" } }
+        [void] $saida.Add([pscustomobject]@{ uf = $uf; cd = "$($o.cd)"; nome = Decodificar-Entidades "$($o.nm)"; capital = ("$(Obter-Campo $o @('c') '')".ToUpper() -eq "S"); pais = $pais })
+        return
+    }
+    foreach ($p in $o.PSObject.Properties) { if ($p.Value -is [array] -or $p.Value -is [pscustomobject]) { Visitar-Mun $p.Value $uf $saida } }
+}
+function Ler-Municipios {
+    if ($null -ne $script:Mun -or (Get-Date) -lt $script:ProxMun) { return }
+    $script:ProxMun = (Get-Date).AddMinutes(10)
+    foreach ($ele in @($Eleicao, $Eleicao1T) | Where-Object { $_ } | Select-Object -Unique) {
+        $e6 = "{0:000000}" -f ([int] $ele)
+        $bruto = Obter-Boletim "$Base/$Ciclo/$ele/config/mun-e$e6-cm.json"
+        if ($null -eq $bruto -or "$bruto" -eq "SEM-MUDANCA") { continue }
+        $lista = New-Object System.Collections.ArrayList
+        Visitar-Mun $bruto "" $lista
+        if ($lista.Count -lt 27) { continue }
+        $caps = @{}
+        foreach ($u in $UFs) {
+            $c = @($lista | Where-Object { $_.uf -eq $u -and $_.capital }) | Select-Object -First 1
+            if ($null -eq $c) { $c = @($lista | Where-Object { $_.uf -eq $u -and (Sem-Acento $_.nome) -eq $NomesCapitais[$u] }) | Select-Object -First 1 }
+            if ($c) { $caps[$u] = $c }
+        }
+        $ext = @($lista | Where-Object { $_.uf -eq "zz" })
+        $script:Mun = @{ capitais = $caps; exterior = $ext }
+        Escrever-Log ("municipios do TSE (eleicao {0}): {1} lidos | capitais achadas: {2}/27 | cidades no exterior: {3}" -f $ele, $lista.Count, $caps.Count, $ext.Count) $(if ($caps.Count -lt 27) { "AVISO" } else { "OK" })
+        return
+    }
+    Escrever-Log "lista de municipios do TSE (mun-e...-cm.json) nao encontrada - capitais e exterior por cidade ficam de fora; tento de novo em 10 min" "AVISO"
+}
+function Url-Mun([string] $Uf, [string] $Cd, [string] $Ele) {
+    $e6 = "{0:000000}" -f ([int] $Ele)
+    return "$Base/$Ciclo/$Ele/dados/$Uf/$Uf$Cd-c0001-e$e6-u.json"
+}
+function Resumo-Mun($bruto, [string] $chave, $m) {
+    $r = Resumir-Boletim $bruto $chave
+    if ($r.fase -eq "S" -or $r.fase -eq "T") { if ($Modo -eq "OFICIAL") { return $null } }
+    return [pscustomobject]@{ tem = $true; cd = $m.cd; nome = $m.nome; pais = $m.pais; andamento = $r.andamento; secoes = $r.secoes
+        eleitorado = $r.eleitorado; votos = $r.votos; candidatos = @($r.candidatos | Select-Object -First 12) }
+}
+function Ler-Capitais {
+    if ($null -eq $script:Mun) { return }
+    foreach ($u in $script:Mun.capitais.Keys) {
+        $m = $script:Mun.capitais[$u]
+        $bruto = Obter-Boletim (Url-Mun $u $m.cd $Eleicao)
+        if ($null -ne $bruto -and "$bruto" -ne "SEM-MUDANCA") { $x = Resumo-Mun $bruto "cap-$u" $m; if ($x) { $script:Capitais[$u] = $x } }
+        if ($Eleicao1T -and -not $script:Capitais1T.Contains($u)) {
+            $b1 = Obter-Boletim (Url-Mun $u $m.cd $Eleicao1T)
+            if ($null -ne $b1 -and "$b1" -ne "SEM-MUDANCA") { $x1 = Resumo-Mun $b1 "cap1-$u" $m; if ($x1 -and $x1.andamento -eq "f") { $script:Capitais1T[$u] = $x1 } }
+        }
+    }
+}
+function Ler-Exterior {
+    if ($null -eq $script:Mun -or -not $script:Mun.exterior.Count) { return }
+    $ext = $script:Mun.exterior; $n = $ext.Count
+    for ($i = 0; $i -lt [math]::Min(30, $n); $i++) {            # 30 cidades por ciclo, em rodizio
+        $m = $ext[($script:ExteriorVez + $i) % $n]
+        $bruto = Obter-Boletim (Url-Mun "zz" $m.cd $Eleicao)
+        if ($null -ne $bruto -and "$bruto" -ne "SEM-MUDANCA") { $x = Resumo-Mun $bruto "zz-$($m.cd)" $m; if ($x) { $script:Exterior[$m.cd] = $x } }
+    }
+    $script:ExteriorVez = ($script:ExteriorVez + 30) % [math]::Max(1, $n)
 }
 
 # ------------------------------------------------------ cor de cada candidato
@@ -741,6 +833,11 @@ function Gravar-Dados {
         tse           = [pscustomobject]@{ base = $Base; ciclo = $Ciclo; eleicao = $Eleicao }
         br            = $br
         ufs           = $porEstado
+        exterior_total = $(if ($script:Cache.ContainsKey("zz")) { $script:Cache["zz"] } else { [pscustomobject]@{ tem = $false } })
+        capitais      = [pscustomobject] $script:Capitais
+        capitais_1t   = [pscustomobject] $script:Capitais1T
+        exterior      = @($script:Exterior.Values)
+        exterior_cidades = $(if ($script:Mun) { $script:Mun.exterior.Count } else { 0 })
         turno1        = $(if ($Eleicao1T) { [pscustomobject]@{ eleicao = $Eleicao1T; br = $(if ($script:Turno1.Contains("br")) { $script:Turno1["br"] } else { [pscustomobject]@{ tem = $false } }); ufs = [pscustomobject] $script:Turno1 } } else { $null })
         evolucao      = [pscustomobject]@{ origem = $script:EvolucaoOrigem; nomes = [pscustomobject] $script:EvolucaoNomes; pontos = @($script:Evolucao) }
     }
@@ -793,14 +890,23 @@ do {
     try {
         Ler-Abrangencia "br"
         if ($Eleicao1T -and (($script:NumCiclo % 3) -eq 1)) {
-            try { Ler-Turno1; Escrever-Log ("1o turno guardado: {0} de 28 boletins (eleicao {1})" -f $script:Turno1.Count, $Eleicao1T) } catch { Escrever-Log "1o turno: $($_.Exception.Message)" "AVISO" }
+            try { Ler-Turno1; Escrever-Log ("1o turno guardado: {0} de 29 boletins (eleicao {1})" -f $script:Turno1.Count, $Eleicao1T) } catch { Escrever-Log "1o turno: $($_.Exception.Message)" "AVISO" }
         }
         Registrar-Evolucao
         Gravar-Dados                       # o Brasil vai para a tela antes dos estados
         # Estados so depois que o Brasil saiu: antes das 17h seriam 27
         # pedidos com 404 por ciclo (o TSE avisa que 404 em excesso bloqueia
         # o IP). Antes, so o Brasil e consultado.
-        if ($script:Cache.ContainsKey("br")) { foreach ($u in $UFs) { Ler-Abrangencia $u } }
+        if ($script:Cache.ContainsKey("br")) {
+            foreach ($u in $UFs) { Ler-Abrangencia $u }
+            # exterior (total), capitais (a cada 2 ciclos) e cidades do exterior (30 por ciclo)
+            try {
+                Ler-Abrangencia "zz"
+                Ler-Municipios
+                if (($script:NumCiclo % 2) -eq 0) { Ler-Capitais }
+                Ler-Exterior
+            } catch { Escrever-Log "capitais/exterior: $($_.Exception.Message)" "AVISO" }
+        }
         Conferir-Recebimento
         Gravar-Dados
         $comDado = @($UFs | Where-Object { $script:Cache.ContainsKey($_) }).Count

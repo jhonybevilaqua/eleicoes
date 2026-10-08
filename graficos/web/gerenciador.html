@@ -110,6 +110,11 @@
   #eleitoAviso .msg { font-size: 17px; margin: 10px 0 18px; }
   #eleitoAviso button { font-size: 17px; padding: 12px 18px; margin: 4px; }
   #eleitoAviso button.forte { background: #fff; color: #0d6b16; border-color: #fff; font-weight: 900; }
+  #ajudaTec { position: fixed; inset: 0; z-index: 41; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; }
+  #ajudaTec[hidden] { display: none; }
+  #ajudaTec .caixa { background: var(--cartao); color: var(--texto); border-radius: 10px; padding: 18px 22px; max-width: 620px; width: 92vw; }
+  #ajudaTec h3 { margin: 0 0 10px; letter-spacing: 1px; } #ajudaTec td { padding: 4px 10px 4px 0; vertical-align: top; }
+  #vigia button.tec-on { background: var(--azul); border-color: var(--azul-borda); color: #fff; }
   body.alarme { box-shadow: inset 0 0 0 8px #e03131; animation: pisca 1s step-start infinite; }
   @keyframes pisca { 50% { box-shadow: inset 0 0 0 8px transparent; } }
   .ctldep .depregs { margin-top: 6px; }
@@ -148,7 +153,19 @@
   <button type="button" id="elAgora">colocar no ar agora (H e V)</button>
   <span class="rot" style="margin-left:14px">SOM:</span>
   <button type="button" id="som">🔔 …</button><button type="button" id="silenciar">silenciar 5 min</button>
+  <span class="rot" id="rotIpad" style="margin-left:14px" hidden>iPAD:</span><button type="button" id="ipadModo" hidden>…</button>
+  <span class="rot" style="margin-left:14px">TECLADO:</span><button type="button" id="tecAlvo" title="tecla H, V ou B troca">saída H</button><button type="button" id="tecAjuda">? atalhos</button>
   <a href="relatorio.html" target="_blank" style="margin-left:auto">relatório da noite ↗</a></div>
+<div id="ajudaTec" hidden><div class="caixa"><h3>ATALHOS DE TECLADO</h3>
+  <table><tr><td><b>H</b> / <b>V</b> / <b>B</b></td><td>saída que o teclado comanda: horizontal, vertical ou as duas (B)</td></tr>
+  <tr><td><b>1</b> a <b>9</b></td><td>favorito 1 a 9 (a ordem do bloco ★ FAVORITOS)</td></tr>
+  <tr><td><b>A</b></td><td>apresentação automática</td></tr>
+  <tr><td><b>P</b></td><td>liga/desliga a prévia antes do ar</td></tr>
+  <tr><td><b>ESPAÇO</b> ou <b>ENTER</b></td><td>CORTAR: põe no ar o que está na prévia</td></tr>
+  <tr><td><b>← →</b></td><td>anterior / próximo (giro, resumo, governador, deputados)</td></tr>
+  <tr><td><b>E</b></td><td>presidente eleito no ar nas duas saídas (pede confirmação)</td></tr>
+  <tr><td><b>?</b></td><td>mostra/esconde esta ajuda</td></tr></table>
+  <p class="dica">Não funcionam enquanto se digita num campo (ex.: tempo do rodízio).</p><button type="button" id="ajudaFechar">fechar</button></div></div>
 <div id="ocorr"><details><summary>OCORRÊNCIAS DA NOITE (<span id="nOc">0</span>)</summary><ol id="listaOc"></ol></details></div>
 <div id="toasts"></div>
 <div id="eleitoAviso" hidden><div class="caixa"><h2>PRESIDENTE ELEITO</h2><div class="nome" id="elNome"></div><div class="msg" id="elMsg"></div>
@@ -369,7 +386,7 @@
     }
     // FAVORITOS (apresentacao-config.js): atalhos, sem tirar a tela do bloco dela
     var favs = (((cfgA.favoritos || {})[S.f]) || []).map(function (id) { return lista.filter(function (x) { return x.id === id; })[0]; }).filter(Boolean);
-    if (favs.length) botoesEm(bloco("fav", "★ FAVORITOS"), favs.map(function (g) { return [g.id, g.nome]; }));
+    if (favs.length) botoesEm(bloco("fav", "★ FAVORITOS  (teclas 1–9)"), favs.map(function (g, i) { return [g.id, (i < 9 ? (i + 1) + " · " : "") + g.nome]; }));
     var gA = bloco("auto", "AUTOMÁTICO");
     botoesEm(gA, [["apresentacao", "▶ Apresentação automática"]]);
     // rodizios prontos: grava a lista no rodizio desta saida e poe no ar
@@ -388,7 +405,7 @@
       gA.appendChild(bxP);
     }
     gA.appendChild(painelRodizio(S));
-    botoesEm(bloco("presidente", "PRESIDENTE"), itensDe(["eleito", "presidente", "presmapa", "presmapa1t", "regioes", "pres2t", "evolucao", "virar", "viradas", "margem", "decisivos", "estados", "lideranca"]));
+    botoesEm(bloco("presidente", "PRESIDENTE"), itensDe(["eleito", "presidente", "presmapa", "presmapa1t", "regioes", "pres2t", "evolucao", "virar", "viradas", "margem", "decisivos", "capitais", "exterior", "excidades", "estados", "lideranca"]));
     // Presidente | estado ou regiao (como no telao)
     var gL = bloco("local", "PRESIDENTE | ESTADO OU REGIÃO");
     var regs = document.createElement("div"); regs.className = "regs";
@@ -713,7 +730,7 @@
   function lerEstado() {
     var g = document.getElementById("stG");
     fetch("/estado?t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.json(); })
-      .then(function (e) { estado = e; pintar(); g.className = "st ok"; g.textContent = "Gerenciador: no ar"; situacaoObs(); try { vigia(e); } catch (x) { } })
+      .then(function (e) { estado = e; pintar(); g.className = "st ok"; g.textContent = "Gerenciador: no ar"; situacaoObs(); try { vigia(e); } catch (x) { } try { ipad(e); } catch (x) { } })
       .catch(function () { g.className = "st ruim"; g.textContent = "Gerenciador: SEM CONEXÃO — a janela do GERENCIADOR fechou?"; });
   }
   // Copia de seguranca num clique (gerenciador.ps1 -> copia-seguranca.ps1).
@@ -806,6 +823,57 @@
     if (el) { bA.textContent = "no ar automático: " + (el.auto ? "LIGADO" : "DESLIGADO"); bA.classList.toggle("ligado", !!el.auto); }
     avisoEleito(el, true);
   }
+  // ------------------------------------------------ iPad (controle.html)
+  var bIpad = document.getElementById("ipadModo"), vistoSug = { h: null, v: null };
+  bIpad.onclick = function () { pedir("/ipadmodo?m=" + (estado && estado.ipad === "ar" ? "sugerir" : "ar")); };
+  function ipad(e) {
+    var on = !!e.rede; bIpad.hidden = !on; document.getElementById("rotIpad").hidden = !on;
+    if (on) { bIpad.textContent = e.ipad === "ar" ? "vai DIRETO ao ar" : "só SUGERE (cai na prévia)"; bIpad.classList.toggle("ligado", e.ipad !== "ar"); bIpad.title = "Endereço no iPad: " + comoArr(e.ipad_enderecos).join("  ou  "); }
+    ["h", "v"].forEach(function (s) {
+      var sg = e["sugestao_" + s];
+      if (vistoSug[s] === null) { vistoSug[s] = sg && sg.id ? sg.id : ""; return; }   // a que ja existia ao abrir a pagina nao conta
+      if (!sg || !sg.id || vistoSug[s] === sg.id) return;
+      vistoSug[s] = sg.id;
+      if (!previa[s]) ligarPrevia(s, true);
+      pendente[s] = { tela: sg.tela, acao: sg.acao || "", rod: sg.rod ? { telas: sg.rod, tempo: +sg.tempo || 12 } : null };
+      mostrarPrevia(s);
+      toast({ tipo: "info", hora: sg.hora, texto: "iPad sugere na saída " + (s === "h" ? "HORIZONTAL" : "VERTICAL") + ": " + nomePendente(s, pendente[s]) + " — está na PRÉVIA, aperte CORTAR" });
+      bip(660, 0.12); bip(880, 0.12, 0.15);
+    });
+  }
+  // ------------------------------------------------ atalhos de teclado
+  var tecAlvo = "h"; try { tecAlvo = localStorage.getItem("gctse-tec-alvo") || "h"; } catch (e) { }
+  var bTec = document.getElementById("tecAlvo");
+  function pintarTec() { bTec.textContent = "saída " + (tecAlvo === "b" ? "H + V" : tecAlvo.toUpperCase()); bTec.classList.add("tec-on"); }
+  function mudarTec(a) { tecAlvo = a; try { localStorage.setItem("gctse-tec-alvo", a); } catch (e) { } pintarTec(); }
+  bTec.onclick = function () { mudarTec(tecAlvo === "h" ? "v" : tecAlvo === "v" ? "b" : "h"); };
+  var ajuda = document.getElementById("ajudaTec");
+  document.getElementById("tecAjuda").onclick = function () { ajuda.hidden = !ajuda.hidden; };
+  document.getElementById("ajudaFechar").onclick = function () { ajuda.hidden = true; };
+  pintarTec();
+  function alvosTec() { return tecAlvo === "b" ? ["h", "v"] : [tecAlvo]; }
+  function favsDe(s) { var f = SAIDAS.filter(function (x) { return x.id === s; })[0].f, l = window.GCTSE_GRAFICOS.lista; return (((cfgA.favoritos || {})[f]) || []).filter(function (id) { return l.some(function (x) { return x.id === id; }); }); }
+  document.addEventListener("keydown", function (ev) {
+    var tg = ev.target, tag = tg && tg.tagName;
+    if (ev.ctrlKey || ev.altKey || ev.metaKey || tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || !estado) return;
+    var k = ev.key, ok = true;
+    if (k === "?" ) ajuda.hidden = !ajuda.hidden;
+    else if (k === "h" || k === "H") mudarTec("h");
+    else if (k === "v" || k === "V") mudarTec("v");
+    else if (k === "b" || k === "B") mudarTec("b");
+    else if (/^[1-9]$/.test(k)) alvosTec().forEach(function (s) { var id = favsDe(s)[+k - 1]; if (id) definir(s, id); });
+    else if (k === "a" || k === "A") alvosTec().forEach(function (s) { definir(s, "apresentacao"); });
+    else if (k === "p" || k === "P") alvosTec().forEach(function (s) { ligarPrevia(s, !previa[s]); });
+    else if (k === " " || k === "Enter") alvosTec().forEach(function (s) { var p0 = pendente[s]; if (p0) { pendente[s] = null; mostrarPrevia(s); irAoAr(s, p0); } });
+    else if (k === "ArrowRight" || k === "ArrowLeft") alvosTec().forEach(function (s) {
+      var e0 = estado[s], d = k === "ArrowRight" ? 1 : -1;
+      if (/^deputados-/.test(e0.tela)) navDep(SAIDAS.filter(function (x) { return x.id === s; })[0], d);
+      else if (e0.tela === "giro" || e0.tela === "girogov" || e0.tela === "resumo") { pararAuto(s); passo(s, d); }
+    });
+    else if (k === "e" || k === "E") { if (confirm("Colocar a tela 'Presidente eleito' no ar nas DUAS saídas agora?")) { pararAuto("h"); pararAuto("v"); pedir("/eleito?ar=1"); } }
+    else ok = false;
+    if (ok) ev.preventDefault();
+  });
   var bTema = document.getElementById("tema");
   function nomeTema() { bTema.textContent = document.documentElement.className === "escuro" ? "tema claro" : "tema escuro"; }
   bTema.onclick = function () {

@@ -17,7 +17,7 @@ $Status = Join-Path $Raiz "copia-seguranca.json"
 if (-not (Test-Path $Pasta)) { New-Item -ItemType Directory -Path $Pasta | Out-Null }
 $nome = "GCTSE-COPIA-{0}.zip" -f (Get-Date -Format "yyyy-MM-dd_HH'h'mm'm'ss")
 $zip = Join-Path $Pasta $nome
-$fora = @("ensaio", "copias-de-seguranca")
+$fora = @("ensaio", "copias-de-seguranca", "arquivo-historico")
 
 function Gravar-Status($ok, $msg) {
     $o = [ordered]@{ ok = $ok; quando = (Get-Date).ToString("yyyy-MM-ddTHH:mm:ss"); arquivo = $nome; pasta = $Pasta; mensagem = $msg }

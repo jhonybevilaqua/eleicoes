@@ -337,17 +337,56 @@ function Vigiar {
 
 # ------------------------------------------------------------------ servidor
 
-# O HttpListener casa pelo cabecalho Host: registra localhost e 127.0.0.1.
-$ouvinte = New-Object System.Net.HttpListener
-$ouvinte.Prefixes.Add("http://localhost:$Porta/")
-$ouvinte.Prefixes.Add("http://127.0.0.1:$Porta/")
-try {
-    $ouvinte.Start()
-} catch {
-    Escrever-Log "Nao foi possivel abrir a porta $Porta : $($_.Exception.Message)" "Red"
-    Escrever-Log "A porta pode estar em uso (gerenciador ja aberto?). Outra porta: config-graficos.json, porta_gerenciador." "Yellow"
-    exit 1
+# CONTROLE PELO iPAD (config-graficos.json): "acesso_rede": true e
+# "senha_controle": "1234". O iPad abre http://<IP deste PC>:<porta>/controle.html,
+# digita a senha uma vez e so pode usar a rota /ipad (trocar tela) e ler
+# /estado. Precisa do LIBERAR-IPAD.bat (como administrador) uma vez no PC.
+$script:Rede = $false; $script:Senha = ""
+try { foreach ($p in $cfg.PSObject.Properties) {
+    if ($p.Name -eq "acesso_rede" -and $p.Value -eq $true) { $script:Rede = $true }
+    if ($p.Name -eq "senha_controle" -and "$($p.Value)" -match '^\S{4,32}$') { $script:Senha = "$($p.Value)" } } } catch { }
+if ($script:Ensaio) { $script:Rede = $false }
+if ($script:Rede -and -not $script:Senha) { Escrever-Log "acesso_rede ligado SEM senha_controle (minimo 4 caracteres): o iPad fica DESLIGADO por seguranca." "Yellow"; $script:Rede = $false }
+$script:Estado.ipad = "ar"   # iPad: "ar" = direto; "sugerir" = cai na previa (lembrado)
+try { $li = (Get-Content $ArqEstado -Raw -Encoding UTF8 | ConvertFrom-Json).PSObject.Properties | Where-Object { $_.Name -eq "ipad" } | Select-Object -First 1
+      if ($li -and @("ar", "sugerir") -contains "$($li.Value)") { $script:Estado.ipad = "$($li.Value)" } } catch { }
+$script:Estado.sugestao_h = $null; $script:Estado.sugestao_v = $null
+function Abrir-Ouvinte([bool] $Rede) {
+    $o = New-Object System.Net.HttpListener
+    if ($Rede) { $o.Prefixes.Add("http://+:$Porta/") }
+    else { $o.Prefixes.Add("http://localhost:$Porta/"); $o.Prefixes.Add("http://127.0.0.1:$Porta/") }   # casa pelo cabecalho Host
+    $o.Start()
+    return $o
 }
+$ouvinte = $null
+if ($script:Rede) {
+    try { $ouvinte = Abrir-Ouvinte $true }
+    catch {
+        Escrever-Log "iPad: o Windows nao liberou a porta $Porta para a rede ($($_.Exception.Message)). Rode o LIBERAR-IPAD.bat (como administrador) uma vez. Seguindo SEM iPad." "Yellow"
+        $script:Rede = $false
+    }
+}
+if ($null -eq $ouvinte) {
+    try { $ouvinte = Abrir-Ouvinte $false } catch {
+        Escrever-Log "Nao foi possivel abrir a porta $Porta : $($_.Exception.Message)" "Red"
+        Escrever-Log "A porta pode estar em uso (gerenciador ja aberto?). Outra porta: config-graficos.json, porta_gerenciador." "Yellow"
+        exit 1
+    }
+}
+$script:Estado.rede = $script:Rede
+if ($script:Rede) {
+    $ips = @()
+    try { $ips = @([Net.Dns]::GetHostAddresses([Net.Dns]::GetHostName()) | Where-Object { $_.AddressFamily -eq "InterNetwork" -and -not [Net.IPAddress]::IsLoopback($_) -and -not $_.ToString().StartsWith("169.254") } | ForEach-Object { $_.ToString() }) } catch { }
+    foreach ($ip in $ips) { Escrever-Log "iPad (mesma rede): http://${ip}:$Porta/controle.html  (senha do config)" "Green" }
+    $script:Estado.ipad_enderecos = @($ips | ForEach-Object { "http://${_}:$Porta/controle.html" })
+}
+$PaginaSenha = @'
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Controle</title>
+<style>body{margin:0;background:#0b1220;color:#fff;font:18px 'Segoe UI',Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh}
+form{background:#131c2c;padding:28px;border-radius:12px;width:min(360px,90vw)}input,button{font:inherit;width:100%;box-sizing:border-box;padding:14px;margin-top:12px;border-radius:8px;border:1px solid #2c3f5e}
+button{background:#1f6fc0;color:#fff;font-weight:700}.e{color:#ff8787;margin-top:10px}</style></head><body>
+<form method="get" action="/entrar"><b>gctse - CONTROLE DAS TELAS</b><input name="pin" type="password" inputmode="numeric" placeholder="senha" autofocus><button>ENTRAR</button>__ERRO__</form></body></html>
+'@
 
 Escrever-Log "gctse GERENCIADOR no ar: http://localhost:$Porta/gerenciador.html" "Green"
 Escrever-Log "OBS da saida HORIZONTAL: http://localhost:$Porta/saida.html?saida=h  (fonte Navegador 1920x1080)" "Cyan"
@@ -368,6 +407,54 @@ while ($ouvinte.IsListening) {
         $ctx = $script:Pedido.Result; $script:Pedido = $null
         $req = $ctx.Request
         $caminho = $req.Url.AbsolutePath
+
+        # ---- pedido de OUTRO aparelho (iPad): senha e so as rotas do controle
+        $remoto = -not $req.IsLocal
+        if ($env:GCTSE_TESTE_IPAD -eq "1" -and $req.Headers["X-Teste-Remoto"] -eq "1") { $remoto = $true }   # so para teste
+        if ($remoto) {
+            if (-not $script:Rede) { Responder $ctx 403 "text/plain; charset=utf-8" ([Text.Encoding]::UTF8.GetBytes("acesso pela rede desligado")); continue }
+            if ($caminho -eq "/entrar") {
+                if ("$($req.QueryString['pin'])" -eq $script:Senha) {
+                    $ctx.Response.Headers.Add("Set-Cookie", "gctse_pin=$([Uri]::EscapeDataString($script:Senha)); Path=/; Max-Age=2592000")
+                    $ctx.Response.Redirect("/controle.html"); Escrever-Log "iPad conectado: $($req.RemoteEndPoint.Address)" "Green"; continue
+                }
+                Escrever-Log "iPad: senha errada de $($req.RemoteEndPoint.Address)" "Yellow"
+                Responder $ctx 200 "text/html; charset=utf-8" ([Text.Encoding]::UTF8.GetBytes($PaginaSenha.Replace("__ERRO__", '<div class="e">senha errada</div>'))); continue
+            }
+            $ck = $req.Cookies["gctse_pin"]
+            if ($null -eq $ck -or [Uri]::UnescapeDataString($ck.Value) -ne $script:Senha) {
+                if ($caminho -eq "/" -or $caminho -like "*.html") { Responder $ctx 200 "text/html; charset=utf-8" ([Text.Encoding]::UTF8.GetBytes($PaginaSenha.Replace("__ERRO__", ""))) }
+                else { Responder $ctx 401 "text/plain; charset=utf-8" ([Text.Encoding]::UTF8.GetBytes("senha")) }
+                continue
+            }
+            if ($caminho -eq "/") { $ctx.Response.Redirect("/controle.html"); continue }
+            if ($caminho -notmatch '\.' -and @("/estado", "/ipad") -notcontains $caminho) { Responder $ctx 403 "text/plain; charset=utf-8" ([Text.Encoding]::UTF8.GetBytes("so no PC do gerenciador")); continue }
+        }
+
+        if ($caminho -eq "/ipad") {
+            # Troca pedida pelo iPad (controle.html). Modo "ar": vai direto ao
+            # ar; modo "sugerir": cai na PREVIA do gerenciador e o operador corta.
+            $s = "$($req.QueryString['saida'])"; $tela = "$($req.QueryString['tela'])"; $acao = "$($req.QueryString['acao'])"
+            $rod = "$($req.QueryString['rod'])"; $tempo = "$($req.QueryString['tempo'])"
+            if (($s -eq "h" -or $s -eq "v") -and $tela -match '^[a-z0-9-]{1,40}$' -and ($acao -eq "" -or $acao -match '^[a-z0-9:,-]{1,40}$') -and $rod -match '^[a-z0-9:,-]{0,800}$' -and ($tempo -eq "" -or $tempo -match '^\d{1,3}$')) {
+                if ($script:Estado.ipad -eq "ar") {
+                    if ($rod) { $script:Estado[$s].rodizio = $rod; $script:Estado[$s].tempo = $(if ($tempo) { [math]::Max(3, [int] $tempo) } else { 0 }) }
+                    Por-No-Ar $s $tela $acao "ipad"
+                    Escrever-Log ("NO AR (iPad) - saida {0}: {1} {2}" -f $(if ($s -eq "h") { "HORIZONTAL" } else { "VERTICAL" }), $tela, $acao) "Green"
+                } else {
+                    $script:Estado["sugestao_$s"] = [ordered]@{ id = "$([DateTime]::Now.Ticks)"; tela = $tela; acao = $acao; rod = $rod; tempo = $tempo; hora = (Get-Date -Format "HH:mm:ss") }
+                    Escrever-Log ("iPad SUGERE - saida {0}: {1} {2} (vai para a previa do gerenciador)" -f $s.ToUpper(), $tela, $acao) "Cyan"
+                }
+                Salvar-Estado
+                Responder-Json $ctx $script:Estado
+            } else { Responder $ctx 400 "text/plain; charset=utf-8" ([Text.Encoding]::UTF8.GetBytes("pedido invalido")) }
+            continue
+        }
+        if ($caminho -eq "/ipadmodo") {
+            $m = "$($req.QueryString['m'])"
+            if ($m -eq "ar" -or $m -eq "sugerir") { $script:Estado.ipad = $m; Salvar-Estado; Evento "info" ("iPad: {0}" -f $(if ($m -eq "ar") { "coloca NO AR direto" } else { "so SUGERE (cai na previa)" })) }
+            Responder-Json $ctx $script:Estado; continue
+        }
 
         if ($caminho -eq "/estado") {
             Checar-Obs

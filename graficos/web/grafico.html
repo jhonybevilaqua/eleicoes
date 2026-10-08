@@ -26,6 +26,7 @@
 <script charset="utf-8" src="candidatos-genero.js"></script>
 <script charset="utf-8" src="comparativo-config.js"></script>
 <script charset="utf-8" src="estados.js"></script>
+<script charset="utf-8" src="exterior-paises.js"></script>
 <script charset="utf-8" src="graficos.js"></script>
 <script charset="utf-8" src="dados.js"></script>
 <script>
@@ -43,7 +44,7 @@
     var d = window.GCTSE_GRAFICOS.dados();
     var e = window.GCTSE_ESTADOS || {};
     var pg = paginada ? window.GCTSE_GRAFICOS.pagina(id) : "";
-    var chave = JSON.stringify([d.modo, d.br, d.ufs, d.cor_slot, d.cores, usaEstados ? [e.camara, e.ref2022, e.ref2022_2t, e.assembleia, e.ufs] : 0, d.turno1, pg]);
+    var chave = JSON.stringify([d.modo, d.br, d.ufs, d.capitais, d.exterior, d.exterior_total, d.cor_slot, d.cores, usaEstados ? [e.camara, e.ref2022, e.ref2022_2t, e.assembleia, e.ufs] : 0, d.turno1, pg]);
     if (chave === ultimo) return;       // so redesenha quando o dado mudou
     var trocouPagina = paginada && ultimo && JSON.parse(ultimo)[7] !== pg;
     ultimo = chave;
