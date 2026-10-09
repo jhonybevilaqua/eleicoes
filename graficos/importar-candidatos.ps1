@@ -140,6 +140,12 @@ function Campos([string] $L) {
 }
 
 $anos = @{}   # ano -> dados
+# nome civil + UF sem acento: liga o mesmo deputado em 2022 e 2026
+function Chave-Nome([string] $Nome, [string] $Uf) {
+    $t = $Nome.ToUpper().Normalize([Text.NormalizationForm]::FormD); $sb = New-Object Text.StringBuilder
+    foreach ($ch in $t.ToCharArray()) { if ([Globalization.CharUnicodeInfo]::GetUnicodeCategory($ch) -ne [Globalization.UnicodeCategory]::NonSpacingMark) { [void] $sb.Append($ch) } }
+    return (($sb.ToString() -replace '\s+', ' ').Trim() + "|" + $Uf.ToUpper())
+}
 # Perfil (tela "Perfil da nova Camara"): idade na posse, grau de instrucao,
 # cor/raca e se disputava a reeleicao - colunas do proprio arquivo do TSE.
 $script:RotGrau = New-Object System.Collections.Generic.List[string]
@@ -188,7 +194,7 @@ foreach ($a in $arquivos) {
                 if ($grau -match '^#' ) { $grau = "" }; if ($corR -match '^#') { $corR = "" }
                 $reel = (V $p "ST_REELEICAO").ToUpper()
                 $pf = @((Idade (V $p "NR_IDADE_DATA_POSSE") (V $p "DT_NASCIMENTO") $ano), (Indice $script:RotGrau $grau), (Indice $script:RotCor $corR), $(if ($reel -eq "S") { 1 } elseif ($reel -eq "N") { 0 } else { -1 }))
-                $anos[$ano].cand[$sq] = [pscustomobject]@{ f = $fem; apto = ($sit -eq "" -or $sit -eq "APTO"); eleito = $eleito; sg = (V $p "SG_PARTIDO"); uf = (V $p "SG_UF"); pf = $pf }
+                $anos[$ano].cand[$sq] = [pscustomobject]@{ f = $fem; apto = ($sit -eq "" -or $sit -eq "APTO"); eleito = $eleito; sg = (V $p "SG_PARTIDO"); uf = (V $p "SG_UF"); pf = $pf; nm = (Chave-Nome (V $p "NM_CANDIDATO") (V $p "SG_UF")) }
                 $usadas++
             }
             Anotar ("lido {0}: {1} linhas, {2} de Deputado Federal, {3} de Senador" -f $f.nome, $n, $usadas, $sens)
@@ -203,7 +209,25 @@ foreach ($a in $arquivos) {
 if ($anos.Count -eq 0) { Sair "nenhuma linha de Deputado Federal nos arquivos lidos." 1 }
 
 # ------------------------------------------------------------------ resumir
+# REELEICAO: o arquivo de 2026 nao traz "disputa a reeleicao" (ST_REELEICAO
+# vazio). Sem ele, reeleito = foi ELEITO deputado federal na eleicao anterior
+# (arquivo de 2022 importado junto) pelo mesmo estado, com o mesmo nome civil.
+$criterioReel = "arquivo"
+$anosOrd = @($anos.Keys | Sort-Object)
+if ($anosOrd.Count -ge 2) {
+    $aN = $anosOrd[-1]; $aAnt = $anosOrd[-2]
+    $semInfo = @($anos[$aN].cand.Values | Where-Object { $_.pf[3] -eq -1 }).Count
+    if ($semInfo -gt 0) {
+        $eleitosAnt = New-Object 'System.Collections.Generic.HashSet[string]'
+        foreach ($cA in $anos[$aAnt].cand.Values) { if ($cA.eleito -and $cA.nm) { [void] $eleitosAnt.Add($cA.nm) } }
+        $nRe = 0
+        foreach ($cN in $anos[$aN].cand.Values) { if ($cN.pf[3] -eq -1) { if ($eleitosAnt.Contains($cN.nm)) { $cN.pf[3] = 1; $nRe++ } else { $cN.pf[3] = 0 } } }
+        $criterioReel = "eleito_em_$aAnt"
+        Anotar ("reeleicao: o arquivo de {0} nao informa; usado 'eleito deputado federal em {1} pelo mesmo estado' ({2} candidatos de {0} se encaixam)" -f $aN, $aAnt, $nRe) "Cyan"
+    }
+}
 $saida = [ordered]@{
+    reeleicao_criterio = $criterioReel
     gerado_em = (Get-Date).ToString("yyyy-MM-ddTHH:mm:ss")
     fonte = "TSE - Portal de Dados Abertos, Candidatos (consulta_cand)"
     rotulos_grau = @($script:RotGrau)

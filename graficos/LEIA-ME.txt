@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 3.20 - apuracao em graficos (versao final)
+ gctse GRAFICOS 3.21 - apuracao em graficos (versao final)
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -22,6 +22,18 @@
    GIRO DOS ESTADOS (Governador e Senador, um estado por vez)
    RESUMO (7 telas de fechamento)
    GERENCIADOR (escolhe o que vai para as saidas SDI da DeckLink)
+
+ NOVO NA 3.21 - PERFIL DA CAMARA E SENADORAS ELEITAS
+   PERFIL DA NOVA CAMARA, bloco RENOVACAO: o arquivo de candidatos de 2026
+   do TSE nao informa "disputa a reeleicao" (por isso aparecia 0% x 100%).
+   Agora: reeleito = foi ELEITO deputado federal em 2022 pelo mesmo estado
+   (mesmo nome civil, sem acento) - do arquivo de candidatos de 2022, que
+   o IMPORTAR-CANDIDATOS ja baixa. Mostra os numeros (ex.: 206 reeleitos,
+   307 novos) e o criterio embaixo. Sem o arquivo de 2022, o bloco diz
+   "o arquivo do TSE nao informa reeleicao" - nunca um numero errado.
+   RODE DE NOVO o IMPORTAR-CANDIDATOS.bat para valer.
+   SENADORAS ELEITAS (antes "10 senadoras mais votadas"): so as ELEITAS
+   (marca do TSE), da mais votada para a menos, todas na tela.
 
  NOVO NA 3.20 - OPERACIONAL: UMA JANELA POR SAIDA, SO TELA COM DADO
    GERENCIADOR.bat abre DUAS janelas lado a lado (meio a meio na tela):

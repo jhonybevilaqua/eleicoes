@@ -983,48 +983,49 @@
   // Candidatas ao Senado (boletim de Senador do TSE, ESTADOS.bat) cujo
   // registro no arquivo "Candidatos" do TSE e FEMININO (IMPORTAR-CANDIDATOS).
   function telaTopSenFem(v) {
-    var W = v ? 540 : 1280, H = v ? 960 : 720, tit = "AS 10 SENADORAS MAIS VOTADAS";
+    var W = v ? 540 : 1280, H = v ? 960 : 720, tit = "SENADORAS ELEITAS";
     var gen = window.GCTSE_GENERO, a26 = gen && gen.anos ? gen.anos["2026"] : null;
-    if (!a26) return semDados(W, H, v, v ? "10 SENADORAS" : tit, "importe o arquivo de candidatos do TSE (IMPORTAR-CANDIDATOS.bat)");
-    if (!a26.mulheres_senado) return semDados(W, H, v, v ? "10 SENADORAS" : tit, "rode de novo o IMPORTAR-CANDIDATOS.bat (agora ele lê também o Senado)");
+    if (!a26) return semDados(W, H, v, tit, "importe o arquivo de candidatos do TSE (IMPORTAR-CANDIDATOS.bat)");
+    if (!a26.mulheres_senado) return semDados(W, H, v, tit, "rode de novo o IMPORTAR-CANDIDATOS.bat (agora ele lê também o Senado)");
     var fem = {}; comoLista(a26.mulheres_senado).forEach(function (q) { fem[q] = 1; });
-    var u = (window.GCTSE_ESTADOS || {}).ufs || {}, todas = [], ufs = 0, nEl = 0;
+    // so as ELEITAS (marca do TSE no boletim de Senador), da mais votada para a menos
+    var u = (window.GCTSE_ESTADOS || {}).ufs || {}, l = [], ufs = 0, nCand = 0;
     Object.keys(DEP_UF).forEach(function (k) {
       var s0 = u[k] && u[k].sen && u[k].sen.tem ? u[k].sen : null; if (!s0) return; ufs++;
-      comoLista(s0.candidatos).forEach(function (c) { if (fem[c.sqcand]) { todas.push({ c: c, u: k }); if (c.eleito) nEl++; } });
+      comoLista(s0.candidatos).forEach(function (c) { if (fem[c.sqcand]) { nCand++; if (c.eleito) l.push({ c: c, u: k }); } });
     });
-    todas.sort(function (a, b) { return ((+b.c.votos || 0) - (+a.c.votos || 0)) || String(a.c.nome).localeCompare(String(b.c.nome), "pt-BR"); });
-    var l = todas.slice(0, 10), max = l.length ? +l[0].c.votos || 1 : 1, o;
-    var sl = !ufs ? { texto: "AGUARDANDO", cor: C.trilho } : (ufs >= 27 ? { texto: "1º TURNO · FINAL", cor: C.verde } : { texto: "PARCIAL", cor: C.vermelho });
-    if (!ufs) return semDados(W, H, v, v ? "10 SENADORAS" : tit, "aguardando o boletim de Senador (ESTADOS.bat)");
-    var sub = "Senado · " + todas.length + " candidatas · " + nEl + (nEl === 1 ? " eleita" : " eleitas") + (ufs < 27 ? " · " + ufs + " de 27 estados" : "");
-    function tag(x, y, c, a) { return c.eleito ? r(a === "end" ? x - 74 : x, y - 15, 74, 20, C.verde, 3) + t(a === "end" ? x - 37 : x + 37, y, "ELEITA", { s: 12, b: true, a: "middle" }) : ""; }
+    if (!ufs) return semDados(W, H, v, tit, "aguardando o boletim de Senador (ESTADOS.bat)");
+    if (!l.length) return semDados(W, H, v, tit, "nenhuma senadora eleita ainda (TSE)");
+    l.sort(function (a, b) { return ((+b.c.votos || 0) - (+a.c.votos || 0)) || String(a.c.nome).localeCompare(String(b.c.nome), "pt-BR"); });
+    l = l.slice(0, 14);
+    var max = +l[0].c.votos || 1, n = l.length, o;
+    var sl = ufs >= 27 ? { texto: "1º TURNO · FINAL", cor: C.verde } : { texto: "PARCIAL", cor: C.vermelho };
+    var sub = "Senado · " + n + (n === 1 ? " mulher eleita" : " mulheres eleitas") + " · " + nCand + " candidatas" + (ufs < 27 ? " · " + ufs + " de 27 estados" : "");
     if (!v) {
+      var ph = Math.min(58, 584 / n), k = ph / 58;   // ate 10 linhas no tamanho cheio; mais que isso, encolhe
       o = t(73, 57, tit, { s: 32, b: true, ls: 1, max: 667 }) + t(73, 85, sub, { s: 17, c: C.apagado, max: 660 }) + seloH(W, sl);
-      if (!l.length) o += marcaVazio() + t(640, 380, "nenhuma candidata com votos ainda", { s: 22, c: C.apagado, a: "middle" });
       l.forEach(function (it, i) {
-        var y = 106 + i * 58, c = it.c, cc = corPartidoCamara(c.partido, i);
-        o += r(73, y, 1134, 52, i % 2 ? "rgba(8,14,32,0.70)" : "rgba(8,14,32,0.86)", 6);
-        o += t(120, y + 36, (i + 1) + "º", { s: 24, b: true, a: "end", c: i < 3 ? "#ffd43b" : C.texto });
-        o += fotoDep(it.u, c, 134, y + 4, 33, 44) + r(178, y + 10, 5, 32, cc, 2);
-        o += t(193, y + 25, c.nome, { s: 21, b: true, max: 400 }) + t(193, y + 44, (c.partido || "") + "  ·  " + (DEP_UF[it.u] || it.u.toUpperCase()), { s: 13, c: C.apagado, max: 400 });
-        o += tag(600, y + 31, c, "start");
-        o += barraFina(690, y + 22, 320, (+c.votos || 0) / max, cc);
-        o += t(1190, y + 33, inteiro(c.votos), { s: 24, b: true, a: "end" }) + t(1190, y + 48, "votos" + (c.pct != null ? " · " + pct1(+c.pct) : ""), { s: 10, c: C.apagado, a: "end" });
+        var y = 106 + i * ph, c = it.c, cc = corPartidoCamara(c.partido, i), hh = ph - 6;
+        o += r(73, y, 1134, hh, i % 2 ? "rgba(8,14,32,0.70)" : "rgba(8,14,32,0.86)", 6);
+        o += t(120, y + hh * 0.69, (i + 1) + "º", { s: Math.round(24 * k), b: true, a: "end", c: i < 3 ? "#ffd43b" : C.texto });
+        o += fotoDep(it.u, c, 134, y + 4 * k, 33 * k, 44 * k) + r(178, y + 10 * k, 5, hh - 20 * k, cc, 2);
+        o += t(193, y + hh * 0.48, c.nome, { s: Math.round(21 * k), b: true, max: 470 }) + t(193, y + hh * 0.85, (c.partido || "") + "  ·  " + (DEP_UF[it.u] || it.u.toUpperCase()), { s: Math.round(13 * k), c: C.apagado, max: 470 });
+        o += barraFina(690, y + hh * 0.42, 320, (+c.votos || 0) / max, cc);
+        o += t(1190, y + hh * 0.63, inteiro(c.votos), { s: Math.round(24 * k), b: true, a: "end" }) + t(1190, y + hh * 0.92, "votos" + (c.pct != null ? " · " + pct1(+c.pct) + " no estado" : ""), { s: Math.round(10 * Math.max(k, 0.9)), c: C.apagado, a: "end" });
       });
-      return svg(W, H, o + t(73, 704, "Fonte: TSE — boletins de Senador dos 27 estados e gênero do arquivo Candidatos 2026 (Dados Abertos) · % dos votos válidos no estado", { s: 12, c: C.apagado2, max: 1134 }));
+      return svg(W, H, o + t(73, 704, "Fonte: TSE — boletins de Senador dos 27 estados (eleitas marcadas pelo TSE) e gênero do arquivo Candidatos 2026 (Dados Abertos)", { s: 12, c: C.apagado2, max: 1134 }));
     }
-    if (!l.length) marcaVazio();
-    o = r(35, 48, 6, 38, COR_MULHER) + t(53, 80, "10 SENADORAS", { s: 30, b: true, ls: 1 }) + t(53, 106, "as mulheres mais votadas · " + nEl + (nEl === 1 ? " eleita" : " eleitas"), { s: 14, c: C.apagado }) + seloV(W, sl);
+    var pv = Math.min(77, 766 / n), kv = pv / 77;
+    o = r(35, 48, 6, 38, COR_MULHER) + t(53, 80, tit, { s: 30, b: true, ls: 1 }) + t(53, 106, n + (n === 1 ? " eleita" : " eleitas") + " · da mais votada", { s: 14, c: C.apagado }) + seloV(W, sl);
     l.forEach(function (it, i) {
-      var y = 164 + i * 77, c = it.c, cc = corPartidoCamara(c.partido, i);
-      o += r(35, y, 470, 71, i % 2 ? "rgba(8,14,32,0.70)" : "rgba(8,14,32,0.86)", 6);
-      o += t(72, y + 44, (i + 1) + "º", { s: 22, b: true, a: "end", c: i < 3 ? "#ffd43b" : C.texto });
-      o += fotoDep(it.u, c, 82, y + 8, 41, 55) + r(131, y + 12, 4, 46, cc, 2);
-      o += t(143, y + 30, c.nome, { s: 18, b: true, max: 350 }) + t(143, y + 50, (c.partido || "") + " · " + it.u.toUpperCase(), { s: 12, c: C.apagado, max: 200 });
-      o += tag(495, y + 28, c, "end") + t(495, y + 56, inteiro(c.votos) + " votos", { s: 15, b: true, a: "end" });
+      var y = 164 + i * pv, c = it.c, cc = corPartidoCamara(c.partido, i), hh = pv - 6;
+      o += r(35, y, 470, hh, i % 2 ? "rgba(8,14,32,0.70)" : "rgba(8,14,32,0.86)", 6);
+      o += t(72, y + hh * 0.62, (i + 1) + "º", { s: Math.round(22 * kv), b: true, a: "end", c: i < 3 ? "#ffd43b" : C.texto });
+      o += fotoDep(it.u, c, 82, y + 8 * kv, 41 * kv, 55 * kv) + r(131, y + 12 * kv, 4, hh - 24 * kv, cc, 2);
+      o += t(143, y + hh * 0.42, c.nome, { s: Math.round(18 * kv), b: true, max: 350 }) + t(143, y + hh * 0.70, (c.partido || "") + " · " + it.u.toUpperCase(), { s: Math.round(12 * Math.max(kv, 0.9)), c: C.apagado, max: 200 });
+      o += t(495, y + hh * 0.79, inteiro(c.votos) + " votos", { s: Math.round(15 * kv), b: true, a: "end" });
     });
-    return svg(W, H, o + t(35, 950, "Fonte: TSE — Senado + arquivo Candidatos 2026", { s: 11, c: C.apagado2 }));
+    return svg(W, H, o + t(35, 950, "Fonte: TSE — Senado (eleitas) + arquivo Candidatos 2026", { s: 11, c: C.apagado2 }));
   }
   G["topsenfem-h"] = function () { return telaTopSenFem(false); };
   G["topsenfem-v"] = function () { return telaTopSenFem(true); };
@@ -2143,24 +2144,30 @@
     if (!P.achados) return svg(W, H, marcaVazio() + cab + t(W / 2, H / 2, P.eleitos ? "os eleitos do boletim não estão no arquivo de candidatos importado" : "aguardando os deputados eleitos (ESTADOS.bat)", { s: v ? 16 : 22, c: C.apagado, a: "middle", max: W - 60 }));
     var n = P.n, a = P.a, sub = P.eleitos + " deputados federais eleitos" + (P.ufs < 27 ? " (" + P.ufs + " de 27 estados)" : "") + (P.anoA ? " · traço branco = eleitos de " + P.anoA : "");
     var media = n.idN ? n.idS / n.idN : null, mediaA = a && a.idN ? a.idS / a.idN : null;
-    var fRe = pctDe(n.re, n.reN), fReA = a ? pctDe(a.re, a.reN) : null;
+    var fRe = pctDe(n.re, n.reN), fReA = a && a.reN ? pctDe(a.re, a.reN) : null, temRe = n.reN > 0;
+    // criterio de "reeleito": do arquivo do TSE ou, sem ele, "eleito em 2022 pelo mesmo estado"
+    var critRe = String((window.GCTSE_GENERO || {}).reeleicao_criterio || ""), anoCrit = (/eleito_em_(\d{4})/.exec(critRe) || [])[1];
+    var txtRe = anoCrit ? "reeleito = eleito deputado federal em " + anoCrit + " pelo mesmo estado · novo = não eleito em " + anoCrit : "reeleito = disputava a reeleição · novo = sem mandato atual";
     var sup = 0, supA = 0;
     P.rg.forEach(function (rot, i) { if (/^SUPERIOR COMPLETO/.test(rot)) { sup += n.grau[i] || 0; if (a) supA += a.grau[i] || 0; } });
     var graus = categorias(n.grau, n.grauN, a ? a.grau : null, a ? a.grauN : 0, P.rg, 4);
     var cores = categorias(n.cor, n.corN, a ? a.cor : null, a ? a.corN : 0, P.rc, 6);
     var faixas = FAIXAS_IDADE.map(function (fx, i) { return { nome: fx[2], f: n.idN ? n.faixa[i] / n.idN : 0, fA: a && a.idN ? a.faixa[i] / a.idN : null }; });
-    var rod = "Fonte: TSE — Dados Abertos (Candidatos: idade na posse, grau de instrução, cor/raça, reeleição) e boletim de resultados. Perfil de " + P.achados + " de " + P.eleitos + " eleitos. Reeleito = disputava a reeleição; novo = sem mandato atual (inclui ex-deputados).";
+    var rod = "Fonte: TSE — Dados Abertos (Candidatos: idade na posse, grau de instrução, cor/raça, reeleição) e boletim de resultados. Perfil de " + P.achados + " de " + P.eleitos + " eleitos.";
     function comp(atual, ant, suf) { if (ant == null) return ""; var d = atual - ant; return P.anoA + ": " + pct1(ant).replace("%", suf || "%") + (Math.abs(d) >= 0.05 ? "  (" + (d > 0 ? "+" : "−") + Number(Math.abs(d)).toFixed(1).replace(".", ",") + " p.p.)" : ""); }
     if (!v) {
       o = cab + t(73, 85, sub, { s: 16, c: C.apagado, max: 660 }) + seloH(W, { texto: P.ufs >= 27 ? "513 CADEIRAS" : "PARCIAL", cor: P.ufs >= 27 ? C.verde : C.vermelho });
       // renovacao
       o += painelPerfil(73, 106, 556, 262, "RENOVAÇÃO");
-      o += t(93, 190, pct1(fRe), { s: 54, b: true }) + t(93, 216, n.re + " reeleitos", { s: 16, c: "#c9d6e6" });
-      o += t(609, 190, pct1(100 - fRe), { s: 54, b: true, a: "end", c: COR_PERFIL }) + t(609, 216, n.novo + " novos no mandato", { s: 16, c: "#c9d6e6", a: "end" });
-      o += r(93, 238, 516, 26, COR_PERFIL, 4) + r(93, 238, 516 * fRe / 100, 26, "#c9d6e6", 4);
-      if (fReA != null) o += r(93 + 516 * fReA / 100 - 1.5, 232, 3, 38, "#ffffff", 0);
-      o += t(93, 300, comp(fRe, fReA) ? "reeleitos em " + comp(fRe, fReA) : "", { s: 14, c: C.apagado, max: 516 });
-      o += t(93, 346, "reeleito = disputava a reeleição · novo = sem mandato atual", { s: 12, c: C.apagado2, max: 516 });
+      if (!temRe) o += t(351, 230, "o arquivo do TSE não informa reeleição", { s: 18, c: C.apagado, a: "middle", max: 516 });
+      else {
+        o += t(93, 190, String(n.re), { s: 54, b: true }) + t(93, 216, "reeleitos · " + pct1(fRe), { s: 16, c: "#c9d6e6" });
+        o += t(609, 190, String(n.novo), { s: 54, b: true, a: "end", c: COR_PERFIL }) + t(609, 216, "novos · " + pct1(100 - fRe), { s: 16, c: "#c9d6e6", a: "end" });
+        o += r(93, 238, 516, 26, COR_PERFIL, 4) + r(93, 238, 516 * fRe / 100, 26, "#c9d6e6", 4);
+        if (fReA != null) o += r(93 + 516 * fReA / 100 - 1.5, 232, 3, 38, "#ffffff", 0);
+        o += t(93, 300, comp(fRe, fReA) ? "reeleitos em " + comp(fRe, fReA) : "", { s: 14, c: C.apagado, max: 516 });
+        o += t(93, 346, anoCrit ? "reeleito = eleito deputado federal em " + anoCrit + " pelo mesmo estado" : txtRe, { s: 12, c: C.apagado2, max: 516 });
+      }
       // idade
       o += painelPerfil(651, 106, 556, 262, "IDADE NA POSSE");
       o += t(671, 180, media ? Number(media).toFixed(1).replace(".", ",") : "—", { s: 44, b: true }) + t(671, 202, "anos, em média" + (mediaA ? " · " + P.anoA + ": " + Number(mediaA).toFixed(1).replace(".", ",") : ""), { s: 13, c: C.apagado });
@@ -2176,11 +2183,14 @@
     }
     o = cab + t(53, 106, P.eleitos + " eleitos" + (P.anoA ? " · traço = " + P.anoA : ""), { s: 13, c: C.apagado, max: 450 }) + seloV(W, { texto: P.ufs >= 27 ? "513 CADEIRAS" : "PARCIAL", cor: P.ufs >= 27 ? C.verde : C.vermelho });
     o += painelPerfil(35, 160, 470, 170, "RENOVAÇÃO");
-    o += t(55, 232, pct1(fRe), { s: 40, b: true }) + t(55, 254, n.re + " reeleitos", { s: 13, c: "#c9d6e6" });
-    o += t(485, 232, pct1(100 - fRe), { s: 40, b: true, a: "end", c: COR_PERFIL }) + t(485, 254, n.novo + " novos", { s: 13, c: "#c9d6e6", a: "end" });
-    o += r(55, 272, 430, 20, COR_PERFIL, 4) + r(55, 272, 430 * fRe / 100, 20, "#c9d6e6", 4);
-    if (fReA != null) o += r(55 + 430 * fReA / 100 - 1.5, 267, 3, 30, "#ffffff", 0);
-    o += t(55, 318, comp(fRe, fReA) ? "reeleitos em " + comp(fRe, fReA) : "", { s: 12, c: C.apagado, max: 430 });
+    if (!temRe) o += t(270, 250, "o arquivo do TSE não informa reeleição", { s: 14, c: C.apagado, a: "middle", max: 430 });
+    else {
+      o += t(55, 232, String(n.re), { s: 40, b: true }) + t(55, 254, "reeleitos · " + pct1(fRe), { s: 13, c: "#c9d6e6" });
+      o += t(485, 232, String(n.novo), { s: 40, b: true, a: "end", c: COR_PERFIL }) + t(485, 254, "novos · " + pct1(100 - fRe), { s: 13, c: "#c9d6e6", a: "end" });
+      o += r(55, 272, 430, 20, COR_PERFIL, 4) + r(55, 272, 430 * fRe / 100, 20, "#c9d6e6", 4);
+      if (fReA != null) o += r(55 + 430 * fReA / 100 - 1.5, 267, 3, 30, "#ffffff", 0);
+      o += t(55, 318, comp(fRe, fReA) ? "reeleitos em " + comp(fRe, fReA) : (anoCrit ? "reeleito = eleito em " + anoCrit + " pelo mesmo estado" : ""), { s: 12, c: C.apagado, max: 430 });
+    }
     o += painelPerfil(35, 342, 470, 210, "IDADE NA POSSE");
     o += t(55, 406, media ? Number(media).toFixed(1).replace(".", ",") + " anos" : "—", { s: 30, b: true }) + t(485, 406, mediaA ? P.anoA + ": " + Number(mediaA).toFixed(1).replace(".", ",") : "", { s: 13, c: C.apagado, a: "end" });
     o += linhasPerfil(55, 440, 430, 24, faixas, 13);
@@ -3503,7 +3513,7 @@
       { id: "assembleias-h", nome: "Assembleias — Brasil (por partido)", f: "h" },
       { id: "topdep-h", nome: "10 deputados federais mais votados", f: "h" },
       { id: "topfem-h", nome: "10 deputadas mais votadas", f: "h" },
-      { id: "topsenfem-h", nome: "10 senadoras mais votadas", f: "h" },
+      { id: "topsenfem-h", nome: "Senadoras eleitas", f: "h" },
       { id: "perfileleitor-h", nome: "Perfil do eleitorado", f: "h" },
       { id: "foiurnas-h", nome: "Quem foi às urnas (perfil)", f: "h" },
       { id: "eleito-v", nome: "Presidente eleito", f: "v" },
@@ -3558,7 +3568,7 @@
       { id: "assembleias-v", nome: "Assembleias — Brasil (por partido)", f: "v" },
       { id: "topdep-v", nome: "10 deputados federais mais votados", f: "v" },
       { id: "topfem-v", nome: "10 deputadas mais votadas", f: "v" },
-      { id: "topsenfem-v", nome: "10 senadoras mais votadas", f: "v" },
+      { id: "topsenfem-v", nome: "Senadoras eleitas", f: "v" },
       { id: "perfileleitor-v", nome: "Perfil do eleitorado", f: "v" },
       { id: "foiurnas-v", nome: "Quem foi às urnas (perfil)", f: "v" }
     ],
