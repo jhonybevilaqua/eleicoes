@@ -464,7 +464,7 @@ button{background:#1f6fc0;color:#fff;font-weight:700}.e{color:#ff8787;margin-top
 <form method="get" action="/entrar"><b>gctse - CONTROLE DAS TELAS</b><input name="pin" type="password" inputmode="numeric" placeholder="senha" autofocus><button>ENTRAR</button>__ERRO__</form></body></html>
 '@
 
-Escrever-Log "gctse GERENCIADOR no ar: http://localhost:$Porta/gerenciador.html" "Green"
+Escrever-Log "gctse GERENCIADOR no ar - HORIZONTAL: http://localhost:$Porta/gerenciador.html?saida=h  |  VERTICAL: http://localhost:$Porta/gerenciador.html?saida=v" "Green"
 Escrever-Log "OBS da saida HORIZONTAL: http://localhost:$Porta/saida.html?saida=h  (fonte Navegador 1920x1080)" "Cyan"
 Escrever-Log "OBS da saida VERTICAL:   http://localhost:$Porta/saida.html?saida=v&obs=1  (fonte Navegador 1920x1080, ja girada)" "Cyan"
 Escrever-Log ("no ar agora: horizontal = {0} | vertical = {1}" -f $script:Estado.h.tela, $script:Estado.v.tela)
@@ -492,7 +492,31 @@ if ($script:DadosAoAbrir -and -not $script:Ensaio) {
         } catch { Escrever-Log "dados do TSE: nao consegui iniciar ($($_.Exception.Message))" "Yellow" }
     }
 }
-if ($AbrirPagina) { try { Start-Process "http://localhost:$Porta/gerenciador.html" } catch { } }
+# Abre o gerenciador em DUAS janelas lado a lado (meio a meio na tela):
+# esquerda = HORIZONTAL, direita = VERTICAL. Edge ou Chrome em modo "app"
+# (sem abas/barra), cada janela com o seu perfil - assim a posicao vale
+# mesmo com o navegador ja aberto. Sem Edge/Chrome: o navegador padrao.
+function Abrir-Gerenciador {
+    $urls = @(@("h", "http://localhost:$Porta/gerenciador.html?saida=h"), @("v", "http://localhost:$Porta/gerenciador.html?saida=v"))
+    $nav = $null
+    foreach ($c in @("${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe", "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe",
+                     "$env:ProgramFiles\Google\Chrome\Application\chrome.exe", "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe",
+                     "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe")) { if ($c -and (Test-Path $c)) { $nav = $c; break } }
+    $x0 = 0; $y0 = 0; $larg = 960; $alt = 1040
+    try { Add-Type -AssemblyName System.Windows.Forms; $wa = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea; $x0 = $wa.X; $y0 = $wa.Y; $larg = [int] [math]::Floor($wa.Width / 2); $alt = $wa.Height } catch { }
+    $i = 0
+    foreach ($par in $urls) {
+        try {
+            if ($nav -and $env:LOCALAPPDATA) {
+                $perfil = Join-Path $env:LOCALAPPDATA ("gctse-gerenciador-" + $par[0])
+                Start-Process -FilePath $nav -ArgumentList @(('--user-data-dir="' + $perfil + '"'), "--no-first-run", "--no-default-browser-check", ("--app=" + $par[1]), ("--window-position={0},{1}" -f ($x0 + $i * $larg), $y0), ("--window-size={0},{1}" -f $larg, $alt))
+            } else { Start-Process $par[1] }
+        } catch { try { Start-Process $par[1] } catch { } }
+        $i++
+    }
+    Escrever-Log "gerenciador aberto em 2 janelas: HORIZONTAL (esquerda) e VERTICAL (direita)" "Green"
+}
+if ($AbrirPagina) { Abrir-Gerenciador }
 
 $script:Pedido = $null
 while ($ouvinte.IsListening) {

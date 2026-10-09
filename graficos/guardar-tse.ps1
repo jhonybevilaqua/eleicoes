@@ -86,6 +86,13 @@ function Cands($obj) {
         $eleito = $(if ($st) { ($st -match 'eleit') -and -not ($st -match 'n\S{1,2}o\s+eleit') -and -not ($st -match 'turno') } else { $e -eq "s" })
         $out += [pscustomobject]@{ sq = "$(Prop $c 'sqcand')"; eleito = $eleito; turno2 = ($st -match 'turno') }
     } } } }
+    # formato de 2022 (dados-simplificados): lista "cand" no topo
+    foreach ($c in @(Prop $obj "cand")) {
+        if ($null -eq $c) { continue }
+        $st = "$(Prop $c 'st')"; $e = "$(Prop $c 'e')"
+        $eleito = $(if ($st) { ($st -match 'eleit') -and -not ($st -match 'n\S{1,2}o\s+eleit') -and -not ($st -match 'turno') } else { $e -eq "s" })
+        $out += [pscustomobject]@{ sq = "$(Prop $c 'sqcand')"; eleito = $eleito; turno2 = ($st -match 'turno') }
+    }
     return $out
 }
 
@@ -149,14 +156,20 @@ foreach ($u in $UFs) {
 Anotar "2022 (comparacoes) e lista de eleicoes..." "Cyan"
 [void] (Guardar (Url "ele2022" $E2022 "br" 1 "r" "dados-simplificados"))
 [void] (Guardar (Url "ele2022" $E2022 "br" 1))
-$n22 = 0; foreach ($abr in @("br") + $UFs + @("zz")) { if (Guardar (Url "ele2022" $E2022T2 $abr 1)) { $n22++ } }
+# 2022 esta no formato daquele ano (dados-simplificados ...-r.json); tenta
+# esse primeiro e depois o novo (-u), como o ESTADOS.bat
+function Guardar-2022([string] $ele, [string] $abr, [int] $cargo) {
+    foreach ($tent in @(@("r", "dados-simplificados"), @("r", "dados"), @("u", "dados"))) { $o = Guardar (Url "ele2022" $ele $abr $cargo $tent[0] $tent[1]); if ($o) { return $o } }
+    return $null
+}
+$n22 = 0; foreach ($abr in @("br") + $UFs + @("zz")) { if (Guardar-2022 $E2022T2 $abr 1) { $n22++ } }
 Anotar ("   2022 Presidente 2o turno (eleicao {0}): {1} de 29 (Brasil, 27 estados, exterior)" -f $E2022T2, $n22)
 $G22 = "546"; $G22T2 = "547"
 if ($c22) { if ("$(Prop $c22 'eleicao_estaduais')") { $G22 = "$(Prop $c22 'eleicao_estaduais')" }; if ("$(Prop $c22 'eleicao_estaduais_2turno')") { $G22T2 = "$(Prop $c22 'eleicao_estaduais_2turno')" } }
 $ng = 0; $ng2 = 0
 foreach ($u in $UFs) {
-    $bol22 = Guardar (Url "ele2022" $G22 $u 3)
-    if ($bol22) { $ng++; if (@(Cands $bol22 | Where-Object { $_.turno2 }).Count) { if (Guardar (Url "ele2022" $G22T2 $u 3)) { $ng2++ } } }
+    $bol22 = Guardar-2022 $G22 $u 3
+    if ($bol22) { $ng++; if (@(Cands $bol22 | Where-Object { $_.turno2 }).Count) { if (Guardar-2022 $G22T2 $u 3) { $ng2++ } } }
 }
 Anotar ("   2022 Governador (eleicoes {0}/{1}): 1o turno {2} de 27 | 2o turno {3} estados" -f $G22, $G22T2, $ng, $ng2) $(if ($ng -lt 27) { "Yellow" } else { "Gray" })
 if ($ng -eq 0) { Anotar "   (governadores de 2022 nao vieram: confira o codigo com a engenharia e ponha em comparar_2022.eleicao_estaduais no config)" "Yellow" }

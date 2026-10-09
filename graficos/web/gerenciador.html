@@ -41,9 +41,8 @@
   .col-cmd .regs .reg { font-size: 12px; letter-spacing: 0; padding: 7px 6px; }
   .col-cmd button { padding: 7px 10px; font-size: 13.5px; }
   .col-cmd .regs .ufs button { width: 42px; padding: 6px 0; }
-  @media (max-width: 1100px) { .col { grid-template-columns: 1fr; } .col-mon { position: static; max-height: none; } }
   /* barra fixa no alto: ir para cada saida, mostrar/esconder, dados do TSE */
-  #nav { position: sticky; top: 0; z-index: 8; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 6px 20px; background: var(--fundo); border-bottom: 1px solid var(--linha); }
+  #nav { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 6px 20px; background: var(--fundo); border-bottom: 1px solid var(--linha); }
   #nav .rot { font-size: 12px; font-weight: 800; letter-spacing: 1px; color: var(--apagado); }
   #nav button { padding: 6px 12px; font-size: 13px; }
   #nav button.ligado { background: var(--azul); border-color: var(--azul-borda); color: #fff; }
@@ -128,7 +127,7 @@
   .regs .reg { font-weight: 800; letter-spacing: 1px; text-align: left; white-space: nowrap; }
   .regs .ufs { display: flex; flex-wrap: wrap; gap: 4px; }
   .regs .ufs button { width: 46px; padding: 6px 0; }
-  #ensaio { background: #c00000; color: #fff; font-weight: 800; letter-spacing: 1px; text-align: center; padding: 8px; position: sticky; top: 0; z-index: 9; }
+  #ensaio { background: #c00000; color: #fff; font-weight: 800; letter-spacing: 1px; text-align: center; padding: 6px; }
   #ensaio[hidden] { display: none; }
   /* VIGIA DA NOITE: eleito, viradas, quedas (gerenciador.ps1) */
   #vigia { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 0 20px 10px; }
@@ -180,16 +179,46 @@
   button.pvwliga.ligado, button.pvwliga.ligado:hover { background: var(--verde); border-color: var(--verde-borda); color: #fff; }
   button.pvw-marcado { outline: 3px solid var(--verde); outline-offset: 1px; }
   .ctldep .depregs button.ativo { background: var(--azul); border-color: var(--azul-borda); color: #fff; }
+  /* ---- OPERACIONAL (3.20): barra do alto FIXA e compacta, monitor FIXO,
+     uma janela por saida (gerenciador.html?saida=h / ?saida=v) ---- */
+  #topo { position: sticky; top: 0; z-index: 20; background: var(--fundo); border-bottom: 1px solid var(--linha); box-shadow: 0 2px 6px rgba(20,32,46,.10); }
+  #topo header { padding: 6px 14px 2px; gap: 10px; } #topo h1 { font-size: 17px; }
+  #topo header a { font-size: 12.5px; }
+  #topo #status { padding: 2px 14px 4px; gap: 6px; } #topo .st { padding: 3px 8px; font-size: 12px; }
+  #topo #vigia, #topo #nav { padding: 2px 14px 5px; gap: 6px; } #topo #nav { border-bottom: 0; }
+  #topo #vigia button, #topo #nav button { padding: 4px 9px; font-size: 12.5px; }
+  #topo #vigia .rot, #topo #nav .rot { font-size: 11px; }
+  .col-mon { top: calc(var(--topo, 140px) + 8px) !important; max-height: calc(100vh - var(--topo, 140px) - 16px) !important; }
+  .col { scroll-margin-top: calc(var(--topo, 140px) + 8px); }
+  #acessos, #voce, #rotIpad, #ipadModo { display: none !important; }   /* uso so com o operador */
+  /* uma saida por janela */
+  body.uma #nav [data-ir], body.uma #nav [data-mostra], body.uma #nav .rot-mostrar, body.uma #nav .rot-saidas, body.uma #tecAlvo, body.uma .rot-teclado { display: none !important; }
+  body.uma main { padding: 8px 10px 14px; }
+  body.uma .col { padding: 10px; gap: 12px; }
+  body.so-h .col { grid-template-columns: minmax(300px, 42%) minmax(0, 1fr); }
+  body.so-v .col { grid-template-columns: minmax(230px, 30%) minmax(0, 1fr); }
+  body.so-v .mon-pgm .previa { max-width: 100% !important; }
+  body.uma .col-cmd { columns: 3 230px; column-gap: 10px; }
+  body.uma .col-cmd .regs { grid-template-columns: 92px 1fr; }
+  body.uma .col-cmd .regs .reg { font-size: 11px; padding: 6px 4px; }
+  body.uma .col-cmd .regs .ufs button { width: 38px; }
+  @media (max-width: 760px) { .col { grid-template-columns: 1fr !important; } .col-mon { position: static !important; max-height: none !important; } }
+  /* tela SEM DADO: o botao some (nao vai ao ar tela vazia); "mostrar" deixa ver */
+  body:not(.mostra-vazias) .col-cmd button.sem-dado, body:not(.mostra-vazias) .col-cmd .sec.toda-vazia { display: none !important; }
+  body.mostra-vazias .col-cmd button.sem-dado { opacity: .45; border-style: dashed; }
+  #vazias { font-size: 12px; color: var(--apagado); } #vazias button { font-size: 12px; padding: 3px 8px; }
 </style>
 <script>try { if (localStorage.getItem("gctse-tema") === "escuro") document.documentElement.className = "escuro"; } catch (e) { }</script>
 </head>
 <body>
+<div id="topo">
 <div id="ensaio" hidden>ENSAIO — DADOS FICTÍCIOS — ESTE GERENCIADOR NÃO VAI AO AR (o do ar é o da porta 8098)</div>
 <div id="voce" hidden></div>
 <header><h1>gctse — GERENCIADOR DAS SAÍDAS</h1>
-  <a href="index.html" target="_blank">situação completa, avisos de virada e cores ↗</a>
-  <a href="checklist.html" target="_blank">checklist do dia ↗</a>
-  <span class="copia so-local"><button id="copia" type="button" title="Guarda a pasta inteira (config, dados, evolução, logs) num .zip em copias-de-seguranca">💾 cópia de segurança</button> <span id="copiaMsg"></span></span>
+  <a href="index.html" target="_blank" title="situação completa, avisos de virada e cores">situação ↗</a>
+  <a href="checklist.html" target="_blank">checklist ↗</a>
+  <a href="relatorio.html" target="_blank">relatório ↗</a>
+  <span class="copia so-local"><button id="copia" type="button" title="Guarda a pasta inteira (config, dados, evolução, logs) num .zip em copias-de-seguranca">💾 cópia</button> <span id="copiaMsg"></span></span>
   <button class="tema" id="tema" type="button">tema escuro</button></header>
 <div id="status"><span class="st neutro" id="stP">Presidente: …</span><span class="st neutro" id="stE">Estados: …</span><span class="st neutro" id="stEv" hidden></span><span class="st aviso" id="stCL" hidden></span><span class="st neutro" id="stG">Gerenciador: …</span><span class="st neutro" id="stOh" hidden></span><span class="st neutro" id="stOv" hidden></span></div>
 <div id="vigia"><span class="rot">PRESIDENTE ELEITO:</span>
@@ -198,8 +227,8 @@
   <span class="rot" style="margin-left:14px">SOM:</span>
   <button type="button" id="som">🔔 …</button><button type="button" id="silenciar">silenciar 5 min</button>
   <span class="rot" id="rotIpad" style="margin-left:14px" hidden>iPAD:</span><button type="button" id="ipadModo" hidden>…</button>
-  <span class="rot" style="margin-left:14px">TECLADO:</span><button type="button" id="tecAlvo" title="tecla H, V ou B troca">saída H</button><button type="button" id="tecAjuda">? atalhos</button>
-  <a href="relatorio.html" target="_blank" style="margin-left:auto">relatório da noite ↗</a></div>
+  <span class="rot rot-teclado" style="margin-left:14px">TECLADO:</span><button type="button" id="tecAlvo" title="tecla H, V ou B troca">saída H</button><button type="button" id="tecAjuda">? atalhos</button>
+  </div>
 <div id="acessos" class="so-local" hidden><span class="rot">ACESSOS (iPad / outros PCs):</span><span id="listaAcessos" style="display:contents"></span>
   <button type="button" id="travar" title="Trava na hora TODOS os comandos que vêm de outros aparelhos (eles continuam vendo)">🔒 travar remotos</button></div>
 <div id="ajudaTec" hidden><div class="caixa"><h3>ATALHOS DE TECLADO</h3>
@@ -212,13 +241,16 @@
   <tr><td><b>E</b></td><td>presidente eleito no ar nas duas saídas (pede confirmação)</td></tr>
   <tr><td><b>?</b></td><td>mostra/esconde esta ajuda</td></tr></table>
   <p class="dica">Não funcionam enquanto se digita num campo (ex.: tempo do rodízio).</p><button type="button" id="ajudaFechar">fechar</button></div></div>
-<div id="nav"><span class="rot">SAÍDAS:</span>
+<div id="nav"><span class="rot rot-saidas">SAÍDAS:</span>
   <button type="button" data-ir="h" title="rola até a saída horizontal">▣ HORIZONTAL</button>
   <button type="button" data-ir="v" title="rola até a saída vertical">▯ VERTICAL</button>
-  <span class="rot" style="margin-left:10px">MOSTRAR:</span>
+  <span class="rot rot-mostrar" style="margin-left:10px">MOSTRAR:</span>
   <button type="button" data-mostra="hv">as duas</button><button type="button" data-mostra="h">só horizontal</button><button type="button" data-mostra="v">só vertical</button>
+  <a id="outraSaida" href="#" target="_blank" hidden style="font-weight:700"></a>
   <button type="button" class="so-local" id="navDados" style="margin-left:10px" title="baixar e importar os dados do TSE">📥 dados do TSE</button>
+  <span id="vazias" hidden></span>
   <span class="noarmini" style="margin-left:auto">no ar: H <b id="navH">…</b> · V <b id="navV">…</b></span></div>
+</div>
 <div id="dadosTse" class="so-local" hidden><h3>📥 DADOS DO TSE (o que não vem no boletim ao vivo)</h3>
   <div class="dica" style="margin:0">Roda numa janela minimizada, um depois do outro. GRAFICOS.bat e ESTADOS.bat continuam coletando normalmente. Ao abrir o gerenciador, o que ainda não existir nesta máquina é buscado sozinho.</div>
   <table><tbody>
@@ -241,6 +273,8 @@
 <script charset="utf-8" src="graficos.js"></script>
 <script charset="utf-8" src="dados.js"></script>
 <script charset="utf-8" src="estados.js"></script>
+<script charset="utf-8" src="candidatos-genero.js"></script>
+<script charset="utf-8" src="perfil-eleitor.js"></script>
 <script>
 (function () {
   "use strict";
@@ -256,6 +290,18 @@
     { id: "h", nome: "SAÍDA HORIZONTAL", sub: "OBS SAIDA-HORIZONTAL → canal da DeckLink escolhido nele · 1920×1080", W: 1920, H: 1080, f: "h" },
     { id: "v", nome: "SAÍDA VERTICAL", sub: "OBS SAIDA-VERTICAL → canal da DeckLink escolhido nele · tela 1080×1920 girada no quadro 1920×1080", W: 1080, H: 1920, f: "v" }
   ];
+  // UMA SAIDA POR JANELA: gerenciador.html?saida=h (horizontal) ou ?saida=v
+  // (vertical). O GERENCIADOR.bat abre as duas, lado a lado. Sem ?saida =
+  // as duas na mesma pagina (como antes).
+  var SO = (/[?&]saida=([hv])\b/.exec(location.search) || [])[1] || "";
+  if (SO) {
+    SAIDAS = SAIDAS.filter(function (x) { return x.id === SO; });
+    document.body.classList.add("uma", "so-" + SO);
+    document.title = "gctse GERENCIADOR · " + (SO === "h" ? "HORIZONTAL" : "VERTICAL");
+    document.querySelector("h1").textContent = "GERENCIADOR · " + (SO === "h" ? "HORIZONTAL" : "VERTICAL");
+    var ao = document.getElementById("outraSaida"); ao.hidden = false;
+    ao.href = "gerenciador.html?saida=" + (SO === "h" ? "v" : "h"); ao.textContent = "abrir a " + (SO === "h" ? "VERTICAL" : "HORIZONTAL") + " ↗";
+  }
   var estado = null, autoTimer = { h: null, v: null };
   var REGIOES_MENU = [["NORTE", "norte", ["ac", "am", "ap", "pa", "ro", "rr", "to"]], ["NORDESTE", "nordeste", ["al", "ba", "ce", "ma", "pb", "pe", "pi", "rn", "se"]],
     ["CENTRO-OESTE", "centro-oeste", ["df", "go", "ms", "mt"]], ["SUDESTE", "sudeste", ["es", "mg", "rj", "sp"]], ["SUL", "sul", ["pr", "rs", "sc"]]];
@@ -612,6 +658,7 @@
 
   // ------------------------------------------- barra fixa: ir / mostrar saidas
   function mostrarSaidas(q) {
+    if (SO) return;   // janela de uma saida so
     if (!/^(hv|h|v)$/.test(q)) q = "hv";
     SAIDAS.forEach(function (S) { document.getElementById("col-" + S.id).classList.toggle("oculta", q.indexOf(S.id) < 0); });
     document.querySelectorAll("#nav [data-mostra]").forEach(function (b) { b.classList.toggle("ligado", b.dataset.mostra === q); });
@@ -896,6 +943,7 @@
     return ctxA;
   }
   function bip(freq, dur, quando) {
+    if (SO === "v") return false;   // com as duas janelas abertas, so a HORIZONTAL apita
     var a = audio(); if (!a || a.state !== "running") return false;
     var o = a.createOscillator(), g = a.createGain(), t0 = a.currentTime + (quando || 0);
     o.type = "square"; o.frequency.value = freq; g.gain.value = 0.07; o.connect(g); g.connect(a.destination); o.start(t0); o.stop(t0 + dur);
@@ -1024,17 +1072,22 @@
   document.getElementById("tecAjuda").onclick = function () { ajuda.hidden = !ajuda.hidden; };
   document.getElementById("ajudaFechar").onclick = function () { ajuda.hidden = true; };
   pintarTec();
-  function alvosTec() { return tecAlvo === "b" ? ["h", "v"] : [tecAlvo]; }
+  function alvosTec() { if (SO) return [SO]; return tecAlvo === "b" ? ["h", "v"] : [tecAlvo]; }
   function favsDe(s) { var f = SAIDAS.filter(function (x) { return x.id === s; })[0].f, l = window.GCTSE_GRAFICOS.lista; return (((cfgA.favoritos || {})[f]) || []).filter(function (id) { return l.some(function (x) { return x.id === id; }); }); }
   document.addEventListener("keydown", function (ev) {
     var tg = ev.target, tag = tg && tg.tagName;
     if (ev.ctrlKey || ev.altKey || ev.metaKey || tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || !estado) return;
     var k = ev.key, ok = true;
     if (k === "?" ) ajuda.hidden = !ajuda.hidden;
-    else if (k === "h" || k === "H") mudarTec("h");
-    else if (k === "v" || k === "V") mudarTec("v");
-    else if (k === "b" || k === "B") mudarTec("b");
-    else if (/^[1-9]$/.test(k)) alvosTec().forEach(function (s) { var id = favsDe(s)[+k - 1]; if (id) definir(s, id); });
+    else if (!SO && (k === "h" || k === "H")) mudarTec("h");
+    else if (!SO && (k === "v" || k === "V")) mudarTec("v");
+    else if (!SO && (k === "b" || k === "B")) mudarTec("b");
+    else if (/^[1-9]$/.test(k)) alvosTec().forEach(function (s) {
+      var id = favsDe(s)[+k - 1]; if (!id) return;
+      var G0 = window.GCTSE_GRAFICOS;
+      if (!mostraVazias && G0.temDados && !G0.temDados(id)) { toast({ tipo: "alerta", hora: new Date().toTimeString().slice(0, 8), texto: "Favorito " + k + " sem dado do TSE agora — não foi ao ar" }); return; }
+      definir(s, id);
+    });
     else if (k === "a" || k === "A") alvosTec().forEach(function (s) { definir(s, "apresentacao"); });
     else if (k === "p" || k === "P") alvosTec().forEach(function (s) { ligarPrevia(s, !previa[s]); });
     else if (k === " " || k === "Enter") alvosTec().forEach(function (s) { var p0 = pendente[s]; if (p0) { pendente[s] = null; mostrarPrevia(s); irAoAr(s, p0); } });
@@ -1058,6 +1111,42 @@
   nomeTema();
   situacao(); lerEstado();
   setInterval(lerEstado, 1500);
+
+  // ------------------------------------- barra do alto fixa: altura real
+  var topo = document.getElementById("topo");
+  function medirTopo() { document.documentElement.style.setProperty("--topo", topo.offsetHeight + "px"); }
+  medirTopo(); try { new ResizeObserver(medirTopo).observe(topo); } catch (e) { window.addEventListener("resize", medirTopo); }
+
+  // ------------------------------------- telas SEM DADO ficam escondidas
+  // O grafico diz se tem dado (GCTSE_GRAFICOS.temDados). Botao de tela vazia
+  // some do painel (e o rodizio pula): nao vai ao ar tela vazia. Quando o
+  // dado chega, o botao volta sozinho. "mostrar" deixa ver/usar mesmo assim.
+  var mostraVazias = false;
+  function filtrarVazias() {
+    var G0 = window.GCTSE_GRAFICOS; if (!G0 || !G0.temDados) return;
+    var ids = {}; G0.lista.forEach(function (g) { ids[g.id] = 1; });
+    var cache = {}, n = 0, noAr = {};
+    SAIDAS.forEach(function (S) { var e0 = estado && estado[S.id]; if (e0) noAr[e0.tela] = 1; });
+    document.querySelectorAll(".col-cmd button[data-k]").forEach(function (b) {
+      var k = b.dataset.k; if (!ids[k]) return;
+      if (!(k in cache)) cache[k] = G0.temDados(k);
+      var vazia = !cache[k] && !noAr[k];   // a que esta no ar nunca some
+      b.classList.toggle("sem-dado", vazia); if (vazia) { n++; b.title = "sem dado do TSE agora — escondida"; } else if (b.title === "sem dado do TSE agora — escondida") b.title = "";
+    });
+    document.querySelectorAll(".col-cmd .sec").forEach(function (sec) {
+      var bs = sec.querySelectorAll("button"); if (!bs.length) return;
+      var todas = [].every.call(bs, function (b) { return b.classList.contains("sem-dado"); });
+      sec.classList.toggle("toda-vazia", todas);
+    });
+    var vz = document.getElementById("vazias"); vz.hidden = !n;
+    vz.innerHTML = n ? n + " tela" + (n > 1 ? "s" : "") + " sem dado escondida" + (n > 1 ? "s" : "") + ' <button type="button" id="vzMostra">' + (mostraVazias ? "esconder" : "mostrar") + "</button>" : "";
+    var bm = document.getElementById("vzMostra");
+    if (bm) bm.onclick = function () { mostraVazias = !mostraVazias; document.body.classList.toggle("mostra-vazias", mostraVazias); filtrarVazias(); };
+  }
+  setTimeout(filtrarVazias, 800);
+  setInterval(filtrarVazias, 10000);
+  // genero dos candidatos e perfil do eleitor: arquivos dos importadores
+  setInterval(function () { recarregar("candidatos-genero.js"); recarregar("perfil-eleitor.js"); }, 60000);
   setInterval(function () { recarregar("dados.js"); recarregar("estados.js"); }, 3000);
 })();
 </script>

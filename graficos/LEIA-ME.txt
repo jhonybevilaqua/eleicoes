@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 3.19 - apuracao em graficos (versao final)
+ gctse GRAFICOS 3.20 - apuracao em graficos (versao final)
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -22,6 +22,28 @@
    GIRO DOS ESTADOS (Governador e Senador, um estado por vez)
    RESUMO (7 telas de fechamento)
    GERENCIADOR (escolhe o que vai para as saidas SDI da DeckLink)
+
+ NOVO NA 3.20 - OPERACIONAL: UMA JANELA POR SAIDA, SO TELA COM DADO
+   GERENCIADOR.bat abre DUAS janelas lado a lado (meio a meio na tela):
+     esquerda = HORIZONTAL (gerenciador.html?saida=h)
+     direita  = VERTICAL   (gerenciador.html?saida=v)
+   (Edge ou Chrome em modo app; sem eles, o navegador padrao.) Cada janela
+   comanda so a sua saida (teclado tambem). Barra do alto FIXA e o monitor
+   do que esta NO AR acompanha a rolagem. Link "abrir a VERTICAL/HORIZONTAL"
+   no alto. gerenciador.html sem ?saida = as duas juntas (como antes).
+   Alarme/som: so na janela HORIZONTAL (nao apita em dobro).
+   ACESSOS/iPad sairam da tela (uso so com o operador).
+
+   TELA SEM DADO NAO VAI AO AR: o botao de uma tela sem dado do TSE some do
+   painel ("N telas sem dado escondidas - mostrar"); o rodizio automatico
+   pula; favorito pelo teclado avisa e nao poe no ar. Quando o dado chega,
+   o botao volta sozinho. Ex.: "Quem foi as urnas" so aparece quando o TSE
+   publicar o comparecimento por perfil; telas de 2022 so com 2022 lido.
+
+   DADOS DE 2022: os boletins de 2022 estao no formato daquele ano
+   (dados-simplificados/...-r.json, sem sigla do partido - sai do numero
+   do candidato). ESTADOS.bat e GUARDAR-DADOS-TSE agora pedem esse formato
+   (antes pediam o de 2024, por isso "nao encontrado").
 
  NOVO NA 3.19 - CORRECAO DOS IMPORTADORES (arquivos reais do TSE)
    IMPORTAR-CANDIDATOS lia "0 de Deputado Federal, 0 de Senador" nos

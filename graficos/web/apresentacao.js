@@ -79,8 +79,16 @@
     window.GCTSE_GRAFICOS.ajustarSelos(camada);
   }
 
-  // Desenha o proximo na camada escondida e cruza.
-  function mostrar(i) {
+  // Tela sem dado (o grafico marca "vazia"): o rodizio pula. Telas de estado,
+  // resumo e giro tem a logica delas e nao sao puladas aqui.
+  function vazia(id) {
+    if (id.indexOf(":") > 0 || !window.GCTSE_GRAFICOS.temDados) return false;
+    return !window.GCTSE_GRAFICOS.temDados(id);
+  }
+  // Desenha o proximo na camada escondida e cruza. dir: 1 = para frente.
+  function mostrar(i, dir) {
+    dir = dir || 1;
+    for (var k = 0; k < ids.length; k++) { var j = ((i + dir * k) % ids.length + ids.length) % ids.length; if (!vazia(ids[j])) { i = j; break; } }
     atual = (i + ids.length) % ids.length;
     // tela que troca sozinha comeca do inicio cada vez que entra
     if (window.GCTSE_GRAFICOS.reiniciarPaginas && ids[atual].indexOf("deputados") === 0) window.GCTSE_GRAFICOS.reiniciarPaginas();
@@ -126,7 +134,7 @@
   }
   document.addEventListener("keydown", function (e) {
     if (e.key === "ArrowRight" || e.key === "PageDown") { mostrar(atual + 1); agendar(); }
-    else if (e.key === "ArrowLeft" || e.key === "PageUp") { mostrar(atual - 1); agendar(); }
+    else if (e.key === "ArrowLeft" || e.key === "PageUp") { mostrar(atual - 1, -1); agendar(); }
     else if (e.key === " ") { pausado = !pausado; avisar(pausado ? "PAUSADO" : "RODANDO"); iniciarBarra(); agendar(); e.preventDefault(); }
   });
 

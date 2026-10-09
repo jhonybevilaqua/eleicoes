@@ -17,7 +17,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "3.19 - 09/10/2026"
+$Versao = "3.20 - 09/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -696,12 +696,48 @@ function Campo-2022 {
     return $null
 }
 
+# --- FORMATO DE 2022: os boletins de 2022 que o TSE mantem estao no formato
+# daquele ano: dados-simplificados/{uf}/{uf}-c{cargo}-e{eleicao}-r.json, com a
+# lista "cand" (numero, nome, votos, %) e SEM a sigla do partido. A sigla
+# sai do numero do candidato (2 primeiros digitos = numero oficial do
+# partido em 2022, tabela do TSE). Tenta esse formato e depois o novo (-u).
+$Partido22 = @{ "10" = "REPUBLICANOS"; "11" = "PP"; "12" = "PDT"; "13" = "PT"; "14" = "PTB"; "15" = "MDB"; "16" = "PSTU"; "18" = "REDE"; "19" = "PODE"
+    "20" = "PSC"; "21" = "PCB"; "22" = "PL"; "23" = "CIDADANIA"; "27" = "DC"; "28" = "PRTB"; "29" = "PCO"; "30" = "NOVO"; "33" = "PMN"; "35" = "PMB"
+    "36" = "AGIR"; "40" = "PSB"; "43" = "PV"; "44" = "UNIÃO"; "45" = "PSDB"; "50" = "PSOL"; "51" = "PATRIOTA"; "55" = "PSD"; "65" = "PC do B"
+    "70" = "AVANTE"; "77" = "SOLIDARIEDADE"; "80" = "UP"; "90" = "PROS" }
+function Urls-2022([string] $Ele, [string] $Abr, [int] $Cargo) {
+    $e6 = "{0:000000}" -f ([int] $Ele); $c4 = "{0:0000}" -f $Cargo
+    return @("$Base/$Ciclo2022/$Ele/dados-simplificados/$Abr/$Abr-c$c4-e$e6-r.json", "$Base/$Ciclo2022/$Ele/dados/$Abr/$Abr-c$c4-e$e6-r.json", "$Base/$Ciclo2022/$Ele/dados/$Abr/$Abr-c$c4-e$e6-u.json")
+}
+function Obter-2022-Um([string[]] $Urls) { foreach ($u0 in $Urls) { $o0 = Obter-2022 $u0; if ($null -ne $o0) { return $o0 } }; return $null }
+# candidatos de um boletim de 2022, nos dois formatos
+function Cands-2022($Obj) {
+    $out = @()
+    if ($null -eq $Obj) { return $out }
+    if (Tem-Propriedade $Obj "carg") {
+        foreach ($cg in @($Obj.carg)) { foreach ($agr in @($cg.agr)) { foreach ($pa in @($agr.par)) {
+            if ($null -eq $pa) { continue }
+            $sg = Decodificar-Entidades "$(Obter-Campo $pa @('sg') '')"
+            foreach ($c in @($pa.cand)) { if ($null -ne $c) { $out += [pscustomobject]@{ sg = $sg; c = $c } } }
+        } } }
+        return $out
+    }
+    if (Tem-Propriedade $Obj "cand") {
+        foreach ($c in @($Obj.cand)) {
+            if ($null -eq $c) { continue }
+            $num = "$(Obter-Campo $c @('n') '')"
+            $sg = $(if ($num.Length -ge 2 -and $Partido22.ContainsKey($num.Substring(0, 2))) { $Partido22[$num.Substring(0, 2)] } else { "" })
+            if ($sg) { $out += [pscustomobject]@{ sg = $sg; c = $c } }
+        }
+    }
+    return $out
+}
+
 function Buscar-2022 {
     if ($null -ne $script:Ref2022 -or (Get-Date) -lt $script:Prox2022) { return }
     $script:Prox2022 = (Get-Date).AddMinutes(10)
     $e6 = "{0:000000}" -f ([int] $Eleicao2022)
-    $urls = @("$Base/$Ciclo2022/$Eleicao2022/dados-simplificados/br/br-c0001-e$e6-r.json",
-              "$Base/$Ciclo2022/$Eleicao2022/dados/br/br-c0001-e$e6-u.json")
+    $urls = Urls-2022 $Eleicao2022 "br" 1
     foreach ($url in $urls) {
         try {
             $resp = Invoke-WebRequest -Uri $url -Headers @{ "User-Agent" = "gctse-graficos/1.0"; "Accept" = "application/json,*/*" } -TimeoutSec 15 -UseBasicParsing
@@ -739,20 +775,13 @@ $Eleicao2022T2 = "545"
 if ((Tem-Propriedade $cfg "comparar_2022") -and (Tem-Propriedade $cfg.comparar_2022 "eleicao_2turno") -and $cfg.comparar_2022.eleicao_2turno) { $Eleicao2022T2 = "$($cfg.comparar_2022.eleicao_2turno)" }
 function Partidos-2022([object] $Obj) {
     $r = [ordered]@{}
-    if (-not (Tem-Propriedade $Obj "carg")) { return $r }
-    foreach ($cg in $Obj.carg) {
-        if (-not (Tem-Propriedade $cg "agr")) { continue }
-        foreach ($agr in $cg.agr) {
-            if (-not (Tem-Propriedade $agr "par")) { continue }
-            foreach ($pa in $agr.par) {
-                $sg = Decodificar-Entidades "$(Obter-Campo $pa @('sg') '')"
-                if (-not $sg -or -not (Tem-Propriedade $pa "cand")) { continue }
-                foreach ($c in $pa.cand) { $v = Converter-Decimal (Obter-Campo $c @('pvap') ''); if ($null -ne $v) { $r[$sg] = $v; $r["_nome_$sg"] = Decodificar-Entidades "$(Obter-Campo $c @('nmu','nm') '')"; $r["_votos_$sg"] = Converter-Inteiro (Obter-Campo $c @('vap') 0) } }
-            }
-        }
+    foreach ($x in (Cands-2022 $Obj)) {
+        $c = $x.c; $sg = $x.sg
+        $v = Converter-Decimal (Obter-Campo $c @('pvap') '')
+        if ($null -ne $v -and -not $r.Contains($sg)) { $r[$sg] = $v; $r["_nome_$sg"] = Decodificar-Entidades "$(Obter-Campo $c @('nmu','nm') '')"; $r["_votos_$sg"] = Converter-Inteiro (Obter-Campo $c @('vap') 0) }
     }
     # comparecimento, abstencao, brancos e nulos do mesmo boletim (2022 x 2026)
-    foreach ($par in @(@("_pc", @("pc")), @("_pa", @("pa")), @("_pvb", @("pvb")), @("_pvn", @("ptvn", "pvn")), @("_aptos", @("te")))) { $x = Campo-2022 $Obj $par[1]; if ($null -ne $x) { $r[$par[0]] = $x } }
+    foreach ($par in @(@("_pc", @("pc")), @("_pa", @("pa")), @("_pvb", @("pvb")), @("_pvn", @("ptvn", "pvn")), @("_aptos", @("te", "e")))) { $x = Campo-2022 $Obj $par[1]; if ($null -ne $x) { $r[$par[0]] = $x } }
     return $r
 }
 
@@ -776,17 +805,13 @@ function Obter-2022([string] $Url) {
 }
 function Eleito-2022($Obj) {
     $r = @{ eleito = $null; turno2 = $false }
-    if ($null -eq $Obj -or -not (Tem-Propriedade $Obj "carg")) { return $r }
-    foreach ($cg in $Obj.carg) { foreach ($agr in @($cg.agr)) { foreach ($pa in @($agr.par)) {
-        if ($null -eq $pa) { continue }
-        $sg = Decodificar-Entidades "$(Obter-Campo $pa @('sg') '')"
-        foreach ($c in @($pa.cand)) {
-            if ($null -eq $c) { continue }
-            $st = Decodificar-Entidades "$(Obter-Campo $c @('st') '')"
-            if ($st -match 'turno') { $r.turno2 = $true }
-            $el = $(if ($st) { ($st -match 'eleit') -and -not ($st -match 'n\S{1,2}o\s+eleit') -and -not ($st -match 'turno') } else { "$(Obter-Campo $c @('e') '')".ToLower() -eq "s" })
-            if ($el) { $r.eleito = [pscustomobject]@{ partido = $sg; nome = Decodificar-Entidades "$(Obter-Campo $c @('nmu','nm') '')"; pct = Converter-Decimal (Obter-Campo $c @('pvap') '') } }
-        } } } }
+    foreach ($x in (Cands-2022 $Obj)) {
+        $c = $x.c
+        $st = Decodificar-Entidades "$(Obter-Campo $c @('st') '')"
+        if ($st -match 'turno') { $r.turno2 = $true }
+        $el = $(if ($st) { ($st -match 'eleit') -and -not ($st -match 'n\S{1,2}o\s+eleit') -and -not ($st -match 'turno') } else { "$(Obter-Campo $c @('e') '')".ToLower() -eq "s" })
+        if ($el) { $r.eleito = [pscustomobject]@{ partido = $x.sg; nome = Decodificar-Entidades "$(Obter-Campo $c @('nmu','nm') '')"; pct = Converter-Decimal (Obter-Campo $c @('pvap') '') } }
+    }
     return $r
 }
 function Buscar-2022-Gov {
@@ -796,10 +821,10 @@ function Buscar-2022-Gov {
     $e1 = "{0:000000}" -f ([int] $Est2022); $e2 = "{0:000000}" -f ([int] $Est2022T2)
     $porUf = [ordered]@{}
     foreach ($u in $UFs) {
-        $b1 = Obter-2022 "$Base/$Ciclo2022/$Est2022/dados/$u/$u-c0003-e$e1-u.json"
+        $b1 = Obter-2022-Um (Urls-2022 $Est2022 $u 3)
         if ($null -eq $b1) { if ($u -eq "ac") { Escrever-Log "governadores de 2022 (TSE, eleicao $Est2022): nao encontrado - tento de novo em 10 min (outro codigo: comparar_2022.eleicao_estaduais no config)" "AVISO"; return }; continue }
         $x = Eleito-2022 $b1; $turno = 1
-        if ($null -eq $x.eleito -and $x.turno2) { $x = Eleito-2022 (Obter-2022 "$Base/$Ciclo2022/$Est2022T2/dados/$u/$u-c0003-e$e2-u.json"); $turno = 2 }
+        if ($null -eq $x.eleito -and $x.turno2) { $x = Eleito-2022 (Obter-2022-Um (Urls-2022 $Est2022T2 $u 3)); $turno = 2 }
         if ($x.eleito) { $porUf[$u] = [pscustomobject]@{ partido = $x.eleito.partido; nome = $x.eleito.nome; pct = $x.eleito.pct; turno = $turno } }
     }
     $script:Ref2022Gov = [pscustomobject]@{ eleicao = $Est2022; eleicao_2turno = $Est2022T2; ufs = [pscustomobject] $porUf; completo = ($porUf.Count -ge 27) }
@@ -813,11 +838,8 @@ function Buscar-2022-2T {
     $e6 = "{0:000000}" -f ([int] $Eleicao2022T2)
     $porUf = [ordered]@{}; $br = $null
     foreach ($abr in @("br") + $UFs + @("zz")) {
-        $url = "$Base/$Ciclo2022/$Eleicao2022T2/dados/$abr/$abr-c0001-e$e6-u.json"
-        try {
-            $resp = Invoke-WebRequest -Uri $url -Headers @{ "User-Agent" = "gctse-graficos/1.0"; "Accept" = "application/json,*/*" } -TimeoutSec 15 -UseBasicParsing
-            $ps = Partidos-2022 ((Ler-Texto-Resposta $resp) | ConvertFrom-Json)
-        } catch { Fechar-Resposta $_; $loc = Copia-Local $url; $ps = $(if ($null -ne $loc) { Partidos-2022 $loc } else { $null }) }
+        $o22 = Obter-2022-Um (Urls-2022 $Eleicao2022T2 $abr 1)
+        $ps = $(if ($null -ne $o22) { Partidos-2022 $o22 } else { $null })
         if ($abr -eq "br") { if ($null -eq $ps -or $ps.Count -lt 2) { Escrever-Log "2o turno de 2022 (TSE, eleicao $Eleicao2022T2): nao encontrado - tento de novo em 10 min" "AVISO"; return }; $br = $ps }
         elseif ($null -ne $ps -and $ps.Count -ge 2) { $porUf[$abr] = [pscustomobject] $ps }
     }

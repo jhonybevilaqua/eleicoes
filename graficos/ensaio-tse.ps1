@@ -22,7 +22,7 @@ $NE = @("al", "ba", "ce", "ma", "pb", "pe", "pi", "rn", "se")
 $RAPIDOS = @("sp", "mg", "rj", "es", "pr", "rs", "sc", "df", "go")
 $SEG2 = @("ac", "am", "df", "es", "go", "pb", "pe", "rj", "rs", "sp")
 $VAGAS = @{ sp = 70; mg = 53; rj = 46; ba = 39; rs = 31; pr = 30; pe = 25; ce = 22; ma = 18; go = 17; pa = 17; sc = 16; pb = 12; es = 10; pi = 10; al = 9 }
-$PARTIDOS = @("PL", "PT", "MDB", "PSD", "UNIAO", "PP", "REPUBLICANOS", "PSB", "PDT", "PSDB", "PODE")
+$PARTIDOS = @("PL", "PT", "MDB", "PSD", "UNIÃO", "PP", "REPUBLICANOS", "PSB", "PDT", "PSDB", "PODE")
 $Inicio = Get-Date
 
 function Rnd([string] $chave) {   # 0..1 fixo por chave (o ensaio e sempre igual)
@@ -156,6 +156,18 @@ function RespDeputados([string] $uf, [int] $cargo = 6) {
     return Boletim $cargo $nv $cs 100 "f" $te "04/10/2026" "23:50:00"
 }
 
+# 2022 no formato daquele ano (dados-simplificados ...-r.json): campos no
+# topo e a lista "cand" sem sigla - o numero do candidato diz o partido.
+$NUM22 = @{ "PL" = 22; "PT" = 13; "MDB" = 15; "PSD" = 55; "UNIÃO" = 44; "PP" = 11; "REPUBLICANOS" = 10; "PSB" = 40; "PDT" = 12; "PSDB" = 45; "PODE" = 19 }
+function Simplificar($b) {
+    $o = [ordered]@{ ele = "545"; t = "1"; pst = $b.s.pst; e = $b.e.te; c = $b.e.c; pc = $b.e.pc; a = $b.e.a; pa = $b.e.pa; vb = $b.v.vb; pvb = $b.v.pvb; tvn = $b.v.tvn; ptvn = $b.v.ptvn; cand = @() }
+    $seq = 0
+    foreach ($cg in @($b.carg)) { foreach ($agr in @($cg.agr)) { foreach ($pa in @($agr.par)) { foreach ($c in @($pa.cand)) {
+        $seq++; $num = $(if ($NUM22.ContainsKey("$($pa.sg)")) { "$($NUM22["$($pa.sg)"])" } else { "$($c.n)" })
+        $o.cand += [ordered]@{ seq = "$seq"; sqcand = $c.sqcand; n = $num; nm = $c.nm; cc = "COLIGACAO FICTICIA"; e = $c.e; st = $c.st; dvt = "Valido"; vap = $c.vap; pvap = $c.pvap }
+    } } } }
+    return $o
+}
 $ouvinte = New-Object System.Net.HttpListener
 $ouvinte.Prefixes.Add("http://localhost:$Porta/"); $ouvinte.Prefixes.Add("http://127.0.0.1:$Porta/")
 $ouvinte.Start()
@@ -168,7 +180,7 @@ while ($ouvinte.IsListening) {
         $m = $re.Match($ctx.Request.Url.AbsolutePath); $obj = $null
         if ($m.Success) {
             $ciclo = $m.Groups[1].Value; $ele = $m.Groups[2].Value; $abr = $m.Groups[3].Value.ToLower(); $cargo = [int] $m.Groups[4].Value
-            if ($ciclo -eq "ele2022") { $ele = "x$ele" }   # 2022: so o 2o turno de Presidente (545)
+            if ($ciclo -eq "ele2022") { $ele = "nao-existe" }   # 2022 nao tem o formato novo (-u): so dados-simplificados (abaixo)
             $ok = ($abr -eq "br" -or $ELEITORES.Contains($abr))
             if ($abr -eq "zz" -and $cargo -eq 1 -and $ele -eq "x545") { $obj = RespMunicipio "zz" "22022" $true }   # exterior 2022
             elseif ($abr -ne "br" -and $ok -and $cargo -eq 3 -and $ele -eq "x546") { $obj = Resp2022Gov $abr $false }
@@ -182,6 +194,15 @@ while ($ouvinte.IsListening) {
             elseif ($abr -ne "br" -and $ok -and $cargo -eq 5 -and $ele -eq "9259") { $obj = RespSenador $abr }
             elseif ($abr -ne "br" -and $ok -and $cargo -eq 6 -and $ele -eq "9259") { $obj = RespDeputados $abr }
             elseif ($abr -ne "br" -and $ok -and (($cargo -eq 7 -and $abr -ne "df") -or ($cargo -eq 8 -and $abr -eq "df")) -and $ele -eq "9259") { $obj = RespDeputados $abr $cargo }
+        }
+        $m22 = [regex]::Match($ctx.Request.Url.AbsolutePath, '/ele2022/(\d+)/dados-simplificados/(\w+)/\w+-c(\d{4})-e\d{6}-r\.json$')
+        if ($m22.Success) {
+            $e22 = $m22.Groups[1].Value; $a22 = $m22.Groups[2].Value.ToLower(); $c22 = [int] $m22.Groups[3].Value; $ok22 = ($a22 -eq "br" -or $ELEITORES.Contains($a22)); $b22 = $null
+            if ($a22 -eq "zz" -and $c22 -eq 1 -and $e22 -eq "545") { $b22 = RespMunicipio "zz" "22022" $true }
+            elseif ($ok22 -and $c22 -eq 1 -and $e22 -eq "545") { $b22 = Resp2022 $a22 }
+            elseif ($a22 -ne "br" -and $ok22 -and $c22 -eq 3 -and $e22 -eq "546") { $b22 = Resp2022Gov $a22 $false }
+            elseif ($a22 -ne "br" -and $ok22 -and $c22 -eq 3 -and $e22 -eq "547") { $b22 = Resp2022Gov $a22 $true }
+            if ($null -ne $b22) { $obj = Simplificar $b22 }
         }
         $mm = [regex]::Match($ctx.Request.Url.AbsolutePath, '/ele2026/(\d+)/config/mun-e\d{6}-cm\.json$')
         if ($mm.Success -and @("9257", "9262") -contains $mm.Groups[1].Value) { $obj = RespMunConfig }
