@@ -98,9 +98,45 @@ function Abrir($F) {
     if ($F.entrada) { return New-Object IO.StreamReader($F.entrada.Open(), $Latin1) }
     return New-Object IO.StreamReader($F.caminho, $Latin1)
 }
+# Leitor de linha CSV do TSE (separador ;): campos com e sem aspas na mesma
+# linha ("2026";6;"DEPUTADO FEDERAL") - os arquivos reais misturam. Em C#
+# (rapido); sem compilador, divide no ; e tira as aspas.
+try {
+    if (-not ("GctseCsv" -as [type])) {
+        Add-Type -Language CSharp -TypeDefinition @"
+public static class GctseCsv {
+    // Campos de uma linha CSV do TSE (separador ;). Aceita campo com e sem
+    // aspas na mesma linha ("2026";6;"DEPUTADO FEDERAL") e "" dentro de aspas.
+    public static string[] Campos(string l) {
+        var r = new System.Collections.Generic.List<string>(64);
+        var sb = new System.Text.StringBuilder();
+        int i = 0, n = l.Length;
+        while (true) {
+            sb.Length = 0;
+            if (i < n && l[i] == '"') {
+                i++;
+                while (i < n) {
+                    char c = l[i];
+                    if (c == '"') { if (i + 1 < n && l[i + 1] == '"') { sb.Append('"'); i += 2; continue; } i++; break; }
+                    sb.Append(c); i++;
+                }
+                while (i < n && l[i] != ';') { sb.Append(l[i]); i++; }   // lixo depois da aspa
+            } else {
+                while (i < n && l[i] != ';') { sb.Append(l[i]); i++; }
+            }
+            r.Add(sb.ToString());
+            if (i >= n) break;
+            i++;   // pula o ;
+        }
+        return r.ToArray();
+    }
+}
+"@
+    }
+} catch { }
 function Campos([string] $L) {
-    if ($L.StartsWith('"')) { return $L.Substring(1, [Math]::Max(0, $L.Length - 2)).Split(@('";"'), [StringSplitOptions]::None) }
-    return $L.Split(';')
+    if ("GctseCsv" -as [type]) { return [GctseCsv]::Campos($L) }
+    return @($L.Split(';') | ForEach-Object { $_.Trim().Trim('"') })
 }
 
 $anos = @{}   # ano -> dados
@@ -128,11 +164,12 @@ foreach ($a in $arquivos) {
             foreach ($c in @("SQ_CANDIDATO", "SG_PARTIDO")) { if (-not $ix.ContainsKey($c)) { throw "coluna $c nao encontrada" } }
             if (-not ($ix.ContainsKey("DS_GENERO") -or $ix.ContainsKey("CD_GENERO"))) { throw "coluna DS_GENERO nao encontrada" }
             function V($p, [string] $n) { if ($ix.ContainsKey($n) -and $ix[$n] -lt $p.Count) { return $p[$ix[$n]].Trim() } return "" }
-            $n = 0; $usadas = 0; $sens = 0
+            $n = 0; $usadas = 0; $sens = 0; $cargosVistos = @{}
             while ($null -ne ($linha = $rd.ReadLine())) {
                 $n++
                 $p = Campos $linha
                 $cargoCd = V $p "CD_CARGO"; $cargoDs = (V $p "DS_CARGO").ToUpper()
+                if ($cargosVistos.Count -lt 12) { $cargosVistos["$cargoCd=$cargoDs"] = 1 }
                 $ehSen = ($cargoCd -eq "5" -or $cargoDs -eq "SENADOR")
                 if (-not ($ehSen -or $cargoCd -eq "6" -or $cargoDs -eq "DEPUTADO FEDERAL")) { continue }
                 $turno = V $p "NR_TURNO"; if ($turno -and $turno -ne "1") { continue }
@@ -155,6 +192,10 @@ foreach ($a in $arquivos) {
                 $usadas++
             }
             Anotar ("lido {0}: {1} linhas, {2} de Deputado Federal, {3} de Senador" -f $f.nome, $n, $usadas, $sens)
+            if ($n -gt 0 -and $usadas -eq 0 -and $sens -eq 0) {
+                # nada reconhecido: mostra o que o arquivo tem (para corrigir)
+                Anotar ("   ATENCAO: nenhum cargo reconhecido. Colunas: {0} | cargos vistos (codigo=nome): {1}" -f $cab.Count, (($cargosVistos.Keys | Select-Object -First 12) -join " ; ")) "Yellow"
+            }
         } catch { Anotar ("{0}: {1}" -f $f.nome, $_.Exception.Message) "Yellow" }
         finally { $rd.Dispose() }
     }

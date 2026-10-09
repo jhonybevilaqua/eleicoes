@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 3.18 - apuracao em graficos (versao final)
+ gctse GRAFICOS 3.19 - apuracao em graficos (versao final)
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -22,6 +22,14 @@
    GIRO DOS ESTADOS (Governador e Senador, um estado por vez)
    RESUMO (7 telas de fechamento)
    GERENCIADOR (escolhe o que vai para as saidas SDI da DeckLink)
+
+ NOVO NA 3.19 - CORRECAO DOS IMPORTADORES (arquivos reais do TSE)
+   IMPORTAR-CANDIDATOS lia "0 de Deputado Federal, 0 de Senador" nos
+   arquivos reais: o TSE mistura campos com e sem aspas na mesma linha
+   ("2026";6;"DEPUTADO FEDERAL") e o leitor so entendia tudo entre aspas.
+   Agora le os dois jeitos (IMPORTAR-CANDIDATOS e IMPORTAR-PERFIL-ELEITOR).
+   Se um arquivo ainda der 0, a janela mostra os cargos que viu (para
+   corrigir). Basta rodar de novo: o zip ja baixado e reaproveitado.
 
  NOVO NA 3.18 - VARIOS USUARIOS (apresentador, produtor, operador)
    Todos comandam o MESMO exibidor (o PC do GERENCIADOR.bat, onde estao o
