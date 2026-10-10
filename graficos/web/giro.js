@@ -264,47 +264,8 @@
       '<path d="M' + (x + w * 0.16) + " " + (y + h) + " Q" + (x + w * 0.16) + " " + (y + h * 0.62) + " " + (x + w / 2) + " " + (y + h * 0.62) +
       " Q" + (x + w * 0.84) + " " + (y + h * 0.62) + " " + (x + w * 0.84) + " " + (y + h) + ' Z" fill="#5b6c86"/>';
   }
-  // RESULTADO FINAL DO ESTADO (governador ja eleito): lista dos candidatos
-  // com foto, partido, votos, barra e % - o eleito em cima, com borda verde.
-  // So candidatos do boletim do TSE (voto anulado nao entra: ver anulados).
-  function govLista(u, g, sit, x, y, w, h, v) {
-    var cs = g.candidatos.slice().sort(function (a, b) { return (b.votos || 0) - (a.votos || 0); }).filter(function (c) { return (c.votos || 0) > 0; });
-    var el = sit.lista[0], turno = +g.turno === 2 ? "2º" : "1º", n = Math.min(4, cs.length), gap = v ? 12 : 10;
-    var cab = v ? 44 : 40, sobra = cs.length > n ? 20 : 0, rh = Math.min(v ? 170 : 150, (h - cab - sobra - (n - 1) * gap) / n), maxP = Math.max(1, +(cs[0] && cs[0].pct) || 1), o = "";
-    o += t(x, y + (v ? 28 : 26), "GOVERNADOR ELEITO NO " + turno + " TURNO", { s: v ? 20 : 22, b: true, ls: 2, c: "#3fd13f" });
-    for (var i = 0; i < n; i++) {
-      var c = cs[i], ry = y + cab + i * (rh + gap), eh = c === el || c.eleito, url = urlFoto(u, c, eleDe(g, "GOVERNADOR"));
-      if (eh) o += r(x - 3, ry - 3, w + 6, rh + 6, C.verde, 9);
-      o += r(x, ry, w, rh, eh ? "#0d1a33" : C.painel, 7);
-      var fh = rh - 16, fw = fh * 0.75, fx = x + 10, fy = ry + 8;
-      o += url ? foto(url, fx, fy, fw, fh) : silhueta(fx, fy, fw, fh);
-      var tx = fx + fw + (v ? 16 : 22), k = rh / 150, sg = String(c.partido || ""), pl = Math.max(46, sg.length * (v ? 10 : 11) + 18), ph = v ? 24 : 26;
-      if (!v) {
-        // horizontal: nome | sigla + votos | barra ; % grande a direita
-        var bw = w - (tx - x) - 290;
-        o += t(tx, ry + rh * 0.32, c.nome, { s: Math.round(30 * Math.min(1, k + 0.15)), b: true, max: bw, nome: true });
-        o += r(tx, ry + rh * 0.44, pl, ph, eh ? C.verde : C.destaque, 4) + t(tx + pl / 2, ry + rh * 0.44 + 19, sg, { s: 16, b: true, a: "middle" });
-        o += t(tx + pl + 16, ry + rh * 0.44 + 19, "nº total de votos  " + inteiro(c.votos), { s: 16, c: C.apagado, max: bw - pl - 16 });
-        o += r(tx, ry + rh * 0.78, bw, 12, "rgba(255,255,255,0.10)", 5) + r(tx, ry + rh * 0.78, Math.max(6, bw * (+c.pct || 0) / maxP), 12, eh ? C.verde : C.neutro, 5);
-        o += t(x + w - 20, ry + rh * 0.66, pct(c.pct), { s: Math.round(56 * Math.min(1, k + 0.1)), b: true, a: "end" });
-      } else {
-        // vertical: nome (largura toda) | sigla ... % | votos | barra
-        var bv = w - (tx - x) - 20;
-        o += t(tx, ry + rh * 0.24, c.nome, { s: Math.round(22 * Math.min(1, k + 0.2)), b: true, max: bv, nome: true });
-        o += r(tx, ry + rh * 0.36, pl, ph, eh ? C.verde : C.destaque, 4) + t(tx + pl / 2, ry + rh * 0.36 + 17, sg, { s: 14, b: true, a: "middle" });
-        o += t(x + w - 20, ry + rh * 0.62, pct(c.pct), { s: Math.round(40 * Math.min(1, k + 0.1)), b: true, a: "end" });
-        o += t(tx, ry + rh * 0.78, inteiro(c.votos) + " votos", { s: 14, c: C.apagado, max: bv });
-        o += r(tx, ry + rh * 0.86, bv, 10, "rgba(255,255,255,0.10)", 5) + r(tx, ry + rh * 0.86, Math.max(6, bv * (+c.pct || 0) / maxP), 10, eh ? C.verde : C.neutro, 5);
-      }
-      if (eh && !v) o += t(x + w - 20, ry + rh * 0.24, "ELEITO", { s: 16, b: true, ls: 2, c: "#3fd13f", a: "end" });
-      if (eh && v) o += t(tx + pl + 12, ry + rh * 0.36 + 17, "ELEITO", { s: 14, b: true, ls: 2, c: "#3fd13f" });
-    }
-    if (cs.length > n) o += t(x + w, y + h - 2, "e mais " + (cs.length - n) + (cs.length - n === 1 ? " candidato" : " candidatos"), { s: v ? 12 : 14, c: C.apagado, a: "end" });
-    return o;
-  }
   function govGrande(u, x, y, w, h, v) {
     var g = cargo(u, "gov"), sit = situacao(g);
-    if (sit.tipo === "eleito" && g.candidatos.length >= 2) return govLista(u, g, sit, x, y, w, h, v);
     if (sit.tipo !== "eleito") return bloco(x, y, w, h, "GOVERNADOR", g, v ? 1 : 1.15, u);
     var c = sit.lista[0], outro = g.candidatos.filter(function (k) { return k !== c; }).sort(function (a, b) { return (b.votos || 0) - (a.votos || 0); })[0];
     var turno = +g.turno === 2 ? "2º" : "1º", url = urlFoto(u, c, eleDe(g, "GOVERNADOR"));
