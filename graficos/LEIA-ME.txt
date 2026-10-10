@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 3.22 - apuracao em graficos (versao final)
+ gctse GRAFICOS 3.23 - apuracao em graficos (versao final)
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -22,6 +22,27 @@
    GIRO DOS ESTADOS (Governador e Senador, um estado por vez)
    RESUMO (7 telas de fechamento)
    GERENCIADOR (escolhe o que vai para as saidas SDI da DeckLink)
+
+ NOVO NA 3.23 - 1o E 2o TURNO JUNTOS (PRESIDENTE E GOVERNADOR)
+   COMO O 1o TURNO FICA GUARDADO (para os comparativos do 2o turno):
+     1. ao vivo: com os codigos do 2o turno, GRAFICOS.bat le tambem o 1o
+        turno de Presidente (Brasil, 27 estados, exterior - 6257) e
+        ESTADOS.bat o de Governador (6259); vao juntos para as telas.
+     2. copia no disco: GUARDAR-DADOS-TSE.bat guarda o 1o turno inteiro em
+        tse-local. Se o TSE tirar o 1o turno do ar, o sistema le de la
+        sozinho. RODE AGORA e de novo no sabado 24/10.
+     3. depois do 2o turno: ARQUIVO-HISTORICO-2026.bat guarda 1o e 2o turno
+        completos num .zip (base para 2028/2030).
+   O 2o turno e sempre ao vivo (nunca da copia).
+   NOVA TELA "Governadores: 1o x 2o turno" (bloco GOVERNADOR E SENADO e
+   rodizios Apuracao/Fechamento): cada estado com 2o turno, os dois
+   finalistas com % do 1o turno -> % agora (+/- pontos), "VIROU" quando quem
+   liderava no 1o turno esta atras, e com 100% das urnas os votos ganhos.
+   Rodizio "Fechamento": so Presidente e Governador (sem Senado/Camara).
+   COMPARATIVOS DE PRESIDENTE 1o x 2o ja prontos: Estados que viraram,
+   Ganho de votos 1o -> 2o, Abstencao 1o x 2o por estado, Brancos e nulos
+   1o x 2o, 1o x 2o (abstencao, brancos e nulos), Evolucao, Presidente +
+   mapa do 1o turno.
 
  NOVO NA 3.22 - CODIGOS DO 2o TURNO (TSE, 10/10) E MENOS 404
    O TSE publicou o pleito 3221 (25/10/2026): 6258 = Eleicao Geral Federal

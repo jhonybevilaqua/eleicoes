@@ -17,7 +17,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "3.22 - 10/10/2026"
+$Versao = "3.23 - 10/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -874,7 +874,10 @@ function Gravar-Dados {
             }
         }
         $g = $g | Select-Object *, @{ n = "turno"; e = { $turnoG } }, @{ n = "eleicao"; e = { $eleG } }
-        $porEstado["$u"] = [pscustomobject]@{ gov = $g; sen = $s }
+        # 2o turno: o 1o turno do Governador vai junto (tela "Governadores: 1o x 2o turno")
+        $g1 = $null
+        if ($Eleicao1T -and $turnoG -eq 2 -and $script:Cache.ContainsKey("$u-3-1t")) { $g1 = $script:Cache["$u-3-1t"] }
+        $porEstado["$u"] = [pscustomobject]@{ gov = $g; sen = $s; gov1t = $g1 }
     }
     $ult = ""
     if ($null -ne $script:UltimaResposta) { $ult = $script:UltimaResposta.ToString("HH:mm:ss") }

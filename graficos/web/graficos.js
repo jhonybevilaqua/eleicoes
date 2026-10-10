@@ -2508,6 +2508,72 @@
   G["gov2t-h"] = function () { return telaGov2t(false); };
   G["gov2t-v"] = function () { return telaGov2t(true); };
 
+  // ---- GOVERNADORES: 1o x 2o TURNO (estados com 2o turno) -------------------
+  // 2o turno ao vivo (estados.js, gov) x 1o turno guardado (gov1t), os dois do
+  // TSE. Os finalistas sao ligados pelo numero do candidato.
+  function govDoisTurnos() {
+    var out = [];
+    Object.keys(DEP_UF).forEach(function (k) {
+      var u = (E().ufs || {})[k], g2 = u && u.gov, g1 = u && u.gov1t;
+      if (!g2 || !g2.tem || +g2.turno !== 2 || !g1 || !g1.tem) return;
+      var c2 = comoLista(g2.candidatos).slice().sort(function (a, b) { return (+b.votos || 0) - (+a.votos || 0); }).slice(0, 2);
+      if (c2.length < 2) return;
+      var c1 = comoLista(g1.candidatos), urnas = +g2.urnas_pct || 0;
+      var par = c2.map(function (c) {
+        var a = c1.filter(function (x) { return String(x.numero) === String(c.numero); })[0];
+        return { c: c, p1: a ? +a.pct : null, v1: a ? +a.votos : null };
+      });
+      var lider1 = par[0].p1 != null && par[1].p1 != null ? (par[0].p1 >= par[1].p1 ? 0 : 1) : null;
+      out.push({ k: k, par: par, urnas: urnas, fim: urnas >= 99.99, virou: urnas > 0 && lider1 === 1, eleito: c2.some(function (c) { return c.eleito; }) });
+    });
+    return out.sort(function (a, b) { return DEP_UF[a.k].localeCompare(DEP_UF[b.k], "pt-BR"); });
+  }
+  function telaGov12(v) {
+    var ls = govDoisTurnos(), W = v ? 540 : 1280, H = v ? 960 : 720, tit = "GOVERNADORES: 1º × 2º TURNO", o;
+    if (!ls.length) return semDados(W, H, v, v ? "GOVERNADOR 1º × 2º" : tit, "disponível quando sair o 2º turno de governador (TSE)");
+    var nv = ls.filter(function (x) { return x.virou; }).length, nEl = ls.filter(function (x) { return x.eleito; }).length;
+    var sub = ls.length + " estados no 2º turno · " + (nv ? nv + (nv === 1 ? " virou" : " viraram") + " (quem liderava no 1º turno está atrás)" : "ninguém virou até agora");
+    var sl = nEl >= ls.length ? { texto: "TODOS DEFINIDOS", cor: C.verde } : { texto: (ls.length - nEl) + " EM DISPUTA", cor: C.destaque };
+    function dif(p) { if (p.p1 == null) return "1º: —"; var d = (+p.c.pct || 0) - p.p1; return "1º " + pct1(p.p1) + " → " + pct1(+p.c.pct || 0) + "  (" + (d >= 0 ? "+" : "−") + Number(Math.abs(d)).toFixed(1).replace(".", ",") + " p.p.)"; }
+    function ganho(p, fim) { return fim && p.v1 != null ? "  ·  " + (p.c.votos - p.v1 >= 0 ? "+" : "−") + inteiro(Math.abs(p.c.votos - p.v1)) + " votos" : ""; }
+    if (!v) {
+      o = t(73, 57, tit, { s: 34, b: true, ls: 1, max: 667 }) + t(73, 85, sub, { s: 16, c: C.apagado, max: 680 }) + seloH(W, sl);
+      var n = ls.length, ph = Math.min(64, 584 / n), k2 = Math.min(1, ph / 60);
+      ls.forEach(function (x, i) {
+        var y = 106 + i * ph, hh = ph - 5;
+        o += r(73, y, 1134, hh, i % 2 ? "rgba(8,14,32,0.70)" : "rgba(8,14,32,0.86)", 6);
+        o += t(87, y + hh * 0.44, DEP_UF[x.k], { s: Math.round(15 * k2), b: true, max: 142 });
+        if (x.virou) o += r(87, y + hh * 0.58, 46, hh * 0.32, "#ffd43b", 3) + t(110, y + hh * 0.83, "VIROU", { s: Math.round(10 * k2), b: true, a: "middle", c: "#111" });
+        o += t(x.virou ? 139 : 87, y + hh * 0.84, x.fim ? "final" : "urnas " + pct(x.urnas), { s: Math.round(11 * k2), c: C.apagado, max: x.virou ? 92 : 142 });
+        x.par.forEach(function (p, j) {
+          var bx = 240 + j * 487, cc = corPartidoCamara(p.c.partido, j);
+          o += r(bx, y + hh * 0.18, 5, hh * 0.64, cc, 2);
+          o += t(bx + 14, y + hh * 0.44, p.c.nome + " · " + p.c.partido, { s: Math.round(15 * k2), b: true, max: 330 }) + t(bx + 14, y + hh * 0.82, dif(p) + ganho(p, x.fim), { s: Math.round(12 * k2), c: "#c9d6e6", max: 460 });
+          o += t(bx + 470, y + hh * 0.56, pct1(+p.c.pct || 0), { s: Math.round(22 * k2), b: true, a: "end" });
+          if (p.c.eleito) o += r(bx + 352, y + hh * 0.12, 64, 15, C.verde, 2) + t(bx + 384, y + hh * 0.12 + 11, "ELEITO", { s: 10, b: true, a: "middle" });
+        });
+      });
+      return svg(W, H, o + t(73, 704, "Fonte: TSE — Governador, 2º turno ao vivo × 1º turno (% dos votos válidos)" + (ls.some(function (x) { return x.fim; }) ? " · votos ganhos só com 100% das urnas" : ""), { s: 11, c: C.apagado2, max: 1134 }));
+    }
+    o = r(35, 48, 6, 38, C.destaque) + t(53, 80, "GOVERNADOR 1º × 2º", { s: 28, b: true, ls: 1, max: 450 }) + t(53, 106, ls.length + " estados · " + (nv ? nv + (nv === 1 ? " virou" : " viraram") : "ninguém virou"), { s: 14, c: C.apagado, max: 450 }) + seloV(W, sl);
+    var n2 = ls.length, pv = Math.min(90, 770 / n2), kv = Math.min(1, pv / 86);
+    ls.forEach(function (x, i) {
+      var y = 160 + i * pv, hh = pv - 6;
+      o += r(35, y, 470, hh, i % 2 ? "rgba(8,14,32,0.70)" : "rgba(8,14,32,0.86)", 6);
+      o += t(47, y + 18 * kv, DEP_UF[x.k], { s: Math.round(14 * kv), b: true, max: 300 }) + t(493, y + 18 * kv, x.virou ? "VIROU" : (x.fim ? "final" : "urnas " + pct(x.urnas)), { s: Math.round(12 * kv), b: x.virou, c: x.virou ? "#ffd43b" : C.apagado, a: "end" });
+      x.par.forEach(function (p, j) {
+        var yy = y + 22 * kv + j * ((hh - 22 * kv) / 2), lh = (hh - 22 * kv) / 2;
+        o += r(47, yy + lh * 0.2, 4, lh * 0.6, corPartidoCamara(p.c.partido, j), 2);
+        o += t(58, yy + lh * 0.58, p.c.nome + " · " + p.c.partido, { s: Math.round(12 * kv), b: true, max: 230 });
+        o += t(390, yy + lh * 0.58, p.p1 != null ? "1º " + pct1(p.p1) + " →" : "", { s: Math.round(11 * kv), c: C.apagado, a: "end" });
+        o += t(493, yy + lh * 0.62, pct1(+p.c.pct || 0), { s: Math.round(16 * kv), b: true, a: "end" });
+      });
+    });
+    return svg(W, H, o + t(35, 950, "Fonte: TSE — 2º turno × 1º turno (% válidos)", { s: 10, c: C.apagado2 }));
+  }
+  G["gov12-h"] = function () { return telaGov12(false); };
+  G["gov12-v"] = function () { return telaGov12(true); };
+
   // ---- MAPA DAS VIRADAS (Presidente): quem liderava no 1o e quem lidera agora
   function viradas() {
     var f1 = fontePres(true), f2 = fontePres(false), out = [];
@@ -3432,8 +3498,8 @@
   // Tela no ar sem o dado de que ela depende (antes das 17h, boletim ainda nao
   // lido, coleta recem-aberta): em vez de numeros zerados, uma tela limpa
   // com o nome da tela. Volta sozinha quando o dado chega.
-  var SEM_PRESIDENTE = /^(senado|comparativo|mulheres|perfilcamara|camara|deputados|topdep|topfem|topsenfem|perfileleitor|foiurnas|menosvot|senvotos|gov22|assembleia|assembleias|governadores|govpartido|gov2t|senadores|senadores1|senadores2)-/;
-  var DE_ESTADOS = /^(camara|deputados|topdep|topfem|topsenfem|menosvot|senvotos|gov22|assembleia|assembleias|governadores|govpartido|gov2t|senadores|senadores1|senadores2|govpres)-/;
+  var SEM_PRESIDENTE = /^(senado|comparativo|mulheres|perfilcamara|camara|deputados|topdep|topfem|topsenfem|perfileleitor|foiurnas|menosvot|senvotos|gov22|assembleia|assembleias|governadores|govpartido|gov2t|gov12|senadores|senadores1|senadores2)-/;
+  var DE_ESTADOS = /^(camara|deputados|topdep|topfem|topsenfem|menosvot|senvotos|gov22|assembleia|assembleias|governadores|govpartido|gov2t|gov12|senadores|senadores1|senadores2|govpres)-/;
   function temPresidente() { var b = D().br; return !!(b && b.tem); }
   function temEstados() { return !!(window.GCTSE_ESTADOS && window.GCTSE_ESTADOS.gravado_em); }
   function telaAguardando(id) {
@@ -3489,6 +3555,7 @@
       { id: "turnos-h", nome: "1º × 2º turno: abstenção, brancos e nulos", f: "h" },
       { id: "virar-h", nome: "Ainda dá para virar?", f: "h" },
       { id: "gov2t-h", nome: "Governadores — 2º turno (placar)", f: "h" },
+      { id: "gov12-h", nome: "Governadores: 1º × 2º turno", f: "h" },
       { id: "viradas-h", nome: "Estados que viraram (1º → 2º)", f: "h" },
       { id: "margem-h", nome: "Disputa mais apertada", f: "h" },
       { id: "ganho-h", nome: "Ganho de votos 1º → 2º turno", f: "h" },
@@ -3544,6 +3611,7 @@
       { id: "turnos-v", nome: "1º × 2º turno: abstenção, brancos e nulos", f: "v" },
       { id: "virar-v", nome: "Ainda dá para virar?", f: "v" },
       { id: "gov2t-v", nome: "Governadores — 2º turno (placar)", f: "v" },
+      { id: "gov12-v", nome: "Governadores: 1º × 2º turno", f: "v" },
       { id: "viradas-v", nome: "Estados que viraram (1º → 2º)", f: "v" },
       { id: "margem-v", nome: "Disputa mais apertada", f: "v" },
       { id: "ganho-v", nome: "Ganho de votos 1º → 2º turno", f: "v" },

@@ -536,7 +536,7 @@
     gL.appendChild(regs);
     botoesEm(bloco("apuracao", "APURAÇÃO"), itensDe(["apuracao", "urnas"]));
     var gE = bloco("estados", "GOVERNADOR E SENADO");
-    botoesEm(gE, itensDe(["governadores", "gov2t", "govpartido", "govpres", "gov22", "senvotos", "senadores", "senadores1", "senadores2", "senado"]).concat([
+    botoesEm(gE, itensDe(["governadores", "gov2t", "gov12", "govpartido", "govpres", "gov22", "senvotos", "senadores", "senadores1", "senadores2", "senado"]).concat([
       ["giro", "Giro dos estados", "uf:" + (ordem.indexOf(String(cfg.estado_destaque || "pr")) >= 0 ? String(cfg.estado_destaque || "pr") : ordem[0])],
       ["resumo", "Resumo (7 telas)", "tela:1"]]));
     // GOVERNADOR | ESTADO OU REGIAO: giro so do Governador. Verde = governador
