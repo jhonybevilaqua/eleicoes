@@ -76,6 +76,13 @@
 
   // ------------------------------------------------------------------ dados
   function D() { return window.GCTSE_ESTADOS || { modo: "OFICIAL", ufs: {} }; }
+  // Votos ANULADOS pelo TSE (ex.: RJ 2026, Garotinho): o coletor tira o
+  // candidato da disputa e guarda em "anulados"; a tela avisa no rodape.
+  function notaAnulados(c) {
+    var an = c ? lista(c.anulados).filter(function (x) { return +x.votos > 0; }) : [];
+    if (!an.length) return "";
+    return "  ·  votos de " + an.map(function (x) { return x.nome + " (" + x.partido + ")"; }).join(", ") + " anulados pelo TSE: não entram nos válidos";
+  }
   function cargo(u, qual) {
     var e = (D().ufs || {})[u], c = e && e[qual];
     if (!c || !c.tem) return null;
@@ -234,7 +241,7 @@
       t(W - 281, 52, s.texto, { s: 20, b: true, a: "end" }) + "</g>";
     o += bloco(73, 146, 551, 528, "GOVERNADOR", g, 1, u);
     o += bloco(656, 146, 551, 528, "SENADOR", se, 1, u);
-    o += t(73, 702, "Fonte: TSE — " + hora(u), { s: 13, c: C.apagado2 });
+    o += t(73, 702, "Fonte: TSE — " + hora(u) + notaAnulados(g) + notaAnulados(se), { s: 13, c: C.apagado2, max: W - 146 });
     return svg(W, H, o);
   }
   function telaV(u) {
@@ -245,7 +252,7 @@
     o += r(30, 108, W - 60, 28, s.cor, 2) + t(W / 2, 128, s.texto, { s: 16, b: true, a: "middle" });
     o += bloco(30, 150, W - 60, 380, "GOVERNADOR", g, 0.78, u);
     o += bloco(30, 546, W - 60, 380, "SENADOR", se, 0.78, u);
-    o += t(30, 950, "Fonte: TSE — " + hora(u), { s: 11, c: C.apagado2 });
+    o += t(30, 950, "Fonte: TSE — " + hora(u) + notaAnulados(g) + notaAnulados(se), { s: 11, c: C.apagado2, max: W - 60 });
     return svg(W, H, o);
   }
   // GIRO DO GOVERNADOR (?so=gov): so o Governador, grande. Eleito: foto,
@@ -285,7 +292,7 @@
     o += '<g data-selo="1" data-x="' + (W - 73 - 200) + '">' + r(W - 540, 27, 267, 36, s.cor, 3) +
       t(W - 281, 52, s.texto, { s: 20, b: true, a: "end" }) + "</g>";
     o += govGrande(u, 73, 146, 1134, 528, false);
-    o += t(73, 702, "Fonte: TSE — " + hora(u), { s: 13, c: C.apagado2 });
+    o += t(73, 702, "Fonte: TSE — " + hora(u) + notaAnulados(g), { s: 13, c: C.apagado2, max: W - 146 });
     return svg(W, H, o);
   }
   function telaGovV(u) {
@@ -294,7 +301,7 @@
     o += t(30, 94, linhaUrnas(g, null, true), { s: 15, c: C.apagado, max: W - 60 });
     o += r(30, 108, W - 60, 28, s.cor, 2) + t(W / 2, 128, s.texto, { s: 16, b: true, a: "middle" });
     o += govGrande(u, 30, 150, W - 60, 776, true);
-    o += t(30, 950, "Fonte: TSE — " + hora(u), { s: 11, c: C.apagado2 });
+    o += t(30, 950, "Fonte: TSE — " + hora(u) + notaAnulados(g), { s: 11, c: C.apagado2, max: W - 60 });
     return svg(W, H, o);
   }
   // ENSAIO (ENSAIO.bat): toda tela sai riscada - nunca confundir com o ar.

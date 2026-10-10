@@ -1883,7 +1883,8 @@
     var st = govEstado(k), borda = corGov(k, modoPartido) || "#3a4c66", o = "", eleito = st.tipo === "eleito1" || st.tipo === "eleito2";
     fn = fn || 10;
     var hl = Math.round(fn * 1.6), hb = Math.round(fn * 2.6);   // sigla e barra do nome
-    o += r(x, y, w, hl, borda, 3) + t(x + w / 2, y + hl * 0.74, k.toUpperCase(), { s: Math.round(fn * 1.15), b: true, a: "middle", ls: 1 });
+    var asterisco = govAnulados().some(function (z) { return z.k === k; }) ? "*" : "";
+    o += r(x, y, w, hl, borda, 3) + t(x + w / 2, y + hl * 0.74, k.toUpperCase() + asterisco, { s: Math.round(fn * 1.15), b: true, a: "middle", ls: 1 });
     var fy = y + hl + 2, fh = h - hl - 2 - hb;
     o += r(x - 2, fy - 2, w + 4, fh + hb + 4, borda, 4);
     if (eleito) o += fotoOuSilhueta(urlFotoGov(k, st), x, fy, w, fh);
@@ -1899,6 +1900,18 @@
       o += t(x + w / 2, fy + fh + hb * 0.62, tx, { s: Math.round(fn * 0.9), b: true, c: st.tipo === "segundo" ? "#7fb8ff" : C.apagado, a: "middle", max: w - 4 });
     }
     return o;
+  }
+  // estados com votos ANULADOS pelo TSE no governador (ex.: RJ, Garotinho)
+  function govAnulados() {
+    return Object.keys(DEP_UF).map(function (k) {
+      var u = (E().ufs || {})[k], an = [];
+      [u && u.gov, u && u.gov1t].forEach(function (g) { if (g) comoLista(g.anulados).forEach(function (x) { if (+x.votos > 0 && !an.some(function (y) { return y.nome === x.nome; })) an.push(x); }); });
+      return an.length ? { k: k, an: an } : null;
+    }).filter(Boolean);
+  }
+  function notaGovAnulados(curto) {
+    var ls = govAnulados(); if (!ls.length) return "";
+    return "  ·  * " + ls.map(function (x) { return x.k.toUpperCase() + (curto ? "" : ": votos de " + x.an.map(function (a) { return a.nome; }).join(", ")) + " anulados pelo TSE"; }).join("; ");
   }
   function contaGov() {
     var n = { eleito1: 0, eleito2: 0, segundo: 0, apurando: 0, vazio: 0 };
@@ -1947,7 +1960,7 @@
       });
       o += mapaCor(700, 112, 0.74, function (k) { return corGov(k, modoPartido); }, { rotulos: true, fonte: 12, apagado: "#22324a", hachura: hachTem });
       o += legendaGov(700, 626, modoPartido, false);
-      return svg(W, H, o + t(73, 700, "Fonte: TSE — situação de cada candidato a Governador" + (E().turno === 2 ? " (1º e 2º turno)" : ""), { s: 13, c: C.apagado2 }));
+      return svg(W, H, o + t(73, 700, "Fonte: TSE — situação de cada candidato a Governador" + (E().turno === 2 ? " (1º e 2º turno)" : "") + notaGovAnulados(false), { s: 13, c: C.apagado2, max: 1134 }));
     }
     var W2 = 540, H2 = 960;
     o = HACH + r(35, 48, 6, 38, C.destaque) + t(53, 80, "GOVERNADORES", { s: 32, b: true, ls: 1 }) + t(53, 106, sub, { s: 13, c: C.apagado, max: 450 }) + seloV(W2, sl);
@@ -1957,7 +1970,7 @@
       var li = Math.floor(i / 7), ci = i % 7, x0 = 36 + (li === 3 ? (cw2 + gx2) / 2 : 0);
       o += cartaoGov(k, x0 + ci * (cw2 + gx2), 470 + li * (ch2 + 6), cw2, ch2, modoPartido, 8);
     });
-    return svg(W2, H2, o + legendaGov(36, 888, modoPartido, true));
+    return svg(W2, H2, o + legendaGov(36, 888, modoPartido, true) + (govAnulados().length ? t(36, 950, "Fonte: TSE" + notaGovAnulados(true), { s: 10, c: C.apagado2, max: 470 }) : ""));
   }
   G["governadores-h"] = function () { return telaGov(false, false); };
   G["governadores-v"] = function () { return telaGov(true, false); };
