@@ -21,7 +21,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "3.25 - 10/10/2026"
+$Versao = "3.26 - 10/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -490,7 +490,9 @@ function Resumir-Boletim {
             }
         }
     }
-    $cands = @($cands | Sort-Object -Property @{Expression = "votos"; Descending = $true}, numero)
+    # voto ANULADO (sub judice, registro indeferido): o TSE nao conta como
+    # valido - vai para o fim da lista, nunca aparece como lider no mapa.
+    $cands = @($cands | Sort-Object -Property @{Expression = { "$($_.destinacao)" -eq '' -or "$($_.destinacao)" -match '^V' }; Descending = $true}, @{Expression = "votos"; Descending = $true}, numero)
 
     $validos = Inteiro-Ou-Nulo (Numero-De $v @('vv'))
     $brancos = Inteiro-Ou-Nulo (Numero-De $v @('vb'))
@@ -623,7 +625,16 @@ function Sem-Acento([string] $T) {
     foreach ($ch in $n.ToCharArray()) { if ([Globalization.CharUnicodeInfo]::GetUnicodeCategory($ch) -ne [Globalization.UnicodeCategory]::NonSpacingMark) { [void] $sb.Append($ch) } }
     return $sb.ToString().ToUpper().Trim()
 }
-$script:Mun = $null                 # @{ capitais = @{uf=@{cd;nome}}; exterior = @(@{cd;nome;pais}) }
+# MAIORES CIDADES fora as capitais (tela "Presidente nas maiores cidades").
+# So os NOMES: o codigo vem da lista de municipios do TSE e a ordem, do
+# eleitorado de cada boletim. Cidade que o TSE nao listar fica de fora.
+$GrandesCidades = @(@("sp", "GUARULHOS"), @("sp", "CAMPINAS"), @("sp", "SAO BERNARDO DO CAMPO"), @("sp", "SANTO ANDRE"), @("sp", "OSASCO"),
+    @("sp", "SOROCABA"), @("sp", "RIBEIRAO PRETO"), @("sp", "SAO JOSE DOS CAMPOS"), @("rj", "SAO GONCALO"), @("rj", "DUQUE DE CAXIAS"),
+    @("rj", "NOVA IGUACU"), @("mg", "UBERLANDIA"), @("mg", "CONTAGEM"), @("mg", "JUIZ DE FORA"), @("pe", "JABOATAO DOS GUARARAPES"),
+    @("ba", "FEIRA DE SANTANA"), @("pr", "LONDRINA"), @("sc", "JOINVILLE"), @("go", "APARECIDA DE GOIANIA"))
+$script:Cidades = [ordered]@{}      # "uf-cd" -> resumo do boletim da cidade
+$script:Cidades1T = [ordered]@{}
+$script:Mun = $null                 # @{ capitais = @{uf=@{cd;nome}}; exterior = @(@{cd;nome;pais}); cidades = @(...) }
 $script:ProxMun = [datetime]::MinValue
 $script:Capitais = [ordered]@{}     # uf -> resumo do boletim da capital
 $script:Capitais1T = [ordered]@{}   # uf -> lider do 1o turno na capital (2o turno)
@@ -660,7 +671,10 @@ function Ler-Municipios {
             if ($c) { $caps[$u] = $c }
         }
         $ext = @($lista | Where-Object { $_.uf -eq "zz" })
-        $script:Mun = @{ capitais = $caps; exterior = $ext }
+        $cids = @()
+        foreach ($gc in $GrandesCidades) { $m0 = @($lista | Where-Object { $_.uf -eq $gc[0] -and (Sem-Acento $_.nome) -eq $gc[1] }) | Select-Object -First 1; if ($m0) { $cids += $m0 } }
+        $script:Mun = @{ capitais = $caps; exterior = $ext; cidades = $cids }
+        Escrever-Log ("maiores cidades (fora as capitais): {0}/{1} achadas na lista do TSE" -f $cids.Count, $GrandesCidades.Count) $(if ($cids.Count -lt $GrandesCidades.Count) { "AVISO" } else { "OK" })
         Escrever-Log ("municipios do TSE (eleicao {0}): {1} lidos | capitais achadas: {2}/27 | cidades no exterior: {3}" -f $ele, $lista.Count, $caps.Count, $ext.Count) $(if ($caps.Count -lt 27) { "AVISO" } else { "OK" })
         return
     }
@@ -686,6 +700,18 @@ function Ler-Capitais {
         if ($Eleicao1T -and -not $script:Capitais1T.Contains($u)) {
             $b1 = Obter-Boletim (Url-Mun $u $m.cd $Eleicao1T)
             if ($null -ne $b1 -and "$b1" -ne "SEM-MUDANCA") { $x1 = Resumo-Mun $b1 "cap1-$u" $m; if ($x1 -and $x1.andamento -eq "f") { $script:Capitais1T[$u] = $x1 } }
+        }
+    }
+}
+function Ler-Cidades {
+    if ($null -eq $script:Mun -or -not $script:Mun.cidades) { return }
+    foreach ($m in $script:Mun.cidades) {
+        $ch = "$($m.uf)-$($m.cd)"
+        $bruto = Obter-Boletim (Url-Mun $m.uf $m.cd $Eleicao)
+        if ($null -ne $bruto -and "$bruto" -ne "SEM-MUDANCA") { $x = Resumo-Mun $bruto "cid-$ch" $m; if ($x) { $x | Add-Member -NotePropertyName uf -NotePropertyValue $m.uf -Force; $script:Cidades[$ch] = $x } }
+        if ($Eleicao1T -and -not $script:Cidades1T.Contains($ch)) {
+            $b1 = Obter-Boletim (Url-Mun $m.uf $m.cd $Eleicao1T)
+            if ($null -ne $b1 -and "$b1" -ne "SEM-MUDANCA") { $x1 = Resumo-Mun $b1 "cid1-$ch" $m; if ($x1 -and $x1.andamento -eq "f") { $x1 | Add-Member -NotePropertyName uf -NotePropertyValue $m.uf -Force; $script:Cidades1T[$ch] = $x1 } }
         }
     }
 }
@@ -837,6 +863,8 @@ function Gravar-Dados {
         exterior_total = $(if ($script:Cache.ContainsKey("zz")) { $script:Cache["zz"] } else { [pscustomobject]@{ tem = $false } })
         capitais      = [pscustomobject] $script:Capitais
         capitais_1t   = [pscustomobject] $script:Capitais1T
+        cidades       = [pscustomobject] $script:Cidades
+        cidades_1t    = [pscustomobject] $script:Cidades1T
         exterior      = @($script:Exterior.Values)
         exterior_cidades = $(if ($script:Mun) { $script:Mun.exterior.Count } else { 0 })
         turno1        = $(if ($Eleicao1T) { [pscustomobject]@{ eleicao = $Eleicao1T; br = $(if ($script:Turno1.Contains("br")) { $script:Turno1["br"] } else { [pscustomobject]@{ tem = $false } }); ufs = [pscustomobject] $script:Turno1 } } else { $null })
@@ -904,7 +932,7 @@ do {
             try {
                 Ler-Abrangencia "zz"
                 Ler-Municipios
-                if (($script:NumCiclo % 2) -eq 0) { Ler-Capitais }
+                if (($script:NumCiclo % 2) -eq 0) { Ler-Capitais; Ler-Cidades }
                 Ler-Exterior
             } catch { Escrever-Log "capitais/exterior: $($_.Exception.Message)" "AVISO" }
         }

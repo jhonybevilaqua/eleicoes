@@ -107,6 +107,11 @@ $EXT = @("LISBOA", "PORTO", "MIAMI", "BOSTON", "NOVA YORK", "TÓQUIO", "NAGOIA",
 function RespMunConfig {
     $abr = @()
     $k = 0; foreach ($u in $CAP.Keys) { $k++; $abr += [ordered]@{ cd = $u.ToUpper(); ds = "UF $($u.ToUpper())"; mu = @([ordered]@{ cd = "{0:00000}" -f (90000 + $k); cdi = ""; nm = $CAP[$u]; c = "S"; z = @() }, [ordered]@{ cd = "{0:00000}" -f (91000 + $k); cdi = ""; nm = "INTERIOR $($u.ToUpper())"; c = "N"; z = @() }) } }
+    # maiores cidades fora as capitais (nomes reais, codigos e votos ficticios)
+    $GC = @(@("sp", "GUARULHOS"), @("sp", "CAMPINAS"), @("sp", "SÃO BERNARDO DO CAMPO"), @("sp", "SANTO ANDRÉ"), @("sp", "OSASCO"), @("sp", "SOROCABA"), @("sp", "RIBEIRÃO PRETO"),
+        @("sp", "SÃO JOSÉ DOS CAMPOS"), @("rj", "SÃO GONÇALO"), @("rj", "DUQUE DE CAXIAS"), @("rj", "NOVA IGUAÇU"), @("mg", "UBERLÂNDIA"), @("mg", "CONTAGEM"), @("mg", "JUIZ DE FORA"),
+        @("pe", "JABOATÃO DOS GUARARAPES"), @("ba", "FEIRA DE SANTANA"), @("pr", "LONDRINA"), @("sc", "JOINVILLE"), @("go", "APARECIDA DE GOIÂNIA"))
+    $g = 0; foreach ($par in $GC) { $g++; $ab0 = @($abr | Where-Object { $_.cd -eq $par[0].ToUpper() })[0]; $ab0.mu += [ordered]@{ cd = "{0:00000}" -f (92000 + $g); cdi = ""; nm = $par[1]; c = "N"; z = @() } }
     $i = 0; $abr += [ordered]@{ cd = "ZZ"; ds = "EXTERIOR"; mu = @($EXT | ForEach-Object { $i++; [ordered]@{ cd = "{0:00000}" -f (29000 + $i); cdi = ""; nm = $_; c = "N"; z = @() } }) }
     return [ordered]@{ dg = "04/10/2026"; abr = $abr }
 }

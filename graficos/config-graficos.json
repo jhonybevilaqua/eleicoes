@@ -11,6 +11,8 @@
   },
   "_comentario_janelas": "janelas_gerenciador: 2 = abre o painel em duas janelas lado a lado (HORIZONTAL a esquerda, VERTICAL a direita); 1 = uma janela so, com as duas saidas uma embaixo da outra.",
   "janelas_gerenciador": 2,
+  "_comentario_monitor": "abrir_monitor: true = o GERENCIADOR.bat abre tambem a janela MONITOR (NO AR e PREVIA das duas saidas) no 2o monitor; false = nao abre (botao 'abrir monitor' no painel).",
+  "abrir_monitor": true,
   "intervalo_segundos": 20,
   "intervalo_estados_segundos": 30,
   "_comentario_obs": "OBS automatico das saidas DeckLink (GERENCIADOR.bat). obs_fps: 29.97 = 1080i59.94 | 59.94 = 1080p59.94. girar_saida_vertical: 90 ou -90 (o sentido tambem troca por botao no gerenciador).",

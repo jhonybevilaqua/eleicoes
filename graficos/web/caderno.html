@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>gctse CADERNO DE DADOS</title>
+<style>
+  /* CADERNO DE DADOS para a bancada: imprimir (ou salvar em PDF) na vespera.
+     So numeros do TSE ja guardados: 1o turno de 2026 (dados.js turno1 e
+     estados.js) e 2o turno de 2022 (estados.js ref2022_2t / ref2022_gov). */
+  :root { --texto: #111; --apagado: #555; --linha: #c9d1dc; --faixa: #f1f4f8; --azul: #1f4e8c; }
+  * { box-sizing: border-box; }
+  body { margin: 0; color: var(--texto); background: #fff; font: 11.5pt 'Segoe UI', Arial, sans-serif; }
+  .barra { position: sticky; top: 0; background: #0b1220; color: #fff; padding: 8px 16px; display: flex; gap: 12px; align-items: center; z-index: 2; }
+  .barra button { font: 700 13px 'Segoe UI', Arial, sans-serif; padding: 7px 14px; border-radius: 5px; border: 0; background: #2b84ff; color: #fff; cursor: pointer; }
+  .barra span { font-size: 13px; opacity: .8; }
+  #aviso { background: #c00000; padding: 3px 10px; border-radius: 4px; font-weight: 800; }
+  #aviso[hidden] { display: none; }
+  .pag { max-width: 190mm; margin: 0 auto; padding: 10mm 0; }
+  h1 { font-size: 22pt; margin: 0 0 2mm; } h2 { font-size: 14pt; margin: 8mm 0 2mm; color: var(--azul); border-bottom: 2px solid var(--azul); padding-bottom: 1mm; }
+  h3 { font-size: 11.5pt; margin: 4mm 0 1mm; }
+  .sub { color: var(--apagado); font-size: 10pt; }
+  table { width: 100%; border-collapse: collapse; font-size: 9.5pt; font-variant-numeric: tabular-nums; margin: 2mm 0; page-break-inside: auto; }
+  tr { page-break-inside: avoid; }
+  th { text-align: right; font-size: 8.5pt; color: var(--apagado); border-bottom: 1.5px solid var(--texto); padding: 1.2mm 1.5mm; }
+  td { text-align: right; padding: 1.1mm 1.5mm; border-bottom: 1px solid var(--linha); }
+  th:first-child, td:first-child, td.e, th.e { text-align: left; }
+  tbody tr:nth-child(even) td { background: var(--faixa); }
+  .tag { font-size: 7.5pt; font-weight: 800; border: 1px solid; border-radius: 2px; padding: 0 1mm; white-space: nowrap; }
+  .quebra { page-break-before: always; }
+  .nota { font-size: 8.5pt; color: var(--apagado); }
+  .vazio { color: var(--apagado); font-style: italic; }
+  @page { size: A4; margin: 12mm; }
+  @media print { .barra { display: none; } .pag { padding: 0; max-width: none; } }
+</style>
+</head>
+<body>
+<div class="barra"><button type="button" onclick="window.print()">🖨 imprimir / salvar PDF</button><span id="gerado"></span><span id="aviso" hidden>ENSAIO / SIMULADO — DADOS FICTÍCIOS</span></div>
+<div class="pag" id="pag"><p class="vazio">carregando os dados…</p></div>
+<script charset="utf-8" src="dados.js"></script>
+<script charset="utf-8" src="estados.js"></script>
+<script>
+(function () {
+  "use strict";
+  var UF = { ac: "Acre", al: "Alagoas", ap: "Amapá", am: "Amazonas", ba: "Bahia", ce: "Ceará", df: "Distrito Federal", es: "Espírito Santo", go: "Goiás", ma: "Maranhão", mt: "Mato Grosso", ms: "Mato Grosso do Sul", mg: "Minas Gerais", pa: "Pará", pb: "Paraíba", pr: "Paraná", pe: "Pernambuco", pi: "Piauí", rj: "Rio de Janeiro", rn: "Rio Grande do Norte", rs: "Rio Grande do Sul", ro: "Rondônia", rr: "Roraima", sc: "Santa Catarina", sp: "São Paulo", se: "Sergipe", to: "Tocantins" };
+  var KS = Object.keys(UF).sort(function (a, b) { return UF[a].localeCompare(UF[b], "pt-BR"); });
+  var D = window.GCTSE_DADOS || {}, E = window.GCTSE_ESTADOS || {};
+  function arr(x) { return Array.isArray(x) ? x : (x && Array.isArray(x.value) ? x.value : []); }
+  function esc(x) { return String(x == null ? "" : x).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function pct(v, d) { return v == null || isNaN(v) ? "—" : Number(v).toFixed(d == null ? 2 : d).replace(".", ",") + "%"; }
+  function int(v) { return v == null || isNaN(v) ? "—" : Math.round(+v).toLocaleString("pt-BR"); }
+  function cands(x) { return arr(x && x.candidatos).filter(function (c) { return c.valido !== false && (c.destinacao || "V").charAt(0) !== "A"; }).slice().sort(function (a, b) { return (+b.votos || 0) - (+a.votos || 0); }); }
+  function acha(x, n) { return arr(x && x.candidatos).filter(function (c) { return String(c.numero) === String(n); })[0] || null; }
+  var av = document.getElementById("aviso"); av.hidden = !(D.ensaio || D.modo === "SIMULADO" || E.ensaio || E.modo === "SIMULADO");
+  document.getElementById("gerado").textContent = "gerado em " + new Date().toLocaleString("pt-BR") + " · fonte: TSE";
+  var h = "", t1 = D.turno1 || {}, b1 = t1.br && t1.br.tem ? t1.br : null;
+  // finalistas do 2o turno: os 2 primeiros do 1o turno (ou do boletim ao vivo)
+  var c1 = b1 ? cands(b1) : [], fin = c1.filter(function (c) { return c.segundo_turno; });
+  if (fin.length < 2) fin = c1.slice(0, 2);
+  h += "<h1>Caderno de dados — 2º turno 2026</h1><div class='sub'>Presidente e governadores: 1º turno de 2026 e 2º turno de 2022, estado por estado. Números do TSE guardados pelo sistema gctse.</div>";
+  // ---- PRESIDENTE 1o TURNO
+  h += "<h2>Presidente — 1º turno de 2026 (resultado final)</h2>";
+  if (b1) {
+    var el = b1.eleitorado || {}, vv = b1.votos || {};
+    h += "<table><thead><tr><th class='e'>CANDIDATO</th><th class='e'>PARTIDO</th><th>VOTOS</th><th>% VÁLIDOS</th><th></th></tr></thead><tbody>" +
+      c1.map(function (c) { return "<tr><td>" + esc(c.nome) + "</td><td class='e'>" + esc(c.partido) + "</td><td>" + int(c.votos) + "</td><td><b>" + pct(c.pct) + "</b></td><td>" + (c.segundo_turno ? "<span class='tag'>2º TURNO</span>" : "") + "</td></tr>"; }).join("") + "</tbody></table>";
+    h += "<div class='nota'>Eleitorado " + int(el.aptos) + " · comparecimento " + pct(el.pct_comparec) + " · abstenção " + pct(el.pct_abstencao) + " · válidos " + int(vv.validos) + " · brancos " + pct(vv.pct_brancos) + " · nulos " + pct(vv.pct_nulos) + "</div>";
+    // por estado
+    var R22 = E.ref2022_2t && E.ref2022_2t.ufs ? E.ref2022_2t.ufs : {};
+    h += "<h3>Por estado — 1º turno 2026 (finalistas) e 2º turno 2022</h3><table><thead><tr><th class='e'>ESTADO</th><th>ELEITORADO</th><th>ABST. 1º T</th>" +
+      fin.map(function (c) { return "<th>" + esc(c.nome.split(" ")[0]) + " (" + esc(c.partido) + ")</th>"; }).join("") + "<th class='e'>LIDEROU NO 1º T</th><th class='e'>2º TURNO 2022</th></tr></thead><tbody>";
+    KS.forEach(function (k) {
+      var x = (t1.ufs || {})[k], cs = x && x.tem ? cands(x) : [], r = R22[k], v22 = "—";
+      if (r) { var sg = Object.keys(r).filter(function (s0) { return s0.charAt(0) !== "_"; }).sort(function (p, q) { return r[q] - r[p]; }); v22 = sg.map(function (s0) { return esc(s0) + " " + pct(r[s0], 1); }).join(" × "); }
+      h += "<tr><td><b>" + k.toUpperCase() + "</b> " + esc(UF[k]) + "</td><td>" + int(x && x.eleitorado ? x.eleitorado.aptos : null) + "</td><td>" + pct(x && x.eleitorado ? x.eleitorado.pct_abstencao : null, 1) + "</td>" +
+        fin.map(function (c) { var y = acha(x, c.numero); return "<td>" + (y ? pct(y.pct, 1) : "—") + "</td>"; }).join("") +
+        "<td class='e'>" + (cs[0] ? esc(cs[0].nome) + " " + pct(cs[0].pct, 1) : "—") + "</td><td class='e'>" + v22 + "</td></tr>";
+    });
+    h += "</tbody></table>";
+    var r22b = E.ref2022_2t && E.ref2022_2t.br;
+    if (r22b) h += "<div class='nota'>2º turno de 2022, Brasil: " + Object.keys(r22b).filter(function (s0) { return s0.charAt(0) !== "_"; }).map(function (s0) { return esc(r22b["_nome_" + s0] || s0) + " (" + esc(s0) + ") " + pct(r22b[s0]) + " · " + int(r22b["_votos_" + s0]) + " votos"; }).join(" × ") + " · abstenção " + pct(r22b._pa) + "</div>";
+  } else h += "<p class='vazio'>1º turno ainda não guardado (GRAFICOS.bat no 2º turno, ou GUARDAR-DADOS-TSE).</p>";
+  // ---- GOVERNADORES
+  h += "<h2 class='quebra'>Governadores — 1º turno de 2026 e eleitos em 2022</h2>";
+  var G22 = E.ref2022_gov && E.ref2022_gov.ufs ? E.ref2022_gov.ufs : {}, eu = E.ufs || {};
+  h += "<table><thead><tr><th class='e'>ESTADO</th><th class='e'>SITUAÇÃO</th><th class='e'>1º COLOCADO (1º T)</th><th>%</th><th class='e'>2º COLOCADO (1º T)</th><th>%</th><th class='e'>ELEITO EM 2022</th></tr></thead><tbody>";
+  var n2 = 0;
+  KS.forEach(function (k) {
+    var u = eu[k] || {}, g1 = u.gov1t || (u.gov && +u.gov.turno !== 2 ? u.gov : null), cs = g1 ? cands(g1) : [];
+    var sit = cs.some(function (c) { return c.eleito; }) ? "<span class='tag'>ELEITO NO 1º T</span>" : cs.some(function (c) { return c.segundo_turno; }) || (u.gov && +u.gov.turno === 2) ? "<span class='tag'>2º TURNO</span>" : "—";
+    if (/2º TURNO/.test(sit)) n2++;
+    var a = G22[k];
+    h += "<tr><td><b>" + k.toUpperCase() + "</b> " + esc(UF[k]) + "</td><td class='e'>" + sit + "</td><td class='e'>" + (cs[0] ? esc(cs[0].nome) + " (" + esc(cs[0].partido) + ")" : "—") + "</td><td>" + (cs[0] ? pct(cs[0].pct, 1) : "—") +
+      "</td><td class='e'>" + (cs[1] ? esc(cs[1].nome) + " (" + esc(cs[1].partido) + ")" : "—") + "</td><td>" + (cs[1] ? pct(cs[1].pct, 1) : "—") + "</td><td class='e'>" + (a ? esc(a.nome) + " (" + esc(a.partido) + ") " + pct(a.pct, 1) + (+a.turno === 2 ? " no 2º T" : "") : "—") + "</td></tr>";
+  });
+  h += "</tbody></table><div class='nota'>" + n2 + " estados com 2º turno de governador. \"Eleito em 2022\" = quem venceu a eleição de 2022 (o vice pode ter assumido depois).</div>";
+  // ---- SENADO
+  h += "<h2>Senado — eleitos em 2026</h2><table><thead><tr><th class='e'>ESTADO</th><th class='e'>ELEITOS</th><th class='e'>PARTIDOS</th></tr></thead><tbody>";
+  KS.forEach(function (k) {
+    var s = (eu[k] || {}).sen, el = s ? cands(s).filter(function (c) { return c.eleito; }) : [];
+    h += "<tr><td><b>" + k.toUpperCase() + "</b> " + esc(UF[k]) + "</td><td class='e'>" + (el.length ? el.map(function (c) { return esc(c.nome) + " " + pct(c.pct, 1); }).join(" · ") : "—") + "</td><td class='e'>" + el.map(function (c) { return esc(c.partido); }).join(", ") + "</td></tr>";
+  });
+  h += "</tbody></table><div class='nota'>Fonte de tudo: TSE (boletins guardados pelo GRAFICOS.bat, ESTADOS.bat e GUARDAR-DADOS-TSE). Confira com o TSE antes de citar número no ar.</div>";
+  document.getElementById("pag").innerHTML = h;
+})();
+</script>
+</body>
+</html>

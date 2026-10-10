@@ -181,6 +181,7 @@ $script:EleitoAuto = $true
 $script:Reabrir = $true
 $script:DadosAoAbrir = $true
 $script:JanelasGer = 2   # "janelas_gerenciador": 2 = H e V lado a lado; 1 = uma janela com as duas
+$script:AbrirMonitor = $true   # "abrir_monitor": false = nao abre a janela MONITOR (NO AR + PREVIA)
 try {
     foreach ($p in $cfg.PSObject.Properties) {
         if ($p.Name -eq "ensaio" -and $p.Value -eq $true) { $script:Ensaio = $true }
@@ -188,6 +189,7 @@ try {
         if ($p.Name -eq "reabrir_coletas" -and $p.Value -eq $false) { $script:Reabrir = $false }
         if ($p.Name -eq "atualizar_dados_ao_abrir" -and $p.Value -eq $false) { $script:DadosAoAbrir = $false }
         if ($p.Name -eq "janelas_gerenciador" -and "$($p.Value)" -eq "1") { $script:JanelasGer = 1 }
+        if ($p.Name -eq "abrir_monitor" -and $p.Value -eq $false) { $script:AbrirMonitor = $false }
     }
 } catch { }
 if ($script:Ensaio) { $script:Reabrir = $false }   # o ENSAIO.bat cuida das janelas dele
@@ -287,7 +289,46 @@ function Coletor-Aberto([string] $Ps1) {
     try { return @(Get-Process -ErrorAction SilentlyContinue | Where-Object { $c = $null; try { $c = $_.CommandLine } catch { }; $c -and $c -match $alvo }).Count -gt 0 } catch { return $true }
 }
 $script:Vigia = @{ prox = [datetime]::MinValue; lidoP = [datetime]::MinValue; lidoE = [datetime]::MinValue; lideres = @{}; parouP = $false; parouE = $false
-    semTse = $false; viSemEleito = $false; reabriuP = [datetime]::MinValue; reabriuE = [datetime]::MinValue; nomes = @{} }
+    semTse = $false; viSemEleito = $false; reabriuP = [datetime]::MinValue; reabriuE = [datetime]::MinValue; nomes = @{}
+    marcos = @{}; marcosP = $false; marcosE = $false; govLider = @{} }
+# MARCOS DA APURACAO (avisos para a bancada e o operador): cada um uma vez
+# por eleicao. O que ja tinha passado quando o gerenciador abriu NAO avisa.
+$script:Grandes = @("sp", "mg", "rj", "ba", "pr", "rs")
+function Marco([string] $Chave, [string] $Texto, [bool] $Calado) {
+    if ($script:Vigia.marcos.ContainsKey($Chave)) { return }
+    $script:Vigia.marcos[$Chave] = $true
+    if (-not $Calado) { Evento "marco" $Texto }
+}
+function Pct-Txt([double] $v) { return $v.ToString("0.0", [Globalization.CultureInfo]::InvariantCulture).Replace(".", ",") }
+function Vigiar-Estados {
+    $arq = Join-Path $Web "estados.js"
+    if (-not (Test-Path $arq)) { return }
+    $quando = (Get-Item $arq).LastWriteTime
+    if ($quando -eq $script:Vigia.lidoE) { return }
+    $d = $null
+    try { $d = Ler-Js "estados.js" } catch { return }
+    if ($null -eq $d) { return }
+    $script:Vigia.lidoE = $quando
+    $calado = -not $script:Vigia.marcosE; $script:Vigia.marcosE = $true
+    $ufs = Prop $d "ufs"; if ($null -eq $ufs) { return }
+    foreach ($p in $ufs.PSObject.Properties) {
+        $k = $p.Name; $g = Prop $p.Value "gov"
+        if ($null -eq $g -or -not (Prop $g "tem") -or [int] (Prop $g "turno") -ne 2) { continue }
+        $ele = "$(Prop $g 'eleicao')"
+        $cs = @(Lista-De (Prop $g "candidatos") | Where-Object { $null -ne $_ })
+        $el = @($cs | Where-Object { (Prop $_ "eleito") -eq $true }) | Select-Object -First 1
+        if ($null -ne $el) { Marco "gov-eleito|$ele|$k" ("GOVERNADOR ELEITO em {0}: {1} ({2}%)" -f $k.ToUpper(), "$(Prop $el 'nome')", (Pct-Txt ([double] (Prop $el 'pct')))) $calado }
+        # virada no governador do 2o turno
+        $l = Lider $g
+        if ($null -ne $l) {
+            $num = "$(Prop $l 'numero')"; $ch = "$ele|$k"; $pu = [double] (Prop $g "urnas_pct")
+            if ($script:Vigia.govLider.ContainsKey($ch) -and $script:Vigia.govLider[$ch][0] -ne $num -and $pu -ge 1 -and -not $calado) {
+                Evento "virada" ("VIROU GOVERNADOR {0}: {1} passou {2} ({3}% das urnas)" -f $k.ToUpper(), "$(Prop $l 'nome')", $script:Vigia.govLider[$ch][1], (Pct-Txt $pu))
+            }
+            $script:Vigia.govLider[$ch] = @($num, "$(Prop $l 'nome')")
+        }
+    }
+}
 function Vigiar-Coleta([string] $Qual, [string] $Js, [string] $Ps1, [string] $Bat, [int] $Limite) {
     $arq = Join-Path $Web $Js
     if (-not (Test-Path $arq)) { return }
@@ -314,6 +355,7 @@ function Vigiar {
     $script:Vigia.prox = (Get-Date).AddSeconds(3)
     Vigiar-Coleta "P" "dados.js" "graficos.ps1" "GRAFICOS.bat" 90
     Vigiar-Coleta "E" "estados.js" "estados.ps1" "ESTADOS.bat" 150
+    try { Vigiar-Estados } catch { }
     $arq = Join-Path $Web "dados.js"
     if (-not (Test-Path $arq)) { return }
     $quando = (Get-Item $arq).LastWriteTime
@@ -333,6 +375,25 @@ function Vigiar {
     $cs = @(Lista-De (Prop $br "candidatos") | Where-Object { $null -ne $_ })
     $el = @($cs | Where-Object { (Prop $_ "eleito") -eq $true }) | Select-Object -First 1
     $pctBr = [double] (Prop (Prop $br "secoes") "pct")
+    # ---- MARCOS: Brasil 25/50/75/90/100% e os 6 maiores eleitorados a 90%
+    $caladoP = -not $script:Vigia.marcosP; $script:Vigia.marcosP = $true
+    foreach ($m in @(25, 50, 75, 90, 100)) {
+        if ($pctBr -ge $m) {
+            $lb = Lider $br; $ld = ""
+            if ($null -ne $lb) { $ld = " - lidera {0} ({1}%)" -f "$(Prop $lb 'nome')", (Pct-Txt ([double] (Prop $lb 'pct'))) }
+            Marco "br$m|$eleicao" ("{0}% DAS URNAS APURADAS NO BRASIL{1}" -f $m, $ld) $caladoP
+        }
+    }
+    $ufsM = Prop $d "ufs"
+    foreach ($k in $script:Grandes) {
+        $ab = Prop $ufsM $k; if ($null -eq $ab) { continue }
+        $pu = [double] (Prop (Prop $ab "secoes") "pct")
+        if ($pu -ge 90) {
+            $lu = Lider $ab; $ld = ""
+            if ($null -ne $lu) { $ld = ": lidera {0} ({1}%)" -f "$(Prop $lu 'nome')", (Pct-Txt ([double] (Prop $lu 'pct'))) }
+            Marco "uf90|$eleicao|$k" ("{0} PASSOU DE 90% DAS URNAS{1}" -f $k.ToUpper(), $ld) $caladoP
+        }
+    }
     # ---- PRESIDENTE ELEITO
     if ($null -eq $el) { $script:Vigia.viSemEleito = $true }
     elseif ($script:Estado.eleito.feito -ne $eleicao) {
@@ -386,6 +447,7 @@ try { $ouvinte.Start() } catch {
     exit 1
 }
 $script:Estado.rede = $false
+$script:Estado.pvw = [ordered]@{ h = $null; v = $null }; $script:Estado.pvw_ligada = [ordered]@{ h = $false; v = $false }   # janela MONITOR
 
 Escrever-Log "gctse GERENCIADOR no ar - HORIZONTAL: http://localhost:$Porta/gerenciador.html?saida=h  |  VERTICAL: http://localhost:$Porta/gerenciador.html?saida=v" "Green"
 Escrever-Log "OBS da saida HORIZONTAL: http://localhost:$Porta/saida.html?saida=h  (fonte Navegador 1920x1080)" "Cyan"
@@ -438,6 +500,19 @@ function Abrir-Gerenciador {
             } else { Start-Process $par[1] }
         } catch { try { Start-Process $par[1] } catch { } }
         $i++
+    }
+    # MONITOR (NO AR + PREVIA das duas saidas): no 2o monitor, se houver;
+    # senao por cima do painel (arraste para onde quiser).
+    if ($script:AbrirMonitor) {
+        $mx = $x0 + 40; $my = $y0 + 40; $mw = 1400; $mh = 860
+        try { $tel = @([System.Windows.Forms.Screen]::AllScreens | Where-Object { -not $_.Primary }); if ($tel.Count) { $a2 = $tel[0].WorkingArea; $mx = $a2.X; $my = $a2.Y; $mw = $a2.Width; $mh = $a2.Height } } catch { }
+        $urlM = "http://localhost:$Porta/monitor.html"
+        try {
+            if ($nav -and $env:LOCALAPPDATA) {
+                Start-Process -FilePath $nav -ArgumentList @(('--user-data-dir="' + (Join-Path $env:LOCALAPPDATA "gctse-monitor") + '"'), "--no-first-run", "--no-default-browser-check", ("--app=" + $urlM), ("--window-position={0},{1}" -f $mx, $my), ("--window-size={0},{1}" -f $mw, $mh))
+            } else { Start-Process $urlM }
+        } catch { try { Start-Process $urlM } catch { } }
+        Escrever-Log "janela MONITOR aberta (NO AR e PREVIA das duas saidas): $urlM" "Green"
     }
     if ($urls.Count -eq 1) { Escrever-Log "gerenciador aberto em 1 janela (HORIZONTAL e VERTICAL juntas)" "Green" }
     else { Escrever-Log "gerenciador aberto em 2 janelas: HORIZONTAL (esquerda) e VERTICAL (direita)" "Green" }
@@ -620,6 +695,23 @@ while ($ouvinte.IsListening) {
                 $deSug = "$($req.QueryString['de'])"
                 Registrar-NoAr $s $tela $acao $(if ($deSug -match '^[^<>;"]{1,30}$') { "painel (sugestao de $deSug)" } else { "painel" })
                 Escrever-Log ("NO AR - saida {0}: {1}" -f $(if ($s -eq "h") { "HORIZONTAL" } else { "VERTICAL" }), $tela) "Green"
+                Responder-Json $ctx $script:Estado
+            } else {
+                Responder $ctx 400 "text/plain; charset=utf-8" ([Text.Encoding]::UTF8.GetBytes("pedido invalido"))
+            }
+        }
+        elseif ($caminho -eq "/pvw") {
+            # PREVIA de cada saida (o que esta selecionado e ainda nao foi ao
+            # ar), para a janela MONITOR. Nao vai ao ar e nao fica gravado.
+            $s = "$($req.QueryString['saida'])"; $tela = "$($req.QueryString['tela'])"; $acao = "$($req.QueryString['acao'])"
+            $rodP = "$($req.QueryString['rodizio'])"; $tempoP = "$($req.QueryString['tempo'])"
+            if (($s -eq "h" -or $s -eq "v") -and ($tela -eq "" -or $tela -match '^[a-z0-9-]{1,40}$') -and ($acao -eq "" -or $acao -match '^[a-z0-9:,-]{1,40}$') -and
+                ($rodP -eq "" -or $rodP -match '^[a-z0-9:,-]{1,2000}$') -and ($tempoP -eq "" -or $tempoP -match '^\d{1,3}$')) {
+                if ($null -eq $script:Estado.pvw) { $script:Estado.pvw = [ordered]@{ h = $null; v = $null } }
+                if ($tela) { $script:Estado.pvw[$s] = [ordered]@{ tela = $tela; acao = $acao; rodizio = $rodP; tempo = $tempoP; nome = "$($req.QueryString['nome'])".Substring(0, [math]::Min(80, "$($req.QueryString['nome'])".Length)); quando = (Get-Date -Format "HH:mm:ss") } }
+                else { $script:Estado.pvw[$s] = $null }
+                $pl = $script:Estado.pvw_ligada; if ($null -eq $pl) { $pl = [ordered]@{ h = $false; v = $false }; $script:Estado.pvw_ligada = $pl }
+                $pl[$s] = ("$($req.QueryString['ligada'])" -eq "1")
                 Responder-Json $ctx $script:Estado
             } else {
                 Responder $ctx 400 "text/plain; charset=utf-8" ([Text.Encoding]::UTF8.GetBytes("pedido invalido"))

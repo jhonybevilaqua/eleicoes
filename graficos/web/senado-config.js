@@ -3,6 +3,9 @@
 // A composicao por partido NAO sai do boletim do TSE de 2026 (os senadores
 // que continuam mudaram de partido desde 2022): estes numeros vieram da
 // tabela que a redacao forneceu. Confira antes de ir ao ar.
+// ATENCAO: senador com mandato ate 2031 eleito GOVERNADOR em 2026 (ex.:
+// Cleitinho, MG, eleito no 1o turno) deixa a cadeira para o SUPLENTE em
+// 2027 - na coluna em2027 a vaga vai para o partido do suplente.
 // Edite com o Bloco de Notas, salve e aperte F5 na tela.
 //   sigla, atual, em2027 (cadeiras) e cor (#rrggbb) de cada partido.
 //   A soma de cada coluna deve dar 81 (a tela mostra a soma que encontrar).

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>gctse ANALISTA</title>
+<style>
+  /* PAINEL DO ANALISTA: so leitura, para o apresentador e os comentaristas.
+     Numeros do TSE (dados.js / estados.js), atualiza sozinho a cada 3 s.
+     Nada aqui vai ao ar e nenhum clique muda o que esta no ar. */
+  :root { --fundo: #0a1120; --cartao: #111b2e; --linha: #23324d; --texto: #f2f6fc; --apagado: #8ea3bd; --verde: #3ddc84; --verm: #ff6b6b; --amar: #ffd43b; --azul: #4ea1ff; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fundo); color: var(--texto); font: 15px 'Segoe UI', Arial, sans-serif; }
+  header { display: flex; align-items: center; gap: 14px; padding: 8px 16px; border-bottom: 1px solid var(--linha); position: sticky; top: 0; background: var(--fundo); z-index: 3; flex-wrap: wrap; }
+  header h1 { margin: 0; font-size: 16px; letter-spacing: 2px; }
+  header .noar { font-size: 13px; color: var(--apagado); } header .noar b { color: var(--texto); }
+  header .hora { margin-left: auto; font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  #aviso { background: #c00000; color: #fff; font-weight: 800; padding: 2px 10px; border-radius: 4px; letter-spacing: 1px; }
+  #aviso[hidden] { display: none; }
+  main { padding: 12px 16px 30px; display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr) 360px; }
+  .cx { background: var(--cartao); border: 1px solid var(--linha); border-radius: 8px; padding: 12px 14px; min-width: 0; }
+  .cx h2 { margin: 0 0 8px; font-size: 12.5px; letter-spacing: 1.5px; color: var(--apagado); }
+  .larga { grid-column: 1 / -1; }
+  .placar { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+  .num { background: rgba(255,255,255,.04); border-radius: 6px; padding: 8px 10px; }
+  .num .r { font-size: 11px; letter-spacing: 1px; color: var(--apagado); font-weight: 700; }
+  .num .v { font-size: 30px; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .num .s { font-size: 13px; color: var(--apagado); }
+  .num.cand .v { font-size: 34px; } .num.cand .n { font-size: 15px; font-weight: 800; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th { text-align: right; font-size: 11px; letter-spacing: .8px; color: var(--apagado); font-weight: 700; padding: 4px 6px; border-bottom: 1px solid var(--linha); white-space: nowrap; }
+  td { text-align: right; padding: 4px 6px; border-bottom: 1px solid rgba(255,255,255,.05); white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  td.uf { font-weight: 800; } td.uf small { color: var(--apagado); font-weight: 400; }
+  tr.apertado td { background: rgba(255, 212, 59, .07); }
+  .tag { display: inline-block; font-size: 10.5px; font-weight: 800; padding: 1px 5px; border-radius: 3px; letter-spacing: .5px; }
+  .tag.virou { background: var(--amar); color: #111; } .tag.el { background: var(--verde); color: #04210f; } .tag.ap { background: #3a2f00; color: var(--amar); }
+  .sw { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; vertical-align: 0; }
+  .up { color: var(--verde); } .dn { color: var(--verm); } .ap { color: var(--apagado); }
+  .ordem { display: flex; gap: 6px; margin: -2px 0 8px; flex-wrap: wrap; }
+  .ordem button { background: #1b2840; color: var(--texto); border: 1px solid var(--linha); border-radius: 5px; padding: 4px 10px; font: 600 12.5px 'Segoe UI', Arial, sans-serif; cursor: pointer; }
+  .ordem button.on { background: var(--azul); border-color: var(--azul); color: #04142a; }
+  ol.ev { list-style: none; margin: 0; padding: 0; font-size: 13.5px; max-height: 520px; overflow: auto; }
+  ol.ev li { padding: 5px 0; border-bottom: 1px dotted var(--linha); } ol.ev li b { color: var(--apagado); margin-right: 6px; font-weight: 600; }
+  .tp-alerta { color: #ffb3b3; } .tp-virada { color: var(--amar); font-weight: 700; } .tp-eleito, .tp-marco { color: var(--verde); font-weight: 700; }
+  .nota { font-size: 12px; color: var(--apagado); margin-top: 6px; }
+  .vazio { color: var(--apagado); padding: 10px 0; }
+  @media (max-width: 1100px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header><h1>gctse · PAINEL DO ANALISTA</h1><span id="aviso" hidden></span>
+  <span class="noar">no ar: H <b id="noH">—</b> · V <b id="noV">—</b></span><span class="hora" id="hora">--:--:--</span></header>
+<main>
+  <section class="cx larga"><h2 id="tPres">PRESIDENTE — 2º TURNO</h2><div class="placar" id="placar"><div class="vazio">aguardando o boletim do TSE…</div></div>
+    <div class="nota" id="notaPres"></div></section>
+  <section class="cx"><h2>ESTADOS — PRESIDENTE</h2>
+    <div class="ordem" id="ordem"><button data-o="faltam" class="on">mais eleitores a apurar</button><button data-o="margem">disputa mais apertada</button><button data-o="eleit">maior eleitorado</button><button data-o="nome">A → Z</button></div>
+    <table><thead id="cabUf"></thead><tbody id="ufs"></tbody></table>
+    <div class="nota">Eleitores a apurar = eleitores das urnas que o TSE ainda não totalizou. 1º turno = resultado final guardado. 2022 = partido que venceu o 2º turno de 2022 no estado. Linha amarela = diferença menor que 5 pontos.</div></section>
+  <section class="cx"><h2>MARCOS DA NOITE</h2><ol class="ev" id="evs"><li class="vazio">nenhum ainda</li></ol></section>
+  <section class="cx larga"><h2>GOVERNADORES — 2º TURNO</h2><table><thead><tr><th>ESTADO</th><th>URNAS</th><th>LIDERA</th><th>%</th><th>2º</th><th>%</th><th>DIFERENÇA</th><th>LÍDER NO 1º TURNO</th><th></th></tr></thead><tbody id="govs"></tbody></table>
+    <div class="nota" id="notaGov"></div></section>
+</main>
+<script charset="utf-8" src="graficos.js"></script>
+<script>
+(function () {
+  "use strict";
+  var UF = { ac: "Acre", al: "Alagoas", ap: "Amapá", am: "Amazonas", ba: "Bahia", ce: "Ceará", df: "Distrito Federal", es: "Espírito Santo", go: "Goiás", ma: "Maranhão", mt: "Mato Grosso", ms: "Mato Grosso do Sul", mg: "Minas Gerais", pa: "Pará", pb: "Paraíba", pr: "Paraná", pe: "Pernambuco", pi: "Piauí", rj: "Rio de Janeiro", rn: "Rio Grande do Norte", rs: "Rio Grande do Sul", ro: "Rondônia", rr: "Roraima", sc: "Santa Catarina", sp: "São Paulo", se: "Sergipe", to: "Tocantins" };
+  var CORES = ["#e03131", "#1c7ed6", "#f08c00", "#2f9e44", "#9c36b5", "#0c8599"];
+  var ordem = "faltam"; try { ordem = localStorage.getItem("gctse-analista-ordem") || "faltam"; } catch (e) { }
+  function arr(x) { return Array.isArray(x) ? x : (x && Array.isArray(x.value) ? x.value : []); }
+  function esc(x) { return String(x == null ? "" : x).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function pct(v, d) { return v == null || isNaN(v) ? "—" : Number(v).toFixed(d == null ? 2 : d).replace(".", ",") + "%"; }
+  function int(v) { return v == null || isNaN(v) ? "—" : Math.round(+v).toLocaleString("pt-BR"); }
+  function mi(v) { v = +v || 0; return Math.abs(v) >= 1e6 ? (v / 1e6).toFixed(2).replace(".", ",") + " mi" : int(v); }
+  function pp(d) { if (d == null || isNaN(d)) return ""; var c = d > 0.05 ? "up" : d < -0.05 ? "dn" : "ap"; return '<span class="' + c + '">' + (d > 0 ? "+" : d < 0 ? "−" : "") + Math.abs(d).toFixed(1).replace(".", ",") + "</span>"; }
+  function curto(n) { var p = String(n || "").split(/\s+/).filter(Boolean); return p.length > 2 && String(n).length > 20 ? p[0] + " " + p[p.length - 1] : String(n || ""); }
+  function porVotos(cs) { return arr(cs).filter(function (c) { return c.valido !== false && (c.destinacao || "V").charAt(0) !== "A"; }).slice().sort(function (a, b) { return (+b.votos || 0) - (+a.votos || 0); }); }
+  function acha(cs, num) { return arr(cs).filter(function (c) { return String(c.numero) === String(num); })[0] || null; }
+
+  function pintar() {
+    var D = window.GCTSE_DADOS || {}, E = window.GCTSE_ESTADOS || {}, br = D.br, t1 = D.turno1 || {};
+    var av = document.getElementById("aviso");
+    av.hidden = !(D.ensaio || D.modo === "SIMULADO"); av.textContent = "ENSAIO / SIMULADO — DADOS FICTÍCIOS";
+    // os dois candidatos em ordem FIXA (numero), para as colunas nao trocarem
+    var cs = br && br.tem ? porVotos(br.candidatos) : [];
+    var dois = cs.slice(0, 2).sort(function (a, b) { return String(a.numero).localeCompare(String(b.numero)); });
+    var cor = {}; dois.forEach(function (c, i) { cor[c.numero] = (D.cores && (D.cores[c.numero] || D.cores[c.partido])) || CORES[i]; });
+    // ---- placar
+    var pl = document.getElementById("placar"), h = "";
+    if (cs.length >= 2) {
+      var a = cs[0], b = cs[1], el = cs.filter(function (c) { return c.eleito; })[0];
+      var s = br.secoes || {}, ele = br.eleitorado || {}, falt = +ele.faltam || 0, comp = (+ele.pct_comparec || 0) / 100;
+      var dif = (+a.votos || 0) - (+b.votos || 0), resta = Math.round(falt * comp);
+      document.getElementById("tPres").textContent = "PRESIDENTE — " + (cs.length === 2 ? "2º TURNO" : "1º TURNO") + (el ? " · ELEITO: " + el.nome : "");
+      h += '<div class="num"><div class="r">URNAS APURADAS</div><div class="v">' + pct(s.pct) + '</div><div class="s">' + int(s.totalizadas) + " de " + int(s.total) + " seções</div></div>";
+      cs.slice(0, 2).forEach(function (c, i) {
+        h += '<div class="num cand"><div class="r">' + (i ? "2º" : "LIDERA") + '</div><div class="n"><span class="sw" style="background:' + (cor[c.numero] || CORES[i]) + '"></span>' + esc(curto(c.nome)) + " · " + esc(c.partido) + '</div><div class="v">' + pct(c.pct) + '</div><div class="s">' + int(c.votos) + " votos" + (c.eleito ? ' <span class="tag el">ELEITO</span>' : "") + "</div></div>";
+      });
+      h += '<div class="num"><div class="r">DIFERENÇA</div><div class="v">' + mi(dif) + '</div><div class="s">' + ((+a.pct || 0) - (+b.pct || 0)).toFixed(2).replace(".", ",") + " pontos</div></div>";
+      h += '<div class="num"><div class="r">ELEITORES A APURAR</div><div class="v">' + mi(falt) + '</div><div class="s">≈ ' + mi(resta) + " votos, com o comparecimento de " + pct(ele.pct_comparec, 1) + "</div></div>";
+      h += '<div class="num"><div class="r">AINDA DÁ PARA VIRAR?</div><div class="v">' + (el ? "NÃO" : falt <= 0 ? "NÃO" : dif < resta ? "SIM" : "NÃO") + '</div><div class="s">' + (el ? "eleito declarado pelo TSE" : falt <= 0 ? "não há urnas a apurar" : "precisaria de " + mi(dif) + " dos ≈ " + mi(resta) + " votos que faltam") + "</div></div>";
+      var nt = "Abstenção " + pct(ele.pct_abstencao) + " · brancos " + pct((br.votos || {}).pct_brancos) + " · nulos " + pct((br.votos || {}).pct_nulos) + " · boletim do TSE de " + esc(br.geracao || "");
+      var b1 = t1.br && t1.br.tem ? t1.br : null;
+      if (b1) nt += " · 1º turno: abstenção " + pct((b1.eleitorado || {}).pct_abstencao) + ", brancos " + pct((b1.votos || {}).pct_brancos) + ", nulos " + pct((b1.votos || {}).pct_nulos);
+      document.getElementById("notaPres").innerHTML = nt;
+    } else h = '<div class="vazio">aguardando o boletim do TSE (normal antes das 17h)</div>';
+    if (pl.innerHTML !== h) pl.innerHTML = h;
+    // ---- estados
+    var R22 = E.ref2022_2t && E.ref2022_2t.ufs ? E.ref2022_2t.ufs : null, ufs = D.ufs || {}, t1u = t1.ufs || {};
+    var cab = "<tr><th>ESTADO</th><th>URNAS</th><th>A APURAR</th>" + dois.map(function (c) { return '<th><span class="sw" style="background:' + cor[c.numero] + '"></span>' + esc(curto(c.nome)) + "</th><th>1º T → 2º T</th>"; }).join("") + "<th>DIFERENÇA</th><th>2022</th></tr>";
+    var cu = document.getElementById("cabUf"); if (cu.innerHTML !== cab) cu.innerHTML = cab;
+    var linhas = Object.keys(UF).map(function (k) {
+      var x = ufs[k], c2 = x && x.tem ? porVotos(x.candidatos) : [], y = t1u[k];
+      var ap = x && x.secoes ? +x.secoes.pct : null, fa = x && x.eleitorado ? +x.eleitorado.faltam || 0 : null, apt = x && x.eleitorado ? +x.eleitorado.aptos || 0 : 0;
+      var mg = c2.length >= 2 ? (+c2[0].pct || 0) - (+c2[1].pct || 0) : null;
+      var virou = false;
+      if (y && y.tem && c2.length >= 2 && ap > 0) { var l1 = porVotos(y.candidatos).filter(function (c) { return dois.some(function (d) { return String(d.numero) === String(c.numero); }); })[0]; virou = !!(l1 && String(l1.numero) !== String(c2[0].numero)); }
+      var r22 = R22 ? R22[k] : null, v22 = "";
+      if (r22) { var sg = Object.keys(r22).filter(function (s0) { return s0.charAt(0) !== "_"; }).sort(function (p, q) { return r22[q] - r22[p]; })[0]; if (sg) v22 = esc(sg) + " " + pct(r22[sg], 1); }
+      return { k: k, x: x, c2: c2, y: y, ap: ap, fa: fa, apt: apt, mg: mg, virou: virou, v22: v22 };
+    });
+    linhas.sort(function (p, q) {
+      if (ordem === "margem") return (p.mg == null ? 999 : p.mg) - (q.mg == null ? 999 : q.mg);
+      if (ordem === "eleit") return q.apt - p.apt;
+      if (ordem === "nome") return UF[p.k].localeCompare(UF[q.k], "pt-BR");
+      return (q.fa || 0) - (p.fa || 0) || q.apt - p.apt;
+    });
+    var hu = linhas.map(function (L) {
+      var tds = dois.map(function (d) {
+        var c = acha(L.c2, d.numero), c1 = L.y && L.y.tem ? acha(L.y.candidatos, d.numero) : null;
+        return "<td><b>" + (c ? pct(c.pct, 1) : "—") + "</b></td><td>" + (c1 ? pct(c1.pct, 1).replace("%", "") : "—") + " → " + (c ? pct(c.pct, 1).replace("%", "") : "—") + " " + (c && c1 ? pp(+c.pct - +c1.pct) : "") + "</td>";
+      }).join("");
+      var lid = L.c2[0];
+      return '<tr class="' + (L.mg != null && L.mg < 5 && L.ap > 0 ? "apertado" : "") + '"><td class="uf">' + L.k.toUpperCase() + " <small>" + esc(UF[L.k]) + "</small>" + (L.virou ? ' <span class="tag virou">VIROU</span>' : "") + "</td><td>" + pct(L.ap, 1) + "</td><td>" + (L.fa == null ? "—" : mi(L.fa)) + "</td>" + tds +
+        "<td>" + (L.mg == null || !lid ? "—" : '<span class="sw" style="background:' + (cor[lid.numero] || "#888") + '"></span>' + L.mg.toFixed(1).replace(".", ",") + " pts") + "</td><td>" + (L.v22 || "—") + "</td></tr>";
+    }).join("");
+    var tb = document.getElementById("ufs"); if (tb.innerHTML !== hu) tb.innerHTML = hu;
+    // ---- governadores do 2o turno
+    var eu = E.ufs || {}, hg = "", n2 = 0, nEl = 0;
+    Object.keys(UF).forEach(function (k) {
+      var g = eu[k] && eu[k].gov; if (!g || !g.tem || +g.turno !== 2) return;
+      n2++; var c = porVotos(g.candidatos), el = c.filter(function (x) { return x.eleito; })[0]; if (el) nEl++;
+      var g1 = eu[k].gov1t, l1 = g1 ? porVotos(g1.candidatos)[0] : null, mg = c.length >= 2 ? (+c[0].pct || 0) - (+c[1].pct || 0) : null;
+      var virou = !!(l1 && c[0] && String(l1.numero) !== String(c[0].numero) && (+g.urnas_pct || 0) > 0);
+      hg += '<tr class="' + (mg != null && mg < 5 && !el ? "apertado" : "") + '"><td class="uf">' + k.toUpperCase() + " <small>" + esc(UF[k]) + "</small></td><td>" + pct(g.urnas_pct, 1) + "</td><td style='text-align:left'><b>" + esc(c[0] ? curto(c[0].nome) : "—") + "</b> <small>" + esc(c[0] ? c[0].partido : "") + "</small></td><td><b>" + (c[0] ? pct(c[0].pct, 1) : "—") + "</b></td><td style='text-align:left'>" + esc(c[1] ? curto(c[1].nome) : "—") + " <small>" + esc(c[1] ? c[1].partido : "") + "</small></td><td>" + (c[1] ? pct(c[1].pct, 1) : "—") + "</td><td>" + (mg == null ? "—" : mg.toFixed(1).replace(".", ",") + " pts") + "</td><td style='text-align:left'>" + (l1 ? esc(curto(l1.nome)) + " " + pct(l1.pct, 1) : "—") + "</td><td>" + (el ? '<span class="tag el">ELEITO</span>' : virou ? '<span class="tag virou">VIROU</span>' : mg != null && mg < 5 ? '<span class="tag ap">APERTADO</span>' : "") + "</td></tr>";
+    });
+    if (!n2) hg = '<tr><td colspan="9" class="vazio" style="text-align:left">aguardando o boletim do 2º turno de governador (ESTADOS.bat)</td></tr>';
+    var tg = document.getElementById("govs"); if (tg.innerHTML !== hg) tg.innerHTML = hg;
+    document.getElementById("notaGov").textContent = n2 ? n2 + " estados no 2º turno · " + nEl + " já com governador eleito" : "";
+  }
+  document.getElementById("ordem").onclick = function (ev) {
+    var b = ev.target.closest("button"); if (!b) return; ordem = b.dataset.o; try { localStorage.setItem("gctse-analista-ordem", ordem); } catch (e) { }
+    [].forEach.call(this.querySelectorAll("button"), function (x) { x.classList.toggle("on", x === b); }); pintar();
+  };
+  [].forEach.call(document.querySelectorAll("#ordem button"), function (x) { x.classList.toggle("on", x.dataset.o === ordem); });
+  // dados.js / estados.js de novo a cada 3 s (o mesmo que as telas do ar leem)
+  function recarregar(nome, fim) {
+    var s = document.createElement("script"); s.charset = "utf-8"; s.src = nome + "?t=" + Date.now();
+    s.onload = s.onerror = function () { s.remove(); if (fim) fim(); }; document.head.appendChild(s);
+  }
+  function ciclo() { recarregar("dados.js", function () { recarregar("estados.js", function () { try { pintar(); } catch (e) { try { console.warn(e); } catch (x) { } } }); }); }
+  // o que esta no ar e os marcos (do gerenciador; sem ele, so os numeros)
+  function nomeTela(e) {
+    if (!e || !e.tela) return "—";
+    var g = (((window.GCTSE_GRAFICOS || {}).lista) || []).filter(function (x) { return x.id === e.tela; })[0];
+    if (e.tela === "girogov") return "Governador " + String(e.acao || "").replace(/^\w+:/, "").toUpperCase();
+    return (g ? g.nome : e.tela.replace(/-[hv]$/, "")) + (e.acao && /^(uf|alvo):/.test(e.acao) ? " " + e.acao.replace(/^\w+:/, "").toUpperCase() : ""); }
+  function lerEstado() {
+    fetch("/estado?t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (e) {
+      document.getElementById("noH").textContent = nomeTela(e.h); document.getElementById("noV").textContent = nomeTela(e.v);
+      var evs = arr(e.eventos).filter(function (x) { return x.tipo !== "info"; }).slice(-25).reverse();
+      var h = evs.length ? evs.map(function (x) { return "<li><b>" + esc(x.hora) + '</b><span class="tp-' + esc(x.tipo) + '">' + esc(x.texto) + "</span></li>"; }).join("") : '<li class="vazio">nenhum ainda</li>';
+      var ol = document.getElementById("evs"); if (ol.innerHTML !== h) ol.innerHTML = h;
+    }).catch(function () { });
+  }
+  setInterval(function () { document.getElementById("hora").textContent = new Date().toTimeString().slice(0, 8); }, 500);
+  ciclo(); setInterval(ciclo, 3000); lerEstado(); setInterval(lerEstado, 3000);
+})();
+</script>
+</body>
+</html>

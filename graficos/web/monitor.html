@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>gctse MONITOR</title>
+<style>
+  /* MONITOR: so imagens. NO AR (PGM) e PREVIA (PVW) das duas saidas, para
+     o 2o monitor do operador. Os comandos ficam no gerenciador. */
+  :root { --fundo: #070c16; --cartao: #0f1726; --linha: #22304a; --texto: #fff; --apagado: #8ea3bd; --verm: #d03b3b; --verde: #16a34a; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--fundo); color: var(--texto); font: 14px 'Segoe UI', Arial, sans-serif; display: flex; flex-direction: column; overflow: hidden; }
+  header { display: flex; align-items: center; gap: 14px; padding: 6px 14px; border-bottom: 1px solid var(--linha); }
+  header h1 { margin: 0; font-size: 15px; letter-spacing: 2px; }
+  header .hora { margin-left: auto; font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  #con { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 4px; background: #10301a; color: #7ee07e; }
+  #con.ruim { background: #3a1212; color: #ffb3b3; }
+  #ensaio { background: #c00000; color: #fff; font-weight: 800; letter-spacing: 1px; padding: 2px 10px; border-radius: 4px; }
+  #ensaio[hidden] { display: none; }
+  main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr); gap: 12px; padding: 10px 12px; }
+  .saida { min-height: 0; display: flex; flex-direction: column; gap: 8px; background: var(--cartao); border: 1px solid var(--linha); border-radius: 8px; padding: 8px 10px; }
+  .saida h2 { margin: 0; font-size: 13px; letter-spacing: 2px; color: var(--apagado); }
+  .telas { flex: 1; min-height: 0; display: flex; gap: 10px; }
+  .h .telas { flex-direction: column; }
+  .mon { flex: 1 1 0; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 4px; }
+  .mon[hidden] { display: none; }
+  .rot { display: flex; gap: 8px; align-items: baseline; font-size: 13px; min-width: 0; }
+  .rot b { color: #fff; padding: 1px 8px; border-radius: 3px; font-size: 12px; letter-spacing: 1px; flex: none; }
+  .pgm .rot b { background: var(--verm); } .pvw .rot b { background: var(--verde); }
+  .rot span { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .caixa { flex: 1; min-height: 0; position: relative; }
+  .tela { position: absolute; background: #000; overflow: hidden; border-radius: 4px; }
+  .pgm .tela { outline: 3px solid var(--verm); } .pvw .tela { outline: 3px solid var(--verde); }
+  .tela iframe { position: absolute; top: 0; left: 0; border: 0; transform-origin: 0 0; pointer-events: none; }
+  .vazio { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--apagado); text-align: center; padding: 10px; font-size: 13px; }
+  footer { border-top: 1px solid var(--linha); padding: 6px 14px; font-size: 13px; display: flex; gap: 18px; white-space: nowrap; overflow: hidden; }
+  footer .ev b { color: var(--apagado); margin-right: 6px; }
+  .tp-alerta { color: #ffb3b3; } .tp-virada { color: #ffd43b; } .tp-eleito, .tp-marco { color: #7ee07e; }
+</style>
+</head>
+<body>
+<header><h1>gctse · MONITOR</h1><span id="con">conectado</span><span id="ensaio" hidden>ENSAIO — NÃO VAI AO AR</span><span class="hora" id="hora">--:--:--</span></header>
+<main>
+  <section class="saida h" id="s-h"><h2>SAÍDA HORIZONTAL · 1920×1080</h2><div class="telas">
+    <div class="mon pgm"><div class="rot"><b>NO AR</b><span class="nome">…</span></div><div class="caixa"><div class="tela"><iframe width="1920" height="1080"></iframe></div></div></div>
+    <div class="mon pvw" hidden><div class="rot"><b>PRÉVIA</b><span class="nome">—</span></div><div class="caixa"><div class="tela"><div class="vazio">nada selecionado</div><iframe width="1920" height="1080"></iframe></div></div></div>
+  </div></section>
+  <section class="saida v" id="s-v"><h2>SAÍDA VERTICAL · 1080×1920</h2><div class="telas">
+    <div class="mon pgm"><div class="rot"><b>NO AR</b><span class="nome">…</span></div><div class="caixa"><div class="tela"><iframe width="1080" height="1920"></iframe></div></div></div>
+    <div class="mon pvw" hidden><div class="rot"><b>PRÉVIA</b><span class="nome">—</span></div><div class="caixa"><div class="tela"><div class="vazio">nada selecionado</div><iframe width="1080" height="1920"></iframe></div></div></div>
+  </div></section>
+</main>
+<footer id="evs"></footer>
+<script charset="utf-8" src="graficos.js"></script>
+<script>
+(function () {
+  "use strict";
+  var TAM = { h: [1920, 1080], v: [1080, 1920] };
+  var LISTA = ((window.GCTSE_GRAFICOS || {}).lista) || [];
+  function nomeTela(id, acao) {
+    if (!id) return "—";
+    if (id === "girogov") return "Governador — " + (acao && acao.indexOf("uf:") === 0 ? acao.slice(3).toUpperCase() : "região");
+    if (id === "giro") return "Giro dos estados" + (acao && acao.indexOf("uf:") === 0 ? " — " + acao.slice(3).toUpperCase() : "");
+    if (id === "resumo") return "Resumo dos estados";
+    if (id === "apresentacao") return "Apresentação automática";
+    var g = LISTA.filter(function (x) { return x.id === id; })[0], n = g ? g.nome : id;
+    if (acao && acao.indexOf("alvo:") === 0) n += " — " + acao.slice(5).toUpperCase();
+    return n;
+  }
+  // encaixa a tela 1920x1080 (ou 1080x1920) na caixa, sem distorcer
+  function encaixar() {
+    ["h", "v"].forEach(function (s) {
+      document.querySelectorAll("#s-" + s + " .caixa").forEach(function (cx) {
+        var W = TAM[s][0], H = TAM[s][1], k = Math.min(cx.clientWidth / W, cx.clientHeight / H);
+        if (!(k > 0)) return;
+        var tl = cx.querySelector(".tela"), w = W * k, h = H * k;
+        tl.style.width = w + "px"; tl.style.height = h + "px"; tl.style.left = (cx.clientWidth - w) / 2 + "px"; tl.style.top = (cx.clientHeight - h) / 2 + "px";
+        tl.querySelector("iframe").style.transform = "scale(" + k + ")";
+      });
+    });
+  }
+  window.addEventListener("resize", encaixar);
+  ["h", "v"].forEach(function (s) { document.querySelector("#s-" + s + " .pgm iframe").src = "saida.html?saida=" + s; });
+  function pvwUrl(s, p) {
+    return "saida.html?saida=" + s + "&previa=1&tela=" + encodeURIComponent(p.tela) + "&acao=" + encodeURIComponent(p.acao || "") +
+      (p.rodizio ? "&rodizio=" + encodeURIComponent(p.rodizio) + "&tempo=" + (p.tempo || 15) : "");
+  }
+  function esc(x) { return String(x == null ? "" : x).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function pintar(e) {
+    document.getElementById("ensaio").hidden = !e.ensaio;
+    ["h", "v"].forEach(function (s) {
+      var sec = document.getElementById("s-" + s), x = e[s] || {}, lig = !!(e.pvw_ligada && e.pvw_ligada[s]), p = e.pvw ? e.pvw[s] : null;
+      sec.querySelector(".pgm .nome").textContent = nomeTela(x.tela, x.acao);
+      var mv = sec.querySelector(".pvw"), mudou = mv.hidden === lig;
+      mv.hidden = !lig;
+      mv.querySelector(".nome").textContent = p ? (p.nome || nomeTela(p.tela, p.acao)) : "nada selecionado";
+      mv.querySelector(".vazio").hidden = !!p;
+      var f = mv.querySelector("iframe"), url = lig && p ? pvwUrl(s, p) : "about:blank";
+      if (f.getAttribute("src") !== url) f.setAttribute("src", url);
+      if (mudou) encaixar();
+    });
+    var evs = Array.isArray(e.eventos) ? e.eventos : ((e.eventos || {}).value || []);
+    var h = evs.slice(-4).reverse().map(function (x) { return '<span class="ev"><b>' + esc(x.hora) + '</b><span class="tp-' + esc(x.tipo) + '">' + esc(x.texto) + "</span></span>"; }).join("");
+    var ft = document.getElementById("evs"); if (ft.innerHTML !== h) ft.innerHTML = h;
+  }
+  var con = document.getElementById("con");
+  function ler() {
+    fetch("/estado?t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.json(); })
+      .then(function (e) { con.className = ""; con.textContent = "conectado"; pintar(e); })
+      .catch(function () { con.className = "ruim"; con.textContent = "SEM CONEXÃO com o gerenciador"; });
+  }
+  setInterval(function () { document.getElementById("hora").textContent = new Date().toTimeString().slice(0, 8); }, 500);
+  setInterval(ler, 1000); ler(); setTimeout(encaixar, 50);
+})();
+</script>
+</body>
+</html>

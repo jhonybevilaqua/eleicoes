@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 3.25 - APURACAO DO 2o TURNO (25/10/2026)
+ gctse GRAFICOS 3.26 - APURACAO DO 2o TURNO (25/10/2026)
  Presidente e Governador ao vivo do TSE, com o 1o turno ao lado.
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
@@ -11,7 +11,10 @@
       Prefere UMA janela so, com as duas saidas? No config-graficos.json
       troque "janelas_gerenciador": 2 por 1 e abra o GERENCIADOR.bat de novo.
    3. No alto de cada janela, o bloco "2o TURNO - AO VIVO" tem os numeros
-      (Presidente e governadores) e as telas da noite. Clique = vai ao ar.
+      e as telas da noite; logo abaixo, GOVERNADORES - 27 ESTADOS (verde =
+      eleito no 1o turno, azul = eleito no 2o, cinza = em disputa).
+      Clique = vai ao ar. As IMAGENS (NO AR e PREVIA) ficam na janela
+      MONITOR, que abre sozinha no 2o monitor.
    4. Nao feche nenhuma janela preta ate o fim da noite.
    So vai ao ar numero do TSE. Tela sem dado nao aparece no painel.
 
@@ -26,6 +29,9 @@
                         (passo a passo da 1a vez: OBS-DECKLINK.txt)
    - as 2 janelas do gerenciador, lado a lado (Edge/Chrome) - ou 1, com
      "janelas_gerenciador": 1 no config-graficos.json
+   - a janela MONITOR (monitor.html): NO AR e PREVIA das duas saidas, no
+     2o monitor se houver ("abrir_monitor": false no config = nao abre).
+     Prefere as imagens no proprio painel? botao "imagens: ..." no alto.
    - os DADOS DO TSE que ainda nao existem nesta maquina (copia local do
      TSE, candidatos, perfil do eleitor), numa janela minimizada
    - confere sozinho os CODIGOS do 2o turno com a lista do TSE (a cada
@@ -43,8 +49,14 @@
      SOM, atalhos de teclado (?), copia de seguranca, tema escuro,
      "abrir a VERTICAL/HORIZONTAL", "dados do TSE".
      "N telas sem dado escondidas - mostrar".
-   ESQUERDA (fixa): o que esta NO AR (e a PREVIA, se ligada). Embaixo,
-     os controles do giro / deputados quando estao no ar.
+     links: analista (painel da bancada) e caderno (para imprimir).
+   AVISOS (canto e OCORRENCIAS DA NOITE): coleta parada, TSE sem resposta,
+     VIROU (Brasil, estados e governador do 2o turno), PRESIDENTE ELEITO e
+     os MARCOS: 25/50/75/90/100% das urnas no Brasil, SP MG RJ BA PR RS
+     passando de 90%, GOVERNADOR ELEITO em cada estado. O que ja tinha
+     acontecido quando o gerenciador abriu nao avisa de novo.
+   FAIXA DA SAIDA (fixa): o que esta NO AR, a PREVIA (se ligada) e o
+     CORTAR; os controles do giro / deputados quando estao no ar.
    DIREITA:
      * 2o TURNO - AO VIVO
         numeros do Presidente: urnas, os dois candidatos (% e votos),
@@ -53,16 +65,18 @@
         PRESIDENTE: 2o turno, + mapa, evolucao, ainda da para virar,
           estados que viraram, disputa mais apertada, estados decisivos,
           regioes, de onde veio a vantagem, presidente eleito;
-        GOVERNADORES: placar do 2o turno, 1o x 2o turno, mapa,
-          governador x presidente; e um botao por estado com 2o turno
-          (lider, %, urnas, VIROU / ELEITO) - clique = governador daquele
-          estado no ar;
+          + onde ainda ha votos para apurar e as maiores cidades;
         COMPARATIVOS 1o x 2o: Presidente 1o turno (todos os candidatos,
-          resultado final), ganho de votos, abstencao e brancos/nulos por
-          estado, 1o x 2o, presidente + mapa do 1o turno, apuracao.
+          resultado final), ganho de votos, onde cada um cresceu (por
+          estado, so com 100%), abstencao e brancos/nulos por estado,
+          1o x 2o, presidente + mapa do 1o turno, apuracao.
+     * GOVERNADORES - 27 ESTADOS: as telas (placar do 2o turno, 1o x 2o,
+       mapa, governador x presidente, por partido, 2022 x 2026) e um botao
+       por estado com o nome e o % (verde = eleito no 1o turno, azul =
+       eleito no 2o, cinza = em disputa). Regiao = troca sozinha.
      * FAVORITOS (teclas 1-9) e AUTOMATICO (rodizios prontos: Abertura,
        Apuracao, Fechamento; "escolher as telas do rodizio").
-     PRESIDENTE | ESTADO OU REGIAO e GOVERNADOR | ESTADO OU REGIAO.
+     PRESIDENTE | ESTADO OU REGIAO.
      OUTRAS TELAS (recolhido): 1o turno (inclui PRESIDENTE 1o TURNO |
        ESTADO OU REGIAO, resultado final), Camara, Senado, Assembleias,
        2022, Jornalismo. Clique no titulo para abrir.
@@ -72,6 +86,15 @@
      anterior/proximo, E presidente eleito, ? ajuda.
    TELA SEM DADO: o botao some e o rodizio pula (ex.: "Quem foi as urnas"
      ate o TSE publicar). "mostrar" deixa ver mesmo assim.
+
+   PAINEL DO ANALISTA (link "analista"): so leitura, para o apresentador
+     e os comentaristas, num monitor ligado a ESTE computador. Placar,
+     eleitores a apurar, "ainda da para virar", os 27 estados (ordenar por
+     votos a apurar, disputa apertada, eleitorado), 1o turno e 2022 lado a
+     lado, governadores do 2o turno e os marcos da noite.
+   CADERNO DE DADOS (link "caderno"): imprimir ou salvar PDF na vespera -
+     Presidente 1o turno (Brasil e estados), 2o turno de 2022, governadores
+     (1o turno 2026 e eleitos em 2022) e senadores eleitos.
 
 ---------------------------------------------------------------------------
  3. ANTES DO DIA

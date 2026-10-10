@@ -17,7 +17,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "3.25 - 10/10/2026"
+$Versao = "3.26 - 10/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -452,7 +452,9 @@ function Resumir-Boletim {
             }
         }
     }
-    $cands = @($cands | Sort-Object -Property @{Expression = "votos"; Descending = $true}, numero)
+    # voto ANULADO (sub judice, registro indeferido): o TSE nao conta como
+    # valido - vai para o fim da lista, nunca aparece como lider no mapa.
+    $cands = @($cands | Sort-Object -Property @{Expression = { [bool] $_.valido }; Descending = $true}, @{Expression = "votos"; Descending = $true}, numero)
 
     # MATEMATICAMENTE ELEITO (conta com os numeros do proprio TSE), so se o
     # TSE ainda nao escreveu a situacao. Pior caso para quem lidera: TODOS os

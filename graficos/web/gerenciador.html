@@ -215,6 +215,29 @@
   body:not(.mostra-vazias) .col-cmd button.sem-dado, body:not(.mostra-vazias) .col-cmd .sec.toda-vazia { display: none !important; }
   body.mostra-vazias .col-cmd button.sem-dado { opacity: .45; border-style: dashed; }
   #vazias { font-size: 12px; color: var(--apagado); } #vazias button { font-size: 12px; padding: 3px 8px; }
+  /* ---- 3.26: PAINEL SO DE COMANDOS (imagens na janela MONITOR) ---- */
+  body.monext .col { grid-template-columns: 1fr !important; gap: 8px; }
+  body.monext .col-mon { position: sticky !important; top: var(--topo, 120px) !important; z-index: 5; max-height: none !important; overflow: visible;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; background: var(--cartao); padding: 8px 10px; margin: -4px -4px 0; border-bottom: 1px solid var(--linha); }
+  body.monext .col-mon h2 { font-size: 15px; } body.monext .col-mon .sub, body.monext .monitores, body.monext .col-mon .so-local .dica { display: none !important; }
+  body.monext .col-mon .noar { margin: 0; } body.monext .col-mon .noar span { font-size: 15px; }
+  body.monext .col-mon .pvwctl { margin: 0; } body.monext .col-mon .grupo { margin: 0 4px 0 0; display: inline; }
+  body.monext .col-mon .so-local { display: flex; align-items: center; gap: 6px; } body.monext .col-mon .girar button { padding: 4px 8px; font-size: 12px; }
+  .noar b.pv { background: var(--verde); }
+  .pvwlin[hidden] { display: none !important; }
+  /* blocos com titulo mais forte, botoes do mesmo tamanho */
+  .sec { border-radius: 0 8px 8px 0; box-shadow: var(--sombra); }
+  .sec > .grupo { font-size: 12.5px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; }
+  .col-cmd .botoes button { min-height: 34px; }
+  /* GOVERNADORES - 27 estados */
+  .col-cmd > .sec.govs { column-span: all; --tema-sec: #8a5a12; }
+  .govgrade { grid-template-columns: 120px 1fr !important; margin-top: 6px; }
+  .govgrade .ufs { gap: 5px !important; }
+  .govgrade .ufs button.govcard { width: 128px !important; padding: 4px 7px !important; text-align: left; line-height: 1.2; }
+  .govcard b { font-size: 14px; letter-spacing: .5px; } .govcard small { display: block; font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: inherit; opacity: .85; }
+  .gov-eleito2 { background: #d8e7fb !important; border-color: #1f6fc0 !important; color: #0d3f78 !important; }
+  :root.escuro .gov-eleito2 { background: #123a66 !important; border-color: #4ea1ff !important; color: #dcebff !important; }
+  .leg-gov i.gov-eleito2 { background: #d8e7fb; border-color: #1f6fc0; }
 </style>
 <script>try { if (localStorage.getItem("gctse-tema") === "escuro") document.documentElement.className = "escuro"; } catch (e) { }</script>
 </head>
@@ -225,6 +248,8 @@
   <a href="index.html" target="_blank" title="situação completa, avisos de virada e cores">situação ↗</a>
   <a href="checklist.html" target="_blank">checklist ↗</a>
   <a href="relatorio.html" target="_blank">relatório ↗</a>
+  <a href="analista.html" target="_blank" title="painel só de leitura para o apresentador e os comentaristas (outro monitor)">analista ↗</a>
+  <a href="caderno.html" target="_blank" title="caderno de dados para imprimir (1º turno 2026 e 2º turno 2022, estado por estado)">caderno ↗</a>
   <span class="copia so-local"><button id="copia" type="button" title="Guarda a pasta inteira (config, dados, evolução, logs) num .zip em copias-de-seguranca">💾 cópia</button> <span id="copiaMsg"></span></span>
   <button class="tema" id="tema" type="button">tema escuro</button></header>
 <div id="status"><span class="st neutro" id="stCod" hidden style="cursor:pointer"></span><span class="st neutro" id="stP">Presidente: …</span><span class="st neutro" id="stE">Estados: …</span><span class="st neutro" id="stEv" hidden></span><span class="st aviso" id="stCL" hidden></span><span class="st neutro" id="stG">Gerenciador: …</span><span class="st neutro" id="stOh" hidden></span><span class="st neutro" id="stOv" hidden></span></div>
@@ -251,6 +276,8 @@
   <span class="rot rot-mostrar" style="margin-left:10px">MOSTRAR:</span>
   <button type="button" data-mostra="hv">as duas</button><button type="button" data-mostra="h">só horizontal</button><button type="button" data-mostra="v">só vertical</button>
   <a id="outraSaida" href="#" target="_blank" hidden style="font-weight:700"></a>
+  <button type="button" id="navMon" style="margin-left:10px" title="abre a janela MONITOR: NO AR e PRÉVIA das duas saídas (ponha no 2º monitor)">🖥 abrir monitor ↗</button>
+  <button type="button" id="navMonModo" title="onde ficam as imagens do NO AR e da PRÉVIA">monitor: …</button>
   <button type="button" class="so-local" id="navDados" style="margin-left:10px" title="baixar e importar os dados do TSE">📥 dados do TSE</button>
   <span id="vazias" hidden></span>
   <span class="noarmini" style="margin-left:auto">no ar: H <b id="navH">…</b> · V <b id="navV">…</b></span></div>
@@ -314,6 +341,13 @@
     var ao = document.getElementById("outraSaida"); ao.hidden = false;
     ao.href = "gerenciador.html?saida=" + (SO === "h" ? "v" : "h"); ao.textContent = "abrir a " + (SO === "h" ? "VERTICAL" : "HORIZONTAL") + " ↗";
   }
+  // MONITOR NA JANELA PROPRIA (padrao): o painel fica so com os comandos e
+  // as imagens do NO AR / PREVIA vao para monitor.html (2o monitor).
+  var MONEXT = true; try { MONEXT = localStorage.getItem("gctse-monext") !== "0"; } catch (e) { }
+  if (MONEXT) document.body.classList.add("monext");
+  document.getElementById("navMonModo").textContent = "imagens: " + (MONEXT ? "na janela MONITOR" : "aqui no painel");
+  document.getElementById("navMonModo").onclick = function () { try { localStorage.setItem("gctse-monext", MONEXT ? "0" : "1"); } catch (e) { } location.reload(); };
+  document.getElementById("navMon").onclick = function () { window.open("monitor.html", "gctse-monitor", "width=1400,height=900"); };
   var estado = null, autoTimer = { h: null, v: null };
   var REGIOES_MENU = [["NORTE", "norte", ["ac", "am", "ap", "pa", "ro", "rr", "to"]], ["NORDESTE", "nordeste", ["al", "ba", "ce", "ma", "pb", "pe", "pi", "rn", "se"]],
     ["CENTRO-OESTE", "centro-oeste", ["df", "go", "ms", "mt"]], ["SUDESTE", "sudeste", ["es", "mg", "rj", "sp"]], ["SUL", "sul", ["pr", "rs", "sc"]]];
@@ -387,7 +421,12 @@
     col.querySelector(".cortar").disabled = !p; col.querySelector(".descartar").disabled = !p;
     var url = p ? "saida.html?saida=" + s + "&previa=1&tela=" + encodeURIComponent(p.tela) + "&acao=" + encodeURIComponent(p.acao) +
       (p.rod ? "&rodizio=" + encodeURIComponent(p.rod.telas) + "&tempo=" + p.rod.tempo : "") : "about:blank";
+    if (MONEXT) url = "about:blank";
     if (f.getAttribute("src") !== url) f.setAttribute("src", url);
+    var pl = col.querySelector(".pvwlin"); pl.hidden = !previa[s]; pl.querySelector(".pvwtxt").textContent = p ? nomePendente(s, p) : "nada selecionado — clique numa tela";
+    // a janela MONITOR mostra a mesma previa (pelo gerenciador.ps1)
+    fetch("/pvw?saida=" + s + "&ligada=" + (previa[s] ? 1 : 0) + (p ? "&tela=" + encodeURIComponent(p.tela) + "&acao=" + encodeURIComponent(p.acao) +
+      "&nome=" + encodeURIComponent(nomePendente(s, p).slice(0, 80)) + (p.rod ? "&rodizio=" + encodeURIComponent(p.rod.telas) + "&tempo=" + p.rod.tempo : "") : "") + "&t=" + Date.now(), { cache: "no-store" }).catch(function () { });
     col.querySelectorAll(".pvw-marcado").forEach(function (b) { b.classList.remove("pvw-marcado"); });
     if (p) col.querySelectorAll(".botoes button[data-k], .regs button[data-k], [data-pronto]").forEach(function (b) {
       if (p.rod ? b.dataset.pronto === p.rod.telas : (b.dataset.k === p.tela + "|" + p.acao || (!p.acao && b.dataset.k === p.tela))) b.classList.add("pvw-marcado");
@@ -472,9 +511,10 @@
     var col = document.createElement("section"); col.className = "col"; col.id = "col-" + S.id;
     col.innerHTML = '<div class="col-mon"><h2>' + S.nome + '</h2><div class="sub">' + S.sub + '</div>' +
       '<div class="noar"><b>NO AR</b><span class="tela">…</span></div>' +
+      '<div class="noar pvwlin" hidden><b class="pv">PRÉVIA</b><span class="pvwtxt">—</span></div>' +
       '<div class="monitores' + (S.f === "v" ? " v" : "") + '"><div class="mon-pgm"><div class="rot pgm" hidden><b>NO AR</b></div>' +
       '<div class="previa" style="aspect-ratio:' + S.W + '/' + S.H + (S.f === "v" ? ';max-width:42%' : '') + '">' +
-      '<iframe src="saida.html?saida=' + S.id + '" width="' + S.W + '" height="' + S.H + '"></iframe></div></div>' +
+      '<iframe ' + (MONEXT ? "" : 'src="saida.html?saida=' + S.id + '" ') + 'width="' + S.W + '" height="' + S.H + '"></iframe></div></div>' +
       '<div class="mon-pvw" hidden><div class="rot pvw"><b>PRÉVIA</b> <span class="pvwnome"></span></div>' +
       '<div class="previa pvwbox" style="aspect-ratio:' + S.W + '/' + S.H + '"><div class="pvwvazio">clique numa tela: ela aparece aqui e só vai ao ar no CORTAR</div>' +
       '<iframe width="' + S.W + '" height="' + S.H + '"></iframe></div></div></div>' +
@@ -520,10 +560,8 @@
     var g2 = bloco("segundo", "★ 2º TURNO — AO VIVO");
     var nb = document.createElement("div"); nb.className = "nums"; nb.id = "nums-" + S.id; nb.textContent = "…"; g2.appendChild(nb);
     function sub2(tit, itens) { if (!itens.length) return; var d = document.createElement("div"); d.className = "sub2"; d.innerHTML = '<span class="rot2">' + tit + "</span>"; g2.appendChild(d); botoesEm(d, itens); }
-    sub2("PRESIDENTE", itensDe(["pres2t", "presmapa", "evolucao", "virar", "viradas", "margem", "decisivos", "regioes", "saldo", "eleito"]));
-    sub2("GOVERNADORES", itensDe(["gov2t", "gov12", "governadores", "govpres"]));
-    var gc = document.createElement("div"); gc.className = "govchips"; gc.id = "govchips-" + S.id; g2.appendChild(gc);
-    sub2("COMPARATIVOS 1º × 2º", itensDe(["pres1t", "ganho", "abstuf", "brnulos", "turnos", "presmapa1t", "apuracao"]));
+    sub2("PRESIDENTE", itensDe(["pres2t", "presmapa", "evolucao", "virar", "faltam", "viradas", "margem", "decisivos", "regioes", "saldo", "cidades", "eleito"]));
+    sub2("COMPARATIVOS 1º × 2º", itensDe(["pres1t", "ganho", "ganhouf", "abstuf", "brnulos", "turnos", "presmapa1t", "apuracao"]));
     // FAVORITOS (apresentacao-config.js): atalhos, sem tirar a tela do bloco dela
     var favs = (((cfgA.favoritos || {})[S.f]) || []).map(function (id) { return lista.filter(function (x) { return x.id === id; })[0]; }).filter(Boolean);
     if (favs.length) botoesEm(bloco("fav", "★ FAVORITOS  (teclas 1–9)"), favs.map(function (g, i) { return [g.id, (i < 9 ? (i + 1) + " · " : "") + g.nome]; }));
@@ -564,27 +602,30 @@
     var gL = blocoLocal("presloc-", "PRESIDENTE | ESTADO OU REGIÃO");
     blocoLocal("presloc1t-", "PRESIDENTE 1º TURNO | ESTADO OU REGIÃO — resultado final");
     botoesEm(bloco("apuracao", "APURAÇÃO"), itensDe(["apuracao", "urnas"]));
-    var gE = bloco("estados", "GOVERNADOR E SENADO");
-    botoesEm(gE, itensDe(["governadores", "gov2t", "gov12", "govpartido", "govpres", "gov22", "senvotos", "senadores", "senadores1", "senadores2", "senado"]).concat([
-      ["giro", "Giro dos estados", "uf:" + (ordem.indexOf(String(cfg.estado_destaque || "pr")) >= 0 ? String(cfg.estado_destaque || "pr") : ordem[0])],
-      ["resumo", "Resumo (7 telas)", "tela:1"]]));
-    // GOVERNADOR | ESTADO OU REGIAO: giro so do Governador. Verde = governador
-    // ja eleito; branco = disputando o 2o turno (ou apurando).
-    var gG = bloco("estados", "GOVERNADOR | ESTADO OU REGIÃO — só o governador");
+    var gE = bloco("estados", "SENADO, GIRO E RESUMO DOS ESTADOS");
+    // GOVERNADORES - tudo num lugar so: as telas e os 27 estados (verde =
+    // eleito no 1o turno; azul = eleito no 2o turno; cinza = 2o turno em
+    // disputa). Estado = o governador daquele estado no ar; regiao = troca
+    // sozinha entre os estados dela.
+    var gG = bloco("estados govs", "GOVERNADORES — 27 ESTADOS");
+    botoesEm(gG, itensDe(["gov2t", "gov12", "governadores", "govpres", "govpartido", "gov22"]));
     gG.appendChild(legendaGov());
-    var gregs = document.createElement("div"); gregs.className = "regs";
+    var gregs = document.createElement("div"); gregs.className = "regs govgrade";
     REGIOES_MENU.forEach(function (rg) {
       var acR = "reg:" + rg[2].join(",");
       var bR = botao(rg[0], function () { definir(S.id, "girogov", acR); }, "girogov|" + acR);
-      bR.className = "reg"; bR.title = "troca sozinha entre os estados da região"; gregs.appendChild(bR);
+      bR.className = "reg"; bR.title = "troca sozinha entre os estados da região a cada " + (cfg.tempo_auto_segundos || 10) + " s"; gregs.appendChild(bR);
       var bx = document.createElement("div"); bx.className = "ufs";
-      rg[2].forEach(function (u) { var b = botao(u.toUpperCase(), function () { definir(S.id, "girogov", "uf:" + u); }, "girogov|uf:" + u); b.dataset.gov = u; bx.appendChild(b); });
+      rg[2].forEach(function (u) {
+        var b = botao("", function () { definir(S.id, "girogov", "uf:" + u); }, "girogov|uf:" + u);
+        b.dataset.gov = u; b.className = "govcard"; b.innerHTML = "<b>" + u.toUpperCase() + "</b><small>…</small>"; bx.appendChild(b);
+      });
       gregs.appendChild(bx);
     });
     gG.appendChild(gregs);
-    var ddG = document.createElement("div"); ddG.className = "dica";
-    ddG.textContent = "Estado = governador daquele estado, fixo. Região = troca sozinha entre os estados da região a cada " + (cfg.tempo_auto_segundos || 10) + " s (setas ◀ ▶ abaixo).";
-    gG.appendChild(ddG);
+    botoesEm(gE, itensDe(["senvotos", "senadores", "senadores1", "senadores2", "senado"]).concat([
+      ["giro", "Giro dos estados", "uf:" + (ordem.indexOf(String(cfg.estado_destaque || "pr")) >= 0 ? String(cfg.estado_destaque || "pr") : ordem[0])],
+      ["resumo", "Resumo (7 telas)", "tela:1"]]));
     botoesEm(bloco("camara", "CÂMARA DOS DEPUTADOS"), itensDe(["camara", "topdep", "menosvot", "deputados", "mulheres", "perfilcamara"]).map(function (it) {
       return /^deputados-/.test(it[0]) ? [it[0], it[1] + " (troca automática)", "", it[0] + "|"] : it;
     }));
@@ -635,7 +676,7 @@
     if (resto.length) botoesEm(bloco("auto", "OUTRAS TELAS"), resto);
     // ordem: 2o turno, favoritos, automatico, Presidente|estado, Governador|estado;
     // o resto (1o turno, Camara, Senado, Assembleias, 2022, Jornalismo) recolhido
-    var frente = [g2].concat(blocos.filter(function (b) { return /\b(fav|auto)\b/.test(b.className) && b.querySelector(".grupo").textContent !== "OUTRAS TELAS"; }), [gL, gG]);
+    var frente = [g2, gG].concat(blocos.filter(function (b) { return /\b(fav|auto)\b/.test(b.className) && b.querySelector(".grupo").textContent !== "OUTRAS TELAS"; }), [gL]);
     var outras = document.createElement("details"); outras.className = "outras";
     outras.innerHTML = "<summary>OUTRAS TELAS — 1º turno, Câmara, Senado, Assembleias, 2022, Jornalismo</summary>";
     var corpo = document.createElement("div"); corpo.className = "corpo"; outras.appendChild(corpo);
@@ -845,7 +886,7 @@
   }
   function legendaGov() {
     var d = document.createElement("div"); d.className = "leg-gov";
-    d.innerHTML = '<span><i class="gov-eleito"></i>governador eleito no 1º turno</span><span><i style="background:var(--bt);border-color:var(--bt-borda)"></i>2º turno (ou ainda apurando)</span>';
+    d.innerHTML = '<span><i class="gov-eleito"></i>eleito no 1º turno</span><span><i class="gov-eleito2"></i>eleito no 2º turno</span><span><i style="background:var(--bt);border-color:var(--bt-borda)"></i>2º turno em disputa</span>';
     return d;
   }
   function marcarAsm() {
@@ -861,6 +902,12 @@
     document.querySelectorAll("[data-gov]").forEach(function (el) {
       var u = el.dataset.gov, st = govSit(u);
       el.classList.toggle("gov-eleito", st.tipo === "eleito1");
+      el.classList.toggle("gov-eleito2", st.tipo === "segundo" && !!st.c);
+      if (el.classList.contains("govcard")) {
+        var sm = el.querySelector("small"), c0 = st.c || (st.cs && st.cs[0]) || null, x0 = ((window.GCTSE_ESTADOS || {}).ufs || {})[u], g0 = x0 && x0.gov;
+        var tx = st.tipo === "eleito1" ? nomeCurto0(st.c.nome) : st.tipo === "segundo" ? (st.c ? "✔ " + nomeCurto0(st.c.nome) : (c0 ? nomeCurto0(c0.nome) + " " + pctT(c0.pct) : "2º turno") + (g0 && +g0.turno === 2 ? " · " + Math.round(+g0.urnas_pct || 0) + "%" : "")) : st.tipo === "apurando" ? "apurando" : "—";
+        if (sm && sm.textContent !== tx) sm.textContent = tx;
+      }
       el.title = u.toUpperCase() + " — " + (st.tipo === "eleito1" ? "governador ELEITO no 1º turno: " + st.c.nome + " (" + st.c.partido + ")" :
         st.tipo === "segundo" ? (st.c ? "2º turno — ELEITO: " + st.c.nome + " (" + st.c.partido + ")" : "2º TURNO" + (st.cs.length ? ": " + st.cs.map(function (c) { return c.nome; }).join(" × ") : "")) :
         st.tipo === "apurando" ? "governador em apuração" : "sem boletim do ESTADOS.bat");
@@ -1148,18 +1195,6 @@
     h += '<div class="lin"><span class="k">GOVERNADOR</span><span>' + (l2.length ? l2.length + " estados no 2º turno · <b>" + nEl + "</b> definidos" + (l2.some(function (x) { return x.t2; }) ? "" : " · aguardando o 2º turno (TSE)") : '<span class="vt">aguardando o boletim de governador (ESTADOS.bat)</span>') + "</span></div>";
     SAIDAS.forEach(function (S) {
       var nbx = document.getElementById("nums-" + S.id); if (nbx && nbx.innerHTML !== h) nbx.innerHTML = h;
-      var gcx = document.getElementById("govchips-" + S.id); if (!gcx) return;
-      var assin = JSON.stringify(l2.map(function (x) { return [x.k, x.c && x.c.nome, x.c && x.c.pct, x.g.urnas_pct, x.el, x.virou]; }));
-      if (gcx.dataset.a === assin) return; gcx.dataset.a = assin; gcx.innerHTML = "";
-      l2.forEach(function (x) {
-        var bt = document.createElement("button"); bt.type = "button";
-        bt.className = (x.el ? "eleito" : "") + (x.virou ? " virou" : "");
-        bt.innerHTML = "<b>" + x.k.toUpperCase() + "</b> " + escN(nomeCurto0(x.c ? x.c.nome : "")) + " " + (x.c ? pctT(x.c.pct) : "") +
-          "<small>" + (x.el ? "ELEITO" : x.t2 ? "urnas " + pctT(x.g.urnas_pct) : "1º turno") + (x.virou ? " · VIROU" : "") + "</small>";
-        bt.title = "põe o governador de " + x.k.toUpperCase() + " no ar nesta saída";
-        bt.onclick = function () { definir(S.id, "girogov", "uf:" + x.k); };
-        gcx.appendChild(bt);
-      });
     });
   }
   setTimeout(pintarNumeros, 500); setInterval(pintarNumeros, 2000);
