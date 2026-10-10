@@ -33,13 +33,27 @@ function Br([double] $v) { return $v.ToString("0.00", [Globalization.CultureInfo
 function Cand($n, $sq, $nome, $sg, $votos, $pct, $st, $e) {
     return [ordered]@{ sg = $sg; cand = @([ordered]@{ n = "$n"; sqcand = "$sq"; nm = $nome; nmu = $nome; e = $e; st = $st; dvt = "Valido"; vap = "$([long] $votos)"; pvap = (Br $pct) }) }
 }
-function Boletim($cd, $nv, $cands, [double] $pst, $and, [long] $te, $dg, $hg) {
+# abstencao, brancos e nulos FICTICIOS que variam por estado e por turno
+# (para o ensaio exercitar os comparativos 1o x 2o). tur: 1, 2 ou 3 (2022).
+function Taxas([string] $abr, [int] $tur) {
+    if ($abr -eq "br") {   # Brasil = media dos estados pesada pelo eleitorado
+        $ta = 0.0; $tb = 0.0; $tn = 0.0; $tt = 0.0
+        foreach ($u in $ELEITORES.Keys) { $x = Taxas $u $tur; $w = [double] $ELEITORES[$u]; $ta += $x.a * $w; $tb += $x.b * $w; $tn += $x.n * $w; $tt += $w }
+        return @{ a = $ta / $tt; b = $tb / $tt; n = $tn / $tt }
+    }
+    $a = 0.17 + 0.07 * (Rnd "a$abr"); $b = 0.015 + 0.015 * (Rnd "b$abr"); $n = 0.03 + 0.03 * (Rnd "n$abr")
+    if ($tur -eq 2) { $a += 0.01 + 0.02 * (Rnd "a2$abr"); $b -= 0.004 + 0.004 * (Rnd "b2$abr"); $n += 0.004 + 0.012 * (Rnd "n2$abr") }
+    if ($tur -eq 3) { $a += 0.005 * (Rnd "a3$abr") }
+    return @{ a = $a; b = $b; n = $n }
+}
+function Boletim($cd, $nv, $cands, [double] $pst, $and, [long] $te, $dg, $hg, [string] $abr = "", [int] $tur = 0) {
     $vv = 0; foreach ($c in $cands) { $vv += [long] $c.cand[0].vap }
-    $est = [long] ($te * $pst / 100); $comp = [long] ($est * 0.79)
+    $tx = $(if ($abr -and $tur) { Taxas $abr $tur } else { @{ a = 0.21; b = 0.02; n = 0.05 } })
+    $est = [long] ($te * $pst / 100); $comp = [long] ($est * (1 - $tx.a))
     return [ordered]@{ f = "O"; and = $and; dg = $dg; hg = $hg
         s = [ordered]@{ ts = "1000"; st = "$([int] (10 * $pst))"; pst = (Br $pst) }
-        e = [ordered]@{ te = "$te"; est = "$est"; esnt = "$($te - $est)"; c = "$comp"; pc = "79,00"; a = "$($est - $comp)"; pa = "21,00" }
-        v = [ordered]@{ vv = "$vv"; pvv = "93,00"; vb = "$([long] ($vv * 0.02))"; pvb = "2,00"; tvn = "$([long] ($vv * 0.05))"; ptvn = "5,00" }
+        e = [ordered]@{ te = "$te"; est = "$est"; esnt = "$($te - $est)"; c = "$comp"; pc = (Br (100 * (1 - $tx.a))); a = "$($est - $comp)"; pa = (Br (100 * $tx.a)) }
+        v = [ordered]@{ vv = "$vv"; pvv = (Br (100 * (1 - $tx.b - $tx.n))); vb = "$([long] ($comp * $tx.b))"; pvb = (Br (100 * $tx.b)); tvn = "$([long] ($comp * $tx.n))"; ptvn = (Br (100 * $tx.n)) }
         carg = @([ordered]@{ cd = "$cd"; nv = "$nv"; agr = @([ordered]@{ par = $cands }) }) }
 }
 function Progresso([string] $uf) {   # 0..1 de quanto a apuracao do estado andou
@@ -68,7 +82,7 @@ function RespPresidente([string] $abr, [bool] $turno2) {
         $tot = $va + $vb + $vc + $vd
         $cs = @((Cand 13 900013 "CANDIDATO A" "PT" $va (100 * $va / $tot) "Concorrente ao 2o turno" "n"), (Cand 22 900022 "CANDIDATO B" "PL" $vb (100 * $vb / $tot) "Concorrente ao 2o turno" "n"),
             (Cand 30 900030 "CANDIDATO C" "NOVO" $vc (100 * $vc / $tot) "Nao eleito" "n"), (Cand 15 900015 "CANDIDATO D" "MDB" $vd (100 * $vd / $tot) "Nao eleito" "n"))
-        return Boletim 1 1 $cs 100 "f" $te "04/10/2026" "23:50:00"
+        return Boletim 1 1 $cs 100 "f" $te "04/10/2026" "23:50:00" $abr 1
     }
     $te = 0; $va = 0; $vb = 0; $est = 0; $ufs = $(if ($abr -eq "br") { @($ELEITORES.Keys) } else { @($abr) })
     foreach ($u in $ufs) { $x = Pres2T $u; $te += $x.te; $va += $x.va; $vb += $x.vb; $est += $x.te * $x.pst / 100 }
@@ -76,14 +90,14 @@ function RespPresidente([string] $abr, [bool] $turno2) {
     $tot = [math]::Max(1, $va + $vb); $pa = 100 * $va / $tot
     $stA = ""; $stB = ""; if ($fim) { if ($va -ge $vb) { $stA = "Eleito"; $stB = "Nao eleito" } else { $stB = "Eleito"; $stA = "Nao eleito" } }
     $cs = @((Cand 13 900013 "CANDIDATO A" "PT" $va $pa $stA $(if ($stA -eq "Eleito") { "s" } else { "n" })), (Cand 22 900022 "CANDIDATO B" "PL" $vb (100 - $pa) $stB $(if ($stB -eq "Eleito") { "s" } else { "n" })))
-    return Boletim 1 1 $cs ([math]::Min(100, $pst)) $(if ($fim) { "f" } else { "p" }) $te "25/10/2026" (Relogio (FracGeral))
+    return Boletim 1 1 $cs ([math]::Min(100, $pst)) $(if ($fim) { "f" } else { "p" }) $te "25/10/2026" (Relogio (FracGeral)) $abr 2
 }
 function Resp2022([string] $abr) {   # 2o turno de 2022 ficticio: A (PT) x B (PL)
     $ufs = $(if ($abr -eq "br") { @($ELEITORES.Keys) } else { @($abr) }); $va = 0; $vb = 0; $te = 0
     foreach ($u in $ufs) { $t = $ELEITORES[$u] * 1000 * 0.79 * 0.93; $l = (LulaFinal $u) - 0.02 + 0.04 * (Rnd "z$u"); $va += $t * $l; $vb += $t * (1 - $l); $te += $ELEITORES[$u] * 1000 }
     $tot = $va + $vb
     $cs = @((Cand 13 800013 "CANDIDATO X (2022)" "PT" $va (100 * $va / $tot) "Eleito" "s"), (Cand 22 800022 "CANDIDATO Y (2022)" "PL" $vb (100 * $vb / $tot) "Nao eleito" "n"))
-    return Boletim 1 1 $cs 100 "f" ([long] $te) "30/10/2022" "20:00:00"
+    return Boletim 1 1 $cs 100 "f" ([long] $te) "30/10/2022" "20:00:00" $abr 3
 }
 # municipios do ensaio: as 27 capitais (codigos ficticios) e 12 cidades no exterior
 $CAP = [ordered]@{ ac = "RIO BRANCO"; al = "MACEIÓ"; ap = "MACAPÁ"; am = "MANAUS"; ba = "SALVADOR"; ce = "FORTALEZA"; df = "BRASÍLIA"; es = "VITÓRIA"; go = "GOIÂNIA"
