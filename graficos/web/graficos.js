@@ -1689,6 +1689,60 @@
   G["presmapa1t-h"] = function () { return telaPresMapa(true, false); };
   G["presmapa1t-v"] = function () { return telaPresMapa(true, true); };
 
+  // ---- PRESIDENTE 1o TURNO: resultado final, TODOS os candidatos ----------
+  // So com o 1o turno guardado (dados.turno1, lido pelo coletor no 2o turno).
+  function etiqueta2T(x, y) { return r(x, y, 92, 22, C.destaque, 3) + t(x + 46, y + 16, "2º TURNO", { s: 14, b: true, a: "middle", ls: 1 }); }
+  function rodape1T(b) {
+    var vv = b.votos || {}, el = b.eleitorado || {}, p = [];
+    if (vv.validos != null) p.push("Válidos " + inteiro(vv.validos));
+    if (vv.pct_brancos != null) p.push("Brancos " + pct(vv.pct_brancos));
+    if (vv.pct_nulos != null) p.push("Nulos " + pct(vv.pct_nulos));
+    if (el.pct_abstencao != null) p.push("Abstenção " + pct(el.pct_abstencao));
+    return p;
+  }
+  function telaPres1T(v) {
+    var W = v ? 540 : 1280, H = v ? 960 : 720;
+    if (!temTurno1()) return marcaVazio() + svg(W, H, t(W / 2, H / 2, "1º turno ainda não guardado", { s: v ? 20 : 26, c: C.apagado, a: "middle" }));
+    var f = fontePres(true), b = f.br, cs = candidatos(b).filter(function (c) { return c.votos > 0; });
+    if (!cs.length) return marcaVazio() + svg(W, H, t(W / 2, H / 2, "1º turno sem candidatos", { s: 22, c: C.apagado, a: "middle" }));
+    var tit = "PRESIDENTE — 1º TURNO", sub = "resultado final  ·  % dos votos válidos", rod = rodape1T(b), o, i, c, y, cc;
+    var max = cs[0].pct || 1;
+    if (!v) {
+      o = t(73, 57, tit, { s: 36, b: true, ls: 1, max: 667 }) + t(73, 85, sub, { s: 18, c: C.apagado, max: 640 }) + seloH(W, seloDe(f));
+      var n = cs.length, hr = Math.min(58, Math.floor(500 / n)), k = Math.min(1, hr / 50), x0 = 73, w = 1134;
+      for (i = 0; i < n; i++) {
+        c = cs[i]; y = 118 + i * hr; cc = cor(c);
+        o += r(x0, y, w, hr - 6, "rgba(8,14,32,0.82)", 6) + r(x0, y, 7, hr - 6, cc, 3);
+        var ym = y + (hr - 6) / 2;
+        o += t(x0 + 22, ym + 7 * k, (i + 1) + "º", { s: Math.round(18 * k), b: true, c: C.apagado });
+        o += t(x0 + 64, ym + 7 * k, c.nome + "  |  " + c.partido, { s: Math.round(20 * k), b: true, max: 430 });
+        o += barraFina(x0 + 510, ym - 4, 360, (c.pct || 0) / max, cc);
+        o += t(x0 + 1000, ym + 6 * k, inteiro(c.votos), { s: Math.round(16 * k), c: C.apagado, a: "end" });
+        o += t(x0 + w - 16, ym + 9 * k, pct(c.pct), { s: Math.round(26 * k), b: true, a: "end" });
+        if (c.eleito) o += etiquetaEleito(x0 + 400, ym - 11, 1);
+        else if (c.segundo_turno) o += etiqueta2T(x0 + 400, ym - 11);
+      }
+      o += t(73, 662, rod.join("   ·   "), { s: 17, c: C.texto, max: 1134 });
+      return svg(W, H, o + t(73, 700, "Fonte: TSE — boletim final do 1º turno (eleição " + (f.eleicao || "") + ")", { s: 13, c: C.apagado2 }));
+    }
+    o = r(35, 48, 6, 38, C.destaque) + t(53, 80, tit, { s: 28, b: true, ls: 1, max: 450 }) + t(53, 106, sub, { s: 13, c: C.apagado, max: 450 }) + seloV(W, seloDe(f));
+    var nv = cs.length, hv = Math.min(66, Math.floor(660 / nv)), kv = Math.min(1, hv / 60);
+    for (i = 0; i < nv; i++) {
+      c = cs[i]; y = 170 + i * hv; cc = cor(c);
+      o += r(35, y, 470, hv - 6, "rgba(8,14,32,0.82)", 6) + r(35, y, 6, hv - 6, cc, 3);
+      o += t(52, y + 24 * kv, (i + 1) + "º  " + c.nome, { s: Math.round(17 * kv), b: true, max: 300 }) + t(493, y + 26 * kv, pct(c.pct), { s: Math.round(24 * kv), b: true, a: "end" });
+      o += t(52, y + 44 * kv, c.partido + "  ·  " + inteiro(c.votos) + " votos", { s: Math.round(12 * kv), c: C.apagado, max: 300 });
+      if (hv >= 56) o += barraFina(52, y + hv - 18, 300, (c.pct || 0) / max, cc);
+      if (c.eleito) o += etiquetaEleito(493 - 78, y + 34 * kv, 0.8);
+      else if (c.segundo_turno) o += r(493 - 74, y + 34 * kv, 74, 18, C.destaque, 3) + t(493 - 37, y + 34 * kv + 13, "2º TURNO", { s: 11, b: true, a: "middle" });
+    }
+    var yr = 170 + nv * hv + 18;
+    o += t(35, yr, rod.slice(0, 2).join("  ·  "), { s: 14, max: 470 }) + t(35, yr + 22, rod.slice(2).join("  ·  "), { s: 14, max: 470 });
+    return svg(W, H, o + t(35, 945, "Fonte: TSE — 1º turno", { s: 11, c: C.apagado2 }));
+  }
+  G["pres1t-h"] = function () { return telaPres1T(false); };
+  G["pres1t-v"] = function () { return telaPres1T(true); };
+
   // ---- PRESIDENTE | REGIOES (5 colunas com mini-mapa) ----------------------
   function cartaoMini(f, c, x, y, w, h) {
     var cc = cor(c), o = r(x, y, w, h, "rgba(8,14,32,0.82)", 6) + r(x, y, 5, h, cc, 2);
@@ -1744,8 +1798,9 @@
     if (!a) { try { a = (new URLSearchParams(location.search).get("a") || "").toLowerCase(); } catch (e) { a = ""; } }
     return a || "sp";
   }
-  function telaPresLoc(v) {
-    var f = fontePres(false), a = alvoAtual(), reg = ALVOS_REG[a], ufs, nomeA, cs, pu, fim;
+  function telaPresLoc(v, t1) {
+    if (t1 && !temTurno1()) return marcaVazio() + svg(v ? 540 : 1280, v ? 960 : 720, t(v ? 270 : 640, v ? 480 : 360, "1º turno ainda não guardado", { s: 24, c: C.apagado, a: "middle" }));
+    var f = fontePres(!!t1), a = alvoAtual(), reg = ALVOS_REG[a], ufs, nomeA, cs, pu, fim;
     if (reg) { ufs = ufsDaRegiao(reg); nomeA = REG_NOME[reg]; var ag = agregar(f, ufs); cs = ag.cs; pu = ag.pctUrnas; fim = ag.fim; }
     else { ufs = [a]; nomeA = DEP_UF[a] || a.toUpperCase(); var x = f.uf(a); cs = x ? candidatos(x) : []; pu = x && x.secoes ? x.secoes.pct : null; fim = x && x.andamento === "f"; }
     cs = cs.filter(function (c) { return c.votos > 0 || f.turno === 2; });
@@ -1754,7 +1809,7 @@
     var sl = fim ? { texto: "TOTALIZAÇÃO FINAL", cor: C.verde } : (pu >= 100 ? { texto: "100% DAS URNAS", cor: C.verde } : (pu > 0 ? { texto: "PARCIAL", cor: C.vermelho } : { texto: "AGUARDANDO APURAÇÃO", cor: C.trilho }));
     if (!v) {
       var W = 1280, H = 720;
-      o = t(73, 57, tit, { s: 36, b: true, ls: 1, max: 667 }) + t(73, 85, turnoTxt(f) + "  ·  urnas apuradas " + (pu == null ? "—" : pct(pu)) + "  ·  " + subtitulo(), { s: 18, c: C.apagado, max: 640 }) + seloH(W, sl);
+      o = t(73, 57, tit, { s: 36, b: true, ls: 1, max: 667 }) + t(73, 85, turnoTxt(f) + "  ·  " + (f.guardado ? "resultado final do 1º turno" : "urnas apuradas " + (pu == null ? "—" : pct(pu)) + "  ·  " + subtitulo()), { s: 18, c: C.apagado, max: 640 }) + seloH(W, sl);
       o += barraFina(73, 112, 360, (pu || 0) / 100, "#2fd17a");
       o += mapaCor(60, 150, 0.68, corMapa, { rotulos: true, fonte: 12, soRotulo: function (k) { return ufs.indexOf(k) >= 0; }, apagado: "#1c2a40" });
       var hr = n === 2 ? 150 : 86, gap = n === 2 ? 24 : 8;
@@ -1792,6 +1847,8 @@
   }
   G["presloc-h"] = function () { return telaPresLoc(false); };
   G["presloc-v"] = function () { return telaPresLoc(true); };
+  G["presloc1t-h"] = function () { return telaPresLoc(false, true); };
+  G["presloc1t-v"] = function () { return telaPresLoc(true, true); };
 
   // ---- GOVERNADORES: foto por estado + mapa --------------------------------
   // Situacao de cada estado (estados.js; no 2o turno o coletor junta 1o e 2o).
@@ -3498,7 +3555,7 @@
   // Tela no ar sem o dado de que ela depende (antes das 17h, boletim ainda nao
   // lido, coleta recem-aberta): em vez de numeros zerados, uma tela limpa
   // com o nome da tela. Volta sozinha quando o dado chega.
-  var SEM_PRESIDENTE = /^(senado|comparativo|mulheres|perfilcamara|camara|deputados|topdep|topfem|topsenfem|perfileleitor|foiurnas|menosvot|senvotos|gov22|assembleia|assembleias|governadores|govpartido|gov2t|gov12|senadores|senadores1|senadores2)-/;
+  var SEM_PRESIDENTE = /^(pres1t|presloc1t|senado|comparativo|mulheres|perfilcamara|camara|deputados|topdep|topfem|topsenfem|perfileleitor|foiurnas|menosvot|senvotos|gov22|assembleia|assembleias|governadores|govpartido|gov2t|gov12|senadores|senadores1|senadores2)-/;
   var DE_ESTADOS = /^(camara|deputados|topdep|topfem|topsenfem|menosvot|senvotos|gov22|assembleia|assembleias|governadores|govpartido|gov2t|gov12|senadores|senadores1|senadores2|govpres)-/;
   function temPresidente() { var b = D().br; return !!(b && b.tem); }
   function temEstados() { return !!(window.GCTSE_ESTADOS && window.GCTSE_ESTADOS.gravado_em); }
@@ -3547,6 +3604,8 @@
       { id: "presmapa1t-h", nome: "Presidente + mapa — 1º turno", f: "h" },
       { id: "regioes-h", nome: "Presidente | Regiões", f: "h" },
       { id: "presloc-h", nome: "Presidente | Estado ou região", f: "h" },
+      { id: "presloc1t-h", nome: "Presidente 1º turno | Estado ou região", f: "h" },
+      { id: "pres1t-h", nome: "Presidente — 1º turno (todos os candidatos)", f: "h" },
       { id: "governadores-h", nome: "Governadores (1º verde · 2º azul)", f: "h" },
       { id: "govpartido-h", nome: "Governadores por partido", f: "h" },
       { id: "senadores-h", nome: "Senadores eleitos (foto + partido)", f: "h" },
@@ -3603,6 +3662,8 @@
       { id: "presmapa1t-v", nome: "Presidente + mapa — 1º turno", f: "v" },
       { id: "regioes-v", nome: "Presidente | Regiões", f: "v" },
       { id: "presloc-v", nome: "Presidente | Estado ou região", f: "v" },
+      { id: "presloc1t-v", nome: "Presidente 1º turno | Estado ou região", f: "v" },
+      { id: "pres1t-v", nome: "Presidente — 1º turno (todos os candidatos)", f: "v" },
       { id: "governadores-v", nome: "Governadores (1º verde · 2º azul)", f: "v" },
       { id: "govpartido-v", nome: "Governadores por partido", f: "v" },
       { id: "senadores-v", nome: "Senadores eleitos (foto + partido)", f: "v" },

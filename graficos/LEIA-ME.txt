@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 3.24 - APURACAO DO 2o TURNO (25/10/2026)
+ gctse GRAFICOS 3.25 - APURACAO DO 2o TURNO (25/10/2026)
  Presidente e Governador ao vivo do TSE, com o 1o turno ao lado.
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
@@ -54,12 +54,14 @@
           governador x presidente; e um botao por estado com 2o turno
           (lider, %, urnas, VIROU / ELEITO) - clique = governador daquele
           estado no ar;
-        COMPARATIVOS 1o x 2o: ganho de votos, abstencao e brancos/nulos
-          por estado, 1o x 2o, presidente + mapa do 1o turno, apuracao.
+        COMPARATIVOS 1o x 2o: Presidente 1o turno (todos os candidatos,
+          resultado final), ganho de votos, abstencao e brancos/nulos por
+          estado, 1o x 2o, presidente + mapa do 1o turno, apuracao.
      * FAVORITOS (teclas 1-9) e AUTOMATICO (rodizios prontos: Abertura,
        Apuracao, Fechamento; "escolher as telas do rodizio").
      PRESIDENTE | ESTADO OU REGIAO e GOVERNADOR | ESTADO OU REGIAO.
-     OUTRAS TELAS (recolhido): 1o turno, Camara, Senado, Assembleias,
+     OUTRAS TELAS (recolhido): 1o turno (inclui PRESIDENTE 1o TURNO |
+       ESTADO OU REGIAO, resultado final), Camara, Senado, Assembleias,
        2022, Jornalismo. Clique no titulo para abrir.
    PREVIA: "previa antes do ar" ligada = o clique so prepara; vai ao ar
      no CORTAR (ou ESPACO/ENTER).
