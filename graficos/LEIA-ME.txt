@@ -8,6 +8,8 @@
    1. Dois cliques em GERENCIADOR.bat. Ele abre TUDO sozinho (lista abaixo).
    2. Use as DUAS janelas do gerenciador: HORIZONTAL (esquerda) e VERTICAL
       (direita). Cada uma comanda a sua saida da DeckLink.
+      Prefere UMA janela so, com as duas saidas? No config-graficos.json
+      troque "janelas_gerenciador": 2 por 1 e abra o GERENCIADOR.bat de novo.
    3. No alto de cada janela, o bloco "2o TURNO - AO VIVO" tem os numeros
       (Presidente e governadores) e as telas da noite. Clique = vai ao ar.
    4. Nao feche nenhuma janela preta ate o fim da noite.
@@ -22,7 +24,8 @@
                         tem) + 1o turno, Senado e Camara do 1o turno
    - os 2 OBS ......... saida HORIZONTAL e VERTICAL da DeckLink
                         (passo a passo da 1a vez: OBS-DECKLINK.txt)
-   - as 2 janelas do gerenciador, lado a lado (Edge/Chrome)
+   - as 2 janelas do gerenciador, lado a lado (Edge/Chrome) - ou 1, com
+     "janelas_gerenciador": 1 no config-graficos.json
    - os DADOS DO TSE que ainda nao existem nesta maquina (copia local do
      TSE, candidatos, perfil do eleitor), numa janela minimizada
    - confere sozinho os CODIGOS do 2o turno com a lista do TSE (a cada

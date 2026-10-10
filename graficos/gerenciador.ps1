@@ -180,12 +180,14 @@ $script:Ensaio = $false
 $script:EleitoAuto = $true
 $script:Reabrir = $true
 $script:DadosAoAbrir = $true
+$script:JanelasGer = 2   # "janelas_gerenciador": 2 = H e V lado a lado; 1 = uma janela com as duas
 try {
     foreach ($p in $cfg.PSObject.Properties) {
         if ($p.Name -eq "ensaio" -and $p.Value -eq $true) { $script:Ensaio = $true }
         if ($p.Name -eq "presidente_eleito_no_ar" -and $p.Value -eq $false) { $script:EleitoAuto = $false }
         if ($p.Name -eq "reabrir_coletas" -and $p.Value -eq $false) { $script:Reabrir = $false }
         if ($p.Name -eq "atualizar_dados_ao_abrir" -and $p.Value -eq $false) { $script:DadosAoAbrir = $false }
+        if ($p.Name -eq "janelas_gerenciador" -and "$($p.Value)" -eq "1") { $script:JanelasGer = 1 }
     }
 } catch { }
 if ($script:Ensaio) { $script:Reabrir = $false }   # o ENSAIO.bat cuida das janelas dele
@@ -413,18 +415,20 @@ if ($script:DadosAoAbrir -and -not $script:Ensaio) {
         } catch { Escrever-Log "dados do TSE: nao consegui iniciar ($($_.Exception.Message))" "Yellow" }
     }
 }
-# Abre o gerenciador em DUAS janelas lado a lado (meio a meio na tela):
+# Abre o gerenciador em DUAS janelas lado a lado (meio a meio na tela)
+# ou, com "janelas_gerenciador": 1 no config, numa janela so (tela inteira):
 # esquerda = HORIZONTAL, direita = VERTICAL. Edge ou Chrome em modo "app"
 # (sem abas/barra), cada janela com o seu perfil - assim a posicao vale
 # mesmo com o navegador ja aberto. Sem Edge/Chrome: o navegador padrao.
 function Abrir-Gerenciador {
     $urls = @(@("h", "http://localhost:$Porta/gerenciador.html?saida=h"), @("v", "http://localhost:$Porta/gerenciador.html?saida=v"))
+    if ($script:JanelasGer -eq 1) { $urls = @(, @("hv", "http://localhost:$Porta/gerenciador.html")) }
     $nav = $null
     foreach ($c in @("${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe", "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe",
                      "$env:ProgramFiles\Google\Chrome\Application\chrome.exe", "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe",
                      "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe")) { if ($c -and (Test-Path $c)) { $nav = $c; break } }
     $x0 = 0; $y0 = 0; $larg = 960; $alt = 1040
-    try { Add-Type -AssemblyName System.Windows.Forms; $wa = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea; $x0 = $wa.X; $y0 = $wa.Y; $larg = [int] [math]::Floor($wa.Width / 2); $alt = $wa.Height } catch { }
+    try { Add-Type -AssemblyName System.Windows.Forms; $wa = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea; $x0 = $wa.X; $y0 = $wa.Y; $larg = [int] [math]::Floor($wa.Width / $urls.Count); $alt = $wa.Height } catch { }
     $i = 0
     foreach ($par in $urls) {
         try {
@@ -435,7 +439,8 @@ function Abrir-Gerenciador {
         } catch { try { Start-Process $par[1] } catch { } }
         $i++
     }
-    Escrever-Log "gerenciador aberto em 2 janelas: HORIZONTAL (esquerda) e VERTICAL (direita)" "Green"
+    if ($urls.Count -eq 1) { Escrever-Log "gerenciador aberto em 1 janela (HORIZONTAL e VERTICAL juntas)" "Green" }
+    else { Escrever-Log "gerenciador aberto em 2 janelas: HORIZONTAL (esquerda) e VERTICAL (direita)" "Green" }
 }
 # CODIGOS DO 2o TURNO: confere sozinho (ao abrir e a cada 30 min) a lista de
 # eleicoes do TSE (comum/config/ele-c.json, pleito de 25/10/2026: cargo 1 =

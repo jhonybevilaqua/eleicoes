@@ -9,6 +9,8 @@
     "eleicao_estaduais_1turno": "6259",
     "eleicao_camara": "6259"
   },
+  "_comentario_janelas": "janelas_gerenciador: 2 = abre o painel em duas janelas lado a lado (HORIZONTAL a esquerda, VERTICAL a direita); 1 = uma janela so, com as duas saidas uma embaixo da outra.",
+  "janelas_gerenciador": 2,
   "intervalo_segundos": 20,
   "intervalo_estados_segundos": 30,
   "_comentario_obs": "OBS automatico das saidas DeckLink (GERENCIADOR.bat). obs_fps: 29.97 = 1080i59.94 | 59.94 = 1080p59.94. girar_saida_vertical: 90 ou -90 (o sentido tambem troca por botao no gerenciador).",
