@@ -1,5 +1,5 @@
 {
-  "_comentario": "gctse GRAFICOS - pacote do dia 04/10/2026, so ambiente OFICIAL. Pleito 3220: 6257 = Presidente; 6259 = Governador, Senador e Camara (eleicao_camara fica 6259 tambem no 2o turno). No 2o turno troque SO eleicao_presidente e eleicao_estaduais pelos codigos do 2o turno; os *_1turno e eleicao_camara continuam (o 1o turno segue na tela).",
+  "_comentario": "gctse GRAFICOS - 2o TURNO 25/10/2026, ambiente OFICIAL. Pleito 3221 (TSE, 10/10): 6258 = Presidente; 6260 = Governador. 1o turno (comparacoes): 6257 = Presidente; 6259 = Governador, Senado, Camara e Assembleias.",
   "tse": {
     "base_url": "https://resultados.tse.jus.br/oficial",
     "ciclo": "ele2026",

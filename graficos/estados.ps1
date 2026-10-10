@@ -7,7 +7,7 @@
     Separado do graficos.ps1 (Presidente) de proposito: se este parar, os
     graficos de Presidente continuam. So o ambiente OFICIAL.
 
-    Uso:  ESTADOS.bat (ou o GIRO-ESTADOS.bat, que abre este junto)
+    Uso:  ESTADOS.bat (o GERENCIADOR.bat abre e reabre sozinho)
 #>
 
 [CmdletBinding()]
@@ -17,7 +17,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "3.23 - 10/10/2026"
+$Versao = "3.24 - 10/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {

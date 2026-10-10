@@ -2753,7 +2753,7 @@
   G["ganho-v"] = function () { return telaGanho(true); };
 
   // ---- ABSTENCAO 1o x 2o TURNO POR ESTADO ----------------------------------
-  var FAIXAS_ABST = [[-99, -2, "#1f9e74", "caiu mais de 2 p.p."], [-2, -0.5, "#63c5a0", "caiu até 2 p.p."], [-0.5, 0.5, "#6b7688", "estável (±0,5)"],
+  var FAIXAS_DIFABST = [[-99, -2, "#1f9e74", "caiu mais de 2 p.p."], [-2, -0.5, "#63c5a0", "caiu até 2 p.p."], [-0.5, 0.5, "#6b7688", "estável (±0,5)"],
     [0.5, 2, "#f0a35b", "subiu até 2 p.p."], [2, 99, "#e8590c", "subiu mais de 2 p.p."]];
   function difAbst() {
     var f1 = fontePres(true), f2 = fontePres(false);
@@ -2766,7 +2766,7 @@
     var b1 = f1.br && f1.br.eleitorado ? f1.br.eleitorado.pct_abstencao : null, b2 = f2.br && f2.br.eleitorado ? f2.br.eleitorado.pct_abstencao : null;
     return { ls: ls, b1: b1, b2: b2, f2: f2 };
   }
-  function corDifAbst(d) { if (d == null) return null; for (var i = 0; i < FAIXAS_ABST.length; i++) if (d >= FAIXAS_ABST[i][0] && d < FAIXAS_ABST[i][1]) return FAIXAS_ABST[i][2]; return "#6b7688"; }
+  function corDifAbst(d) { if (d == null) return null; for (var i = 0; i < FAIXAS_DIFABST.length; i++) if (d >= FAIXAS_DIFABST[i][0] && d < FAIXAS_DIFABST[i][1]) return FAIXAS_DIFABST[i][2]; return "#6b7688"; }
   function ppS(d) { return (d > 0 ? "+" : d < 0 ? "−" : "") + Number(Math.abs(d)).toFixed(2).replace(".", ",") + " p.p."; }
   function telaAbstUf(v) { return telaVarUf(v, { da: difAbst(), tit: "ABSTENÇÃO: 1º × 2º TURNO", titV: "ABSTENÇÃO 1º × 2º", oque: "variação da abstenção por estado (pontos percentuais)", sem: "disponível no 2º turno (compara com o 1º turno guardado)", fonte: "Fonte: TSE — abstenção sobre o eleitorado; 1º turno final × 2º turno", fonteV: "Fonte: TSE — abstenção 1º × 2º turno" }); }
   // Variacao por estado (mapa + mais subiu/caiu): abstencao 1o x 2o, 2022 x 2026, brancos e nulos.
@@ -2782,7 +2782,7 @@
     if (!v) {
       o = t(73, 57, tit, { s: 36, b: true, ls: 1, max: 667 }) + t(73, 85, sub, { s: 16, c: C.apagado, max: 660 }) + seloH(W, seloDe(da.f2));
       o += mapaCor(40, 112, 0.84, corM, { rotulos: true, fonte: 12, apagado: "#1c2a40" });
-      FAIXAS_ABST.forEach(function (fx, i) { o += r(60, 600 + i * 20, 14, 14, fx[2], 2) + t(82, 612 + i * 20, fx[3], { s: 12, c: C.apagado }); });
+      FAIXAS_DIFABST.forEach(function (fx, i) { o += r(60, 600 + i * 20, 14, 14, fx[2], 2) + t(82, 612 + i * 20, fx[3], { s: 12, c: C.apagado }); });
       [["MAIS SUBIU", sob.filter(function (x) { return x.d > 0; }).slice(0, 5)], ["MAIS CAIU", des.filter(function (x) { return x.d < 0; }).slice(0, 5)]].forEach(function (bl, j) {
         var y0 = 120 + j * 290;
         o += t(650, y0, bl[0], { s: 16, b: true, c: "#c9d6e6", ls: 1 });
@@ -2798,7 +2798,7 @@
     }
     o = r(35, 48, 6, 38, C.destaque) + t(53, 80, P.titV, { s: 28, b: true, ls: 1 }) + t(53, 106, da.b1 != null && da.b2 != null ? "Brasil: " + pct(da.b1) + " → " + pct(da.b2) : "por estado", { s: 14, c: C.apagado }) + seloV(W, seloDe(da.f2));
     o += mapaCor(70, 165, 0.65, corM, { rotulos: true, fonte: 10, apagado: "#1c2a40" });
-    FAIXAS_ABST.forEach(function (fx, i) { o += r(40 + (i % 3) * 160, 600 + Math.floor(i / 3) * 20, 12, 12, fx[2], 2) + t(58 + (i % 3) * 160, 610 + Math.floor(i / 3) * 20, fx[3], { s: 10, c: C.apagado }); });
+    FAIXAS_DIFABST.forEach(function (fx, i) { o += r(40 + (i % 3) * 160, 600 + Math.floor(i / 3) * 20, 12, 12, fx[2], 2) + t(58 + (i % 3) * 160, 610 + Math.floor(i / 3) * 20, fx[3], { s: 10, c: C.apagado }); });
     [["SUBIU", sob.filter(function (x) { return x.d > 0; }).slice(0, 4)], ["CAIU", des.filter(function (x) { return x.d < 0; }).slice(0, 4)]].forEach(function (bl, j) {
       var y0 = 670 + j * 140;
       o += t(35, y0, bl[0], { s: 13, b: true, c: "#c9d6e6", ls: 1 });
@@ -3522,7 +3522,7 @@
   }
   // tem dado para ir ao ar? (o gerenciador e o rodizio perguntam)
   function temDados(id) {
-    try { var o = desenharTela(id); return !!o && !VAZIA; } catch (e) { return false; }
+    try { var o = desenharTela(id); return !!o && !VAZIA; } catch (e) { try { console.warn("tela " + id + " deu erro: " + e.message); } catch (x) { } return false; }
   }
   window.GCTSE_EXTERIOR_SEM_PAIS = exteriorSemPais;
   window.GCTSE_GRAFICOS = {

@@ -48,20 +48,6 @@
   #nav button.ligado { background: var(--azul); border-color: var(--azul-borda); color: #fff; }
   #nav .noarmini { font-size: 13px; color: var(--apagado); } #nav .noarmini b { color: var(--texto); }
   #navDados.falta { background: #fff3bf; border-color: #d4a017; } #navDados.rodando { background: var(--azul); border-color: var(--azul-borda); color: #fff; }
-  /* ACESSOS: quem comanda de outro aparelho (iPad, PC da producao) */
-  #acessos { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 0 20px 10px; }
-  #acessos[hidden] { display: none; }
-  #acessos .rot { font-size: 12px; font-weight: 800; letter-spacing: 1px; color: var(--apagado); }
-  #acessos .ac { display: inline-flex; gap: 4px; align-items: center; background: var(--cartao); border: 1px solid var(--linha); border-radius: 6px; padding: 3px 6px 3px 8px; font-size: 13px; }
-  #acessos .ac i { width: 9px; height: 9px; border-radius: 50%; background: #9aa5b4; display: inline-block; margin-right: 2px; } #acessos .ac i.on { background: #2f9e44; }
-  #acessos .ac small { color: var(--apagado); } #acessos .ac button { padding: 3px 7px; font-size: 12px; }
-  #acessos .ac button.ligado { background: var(--azul); border-color: var(--azul-borda); color: #fff; }
-  #acessos .ac button.ligado.blq { background: var(--verm); border-color: var(--verm-borda); }
-  #travar.ligado { background: var(--verm); border-color: var(--verm-borda); color: #fff; }
-  #voce { padding: 8px 20px; font-weight: 800; letter-spacing: .5px; color: #fff; background: #1f6fc0; }
-  #voce.sugerir { background: #b8860b; } #voce.bloqueado { background: #6b7a8c; }
-  #voce[hidden] { display: none; }
-  body.remoto .so-local { display: none !important; }
   #dadosTse { margin: 0 20px 12px; background: var(--cartao); border: 1px solid var(--linha); border-left: 4px solid #b8860b; border-radius: 6px; padding: 10px 14px; }
   #dadosTse[hidden] { display: none; }
   #dadosTse h3 { margin: 0 0 4px; font-size: 14px; letter-spacing: 1px; }
@@ -190,7 +176,6 @@
   #topo #vigia .rot, #topo #nav .rot { font-size: 11px; }
   .col-mon { top: calc(var(--topo, 140px) + 8px) !important; max-height: calc(100vh - var(--topo, 140px) - 16px) !important; }
   .col { scroll-margin-top: calc(var(--topo, 140px) + 8px); }
-  #acessos, #voce, #rotIpad, #ipadModo { display: none !important; }   /* uso so com o operador */
   /* uma saida por janela */
   body.uma #nav [data-ir], body.uma #nav [data-mostra], body.uma #nav .rot-mostrar, body.uma #nav .rot-saidas, body.uma #tecAlvo, body.uma .rot-teclado { display: none !important; }
   body.uma main { padding: 8px 10px 14px; }
@@ -203,6 +188,29 @@
   body.uma .col-cmd .regs .reg { font-size: 11px; padding: 6px 4px; }
   body.uma .col-cmd .regs .ufs button { width: 38px; }
   @media (max-width: 760px) { .col { grid-template-columns: 1fr !important; } .col-mon { position: static !important; max-height: none !important; } }
+  /* ★ 2o TURNO — AO VIVO */
+  .col-cmd > .sec.segundo { column-span: all; --tema-sec: #c62828; }
+  .sec.segundo .nums { display: grid; grid-template-columns: 1fr; gap: 4px; background: var(--cartao); border: 1px solid var(--linha); border-radius: 6px; padding: 8px 10px; margin-bottom: 6px; font-size: 13.5px; }
+  .nums .lin { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+  .nums .k { font-size: 11px; font-weight: 800; letter-spacing: 1px; color: var(--apagado); min-width: 88px; }
+  .nums .c { font-weight: 800; } .nums .p { font-size: 18px; font-weight: 900; } .nums .vt { color: var(--apagado); font-size: 12px; }
+  .nums .cand { display: grid; grid-template-columns: 98px minmax(0, 1fr) 92px 110px; align-items: baseline; gap: 8px; }
+  .nums .cand::before { content: ""; } .nums .cand .c { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .nums .cand .c small { color: var(--apagado); font-weight: 600; }
+  .nums .cand .p { text-align: right; } .nums .cand.lider .p { color: var(--verde); }
+  .nums .tag { font-size: 11px; font-weight: 800; padding: 1px 6px; border-radius: 3px; background: var(--neutro-f); color: var(--neutro-t); }
+  .nums .tag.ok { background: var(--verde); color: #fff; } .nums .tag.av { background: #ffd43b; color: #111; }
+  .sub2 { display: flex; gap: 8px; align-items: flex-start; margin: 6px 0 2px; }
+  .sub2 .rot2 { font-size: 11px; font-weight: 800; letter-spacing: 1px; color: var(--apagado); min-width: 96px; padding-top: 8px; }
+  .sub2 .botoes { flex: 1; }
+  .govchips { display: flex; flex-wrap: wrap; gap: 5px; margin: 4px 0 4px 104px; }
+  .govchips button { padding: 4px 8px; font-size: 12px; text-align: left; line-height: 1.25; }
+  .govchips button small { display: block; font-weight: 400; color: var(--apagado); font-size: 11px; }
+  .govchips button.eleito { background: #d6f2d6; border-color: #2e9e2e; } :root.escuro .govchips button.eleito { background: #134a1c; }
+  .govchips button.virou small { color: #b8860b; font-weight: 700; }
+  .col-cmd > details.outras { column-span: all; margin-top: 6px; border: 1px dashed var(--linha); border-radius: 6px; padding: 6px 10px; }
+  .col-cmd > details.outras > summary { cursor: pointer; font-weight: 800; font-size: 12.5px; letter-spacing: .5px; color: var(--apagado); }
+  .outras .corpo { columns: 3 230px; column-gap: 10px; margin-top: 8px; } .outras .corpo > .sec { break-inside: avoid; margin: 0 0 10px; }
+  @media (max-width: 1000px) { .govchips { margin-left: 0; } .sub2 { flex-direction: column; gap: 2px; } .sub2 .rot2 { padding-top: 0; } }
   /* tela SEM DADO: o botao some (nao vai ao ar tela vazia); "mostrar" deixa ver */
   body:not(.mostra-vazias) .col-cmd button.sem-dado, body:not(.mostra-vazias) .col-cmd .sec.toda-vazia { display: none !important; }
   body.mostra-vazias .col-cmd button.sem-dado { opacity: .45; border-style: dashed; }
@@ -213,24 +221,20 @@
 <body>
 <div id="topo">
 <div id="ensaio" hidden>ENSAIO — DADOS FICTÍCIOS — ESTE GERENCIADOR NÃO VAI AO AR (o do ar é o da porta 8098)</div>
-<div id="voce" hidden></div>
 <header><h1>gctse — GERENCIADOR DAS SAÍDAS</h1>
   <a href="index.html" target="_blank" title="situação completa, avisos de virada e cores">situação ↗</a>
   <a href="checklist.html" target="_blank">checklist ↗</a>
   <a href="relatorio.html" target="_blank">relatório ↗</a>
   <span class="copia so-local"><button id="copia" type="button" title="Guarda a pasta inteira (config, dados, evolução, logs) num .zip em copias-de-seguranca">💾 cópia</button> <span id="copiaMsg"></span></span>
   <button class="tema" id="tema" type="button">tema escuro</button></header>
-<div id="status"><span class="st neutro" id="stP">Presidente: …</span><span class="st neutro" id="stE">Estados: …</span><span class="st neutro" id="stEv" hidden></span><span class="st aviso" id="stCL" hidden></span><span class="st neutro" id="stG">Gerenciador: …</span><span class="st neutro" id="stOh" hidden></span><span class="st neutro" id="stOv" hidden></span></div>
+<div id="status"><span class="st neutro" id="stCod" hidden style="cursor:pointer"></span><span class="st neutro" id="stP">Presidente: …</span><span class="st neutro" id="stE">Estados: …</span><span class="st neutro" id="stEv" hidden></span><span class="st aviso" id="stCL" hidden></span><span class="st neutro" id="stG">Gerenciador: …</span><span class="st neutro" id="stOh" hidden></span><span class="st neutro" id="stOv" hidden></span></div>
 <div id="vigia"><span class="rot">PRESIDENTE ELEITO:</span>
   <button type="button" class="so-local" id="elAuto" title="Quando o TSE declarar o eleito, a tela 'Presidente eleito' vai ao ar sozinha nas duas saídas">no ar automático: …</button>
   <button type="button" id="elAgora">colocar no ar agora (H e V)</button>
   <span class="rot" style="margin-left:14px">SOM:</span>
   <button type="button" id="som">🔔 …</button><button type="button" id="silenciar">silenciar 5 min</button>
-  <span class="rot" id="rotIpad" style="margin-left:14px" hidden>iPAD:</span><button type="button" id="ipadModo" hidden>…</button>
   <span class="rot rot-teclado" style="margin-left:14px">TECLADO:</span><button type="button" id="tecAlvo" title="tecla H, V ou B troca">saída H</button><button type="button" id="tecAjuda">? atalhos</button>
   </div>
-<div id="acessos" class="so-local" hidden><span class="rot">ACESSOS (iPad / outros PCs):</span><span id="listaAcessos" style="display:contents"></span>
-  <button type="button" id="travar" title="Trava na hora TODOS os comandos que vêm de outros aparelhos (eles continuam vendo)">🔒 travar remotos</button></div>
 <div id="ajudaTec" hidden><div class="caixa"><h3>ATALHOS DE TECLADO</h3>
   <table><tr><td><b>H</b> / <b>V</b> / <b>B</b></td><td>saída que o teclado comanda: horizontal, vertical ou as duas (B)</td></tr>
   <tr><td><b>1</b> a <b>9</b></td><td>favorito 1 a 9 (a ordem do bloco ★ FAVORITOS)</td></tr>
@@ -270,6 +274,14 @@
 <script charset="utf-8" src="giro-config.js"></script>
 <script charset="utf-8" src="apresentacao-config.js"></script>
 <script charset="utf-8" src="deputados-config.js"></script>
+<!-- os mesmos arquivos das saidas do ar: o painel testa cada tela (tem dado?) igual ao ar -->
+<script charset="utf-8" src="mapa-brasil.js"></script>
+<script charset="utf-8" src="fotos-config.js"></script>
+<script charset="utf-8" src="fotos-tse/indice.js"></script>
+<script charset="utf-8" src="senado-config.js"></script>
+<script charset="utf-8" src="camara-config.js"></script>
+<script charset="utf-8" src="comparativo-config.js"></script>
+<script charset="utf-8" src="exterior-paises.js"></script>
 <script charset="utf-8" src="graficos.js"></script>
 <script charset="utf-8" src="dados.js"></script>
 <script charset="utf-8" src="estados.js"></script>
@@ -338,8 +350,8 @@
   function botao(txt, fn, extra) { var b = document.createElement("button"); b.textContent = txt; b.onclick = fn; if (extra) b.dataset.k = extra; return b; }
   function pedir(url) {
     return fetch(url + (url.indexOf("?") < 0 ? "?" : "&") + "t=" + Date.now(), { cache: "no-store", credentials: "same-origin" }).then(function (r) {
-      if (r.ok) return r.json().then(function (e) { estado = e; pintar(); if (e.voce && !e.voce.local && e.voce.modo === "sugerir" && /^\/(definir|ipad)/.test(url)) toast({ tipo: "ok", hora: new Date().toTimeString().slice(0, 8), texto: "SUGESTÃO enviada ao operador do exibidor" }); });
-      // recusado (modo do usuario remoto, travado, so no exibidor): avisa e nao mexe no estado
+      if (r.ok) return r.json().then(function (e) { estado = e; pintar(); });
+      // pedido recusado pelo servidor: avisa e nao mexe no estado
       return r.text().then(function (t) { var m = t; try { m = JSON.parse(t).erro || t; } catch (x) { } toast({ tipo: "alerta", hora: new Date().toTimeString().slice(0, 8), texto: "NÃO FOI: " + m }); });
     });
   }
@@ -480,10 +492,11 @@
       g.appendChild(bx); cmd.appendChild(g);
     }
     // Menu por assunto. Cada botao poe a tela fixa no ar desta saida.
+    var blocos = [];
     function bloco(classe, titulo) {
       var g = document.createElement("div"); g.className = "sec " + classe;
       g.innerHTML = '<div class="grupo">' + titulo + '</div>';
-      cmd.appendChild(g); return g;
+      cmd.appendChild(g); blocos.push(g); return g;
     }
     function botoesEm(g, itens) {
       var bx = document.createElement("div"); bx.className = "botoes";
@@ -501,6 +514,15 @@
       });
       return out;
     }
+    // ★ 2o TURNO — AO VIVO: os numeros para o operador e as telas da noite
+    // (Presidente e Governador), em ordem de uso. O resto fica em OUTRAS TELAS.
+    var g2 = bloco("segundo", "★ 2º TURNO — AO VIVO");
+    var nb = document.createElement("div"); nb.className = "nums"; nb.id = "nums-" + S.id; nb.textContent = "…"; g2.appendChild(nb);
+    function sub2(tit, itens) { if (!itens.length) return; var d = document.createElement("div"); d.className = "sub2"; d.innerHTML = '<span class="rot2">' + tit + "</span>"; g2.appendChild(d); botoesEm(d, itens); }
+    sub2("PRESIDENTE", itensDe(["pres2t", "presmapa", "evolucao", "virar", "viradas", "margem", "decisivos", "regioes", "saldo", "eleito"]));
+    sub2("GOVERNADORES", itensDe(["gov2t", "gov12", "governadores", "govpres"]));
+    var gc = document.createElement("div"); gc.className = "govchips"; gc.id = "govchips-" + S.id; g2.appendChild(gc);
+    sub2("COMPARATIVOS 1º × 2º", itensDe(["ganho", "abstuf", "brnulos", "turnos", "presmapa1t", "apuracao"]));
     // FAVORITOS (apresentacao-config.js): atalhos, sem tirar a tela do bloco dela
     var favs = (((cfgA.favoritos || {})[S.f]) || []).map(function (id) { return lista.filter(function (x) { return x.id === id; })[0]; }).filter(Boolean);
     if (favs.length) botoesEm(bloco("fav", "★ FAVORITOS  (teclas 1–9)"), favs.map(function (g, i) { return [g.id, (i < 9 ? (i + 1) + " · " : "") + g.nome]; }));
@@ -604,6 +626,17 @@
     usados["assembleias-" + S.f] = 1;
     var resto = lista.filter(function (g) { return !usados[g.id]; }).map(function (g) { return [g.id, g.nome]; });
     if (resto.length) botoesEm(bloco("auto", "OUTRAS TELAS"), resto);
+    // ordem: 2o turno, favoritos, automatico, Presidente|estado, Governador|estado;
+    // o resto (1o turno, Camara, Senado, Assembleias, 2022, Jornalismo) recolhido
+    var frente = [g2].concat(blocos.filter(function (b) { return /\b(fav|auto)\b/.test(b.className) && b.querySelector(".grupo").textContent !== "OUTRAS TELAS"; }), [gL, gG]);
+    var outras = document.createElement("details"); outras.className = "outras";
+    outras.innerHTML = "<summary>OUTRAS TELAS — 1º turno, Câmara, Senado, Assembleias, 2022, Jornalismo</summary>";
+    var corpo = document.createElement("div"); corpo.className = "corpo"; outras.appendChild(corpo);
+    frente.forEach(function (b) { cmd.appendChild(b); });
+    blocos.forEach(function (b) { if (frente.indexOf(b) < 0) corpo.appendChild(b); });
+    cmd.appendChild(outras);
+    try { if (localStorage.getItem("gctse-outras-" + S.id) === "1") outras.open = true; } catch (e) { }
+    outras.addEventListener("toggle", function () { try { localStorage.setItem("gctse-outras-" + S.id, outras.open ? "1" : "0"); } catch (e) { } });
     // controles do giro / resumo
     var ctl = document.createElement("div"); ctl.className = "controle";
     var l1 = document.createElement("div"); l1.className = "linha";
@@ -913,10 +946,19 @@
       else if (st === "fechado") { el.className = "st ruim"; el.textContent = x[2] + ": FECHADO — ABRIR-OBS.bat"; }
     });
   }
+  // codigos do 2o turno conferidos pelo gerenciador.ps1 com a lista do TSE
+  function pintarCodigos(e) {
+    var c = e.codigos, el = document.getElementById("stCod"); if (!c) { el.hidden = true; return; }
+    el.hidden = false;
+    if (c.situacao === "ok") { el.className = "st ok"; el.textContent = "Códigos 2º turno: OK (" + c.config_pres + "/" + c.config_gov + ")"; el.title = "conferido com o TSE às " + c.quando; el.onclick = null; }
+    else if (c.situacao === "diferente") { el.className = "st ruim"; el.textContent = "CÓDIGOS ERRADOS: TSE " + c.tse_pres + "/" + c.tse_gov + " · config " + c.config_pres + "/" + c.config_gov + " — clique para gravar"; el.onclick = function () { if (confirm("Abrir o CODIGOS-2-TURNO para gravar os códigos do TSE? (ele pede S na janela)")) fetch("/dados?rodar=codigos&t=" + Date.now()); }; }
+    else if (c.situacao === "tse_sem_2t") { el.className = "st aviso"; el.textContent = "Códigos 2º turno: o TSE ainda não publicou o pleito de 25/10"; el.onclick = null; }
+    else { el.className = "st neutro"; el.textContent = "Códigos 2º turno: sem resposta do TSE (" + c.quando + ")"; el.onclick = null; }
+  }
   function lerEstado() {
     var g = document.getElementById("stG");
     fetch("/estado?t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.json(); })
-      .then(function (e) { estado = e; pintar(); g.className = "st ok"; g.textContent = "Gerenciador: no ar"; situacaoObs(); try { vigia(e); } catch (x) { } try { acessos(e); } catch (x) { } if (!e.voce || e.voce.local) { try { ipad(e); } catch (x) { } } })
+      .then(function (e) { estado = e; pintar(); g.className = "st ok"; g.textContent = "Gerenciador: no ar"; situacaoObs(); try { vigia(e); } catch (x) { } try { pintarCodigos(e); } catch (x) { } })
       .catch(function () { g.className = "st ruim"; g.textContent = "Gerenciador: SEM CONEXÃO — a janela do GERENCIADOR fechou?"; });
   }
   // Copia de seguranca num clique (gerenciador.ps1 -> copia-seguranca.ps1).
@@ -1010,58 +1052,6 @@
     if (el) { bA.textContent = "no ar automático: " + (el.auto ? "LIGADO" : "DESLIGADO"); bA.classList.toggle("ligado", !!el.auto); }
     avisoEleito(el, true);
   }
-  // ------------------------------------------------ iPad (controle.html)
-  var bIpad = document.getElementById("ipadModo"), vistoSug = { h: null, v: null };
-  bIpad.onclick = function () { pedir("/ipadmodo?m=" + (estado && estado.ipad === "ar" ? "sugerir" : "ar")); };
-  function ipad(e) {
-    var on = !!e.rede; bIpad.hidden = true; document.getElementById("rotIpad").hidden = true;   // agora no bloco ACESSOS
-    if (on) { bIpad.textContent = e.ipad === "ar" ? "vai DIRETO ao ar" : "só SUGERE (cai na prévia)"; bIpad.classList.toggle("ligado", e.ipad !== "ar"); bIpad.title = "Endereço no iPad: " + comoArr(e.ipad_enderecos).join("  ou  "); }
-    ["h", "v"].forEach(function (s) {
-      var sg = e["sugestao_" + s];
-      if (vistoSug[s] === null) { vistoSug[s] = sg && sg.id ? sg.id : ""; return; }   // a que ja existia ao abrir a pagina nao conta
-      if (!sg || !sg.id || vistoSug[s] === sg.id) return;
-      vistoSug[s] = sg.id;
-      if (!previa[s]) ligarPrevia(s, true);
-      pendente[s] = { tela: sg.tela, acao: sg.acao || "", rod: sg.rod ? { telas: sg.rod, tempo: +sg.tempo || 12 } : null, de: sg.quem || "iPad" };
-      mostrarPrevia(s);
-      toast({ tipo: "info", hora: sg.hora, texto: (sg.quem || "iPad") + " sugere na saída " + (s === "h" ? "HORIZONTAL" : "VERTICAL") + ": " + nomePendente(s, pendente[s]) + " — está na PRÉVIA, aperte CORTAR" });
-      bip(660, 0.12); bip(880, 0.12, 0.15);
-    });
-  }
-  // ------------------------------------------------ acessos (varios usuarios)
-  var MODOS_AC = [["direto", "direto ao ar"], ["sugerir", "sugere"], ["bloqueado", "bloqueado"]];
-  function acessos(e) {
-    var v = e.voce || { local: true }, us = comoArr(e.usuarios);
-    document.body.classList.toggle("remoto", !v.local);
-    var bv = document.getElementById("voce");
-    if (!v.local) {
-      bv.hidden = false; bv.className = v.modo;
-      bv.textContent = "CONECTADO COMO " + String(v.nome).toUpperCase() + " — " + (v.modo === "direto" ? "seus comandos vão DIRETO AO AR no exibidor" :
-        v.modo === "sugerir" ? "você SUGERE: a tela cai na prévia do operador do exibidor, que corta" : (v.travado ? "o operador TRAVOU os comandos — só visualização" : "só visualização (o operador pode liberar)"));
-      return;
-    }
-    bv.hidden = true;
-    var box = document.getElementById("acessos"); box.hidden = !(e.rede && us.length);
-    if (box.hidden) return;
-    var lst = document.getElementById("listaAcessos"); lst.innerHTML = "";
-    us.forEach(function (u) {
-      var sp = document.createElement("span"); sp.className = "ac";
-      sp.title = (u.online ? "conectado" : "desconectado") + (u.ip ? " · " + u.ip : "") + (u.ultimo ? " · último: " + u.ultimo : "");
-      sp.innerHTML = '<i class="' + (u.online ? "on" : "") + '"></i><b></b> <small>(' + (u.tela === "gerenciador" ? "PC" : "iPad") + ")</small>";
-      sp.querySelector("b").textContent = u.nome;
-      MODOS_AC.forEach(function (m) {
-        var b = document.createElement("button"); b.type = "button"; b.textContent = m[1];
-        if (u.modo === m[0]) b.className = "ligado" + (m[0] === "bloqueado" ? " blq" : "");
-        b.onclick = function () { pedir("/acesso?nome=" + encodeURIComponent(u.nome) + "&modo=" + m[0]); };
-        sp.appendChild(b);
-      });
-      lst.appendChild(sp);
-    });
-    var bt = document.getElementById("travar");
-    bt.classList.toggle("ligado", !!e.travado);
-    bt.textContent = e.travado ? "🔒 REMOTOS TRAVADOS — clique para liberar" : "🔒 travar remotos";
-  }
-  document.getElementById("travar").onclick = function () { pedir("/acesso?travar=" + (estado && estado.travado ? "0" : "1")); };
   // ------------------------------------------------ atalhos de teclado
   var tecAlvo = "h"; try { tecAlvo = localStorage.getItem("gctse-tec-alvo") || "h"; } catch (e) { }
   var bTec = document.getElementById("tecAlvo");
@@ -1116,6 +1106,56 @@
   var topo = document.getElementById("topo");
   function medirTopo() { document.documentElement.style.setProperty("--topo", topo.offsetHeight + "px"); }
   medirTopo(); try { new ResizeObserver(medirTopo).observe(topo); } catch (e) { window.addEventListener("resize", medirTopo); }
+
+  // ------------------------------------- ★ 2o TURNO: numeros para o operador
+  // Do mesmo dados.js / estados.js das telas (TSE). Atualiza a cada 2 s.
+  function nomeCurto0(n) { var p = String(n || "").split(/\s+/).filter(Boolean); return p.length > 2 && String(n).length > 18 ? p[0] + " " + p[p.length - 1] : String(n || ""); }
+  function pctT(v) { return v == null || isNaN(v) ? "—" : Number(v).toFixed(2).replace(".", ",") + "%"; }
+  function milT(v) { v = Math.abs(+v || 0); return v >= 1e6 ? (v / 1e6).toFixed(2).replace(".", ",") + " mi" : v.toLocaleString("pt-BR"); }
+  function escN(x) { return String(x == null ? "" : x).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function pintarNumeros() {
+    var Dd = window.GCTSE_DADOS || {}, Ee = window.GCTSE_ESTADOS || {}, b = Dd.br, h = "";
+    if (b && b.tem) {
+      var cs = comoArr(b.candidatos).filter(function (c) { return (c.destinacao || "Valido") !== "Anulado"; }).slice().sort(function (x, y) { return (+y.votos || 0) - (+x.votos || 0); });
+      var urn = b.secoes ? +b.secoes.pct : null, a1 = cs[0], a2 = cs[1], el = cs.filter(function (c) { return c.eleito; })[0];
+      var st = el ? '<span class="tag ok">ELEITO: ' + escN(nomeCurto0(el.nome)) + "</span>" : (b.andamento === "f" ? '<span class="tag">totalização final</span>' : '<span class="tag">apurando</span>');
+      h += '<div class="lin"><span class="k">PRESIDENTE</span><span>urnas <b>' + pctT(urn) + "</b></span>" + st + "</div>";
+      [a1, a2].forEach(function (c, i) { if (c) h += '<div class="cand' + (i ? "" : " lider") + '"><span class="c">' + (i ? "" : "▲ ") + escN(nomeCurto0(c.nome)) + ' <small>' + escN(c.partido) + '</small></span><span class="p">' + pctT(c.pct) + '</span><span class="vt">' + milT(c.votos) + " votos</span></div>"; });
+      if (a1 && a2) h += '<div class="lin"><span class="k"></span><span>diferença <b>' + milT((+a1.votos || 0) - (+a2.votos || 0)) + " votos</b> · " + Number((+a1.pct || 0) - (+a2.pct || 0)).toFixed(2).replace(".", ",") + " pontos</span></div>";
+    } else h += '<div class="lin"><span class="k">PRESIDENTE</span><span class="vt">o TSE ainda não publicou o boletim (normal antes das 17h)</span></div>';
+    // governadores do 2o turno
+    var ufs = Ee.ufs || {}, l2 = [];
+    Object.keys(ufs).forEach(function (k) {
+      var g = ufs[k] && ufs[k].gov; if (!g || !g.tem) return;
+      var cs = comoArr(g.candidatos); if (+g.turno !== 2 && !cs.some(function (c) { return c.segundo_turno; })) return;
+      cs = cs.slice().sort(function (x, y) { return (+y.votos || 0) - (+x.votos || 0); });
+      var g1 = ufs[k].gov1t, virou = false;
+      if (+g.turno === 2 && g1 && cs[0] && cs[1] && (+g.urnas_pct || 0) > 0) {
+        var c1 = comoArr(g1.candidatos), p0 = c1.filter(function (c) { return String(c.numero) === String(cs[0].numero); })[0], p1 = c1.filter(function (c) { return String(c.numero) === String(cs[1].numero); })[0];
+        virou = !!(p0 && p1 && +p1.pct > +p0.pct);
+      }
+      l2.push({ k: k, g: g, c: cs[0], el: cs.some(function (c) { return c.eleito; }), t2: +g.turno === 2, virou: virou });
+    });
+    l2.sort(function (x, y) { return x.k.localeCompare(y.k); });
+    var nEl = l2.filter(function (x) { return x.el; }).length;
+    h += '<div class="lin"><span class="k">GOVERNADOR</span><span>' + (l2.length ? l2.length + " estados no 2º turno · <b>" + nEl + "</b> definidos" + (l2.some(function (x) { return x.t2; }) ? "" : " · aguardando o 2º turno (TSE)") : '<span class="vt">aguardando o boletim de governador (ESTADOS.bat)</span>') + "</span></div>";
+    SAIDAS.forEach(function (S) {
+      var nbx = document.getElementById("nums-" + S.id); if (nbx && nbx.innerHTML !== h) nbx.innerHTML = h;
+      var gcx = document.getElementById("govchips-" + S.id); if (!gcx) return;
+      var assin = JSON.stringify(l2.map(function (x) { return [x.k, x.c && x.c.nome, x.c && x.c.pct, x.g.urnas_pct, x.el, x.virou]; }));
+      if (gcx.dataset.a === assin) return; gcx.dataset.a = assin; gcx.innerHTML = "";
+      l2.forEach(function (x) {
+        var bt = document.createElement("button"); bt.type = "button";
+        bt.className = (x.el ? "eleito" : "") + (x.virou ? " virou" : "");
+        bt.innerHTML = "<b>" + x.k.toUpperCase() + "</b> " + escN(nomeCurto0(x.c ? x.c.nome : "")) + " " + (x.c ? pctT(x.c.pct) : "") +
+          "<small>" + (x.el ? "ELEITO" : x.t2 ? "urnas " + pctT(x.g.urnas_pct) : "1º turno") + (x.virou ? " · VIROU" : "") + "</small>";
+        bt.title = "põe o governador de " + x.k.toUpperCase() + " no ar nesta saída";
+        bt.onclick = function () { definir(S.id, "girogov", "uf:" + x.k); };
+        gcx.appendChild(bt);
+      });
+    });
+  }
+  setTimeout(pintarNumeros, 500); setInterval(pintarNumeros, 2000);
 
   // ------------------------------------- telas SEM DADO ficam escondidas
   // O grafico diz se tem dado (GCTSE_GRAFICOS.temDados). Botao de tela vazia

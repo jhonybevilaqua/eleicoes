@@ -48,25 +48,22 @@
 
   <h2>ANTES DO DIA <small>(até sexta 23/10)</small></h2>
   <ul>
-    <li><div><b>ENSAIO.bat</b> com a equipe: noite simulada (dados fictícios, tudo riscado “ENSAIO”), gerenciador na porta <b class="k">8096</b>. Treinar: rodízios prontos, Governadores do 2º turno (cinza), Deputados por estado, Prévia → CORTAR. ENTER na janela do ensaio fecha tudo.</div></li>
+    <li><div><b>ENSAIO.bat</b> com a equipe: noite simulada (dados fictícios, tudo riscado “ENSAIO”), gerenciador na porta <b class="k">8096</b>. Treinar: bloco <b>★ 2º TURNO</b> (números e botões dos estados), rodízios prontos, Prévia → CORTAR. ENTER na janela do ensaio fecha tudo.</div></li>
     <li><div>OBS das duas saídas abrindo sozinhos pelo <b>GERENCIADOR.bat</b> e canal da DeckLink conferido (ver OBS-DECKLINK.txt).</div></li>
     <li><div>Gerenciador › <b>📥 dados do TSE › ATUALIZAR TUDO</b> (de novo no sábado 24/10) e depois <b>💾 cópia de segurança</b>; o .zip no pendrive / outra máquina.</div></li>
     <li><div><b>Máquina reserva</b>: a mesma pasta no 2º PC, com o mesmo config. No dia, só GRAFICOS.bat e ESTADOS.bat abertos nela (coletando); se o PC principal travar, abrir o GERENCIADOR.bat na reserva e passar a DeckLink/OBS para ela.</div></li>
   </ul>
 
-  <h2>CÓDIGOS DO 2º TURNO <small>(quando o TSE publicar; de novo no domingo de manhã)</small></h2>
+  <h2>CÓDIGOS DO 2º TURNO <small>(TSE: pleito 3221 · Presidente 6258 · Governador 6260)</small></h2>
   <ul>
-    <li><div><b>CODIGOS-2-TURNO.bat</b>: lê a lista oficial do TSE e mostra o pleito de 25/10/2026. Responder <b>S</b> para gravar. Ele troca só <b class="k">eleicao_presidente</b> e <b class="k">eleicao_estaduais</b>; os do 1º turno (<b class="k">*_1turno</b>) e <b class="k">eleicao_camara</b> ficam como estão. Guarda o anterior em <b class="k">config-graficos.ANTES-2T.json</b>.</div></li>
-    <li><div>Se disser “ainda NÃO publicou”: nada foi alterado — rodar de novo mais tarde. <span class="alerta">Não digitar código na mão.</span></div></li>
-    <li><div>Anotar: Presidente 2º turno <span style="border-bottom:1px solid #999;display:inline-block;width:70px"></span> Governador 2º turno <span style="border-bottom:1px solid #999;display:inline-block;width:70px"></span></div></li>
-    <li><div>Depois de gravar: fechar e abrir de novo GRAFICOS.bat e ESTADOS.bat.</div></li>
+    <li><div>No alto do gerenciador: selo <b>“Códigos 2º turno: OK (6258/6260)”</b> (confere sozinho com o TSE a cada 30 min). Vermelho: clicar nele e responder <b>S</b> na janela. <span class="alerta">Não digitar código na mão.</span></div></li>
   </ul>
 
   <h2>16h30 — ABRIR</h2>
   <ul>
-    <li><div><b>GERENCIADOR.bat</b> (abre GRAFICOS.bat, ESTADOS.bat e os dois OBS). <span class="alerta">Não fechar nenhuma janela preta até o fim.</span></div></li>
+    <li><div><b>GERENCIADOR.bat</b>: abre GRAFICOS.bat, ESTADOS.bat, os dois OBS e as 2 janelas do gerenciador (HORIZONTAL à esquerda, VERTICAL à direita). <span class="alerta">Não fechar nenhuma janela preta até o fim.</span></div></li>
     <li><div>Gerenciador, faixa de status: <b>Presidente</b>, <b>Estados</b>, <b>Gerenciador</b> e os dois <b>OBS</b>. Antes das 17h o normal é “TSE ainda não publicou”.</div></li>
-    <li><div>Saídas no ar: rodízio <b>Abertura (17h)</b>. Gerenciador: <b>🔈 ligar o som</b>; gerenciador em 2 janelas (HORIZONTAL à esquerda, VERTICAL à direita).</div></li>
+    <li><div>Saídas no ar: rodízio <b>Abertura (17h)</b>. <b>🔈 Ligar o som</b> (janela HORIZONTAL).</div></li>
     <li><div><b>COPIA-DE-SEGURANCA</b> (botão 💾 no alto do gerenciador).</div></li>
   </ul>
 
@@ -74,7 +71,7 @@
   <ul>
     <li><div>Janela do GRAFICOS: “estados com boletim: <b>27 de 27</b>”. Menos que 27 por mais de 10 min: avisar a engenharia (o resto continua).</div></li>
     <li><div>Janela do GRAFICOS e gerenciador: <b>GRAVANDO EVOLUÇÃO: N pontos</b> subindo. Ficou <span class="alerta">vermelho “EVOLUÇÃO PAROU”</span>: ver se o GRAFICOS.bat está aberto e se o TSE atualiza.</div></li>
-    <li><div>Janela do ESTADOS: “governador: 27/27” e os estados do 2º turno listados.</div></li>
+    <li><div>Janela do ESTADOS: “governador 2o turno: N estados (…)” — conferir a lista. No gerenciador, bloco <b>★ 2º TURNO</b>: números do Presidente e um botão por estado com 2º turno.</div></li>
     <li><div>Trocar para o rodízio <b>Apuração</b>. Usar <b>Prévia</b> para conferir antes de <b>CORTAR</b> o que é escolhido na mão.</div></li>
     <li><div>Cópia de segurança a cada hora: 18h <span>☐</span> 19h <span>☐</span> 20h <span>☐</span> 21h <span>☐</span> 22h <span>☐</span></div></li>
   </ul>
@@ -82,8 +79,7 @@
   <h2>SE ALGO SAIR DO LUGAR</h2>
   <table>
     <tr><th>O que aparece</th><th>O que fazer</th></tr>
-    <tr><td>Janela do GRAFICOS fechou</td><td>Abrir <b>GRAFICOS.bat</b> na hora. O minuto a minuto continua do arquivo; o trecho em que ficou fechado vira reta.</td></tr>
-    <tr><td>Janela do ESTADOS fechou</td><td>Abrir <b>ESTADOS.bat</b>. Governador/Senado/Câmara voltam no próximo ciclo (até 1 min).</td></tr>
+    <tr><td>Janela do GRAFICOS ou ESTADOS fechou</td><td>O gerenciador <b>reabre sozinho</b> e avisa. Se não voltar em 1 min: dois cliques no .bat. O minuto a minuto continua do arquivo.</td></tr>
     <tr><td>Gerenciador “SEM CONEXÃO”</td><td>Abrir <b>GERENCIADOR.bat</b>. As saídas voltam no que estava no ar.</td></tr>
     <tr><td>OBS “FECHADO”</td><td><b>ABRIR-OBS.bat</b>. Plano B: <b>ENDERECOS-OBS.bat</b> (endereços para colar na mão).</td></tr>
     <tr><td>“SEM RESPOSTA DO TSE”</td><td>Não mexer no config. O programa tenta sozinho; a tela fica no último dado. Conferir a internet.</td></tr>

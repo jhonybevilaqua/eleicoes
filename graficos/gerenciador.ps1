@@ -368,101 +368,22 @@ function Vigiar {
 
 # ------------------------------------------------------------------ servidor
 
-# CONTROLE PELO iPAD (config-graficos.json): "acesso_rede": true e
-# "senha_controle": "1234". O iPad abre http://<IP deste PC>:<porta>/controle.html,
-# digita a senha uma vez e so pode usar a rota /ipad (trocar tela) e ler
-# /estado. Precisa do LIBERAR-IPAD.bat (como administrador) uma vez no PC.
-$script:Rede = $false; $script:Senha = ""
-try { foreach ($p in $cfg.PSObject.Properties) {
-    if ($p.Name -eq "acesso_rede" -and $p.Value -eq $true) { $script:Rede = $true }
-    if ($p.Name -eq "senha_controle" -and "$($p.Value)" -match '^\S{4,32}$') { $script:Senha = "$($p.Value)" } } } catch { }
-if ($script:Ensaio) { $script:Rede = $false }
-$script:Estado.ipad = "ar"   # iPad: "ar" = direto; "sugerir" = cai na previa (lembrado)
-try { $li = (Get-Content $ArqEstado -Raw -Encoding UTF8 | ConvertFrom-Json).PSObject.Properties | Where-Object { $_.Name -eq "ipad" } | Select-Object -First 1
-      if ($li -and @("ar", "sugerir") -contains "$($li.Value)") { $script:Estado.ipad = "$($li.Value)" } } catch { }
+# SO NESTE PC: o gerenciador atende so o proprio exibidor (localhost). O
+# acesso pela rede (iPad, outros PCs) foi retirado na 3.24.
+$script:Rede = $false
+$script:Estado.ipad = "sugerir"
 $script:Estado.sugestao_h = $null; $script:Estado.sugestao_v = $null
-
-# VARIOS USUARIOS (config-graficos.json, "usuarios"): cada um com nome, senha,
-# tela e modo. Todos os comandos chegam AQUI (o exibidor, onde esta o OBS).
-#   tela: "controle"     -> controle.html (iPad/celular: botoes grandes)
-#         "gerenciador"  -> gerenciador.html completo (outro computador)
-#   modo: "direto"    -> o comando vai ao ar
-#         "sugerir"   -> cai na PREVIA do operador, que corta (ou nao)
-#         "bloqueado" -> so ve; nao comanda
-# O operador (este PC) muda o modo de cada um na hora, ou TRAVA todos.
-# Coisas tecnicas (dados do TSE, copia, girar, eleito automatico, acessos)
-# so neste PC. A "senha_controle" antiga vira o usuario "iPad".
-$script:Usuarios = New-Object System.Collections.ArrayList
-$modosSalvos = @{}
-try { $la = (Get-Content $ArqEstado -Raw -Encoding UTF8 | ConvertFrom-Json).PSObject.Properties | Where-Object { $_.Name -eq "acessos" } | Select-Object -First 1
-      if ($la -and $la.Value) { foreach ($pa in $la.Value.PSObject.Properties) { $modosSalvos["$($pa.Name)"] = "$($pa.Value)" } } } catch { }
-try {
-    $listaU = @(); foreach ($p in $cfg.PSObject.Properties) { if ($p.Name -eq "usuarios" -and $p.Value) { $listaU = @($p.Value) } }
-    foreach ($x in $listaU) {
-        $nomeU = "$((Prop $x 'nome'))".Trim(); $senhaU = "$((Prop $x 'senha'))"
-        $telaU = $(if ("$((Prop $x 'tela'))" -eq "gerenciador") { "gerenciador" } else { "controle" })
-        $modoU = "$((Prop $x 'modo'))"; if (@("direto", "sugerir", "bloqueado") -notcontains $modoU) { $modoU = $(if ($telaU -eq "gerenciador") { "direto" } else { "sugerir" }) }
-        if ($nomeU -notmatch '^[^<>"&]{1,30}$' -or $senhaU -notmatch '^\S{4,32}$') { Escrever-Log "usuario ignorado no config (nome 1-30 letras e senha de 4 a 32 caracteres sem espaco): '$nomeU'" "Yellow"; continue }
-        if (@($script:Usuarios | Where-Object { $_.senha -eq $senhaU -or $_.nome -eq $nomeU }).Count) { Escrever-Log "usuario '$nomeU' ignorado: nome ou senha repetidos (cada pessoa precisa de uma senha diferente)" "Yellow"; continue }
-        if ($modosSalvos.ContainsKey($nomeU) -and @("direto", "sugerir", "bloqueado") -contains $modosSalvos[$nomeU]) { $modoU = $modosSalvos[$nomeU] }
-        [void] $script:Usuarios.Add([ordered]@{ nome = $nomeU; senha = $senhaU; tela = $telaU; modo = $modoU; visto = $null; ip = ""; ultimo = ""; rodSug = $null; legado = $false })
-    }
-} catch { Escrever-Log "config 'usuarios' com erro: $($_.Exception.Message)" "Yellow" }
-if ($script:Senha -and -not @($script:Usuarios | Where-Object { $_.senha -eq $script:Senha }).Count) {
-    [void] $script:Usuarios.Add([ordered]@{ nome = "iPad"; senha = $script:Senha; tela = "controle"; modo = $(if ($script:Estado.ipad -eq "ar") { "direto" } else { "sugerir" }); visto = $null; ip = ""; ultimo = ""; rodSug = $null; legado = $true })
-}
-if ($script:Rede -and $script:Usuarios.Count -eq 0) { Escrever-Log "acesso_rede ligado SEM usuarios/senha (minimo 4 caracteres): acesso pela rede DESLIGADO por seguranca." "Yellow"; $script:Rede = $false }
 $script:Estado.travado = $false
-try { $lt = (Get-Content $ArqEstado -Raw -Encoding UTF8 | ConvertFrom-Json).PSObject.Properties | Where-Object { $_.Name -eq "travado" } | Select-Object -First 1
-      if ($lt) { $script:Estado.travado = [bool] $lt.Value } } catch { }
-# o que vai para o /estado (sem as senhas)
-function Publicar-Usuarios {
-    $agora = Get-Date; $l = @(); $m = [ordered]@{}
-    foreach ($u in $script:Usuarios) {
-        $on = ($null -ne $u.visto -and ($agora - $u.visto).TotalSeconds -lt 20)
-        $l += [ordered]@{ nome = $u.nome; tela = $u.tela; modo = $u.modo; online = $on; ip = $u.ip; ultimo = $u.ultimo }
-        $m[$u.nome] = $u.modo
-    }
-    $script:Estado.usuarios = $l; $script:Estado.acessos = $m
-}
-Publicar-Usuarios
+$script:Estado.usuarios = @(); $script:Estado.acessos = [ordered]@{}
 $script:Quem = ""; $script:ModoReq = ""; $script:Voce = $null
-function Abrir-Ouvinte([bool] $Rede) {
-    $o = New-Object System.Net.HttpListener
-    if ($Rede) { $o.Prefixes.Add("http://+:$Porta/") }
-    else { $o.Prefixes.Add("http://localhost:$Porta/"); $o.Prefixes.Add("http://127.0.0.1:$Porta/") }   # casa pelo cabecalho Host
-    $o.Start()
-    return $o
+$ouvinte = New-Object System.Net.HttpListener
+$ouvinte.Prefixes.Add("http://localhost:$Porta/"); $ouvinte.Prefixes.Add("http://127.0.0.1:$Porta/")   # casa pelo cabecalho Host
+try { $ouvinte.Start() } catch {
+    Escrever-Log "Nao foi possivel abrir a porta $Porta : $($_.Exception.Message)" "Red"
+    Escrever-Log "A porta pode estar em uso (gerenciador ja aberto?). Outra porta: config-graficos.json, porta_gerenciador." "Yellow"
+    exit 1
 }
-$ouvinte = $null
-if ($script:Rede) {
-    try { $ouvinte = Abrir-Ouvinte $true }
-    catch {
-        Escrever-Log "iPad: o Windows nao liberou a porta $Porta para a rede ($($_.Exception.Message)). Rode o LIBERAR-IPAD.bat (como administrador) uma vez. Seguindo SEM iPad." "Yellow"
-        $script:Rede = $false
-    }
-}
-if ($null -eq $ouvinte) {
-    try { $ouvinte = Abrir-Ouvinte $false } catch {
-        Escrever-Log "Nao foi possivel abrir a porta $Porta : $($_.Exception.Message)" "Red"
-        Escrever-Log "A porta pode estar em uso (gerenciador ja aberto?). Outra porta: config-graficos.json, porta_gerenciador." "Yellow"
-        exit 1
-    }
-}
-$script:Estado.rede = $script:Rede
-if ($script:Rede) {
-    $ips = @()
-    try { $ips = @([Net.Dns]::GetHostAddresses([Net.Dns]::GetHostName()) | Where-Object { $_.AddressFamily -eq "InterNetwork" -and -not [Net.IPAddress]::IsLoopback($_) -and -not $_.ToString().StartsWith("169.254") } | ForEach-Object { $_.ToString() }) } catch { }
-    foreach ($ip in $ips) { Escrever-Log "iPad (mesma rede): http://${ip}:$Porta/controle.html  (senha do config)" "Green" }
-    $script:Estado.ipad_enderecos = @($ips | ForEach-Object { "http://${_}:$Porta/controle.html" })
-}
-$PaginaSenha = @'
-<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Controle</title>
-<style>body{margin:0;background:#0b1220;color:#fff;font:18px 'Segoe UI',Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh}
-form{background:#131c2c;padding:28px;border-radius:12px;width:min(360px,90vw)}input,button{font:inherit;width:100%;box-sizing:border-box;padding:14px;margin-top:12px;border-radius:8px;border:1px solid #2c3f5e}
-button{background:#1f6fc0;color:#fff;font-weight:700}.e{color:#ff8787;margin-top:10px}</style></head><body>
-<form method="get" action="/entrar"><b>gctse - CONTROLE DAS TELAS</b><input name="pin" type="password" inputmode="numeric" placeholder="senha" autofocus><button>ENTRAR</button>__ERRO__</form></body></html>
-'@
+$script:Estado.rede = $false
 
 Escrever-Log "gctse GERENCIADOR no ar - HORIZONTAL: http://localhost:$Porta/gerenciador.html?saida=h  |  VERTICAL: http://localhost:$Porta/gerenciador.html?saida=v" "Green"
 Escrever-Log "OBS da saida HORIZONTAL: http://localhost:$Porta/saida.html?saida=h  (fonte Navegador 1920x1080)" "Cyan"
@@ -516,6 +437,40 @@ function Abrir-Gerenciador {
     }
     Escrever-Log "gerenciador aberto em 2 janelas: HORIZONTAL (esquerda) e VERTICAL (direita)" "Green"
 }
+# CODIGOS DO 2o TURNO: confere sozinho (ao abrir e a cada 30 min) a lista de
+# eleicoes do TSE (comum/config/ele-c.json, pleito de 25/10/2026: cargo 1 =
+# Presidente, cargo 3 = Governador) com o config. NAO grava nada: o painel
+# avisa e o botao abre o CODIGOS-2-TURNO.bat (que pede S para gravar).
+$script:Estado.codigos = $null
+$script:ProxCodigos = [datetime]::MinValue
+function Checar-Codigos {
+    if ((Get-Date) -lt $script:ProxCodigos) { return }
+    $script:ProxCodigos = (Get-Date).AddMinutes(30)
+    $tc = Prop $cfg "tse"; $baseC = "$(Prop $tc 'base_url')".TrimEnd('/')
+    $rc = [ordered]@{ quando = (Get-Date -Format "HH:mm"); config_pres = "$(Prop $tc 'eleicao_presidente')"; config_gov = "$(Prop $tc 'eleicao_estaduais')"; tse_pres = ""; tse_gov = ""; situacao = "" }
+    try {
+        $respC = Invoke-WebRequest -Uri "$baseC/comum/config/ele-c.json" -TimeoutSec 10 -UseBasicParsing -Headers @{ "User-Agent" = "gctse-graficos/1.0"; "Accept" = "application/json,*/*" }
+        $listaC = [Text.Encoding]::UTF8.GetString($respC.RawContentStream.ToArray()) | ConvertFrom-Json
+        foreach ($plC in @(Prop $listaC "pl")) {
+            if ($null -eq $plC -or "$(Prop $plC 'dt')" -notlike "*25/10/2026*") { continue }
+            foreach ($elC in @(Prop $plC "e")) {
+                if ($null -eq $elC) { continue }
+                $cargosC = @(); foreach ($abC in @(Prop $elC "abr")) { foreach ($cpC in @(Prop $abC "cp")) { if ($null -ne $cpC) { $cargosC += "$(Prop $cpC 'cd')" } } }
+                if ($cargosC -contains "1" -and -not $rc.tse_pres) { $rc.tse_pres = "$(Prop $elC 'cd')" }
+                if ($cargosC -contains "3" -and -not $rc.tse_gov) { $rc.tse_gov = "$(Prop $elC 'cd')" }
+            }
+        }
+        if (-not $rc.tse_pres) { $rc.situacao = "tse_sem_2t" }
+        elseif ($rc.tse_pres -eq $rc.config_pres -and $rc.tse_gov -eq $rc.config_gov) { $rc.situacao = "ok" }
+        else {
+            $rc.situacao = "diferente"
+            if ($null -eq $script:Estado.codigos -or $script:Estado.codigos.situacao -ne "diferente") { Evento "alerta" ("CODIGOS DO 2o TURNO: o TSE usa {0}/{1} e o config esta com {2}/{3} - rode o CODIGOS-2-TURNO (botao no painel)" -f $rc.tse_pres, $rc.tse_gov, $rc.config_pres, $rc.config_gov) }
+        }
+    } catch { $rc.situacao = "sem_resposta" }
+    $script:Estado.codigos = $rc
+    Escrever-Log ("codigos do 2o turno: TSE {0}/{1} | config {2}/{3} -> {4}" -f $(if ($rc.tse_pres) { $rc.tse_pres } else { "-" }), $(if ($rc.tse_gov) { $rc.tse_gov } else { "-" }), $rc.config_pres, $rc.config_gov, $rc.situacao) $(if ($rc.situacao -eq "ok") { "Green" } else { "Yellow" })
+}
+try { Checar-Codigos } catch { }
 if ($AbrirPagina) { Abrir-Gerenciador }
 
 $script:Pedido = $null
@@ -524,124 +479,16 @@ while ($ouvinte.IsListening) {
     try {
         # espera um pedido sem parar a vigia (a cada 3 s, mesmo sem pagina aberta)
         if ($null -eq $script:Pedido) { $script:Pedido = $ouvinte.GetContextAsync() }
-        if (-not $script:Pedido.Wait(1000)) { $script:Quem = ""; try { Vigiar } catch { Escrever-Log "vigia: $($_.Exception.Message)" "Red" }; continue }
+        if (-not $script:Pedido.Wait(1000)) { $script:Quem = ""; try { Checar-Codigos } catch { }; try { Vigiar } catch { Escrever-Log "vigia: $($_.Exception.Message)" "Red" }; continue }
         $ctx = $script:Pedido.Result; $script:Pedido = $null
         $req = $ctx.Request
         $caminho = $req.Url.AbsolutePath
 
-        # ---- pedido de OUTRO aparelho (iPad, outro PC): usuario pela senha,
-        # e so as rotas que o usuario pode usar. Comandos respeitam o modo dele.
+        # so o operador deste PC (o servidor escuta so localhost)
         $script:Quem = ""; $script:ModoReq = ""
         $script:Voce = [ordered]@{ nome = "Operador (exibidor)"; tela = "gerenciador"; modo = "direto"; local = $true }
-        $remoto = -not $req.IsLocal
-        if ($env:GCTSE_TESTE_IPAD -eq "1" -and $req.Headers["X-Teste-Remoto"] -eq "1") { $remoto = $true }   # so para teste
-        if ($remoto) {
-            if (-not $script:Rede) { Responder $ctx 403 "text/plain; charset=utf-8" ([Text.Encoding]::UTF8.GetBytes("acesso pela rede desligado")); continue }
-            $ipR = "$($req.RemoteEndPoint.Address)"
-            if ($caminho -eq "/entrar") {
-                $pin = "$($req.QueryString['pin'])"
-                $uE = @($script:Usuarios | Where-Object { $_.senha -eq $pin }) | Select-Object -First 1
-                if ($pin -and $uE) {
-                    $ctx.Response.Headers.Add("Set-Cookie", "gctse_pin=$([Uri]::EscapeDataString($pin)); Path=/; Max-Age=2592000")
-                    $ctx.Response.Redirect($(if ($uE.tela -eq "gerenciador") { "/gerenciador.html" } else { "/controle.html" }))
-                    $uE.visto = Get-Date; $uE.ip = $ipR
-                    Evento "info" ("{0} entrou ({1}, {2})" -f $uE.nome, $ipR, $(if ($uE.tela -eq "gerenciador") { "gerenciador" } else { "controle" })); continue
-                }
-                Escrever-Log "acesso pela rede: senha errada de $ipR" "Yellow"
-                Responder $ctx 200 "text/html; charset=utf-8" ([Text.Encoding]::UTF8.GetBytes($PaginaSenha.Replace("__ERRO__", '<div class="e">senha errada</div>'))); continue
-            }
-            $ck = $req.Cookies["gctse_pin"]
-            $u = $null
-            if ($null -ne $ck) { $pinC = [Uri]::UnescapeDataString($ck.Value); $u = @($script:Usuarios | Where-Object { $_.senha -eq $pinC }) | Select-Object -First 1 }
-            if ($null -eq $u) {
-                if ($caminho -eq "/" -or $caminho -like "*.html") { Responder $ctx 200 "text/html; charset=utf-8" ([Text.Encoding]::UTF8.GetBytes($PaginaSenha.Replace("__ERRO__", ""))) }
-                else { Responder $ctx 401 "text/plain; charset=utf-8" ([Text.Encoding]::UTF8.GetBytes("senha")) }
-                continue
-            }
-            $u.visto = Get-Date; $u.ip = $ipR
-            $modoEf = $(if ($script:Estado.travado) { "bloqueado" } else { $u.modo })
-            $script:Voce = [ordered]@{ nome = $u.nome; tela = $u.tela; modo = $modoEf; local = $false; travado = [bool] $script:Estado.travado }
-            if ($caminho -eq "/") { $ctx.Response.Redirect($(if ($u.tela -eq "gerenciador") { "/gerenciador.html" } else { "/controle.html" })); continue }
-            if ($caminho -notmatch '\.') {
-                $cmds = $(if ($u.tela -eq "gerenciador") { @("/ipad", "/definir", "/comando", "/rodizio", "/eleito") } else { @("/ipad") })
-                if (@("/estado", "/relatorio-dados") -contains $caminho) { }
-                elseif ($cmds -contains $caminho) {
-                    function Recusar([string] $Msg) { Responder $ctx 423 "application/json; charset=utf-8" ([Text.Encoding]::UTF8.GetBytes((([ordered]@{ erro = $Msg }) | ConvertTo-Json -Compress))) }
-                    if ($caminho -eq "/eleito" -and "$($req.QueryString['auto'])") { Recusar "o automatico do presidente eleito so muda no PC do exibidor"; continue }
-                    if ($modoEf -eq "bloqueado") { Recusar $(if ($script:Estado.travado) { "o operador TRAVOU os comandos remotos" } else { "seu acesso esta so para ver (o operador pode liberar)" }); continue }
-                    if ($modoEf -eq "sugerir") {
-                        if ($caminho -eq "/rodizio") {
-                            $u.rodSug = [ordered]@{ telas = "$($req.QueryString['telas'])"; tempo = "$($req.QueryString['tempo'])" }
-                            Responder-Json $ctx $script:Estado; continue
-                        }
-                        if ($caminho -eq "/definir") {
-                            $sS = "$($req.QueryString['saida'])"; $tS = "$($req.QueryString['tela'])"; $aS = "$($req.QueryString['acao'])"
-                            if (($sS -eq "h" -or $sS -eq "v") -and $tS -match '^[a-z0-9-]{1,40}$' -and ($aS -eq "" -or $aS -match '^[a-z0-9:,-]{1,40}$')) {
-                                $rS = ""; $tpS = ""
-                                if ($u.rodSug -and "$($u.rodSug.telas)" -match '^[a-z0-9:,-]{0,800}$') { $rS = "$($u.rodSug.telas)"; $tpS = "$($u.rodSug.tempo)" }
-                                $u.rodSug = $null
-                                $script:Estado["sugestao_$sS"] = [ordered]@{ id = "$([DateTime]::Now.Ticks)"; tela = $tS; acao = $aS; rod = $rS; tempo = $tpS; hora = (Get-Date -Format "HH:mm:ss"); quem = $u.nome }
-                                $u.ultimo = "{0} sugeriu {1} ({2})" -f (Get-Date -Format "HH:mm:ss"), $tS, $sS.ToUpper()
-                                Escrever-Log ("{0} SUGERE - saida {1}: {2} {3} (vai para a previa do operador)" -f $u.nome, $sS.ToUpper(), $tS, $aS) "Cyan"
-                                Publicar-Usuarios; Responder-Json $ctx $script:Estado
-                            } else { Responder $ctx 400 "text/plain; charset=utf-8" ([Text.Encoding]::UTF8.GetBytes("pedido invalido")) }
-                            continue
-                        }
-                        if ($caminho -ne "/ipad") { Recusar "no modo SUGERE so da para sugerir telas (o operador comanda o resto)"; continue }
-                    }
-                    $script:ModoReq = $(if ($modoEf -eq "sugerir") { "sugerir" } else { "ar" })
-                    if ($modoEf -eq "direto") { $script:Quem = $u.nome }
-                    $u.ultimo = "{0} {1} {2}" -f (Get-Date -Format "HH:mm:ss"), $caminho.TrimStart('/'), "$($req.QueryString['tela'])$($req.QueryString['acao'])"
-                }
-                else { Responder $ctx 403 "text/plain; charset=utf-8" ([Text.Encoding]::UTF8.GetBytes("so no PC do exibidor")); continue }
-            }
-        }
-
-        if ($caminho -eq "/ipad") {
-            # Troca pedida pelo iPad (controle.html). Modo "ar": vai direto ao
-            # ar; modo "sugerir": cai na PREVIA do gerenciador e o operador corta.
-            $s = "$($req.QueryString['saida'])"; $tela = "$($req.QueryString['tela'])"; $acao = "$($req.QueryString['acao'])"
-            $rod = "$($req.QueryString['rod'])"; $tempo = "$($req.QueryString['tempo'])"
-            if (($s -eq "h" -or $s -eq "v") -and $tela -match '^[a-z0-9-]{1,40}$' -and ($acao -eq "" -or $acao -match '^[a-z0-9:,-]{1,40}$') -and $rod -match '^[a-z0-9:,-]{0,800}$' -and ($tempo -eq "" -or $tempo -match '^\d{1,3}$')) {
-                $modoIpad = $(if ($script:ModoReq) { $script:ModoReq } else { $script:Estado.ipad })
-                if ($modoIpad -eq "ar") {
-                    if ($rod) { $script:Estado[$s].rodizio = $rod; $script:Estado[$s].tempo = $(if ($tempo) { [math]::Max(3, [int] $tempo) } else { 0 }) }
-                    Por-No-Ar $s $tela $acao "ipad"
-                    Escrever-Log ("NO AR ({3}) - saida {0}: {1} {2}" -f $(if ($s -eq "h") { "HORIZONTAL" } else { "VERTICAL" }), $tela, $acao, $(if ($script:Voce.local) { "controle local" } else { $script:Voce.nome })) "Green"
-                } else {
-                    $script:Estado["sugestao_$s"] = [ordered]@{ id = "$([DateTime]::Now.Ticks)"; tela = $tela; acao = $acao; rod = $rod; tempo = $tempo; hora = (Get-Date -Format "HH:mm:ss"); quem = $(if ($script:Voce.local) { "iPad" } else { $script:Voce.nome }) }
-                    Escrever-Log ("iPad SUGERE - saida {0}: {1} {2} (vai para a previa do gerenciador)" -f $s.ToUpper(), $tela, $acao) "Cyan"
-                }
-                Salvar-Estado
-                Responder-Json $ctx $script:Estado
-            } else { Responder $ctx 400 "text/plain; charset=utf-8" ([Text.Encoding]::UTF8.GetBytes("pedido invalido")) }
-            continue
-        }
-        if ($caminho -eq "/ipadmodo") {
-            $m = "$($req.QueryString['m'])"
-            if ($m -eq "ar" -or $m -eq "sugerir") { $script:Estado.ipad = $m; foreach ($ul in @($script:Usuarios | Where-Object { $_.legado })) { $ul.modo = $(if ($m -eq "ar") { "direto" } else { "sugerir" }) }; Publicar-Usuarios; Salvar-Estado; Evento "info" ("iPad: {0}" -f $(if ($m -eq "ar") { "coloca NO AR direto" } else { "so SUGERE (cai na previa)" })) }
-            Responder-Json $ctx $script:Estado; continue
-        }
-
-        if ($caminho -eq "/acesso") {
-            # Operador (so neste PC): ?nome=X&modo=direto|sugerir|bloqueado ou ?travar=1|0
-            $nA = "$($req.QueryString['nome'])"; $mA = "$($req.QueryString['modo'])"; $tA = "$($req.QueryString['travar'])"
-            if ($tA -eq "1" -or $tA -eq "0") {
-                $script:Estado.travado = ($tA -eq "1")
-                Evento "info" $(if ($tA -eq "1") { "Comandos remotos TRAVADOS pelo operador (iPad e outros PCs so veem)" } else { "Comandos remotos LIBERADOS" })
-            }
-            $uA = @($script:Usuarios | Where-Object { $_.nome -eq $nA }) | Select-Object -First 1
-            if ($uA -and @("direto", "sugerir", "bloqueado") -contains $mA) {
-                $uA.modo = $mA
-                if ($uA.legado) { $script:Estado.ipad = $(if ($mA -eq "direto") { "ar" } else { "sugerir" }) }
-                Evento "info" ("{0}: {1}" -f $uA.nome, $(switch ($mA) { "direto" { "comandos vao DIRETO ao ar" } "sugerir" { "so SUGERE (cai na previa do operador)" } default { "BLOQUEADO (so ve)" } }))
-            }
-            Publicar-Usuarios; Salvar-Estado
-            Responder-Json $ctx $script:Estado; continue
-        }
 
         if ($caminho -eq "/estado") {
-            Publicar-Usuarios
             Checar-Obs
             try { Vigiar } catch { }
             Responder-Json $ctx $script:Estado

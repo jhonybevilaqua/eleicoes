@@ -1,1013 +1,162 @@
 ===========================================================================
- gctse GRAFICOS 3.23 - apuracao em graficos (versao final)
+ gctse GRAFICOS 3.24 - APURACAO DO 2o TURNO (25/10/2026)
+ Presidente e Governador ao vivo do TSE, com o 1o turno ao lado.
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
- O QUE FAZ
-
-   GRAFICOS.bat le do TSE o boletim de Presidente (Brasil e 27 estados) a
-   cada 20 s; ESTADOS.bat le Governador, Senador e Deputado Federal dos 27
-   estados. Todas as telas se atualizam sozinhas, so com dado do TSE (o
-   que nao e do TSE fica em arquivo de config e aparece com a fonte).
-
-   GRAFICOS (horizontal 1280x720 e vertical 540x960)
-     Presidente - Brasil              Como o Brasil votou / Brancos e nulos
-     Apuracao nacional / Urnas        Como cada estado votou (mapa)
-     Lideranca por estado             Comparecimento
-     Abstencao, brancos e nulos       Mapa da abstencao
-     Presidente - 2o turno            Senado: atual x 2027
-     2018 x 2022 x 2026               Camara: bancadas 2027
-     Deputados federais eleitos (foto, nome e votos, 5 por tela)
-     Evolucao minuto a minuto (1o x 2o colocado de Presidente)
-   GIRO DOS ESTADOS (Governador e Senador, um estado por vez)
-   RESUMO (7 telas de fechamento)
-   GERENCIADOR (escolhe o que vai para as saidas SDI da DeckLink)
-
- NOVO NA 3.23 - 1o E 2o TURNO JUNTOS (PRESIDENTE E GOVERNADOR)
-   COMO O 1o TURNO FICA GUARDADO (para os comparativos do 2o turno):
-     1. ao vivo: com os codigos do 2o turno, GRAFICOS.bat le tambem o 1o
-        turno de Presidente (Brasil, 27 estados, exterior - 6257) e
-        ESTADOS.bat o de Governador (6259); vao juntos para as telas.
-     2. copia no disco: GUARDAR-DADOS-TSE.bat guarda o 1o turno inteiro em
-        tse-local. Se o TSE tirar o 1o turno do ar, o sistema le de la
-        sozinho. RODE AGORA e de novo no sabado 24/10.
-     3. depois do 2o turno: ARQUIVO-HISTORICO-2026.bat guarda 1o e 2o turno
-        completos num .zip (base para 2028/2030).
-   O 2o turno e sempre ao vivo (nunca da copia).
-   NOVA TELA "Governadores: 1o x 2o turno" (bloco GOVERNADOR E SENADO e
-   rodizios Apuracao/Fechamento): cada estado com 2o turno, os dois
-   finalistas com % do 1o turno -> % agora (+/- pontos), "VIROU" quando quem
-   liderava no 1o turno esta atras, e com 100% das urnas os votos ganhos.
-   Rodizio "Fechamento": so Presidente e Governador (sem Senado/Camara).
-   COMPARATIVOS DE PRESIDENTE 1o x 2o ja prontos: Estados que viraram,
-   Ganho de votos 1o -> 2o, Abstencao 1o x 2o por estado, Brancos e nulos
-   1o x 2o, 1o x 2o (abstencao, brancos e nulos), Evolucao, Presidente +
-   mapa do 1o turno.
-
- NOVO NA 3.22 - CODIGOS DO 2o TURNO (TSE, 10/10) E MENOS 404
-   O TSE publicou o pleito 3221 (25/10/2026): 6258 = Eleicao Geral Federal
-   (Presidente) e 6260 = Eleicoes Gerais Estaduais (Governador). O
-   config-graficos.json deste pacote JA vem com eles:
-     eleicao_presidente 6258 | eleicao_estaduais 6260
-     1o turno (comparacoes): 6257 / 6259 | Camara: 6259
-   Quem ja tem a pasta: CODIGOS-2-TURNO.bat le a lista do TSE e grava os
-   mesmos codigos (as suplementares e plebiscitos do pleito sao ignorados).
-   Ate 17h do dia 25 o 2o turno nao tem boletim: o normal e "TSE ainda nao
-   publicou".
-   AVISO DO TSE: 404 em excesso bloqueia o IP por 10 min. Agora:
-     - ESTADOS.bat pede o Governador do 2o turno SO nos estados que tem 2o
-       turno (os outros ficam com o 1o turno) e, antes do 1o boletim, so 1
-       estado por ciclo. A janela mostra: "governador 2o turno: N estados".
-     - GRAFICOS.bat ja so pede os estados depois que o Brasil sai.
-     - 2022: o formato que funcionou fica lembrado (1 pedido por arquivo),
-       nova tentativa a cada 30 min; GUARDAR-DADOS-TSE nao insiste nos
-       estados se o Brasil (ou o 1o estado) de 2022 nao vier.
-     - codigo de municipio sempre com 5 digitos (zeros a esquerda).
-
- NOVO NA 3.21 - PERFIL DA CAMARA E SENADORAS ELEITAS
-   PERFIL DA NOVA CAMARA, bloco RENOVACAO: o arquivo de candidatos de 2026
-   do TSE nao informa "disputa a reeleicao" (por isso aparecia 0% x 100%).
-   Agora: reeleito = foi ELEITO deputado federal em 2022 pelo mesmo estado
-   (mesmo nome civil, sem acento) - do arquivo de candidatos de 2022, que
-   o IMPORTAR-CANDIDATOS ja baixa. Mostra os numeros (ex.: 206 reeleitos,
-   307 novos) e o criterio embaixo. Sem o arquivo de 2022, o bloco diz
-   "o arquivo do TSE nao informa reeleicao" - nunca um numero errado.
-   RODE DE NOVO o IMPORTAR-CANDIDATOS.bat para valer.
-   SENADORAS ELEITAS (antes "10 senadoras mais votadas"): so as ELEITAS
-   (marca do TSE), da mais votada para a menos, todas na tela.
-
- NOVO NA 3.20 - OPERACIONAL: UMA JANELA POR SAIDA, SO TELA COM DADO
-   GERENCIADOR.bat abre DUAS janelas lado a lado (meio a meio na tela):
-     esquerda = HORIZONTAL (gerenciador.html?saida=h)
-     direita  = VERTICAL   (gerenciador.html?saida=v)
-   (Edge ou Chrome em modo app; sem eles, o navegador padrao.) Cada janela
-   comanda so a sua saida (teclado tambem). Barra do alto FIXA e o monitor
-   do que esta NO AR acompanha a rolagem. Link "abrir a VERTICAL/HORIZONTAL"
-   no alto. gerenciador.html sem ?saida = as duas juntas (como antes).
-   Alarme/som: so na janela HORIZONTAL (nao apita em dobro).
-   ACESSOS/iPad sairam da tela (uso so com o operador).
-
-   TELA SEM DADO NAO VAI AO AR: o botao de uma tela sem dado do TSE some do
-   painel ("N telas sem dado escondidas - mostrar"); o rodizio automatico
-   pula; favorito pelo teclado avisa e nao poe no ar. Quando o dado chega,
-   o botao volta sozinho. Ex.: "Quem foi as urnas" so aparece quando o TSE
-   publicar o comparecimento por perfil; telas de 2022 so com 2022 lido.
-
-   DADOS DE 2022: os boletins de 2022 estao no formato daquele ano
-   (dados-simplificados/...-r.json, sem sigla do partido - sai do numero
-   do candidato). ESTADOS.bat e GUARDAR-DADOS-TSE agora pedem esse formato
-   (antes pediam o de 2024, por isso "nao encontrado").
-
- NOVO NA 3.19 - CORRECAO DOS IMPORTADORES (arquivos reais do TSE)
-   IMPORTAR-CANDIDATOS lia "0 de Deputado Federal, 0 de Senador" nos
-   arquivos reais: o TSE mistura campos com e sem aspas na mesma linha
-   ("2026";6;"DEPUTADO FEDERAL") e o leitor so entendia tudo entre aspas.
-   Agora le os dois jeitos (IMPORTAR-CANDIDATOS e IMPORTAR-PERFIL-ELEITOR).
-   Se um arquivo ainda der 0, a janela mostra os cargos que viu (para
-   corrigir). Basta rodar de novo: o zip ja baixado e reaproveitado.
-
- NOVO NA 3.18 - VARIOS USUARIOS (apresentador, produtor, operador)
-   Todos comandam o MESMO exibidor (o PC do GERENCIADOR.bat, onde estao o
-   OBS e a DeckLink). Funciona so na REDE INTERNA da emissora: nao precisa
-   de hospedagem nem de internet para isso.
-   1. LIBERAR-IPAD.bat uma vez no exibidor (como administrador).
-   2. config-graficos.json:
-        "acesso_rede": true,
-        "usuarios": [
-          { "nome": "Apresentador", "senha": "SENHA1", "tela": "controle",    "modo": "sugerir" },
-          { "nome": "Produtor",     "senha": "SENHA2", "tela": "gerenciador", "modo": "direto" }
-        ]
-      senha: 4 a 32 caracteres, DIFERENTE para cada pessoa (e o que
-      identifica quem e quem). tela: "controle" = botoes grandes (iPad,
-      celular); "gerenciador" = o gerenciador completo (outro PC).
-      modo: "direto" = vai ao ar | "sugerir" = cai na PREVIA do operador,
-      que corta | "bloqueado" = so ve.
-      A "senha_controle" antiga continua valendo: vira o usuario "iPad".
-   3. Reabra o GERENCIADOR.bat. Cada pessoa abre http://IP-DO-EXIBIDOR:8098
-      (a janela do gerenciador mostra o IP), digita a SUA senha e cai na
-      tela dela. Fica lembrado 30 dias naquele aparelho.
-   NO EXIBIDOR (operador), linha ACESSOS: quem esta conectado (bolinha
-   verde), e o modo de cada um - muda na hora com um clique (fica
-   lembrado). "TRAVAR REMOTOS" trava todos de uma vez (eles continuam
-   vendo e recebem "o operador travou"). Sugestao chega na PREVIA com o
-   nome de quem pediu ("Produtor sugere..."), com som; CORTAR poe no ar.
-   Quem entra de outro aparelho NAO ve nem usa: dados do TSE, copia de
-   seguranca, girar a vertical, eleito automatico e ACESSOS.
-   O log do que foi ao ar (logs\no-ar-*.csv e relatorio da noite) diz quem
-   mandou: "painel - Produtor", "ipad - Apresentador",
-   "painel (sugestao de Apresentador)".
-   Rede: o exibidor com IP fixo (reserva no roteador) e iPad/PCs no mesmo
-   Wi-Fi/rede da emissora. Fora da emissora (casa): so com VPN da TI - nao
-   abra a porta do gerenciador para a internet.
-
- NOVO NA 3.17 - GERENCIADOR NOVO E DADOS DO TSE NUM CLIQUE
-   LAYOUT: uma faixa por saida - HORIZONTAL em cima, VERTICAL embaixo. Em
-   cada faixa, o monitor (no ar / previa) fica a esquerda e acompanha a
-   rolagem; os botoes ficam a direita em colunas (Favoritos e Automatico
-   numa linha larga no alto). Os controles do giro e dos deputados aparecem
-   embaixo do monitor.
-   BARRA FIXA no alto: "HORIZONTAL" / "VERTICAL" rolam ate a saida;
-   "as duas / so horizontal / so vertical" esconde a outra (fica lembrado);
-   a direita, o que esta no ar nas duas saidas.
-
-   DADOS DO TSE (botao "dados do TSE" na barra):
-     roda sozinho, numa janela minimizada e um depois do outro:
-       GUARDAR-DADOS-TSE, IMPORTAR-CANDIDATOS e IMPORTAR-PERFIL-ELEITOR
-     "ATUALIZAR TUDO" ou "rodar" em cada linha; mostra quando cada um rodou
-     pela ultima vez e o resultado. "Codigos do 2o turno" abre a janela do
-     CODIGOS-2-TURNO (ele pede S para gravar - de proposito).
-     AO ABRIR O GERENCIADOR: o que ainda nao existe nesta maquina e buscado
-     sozinho. Para desligar: "atualizar_dados_ao_abrir": false no
-     config-graficos.json. No ENSAIO nada e baixado.
-     O botao fica amarelo "(falta)" se algum dado nunca foi baixado.
-     Sem o gerenciador: ATUALIZAR-DADOS.bat (ou ATUALIZAR-DADOS.bat perfil).
-     GRAFICOS.bat e ESTADOS.bat (boletim ao vivo) continuam como sempre:
-     o GERENCIADOR.bat ja abre os dois e reabre se fecharem.
-
- NOVO NA 3.16 - IMPORTAR-PERFIL-ELEITOR MUITO MAIS RAPIDO
-   O arquivo real do TSE (perfil_eleitorado_2026.zip, ~390 MB) tem
-   milhoes de linhas. A leitura agora e feita por um trecho em C# que o
-   proprio Windows compila na hora: ~1 milhao de linhas em poucos segundos
-   (antes, varios minutos por milhao). A janela mostra "N linhas..." a
-   cada milhao e, no fim, "gravado web\perfil-eleitor.js".
-   So DEPOIS dessa mensagem clique de novo na tela no gerenciador.
-   O zip baixado fica na pasta importar: rodar de novo nao baixa de novo.
-
- NOVO NA 3.15 - BLOCO JORNALISMO NO GERENCIADOR
-   Gerenciador > JORNALISMO (bloco dourado), pedidos da redacao:
-     10 deputadas mais votadas .. (saiu do bloco Camara e veio para ca)
-     10 senadoras mais votadas .. candidatas ao Senado com mais votos no
-                                  Brasil, com a marca ELEITA.
-     Perfil do eleitorado ....... QUEM PODE VOTAR: idade, sexo,
-                                  escolaridade e cor/raca (% dos eleitores).
-     Quem foi as urnas .......... % que COMPARECEU em cada grupo (idade,
-                                  sexo, escolaridade, cor/raca); a linha
-                                  amarela e a media do Brasil.
-
-   DEPUTADAS E SENADORAS: genero vem do arquivo "Candidatos" do TSE.
-     Rode de novo o IMPORTAR-CANDIDATOS.bat (a 3.15 le tambem o Senado;
-     a importacao antiga nao tinha as senadoras - a tela avisa).
-
-   PERFIL DO ELEITOR: IMPORTAR-PERFIL-ELEITOR.bat (novo). Le dois arquivos
-   do TSE (Dados Abertos) e grava web\perfil-eleitor.js:
-     perfil_eleitorado_2026.zip ........... ja publicado (quem pode votar)
-     perfil_comparecimento_abstencao_2026.zip  o TSE publica DEPOIS da
-                                            eleicao (quem foi as urnas):
-                                            na noite a tela "Quem foi as
-                                            urnas" fica "aguardando"; rode
-                                            de novo nos dias seguintes.
-   Ele tenta baixar sozinho para a pasta importar; se nao conseguir, baixe
-   em dadosabertos.tse.jus.br e ponha na pasta importar. Arquivo grande:
-   a leitura leva alguns minutos (a janela mostra o andamento).
-   A janela diz se o arquivo traz cor/raca. Cor/raca e AUTODECLARADA e boa
-   parte do eleitorado nao informou: a tela mostra o % entre quem declarou
-   e quantos declararam.
-   CLASSE SOCIAL / RENDA: o TSE NAO coleta. Nao existe na base do TSE -
-   so em pesquisas (Datafolha, Quaest etc.) ou IBGE, com a fonte delas.
-
- NOVO NA 3.14 - AS 10 DEPUTADAS MAIS VOTADAS
-   Gerenciador > CAMARA > "10 deputadas mais votadas": as mulheres eleitas
-   para a Camara com mais votos no Brasil (foto, partido, estado, votos) e
-   quantas mulheres foram eleitas no total.
-   Eleitas = eleitos do boletim do TSE (ESTADOS.bat); genero = arquivo
-   "Candidatos 2026" do TSE (o boletim de resultados NAO traz o genero).
-   Por isso esta tela, a "Bancada feminina" e o "Perfil da nova Camara"
-   ficam VAZIAS ate rodar o IMPORTAR-CANDIDATOS.bat.
-   IMPORTAR-CANDIDATOS.bat agora BAIXA SOZINHO do TSE o
-   consulta_cand_2026.zip e o consulta_cand_2022.zip (para a pasta
-   importar). Se o download falhar, a janela avisa: baixe na mao em
-   dadosabertos.tse.jus.br > Candidatos e ponha na pasta importar.
-   Depois de importar, clique de novo na tela no gerenciador.
-   No ENSAIO essas telas ficam vazias (o ensaio nao usa o arquivo real).
-
- NOVO NA 3.13 - MAIS 10 GRAFICOS E COMPARATIVOS (2022 x 2026)
-   Todos com dado do TSE. Onde o grafico usa 2022 e o TSE nao entregou,
-   a tela diz "aguardando ..." em vez de inventar.
-   No gerenciador:
-   PRESIDENTE
-     De onde veio a vantagem ... saldo de votos que cada estado deu a cada
-                                 candidato, por regiao, exterior e Brasil.
-     Mudou de lado desde 2022 .. mapa: partido que lidera o estado no 2o
-                                 turno de 2026 x o que venceu em 2022
-                                 (hachurado = mudou). So no 2o turno.
-     Intensidade da vitoria .... mapa pela margem (ate 5, 5 a 15, 15 a 30,
-                                 mais de 30 pontos) e onde cada um foi
-                                 mais forte.
-     Concentracao do voto ...... em quantos estados cada candidato teve
-                                 70%+, 60-70%, 50-60%, abaixo de 50%.
-   COMPARATIVOS
-     Abstencao 2022 x 2026 ..... por estado, 2o turno x 2o turno.
-     Brancos e nulos 1o x 2o ... por estado, 1o turno x 2o turno de 2026.
-     Exterior: a caixa do total do exterior ganha a linha de 2022.
-   CAMARA
-     10 eleitos com menos votos  deputados federais eleitos com a menor
-                                 votacao nominal (sistema proporcional).
-   GOVERNADOR E SENADO
-     Governadores 2022 x 2026 .. eleitos por partido nas duas eleicoes,
-                                 saldo e estados que trocaram de partido.
-     Senado: votos por partido . soma dos votos para o Senado nos 27
-                                 estados e eleitos de cada partido.
-
-   DADOS DE 2022 NO TSE (a mesma base publica, ainda no ar):
-     Presidente 2022 ... eleicao 544 (1o turno) e 545 (2o turno) - ja
-                         conferidos (config\config.validacao-2022.yaml).
-     Governador 2022 ... 546 (1o turno) e 547 (2o turno). Se o TSE usar
-                         outro numero, acrescentar em config-graficos.json:
-                           "comparar_2022": { "eleicao_estaduais": "546",
-                                              "eleicao_estaduais_2turno": "547" }
-     Rode GUARDAR-DADOS-TSE.bat: a janela informa
-       "2022 Presidente 2o turno (eleicao 545): N de 29"
-       "2022 Governador (eleicoes 546/547): 1o turno N de 27 | 2o turno M"
-     e guarda uma copia local (vale se o TSE tirar do ar).
-     Referencia 2o turno 2022 (TSE): Lula 60.345.999 (50,90%) x
-     Bolsonaro 58.206.354 (49,10%).
-
- NOVO NA 3.12 - CAPITAIS, EXTERIOR, iPAD, TECLADO E ARQUIVO HISTORICO
-   PRESIDENTE NAS CAPITAIS: as 27 capitais, quem lidera e por quanto,
-     urnas de cada uma e, no 2o turno, "VIROU" (outro liderava no 1o turno);
-     no alto, em quantas capitais cada candidato lidera. Boletim de cada
-     capital (municipio do TSE), lido pelo GRAFICOS.bat a cada 2 ciclos.
-   BRASILEIROS NO EXTERIOR: total do exterior (boletim ZZ do TSE: %, votos,
-     comparecimento, abstencao; no 2o turno, o 1o turno ao lado) e os paises
-     com mais votos, quem venceu em cada um e "vence em N paises".
-     "Exterior: por cidade" mostra as cidades com mais votos.
-     ATENCAO: o TSE publica o exterior por CIDADE. O pais de cada cidade vem
-     da tabela web\exterior-paises.js (geografia, da emissora - os votos
-     sao so do TSE). Cidade fora da tabela entra em "OUTROS PAISES" e aparece
-     na index.html ("cidades do exterior sem pais"): acrescente na tabela.
-     As cidades do exterior sao lidas 30 por ciclo, em rodizio.
-     Lista de municipios: {eleicao}/config/mun-e{eleicao}-cm.json (TSE).
-     Rode o GUARDAR-DADOS-TSE.bat: o relatorio dele diz "capitais 27/27 |
-     cidades do exterior N" - confirma que o TSE publica no formato esperado.
-   TELA "AGUARDANDO O TSE" AUTOMATICA: tela no ar sem o dado dela (antes
-     das 17h, coleta recem-aberta) mostra o nome da tela e "AGUARDANDO O
-     TSE" em vez de numeros zerados; troca sozinha quando o dado chega.
-   ATALHOS DE TECLADO no gerenciador (tecla ? mostra): H/V/B escolhe a
-     saida (B = as duas), 1-9 = favoritos, A = apresentacao automatica,
-     P = previa liga/desliga, ESPACO = CORTAR, setas = anterior/proximo,
-     E = presidente eleito nas duas (pede confirmacao).
-   CONTROLE PELO iPAD (apresentador no estudio):
-     1. LIBERAR-IPAD.bat uma vez (pede administrador): libera a porta para
-        a rede interna e o firewall (so redes privada/dominio - se o Wi-Fi
-        da emissora estiver como "Publica" no Windows, mude para Privada).
-     2. config-graficos.json: "acesso_rede": true, "senha_controle": "1234"
-        (sua senha, 4+ caracteres). Reabra o GERENCIADOR.bat: a janela mostra
-        o endereco (http://IP-DO-PC:8098/controle.html).
-     3. No iPad (mesmo Wi-Fi): abra o endereco, digite a senha (fica
-        lembrada 30 dias). Botoes grandes: saida H, V ou AS DUAS; presidente
-        eleito, favoritos, rodizios, Presidente/Governador/Deputados/
-        Assembleia por estado e todas as telas.
-     No gerenciador, botao "iPAD": "vai DIRETO ao ar" ou "so SUGERE" (o
-     pedido do iPad cai na PREVIA do operador, com aviso e som, e so vai ao
-     ar no CORTAR). Pela rede o iPad so troca telas: copia, girar, eleito
-     automatico etc. ficam so no PC. Sem senha no config, o iPad nao liga.
-   ARQUIVO HISTORICO 2026: ARQUIVO-HISTORICO-2026.bat DEPOIS do resultado
-     final do 2o turno: guarda o 1o e o 2o turno completos do TSE (Brasil,
-     estados, capitais, exterior, governadores, Camara, Assembleias, 2022,
-     fotos), a evolucao minuto a minuto, logs e os dados das telas num .zip
-     em "arquivo-historico" - base para 2028 e 2030. Guarde fora do PC.
-   GUARDAR-DADOS-TSE agora guarda tambem capitais e exterior do 1o turno.
-     A copia local NUNCA e usada para o 2o turno (sempre ao vivo).
-
- NOVO NA 3.11 - COPIA LOCAL DO TSE E TELAS NACIONAIS
-   GUARDAR-DADOS-TSE.bat (rode agora e de novo no sabado 24/10): guarda em
-     "tse-local" os boletins do 1o TURNO que o 2o turno usa (Presidente
-     Brasil e 27 estados; Governador, Senador, Deputado Federal e Estadual/
-     Distrital dos 27 estados), os de 2022 das comparacoes e a lista de
-     eleicoes; e em web\fotos-tse as fotos do Presidente (1o turno), dos
-     governadores e senadores eleitos (e dos que vao ao 2o turno) e dos
-     deputados federais eleitos. Arquivos do proprio TSE, sem alteracao.
-     Sem fotos: GUARDAR-DADOS-TSE.bat semfotos. Relatorio no
-     GUARDAR-DADOS-TSE.txt.
-   No dia: boletim do 1o turno/2022 que o TSE nao entregar (fora do ar, 404,
-     erro) sai da copia local, sozinho - o painel mostra em amarelo "usando
-     a COPIA LOCAL" e o log diz qual. Quando o TSE volta, volta ao TSE. O 2o
-     turno e SEMPRE ao vivo: se ele parar, o alarme "SEM RESPOSTA DO TSE"
-     continua valendo. Fotos guardadas sao usadas no lugar das do TSE.
-     A COPIA-DE-SEGURANCA leva a pasta tse-local junto.
-   ASSEMBLEIAS - BRASIL (menu ASSEMBLEIAS LEGISLATIVAS): soma nacional por
-     partido (ex.: quantos deputados estaduais o PL elegeu no Brasil todo).
-     Botao "todos os estados + BRASIL no fim": estado por estado (8 s) e o
-     resumo nacional no fim.
-   10 DEPUTADOS FEDERAIS MAIS VOTADOS (bloco CAMARA): Brasil todo, com
-     foto, partido, estado e votos (entre os eleitos marcados pelo TSE).
-   GIRO DO GOVERNADOR: tirado o "VAO AO 2o TURNO". Antes de 25/10 mostra o
-     placar do 1o turno (selo "1o TURNO"); com o config do 2o turno, a
-     apuracao do 2o turno ao vivo, ate "ELEITO NO 2o TURNO".
-
- NOVO NA 3.10 - PRESIDENTE ELEITO NO AR SOZINHO E VIGIA DA NOITE
-   PRESIDENTE ELEITO: quando o TSE declara o eleito no boletim, o
-     gerenciador (a janela preta, mesmo com a pagina fechada) poe a tela
-     "Presidente eleito" no ar nas DUAS saidas e o painel mostra um aviso
-     verde com som. Uma vez por eleicao. Botoes no alto do painel:
-     "no ar automatico: LIGADO/DESLIGADO" e "colocar no ar agora (H e V)".
-     Seguranca: se o programa for aberto com o eleito JA declarado (dia
-     seguinte, reinicio), so avisa - nao tira nada do ar sozinho.
-     config-graficos.json (opcional): "presidente_eleito_no_ar": false
-     comeca desligado.
-   AVISOS NO PAINEL (canto direito) e "OCORRENCIAS DA NOITE": viradas na
-     lideranca de Presidente (Brasil e estados), coleta parada, TSE sem
-     resposta, eleito. Com SOM (clique em "ligar o som" ao abrir o painel;
-     "silenciar 5 min"). Enquanto houver aviso vermelho na faixa de status,
-     bipa a cada 8 s e a borda da pagina pisca.
-   REABRIR SOZINHO: se a janela do GRAFICOS.bat ou do ESTADOS.bat for
-     fechada, o gerenciador percebe (arquivo parado) e abre de novo. Se a
-     janela estiver aberta mas parada (clique nela = modo Selecionar),
-     avisa para apertar ESC. Desligar: "reabrir_coletas": false no config.
-   RELATORIO DA NOITE (link no painel; Ctrl+P): 1o boletim, 50%, 90%,
-     100%, eleito declarado e se foi ao ar pelo sistema, trocas de tela,
-     tempo de coleta parada, quedas do TSE, viradas, telas mais exibidas e
-     copias de seguranca. Registros em logs\no-ar-AAAA-MM-DD.csv e
-     logs\ocorrencias-AAAA-MM-DD.csv (abrem no Excel).
-   GOVERNADOR | ESTADO OU REGIAO (painel): giro so do Governador. Estado =
-     governador daquele estado, fixo; regiao = troca sozinha entre os
-     estados dela. Botoes VERDES = governador ja eleito; BRANCOS = disputa
-     o 2o turno. Tela: foto grande, "GOVERNADOR ELEITO NO 1o/2o TURNO", %,
-     votos e o 2o colocado; sem eleito ainda, os dois com barra.
-   ASSEMBLEIAS LEGISLATIVAS | ESTADO (painel, bloco Camara): bancadas por
-     partido de cada estado (deputados estaduais; no DF, distritais), no
-     desenho da Camara. O ESTADOS.bat le o cargo 7 (DF: 8) do mesmo pleito
-     da Camara. Botao tracejado = estado sem eleitos ainda (motivo ao passar
-     o mouse). No rodizio: "assembleia:pr"; governador: "gov:pr".
-   2o TURNO: 2022 x 2026 (Comparativos): % de cada partido no 2o turno de
-     2022 e agora, Brasil e 27 estados. O ESTADOS.bat le o 2o turno de 2022
-     que o TSE mantem publicado (eleicao 545; outro codigo:
-     "comparar_2022": { "eleicao_2turno": "..." } no config). Compara o
-     partido, nao o candidato. So no modo 2o turno.
-   CHECKLIST: campos das funcoes da equipe, maquina reserva, eleito e
-     relatorio.
-   MAQUINA RESERVA: copie a pasta inteira (com o config) para um 2o PC. No
-     dia, deixe so GRAFICOS.bat e ESTADOS.bat abertos nele (coletando,
-     inclusive o minuto a minuto). Se o PC principal travar: GERENCIADOR.bat
-     na reserva e passe a DeckLink/OBS para ela.
-
- NOVO NA 3.9 - OPERACAO DO 2o TURNO (25/10)
-   CHECKLIST DO DIA (1 folha A4): web\checklist.html - link "checklist do
-     dia" no alto do gerenciador. Ctrl+P imprime.
-   CODIGOS-2-TURNO.bat: le a lista de eleicoes do PROPRIO TSE
-     (comum/config/ele-c.json, o mesmo das tarjas) e mostra os codigos de
-     Presidente e Governador do pleito de 25/10/2026. Responda S para
-     gravar no config: troca so eleicao_presidente e eleicao_estaduais; os
-     *_1turno e eleicao_camara ficam. Guarda o anterior em
-     config-graficos.ANTES-2T.json. Sem o pleito publicado, NAO grava.
-   COPIA DE SEGURANCA: botao "copia de seguranca" no alto do gerenciador
-     ou COPIA-DE-SEGURANCA.bat. Zip da pasta inteira (config, dados lidos,
-     evolucao minuto a minuto, logs) em "copias-de-seguranca", com data e
-     hora no nome. Pode rodar com tudo aberto.
-   EVOLUCAO GRAVANDO: a janela do GRAFICOS.bat escreve "GRAVANDO EVOLUCAO:
-     N pontos" a cada ciclo; o gerenciador mostra o mesmo na faixa de
-     status. Vermelho "EVOLUCAO PAROU" = apuracao andando e nenhum ponto
-     novo ha 5 minutos.
-   PREVIA ANTES DO AR (gerenciador, em cada saida): botao "previa antes do
-     ar". Ligado, o clique numa tela so PREPARA: ela aparece ao lado do NO
-     AR (borda verde) e vai ao ar no "CORTAR". Desligado, como sempre (vai
-     direto). Setas do giro/resumo/deputados continuam diretas.
-   ENSAIO GERAL (ENSAIO.bat): treino da equipe com uma noite de 2o turno
-     SIMULADA - nomes e numeros FICTICIOS ("CANDIDATO A", "GOVERNADOR B
-     (SP)"), 0 a 100% em 20 min (ENSAIO.bat 40 = 40 min), virada no meio e
-     ELEITO no fim. Copia o sistema para a pasta "ensaio", liga um TSE
-     simulado local (porta 8799), as duas coletas e o gerenciador do ensaio
-     na porta 8096. O OBS usa a 8098: nada do ensaio chega na DeckLink. Toda
-     tela sai riscada "ENSAIO - DADOS FICTICIOS - NAO VAI AO AR". ENTER na
-     janela do ensaio fecha tudo o que ele abriu.
-   TELAS NOVAS (horizontal e vertical; so dados do TSE)
-   - Estados decisivos ........ os 6 maiores eleitorados (aptos do proprio
-     boletim do TSE) lado a lado: placar do 2o turno, urnas, % do
-     eleitorado do Brasil, quem liderou no 1o turno e "VIROU".
-   - Governador x Presidente .. em cada estado: partido do governador
-     eleito e o candidato a presidente mais votado. "MESMO PARTIDO" so
-     quando as siglas sao iguais (nao indica apoio - o TSE nao traz isso).
-   - Perfil da nova Camara .... dos 513 eleitos (boletim ao vivo): reeleitos
-     x novos no mandato, idade na posse, escolaridade e cor/raca; traco
-     branco = eleitos do ano anterior. Precisa do IMPORTAR-CANDIDATOS.bat
-     (consulta_cand_2026 e _2022, Dados Abertos do TSE) - o mesmo da
-     bancada feminina; rode de novo se ja tinha importado antes da 3.9.
-   - Presidente (Brasil): no 2o turno, so as 2 linhas (sem linhas vazias).
-
- NOVO NA 3.8 - ANALISE DO 2o TURNO E OPERACAO
-   GERENCIADOR
-   - FAVORITOS no topo: 8 telas mais usadas (apresentacao-config.js,
-     "favoritos").
-   - RODIZIOS PRONTOS no bloco AUTOMATICO: "Abertura (17h)", "Apuracao",
-     "Fechamento". Um clique poe a Apresentacao no ar com aquelas telas
-     (fica verde o que esta no ar). Editar: apresentacao-config.js,
-     "rodizios_prontos" (telas e segundos de cada).
-   TELAS NOVAS (horizontal e vertical; so numeros do TSE)
-   - Ainda da para virar? ...... Brasil e 27 estados: vantagem do 1o x
-     eleitores em secoes ainda nao totalizadas (TSE: esnt). DECIDIDO =
-     nem todos os que faltam virariam; senao, "precisa X%" = o minimo dos
-     votos que faltam que o 2o colocado teria de ter. Do mais viravel ao
-     menos.
-   - Governadores - 2o turno .... os estados do 2o turno numa tela: os
-     dois, foto, %, barra e ELEITO quando o TSE declarar.
-   - Estados que viraram ........ Presidente: estados em que quem lidera
-     no 2o turno nao e quem liderava no 1o (contorno branco no mapa).
-   - Disputa mais apertada ...... os 10 estados com menor diferenca.
-   - Ganho de votos 1o -> 2o .... Brasil e regioes. So aparece com 100%
-     das urnas do 2o turno (antes disso a conta parece perda).
-   - Abstencao 1o x 2o por estado mapa de onde subiu/caiu e os maiores.
-   Viradas, ganho e abstencao precisam do 1o turno guardado (modo 2o
-   turno do config). Hoje mostram "disponivel no 2o turno".
-
- NOVO NA 3.7
-   - Tela "Senadores eleitos (foto + partido)": os 2 eleitos de cada
-     estado com foto, nome e partido; mapa em blocos (dividido na
-     diagonal quando sao 2 partidos) e quantos eleitos por partido.
-     Vaga ainda nao definida: "APURANDO"/"AGUARDANDO" e meio bloco vazio.
-     Dados: boletim de Senador do TSE (ESTADOS.bat). Gerenciador: bloco
-     GOVERNADOR E SENADO.
-   - Senadores em DUAS telas, com cartoes e fotos maiores: "Senadores 1/2
-     (AC a PA)" e "Senadores 2/2 (PB a TO)"; a contagem por partido nas
-     duas e a do Brasil inteiro.
-     No ar o titulo e so "SENADORES" e cada cartao traz o nome do estado
-     por extenso (o "1/2" e "2/2" so aparece no gerenciador).
-
- NOVO NA 3.6
-   - Gerenciador: bloco "DEPUTADOS FEDERAIS | ESTADO OU REGIAO" (igual ao
-     de Presidente). So os 5 mais votados de cada estado.
-
- NOVO NA 3.5
-   - Tela "Camara: bancada feminina" (ver BANCADA FEMININA abaixo).
-
- NOVO NA 3.4
-   - Governadores: barrinha com o nome do eleito embaixo de cada foto
-     ("2o TURNO" em quem aguarda).
-   - Deputados federais: no gerenciador, escolha o estado e passe as telas
-     pelas setas, sem troca automatica (ver DEPUTADOS abaixo).
-
- NOVO NA 3.3 - 2o TURNO E TELAS NO ESTILO TELAO (ver abaixo)
-   - Apuracao por regiao e estado, Presidente + mapa (1o e 2o turno),
-     Presidente | Regioes, Presidente | estado ou regiao, Governadores
-     (foto + mapa), 1o x 2o turno (abstencao, brancos, nulos).
-   - Gerenciador com menu por assunto e menu de regioes e estados.
-   - No 2o turno o 1o turno continua na tela (governadores eleitos,
-     senadores, mapa do 1o turno, comparativos).
-
- NOVO NA 3.2
-   - Tela "Deputados federais eleitos" (ver abaixo).
-
- NOVO NA 3.0
-   - Evolucao minuto a minuto com os numeros REAIS do 1o turno: o
-     IMPORTAR-EVOLUCAO.bat le o log das tarjas ou, sem ele, o log deste
-     proprio exibidor (ver abaixo).
-   - Selo "100% DAS URNAS" (verde) quando todas as secoes foram apuradas
-     mas o TSE ainda nao marcou a totalizacao como final.
-   - Camara dos Deputados por partido (eleitos marcados pelo TSE).
-   - Revisao geral: todas as telas, horizontal e vertical, conferidas.
-
-   Nao instala nada. Nao precisa de internet alem do TSE (o mapa e os
-   graficos estao dentro da pasta).
+ RESUMO EM 1 MINUTO
+   1. Dois cliques em GERENCIADOR.bat. Ele abre TUDO sozinho (lista abaixo).
+   2. Use as DUAS janelas do gerenciador: HORIZONTAL (esquerda) e VERTICAL
+      (direita). Cada uma comanda a sua saida da DeckLink.
+   3. No alto de cada janela, o bloco "2o TURNO - AO VIVO" tem os numeros
+      (Presidente e governadores) e as telas da noite. Clique = vai ao ar.
+   4. Nao feche nenhuma janela preta ate o fim da noite.
+   So vai ao ar numero do TSE. Tela sem dado nao aparece no painel.
 
 ---------------------------------------------------------------------------
- COMO USAR
+ 1. O QUE O GERENCIADOR.bat ABRE SOZINHO
 ---------------------------------------------------------------------------
-
- 1. Copie a pasta GCTSE-GRAFICOS para o outro computador. Ex.: D:\GRAFICOS
-
- 2. Duplo clique em GRAFICOS.bat e deixe a janela ABERTA.
-    (No dia da eleicao, perto das 16h45 - o TSE so publica depois das 17h.)
-
- 3. Duplo clique em ABRIR-GRAFICOS.bat. Abre a pagina do operador, com a
-    situacao da coleta no alto e a previa de todos os graficos.
-
- 4. Para cada grafico:
-      - Chrome em tela cheia: clique em "Abrir" e aperte F11
-      - no switcher (vMix/OBS): fonte de NAVEGADOR apontando para o
-        caminho que aparece embaixo de cada previa, no tamanho indicado
-        (1280x720 ou 540x960)
-      - imagem para redes: com o grafico aberto, aperte P (ou o botao
-        "Salvar PNG", que aparece ao mexer o mouse). Sai em 1920x1080 ou
-        1080x1920, na pasta Downloads.
-
-    Os graficos se atualizam sozinhos a cada 3 segundos.
-
-    Para passar os graficos sozinhos a cada 15 s em tela cheia, veja
-    APRESENTACAO abaixo. O botao so
-    aparece com o mouse em cima: a captura no ar sai limpa.
+   - GRAFICOS.bat ..... coleta do Presidente (Brasil, 27 estados, exterior,
+                        capitais), 2o turno ao vivo + 1o turno guardado
+   - ESTADOS.bat ...... coleta do Governador (2o turno so nos estados que
+                        tem) + 1o turno, Senado e Camara do 1o turno
+   - os 2 OBS ......... saida HORIZONTAL e VERTICAL da DeckLink
+                        (passo a passo da 1a vez: OBS-DECKLINK.txt)
+   - as 2 janelas do gerenciador, lado a lado (Edge/Chrome)
+   - os DADOS DO TSE que ainda nao existem nesta maquina (copia local do
+     TSE, candidatos, perfil do eleitor), numa janela minimizada
+   - confere sozinho os CODIGOS do 2o turno com a lista do TSE (a cada
+     30 min) - selo "Codigos 2o turno" no alto do painel
+   Se GRAFICOS.bat ou ESTADOS.bat fecharem, o gerenciador REABRE sozinho e
+   avisa no painel.
 
 ---------------------------------------------------------------------------
- APRESENTACAO - TROCA AUTOMATICA A CADA 15 SEGUNDOS
+ 2. O PAINEL (cada janela do gerenciador)
 ---------------------------------------------------------------------------
-
-   Um duplo clique por maquina:
-
-   APRESENTACAO-HORIZONTAL.bat  -> tela cheia 1920x1080, passa pelas
-                                   telas horizontais do rodizio
-   APRESENTACAO-VERTICAL.bat    -> tela cheia 1080x1920, passa pelas
-                                   telas verticais do rodizio
-   (rodizio = o escolhido no GERENCIADOR; sem escolha, o do
-   web\apresentacao-config.js)
-
-   Abrem no Chrome (ou no Edge, se nao tiver Chrome) em tela cheia, sem
-   barra nem mouse. Os numeros continuam se atualizando sozinhos durante
-   a apresentacao, sem esperar a troca.
-
-   - Se a coleta (GRAFICOS.bat) nao estiver rodando NESTA maquina, o
-     atalho abre ela tambem. Cada computador precisa da sua coleta.
-   - Fica uma janela preta "gctse APRESENTACAO ... deixe esta janela
-     aberta": ela VIGIA a apresentacao. Se o navegador fechar ou cair,
-     reabre sozinho em 10 s. A cada minuto ela escreve o que os monitores
-     estao recebendo, ex.: "dados OFICIAL ok (ha 5 s) - Brasil: 13
-     candidatos, urnas 0%". Vermelho ali = olhe a janela do GRAFICOS.bat.
-   - A apresentacao e sempre do OFICIAL (este pacote nem tem mais o
-     modo de teste: nada nele mostra "SIMULADO" ou "NAO OFICIAL").
-   - Para encerrar DE VEZ: Alt+F4 na apresentacao e, na janela preta,
-     aperte S (antes de 10 s). Ou feche a janela preta primeiro.
-
-   Teclas:  seta direita / esquerda .. proximo / anterior
-            espaco ................... pausa / continua
-            Alt+F4 ................... fecha (reabre em 10 s - ver acima)
-
-   MONITOR VERTICAL
-     - Windows em "Retrato" (Configuracoes > Sistema > Tela > Orientacao):
-       a tela fica 1080x1920 e nao precisa mudar nada.
-     - Monitor virado, mas o Windows ainda em "Paisagem": em
-       web\apresentacao-config.js coloque  girar_vertical: 90
-       (ou -90 se a imagem ficar de cabeca para baixo).
-
-   MAIS DE UM MONITOR NO MESMO COMPUTADOR
-     Edite o .bat (Bloco de Notas) e mude MONITOR_X / MONITOR_Y para um
-     ponto dentro do monitor desejado. Ex.: monitor a direita de um
-     1920x1080 principal = MONITOR_X=1920, MONITOR_Y=0.
-
-   AJUSTES (web\apresentacao-config.js, Bloco de Notas)
-     tempo_segundos ...... tempo de cada grafico (padrao 15)
-     horizontal/vertical . ordem dos graficos; apague a linha para tirar
-     transicao_segundos .. fusao entre graficos (0 = corte seco)
-     barra_progresso ..... true = barrinha do tempo embaixo
-   Depois de salvar, feche (Alt+F4) e abra de novo o .bat.
-
-   Antes do dia, rode o PREPARAR-WINDOWS.bat em cada maquina (ver abaixo).
-
-   No switcher (vMix/OBS) tambem da para usar a apresentacao como fonte
-   de navegador: web\apresentacao-horizontal.html (1920x1080) ou
-   web\apresentacao-vertical.html (1080x1920).
+   BARRA DO ALTO (fixa)
+     selos: Codigos do 2o turno | Presidente | Estados | Evolucao | OBS.
+       Verde = ok. Vermelho = olhar (o texto diz o que fazer).
+     PRESIDENTE ELEITO: no ar automatico (ligado) / colocar no ar agora.
+     SOM, atalhos de teclado (?), copia de seguranca, tema escuro,
+     "abrir a VERTICAL/HORIZONTAL", "dados do TSE".
+     "N telas sem dado escondidas - mostrar".
+   ESQUERDA (fixa): o que esta NO AR (e a PREVIA, se ligada). Embaixo,
+     os controles do giro / deputados quando estao no ar.
+   DIREITA:
+     * 2o TURNO - AO VIVO
+        numeros do Presidente: urnas, os dois candidatos (% e votos),
+          diferenca, "apurando"/"ELEITO";
+        governadores: quantos estados no 2o turno e quantos definidos;
+        PRESIDENTE: 2o turno, + mapa, evolucao, ainda da para virar,
+          estados que viraram, disputa mais apertada, estados decisivos,
+          regioes, de onde veio a vantagem, presidente eleito;
+        GOVERNADORES: placar do 2o turno, 1o x 2o turno, mapa,
+          governador x presidente; e um botao por estado com 2o turno
+          (lider, %, urnas, VIROU / ELEITO) - clique = governador daquele
+          estado no ar;
+        COMPARATIVOS 1o x 2o: ganho de votos, abstencao e brancos/nulos
+          por estado, 1o x 2o, presidente + mapa do 1o turno, apuracao.
+     * FAVORITOS (teclas 1-9) e AUTOMATICO (rodizios prontos: Abertura,
+       Apuracao, Fechamento; "escolher as telas do rodizio").
+     PRESIDENTE | ESTADO OU REGIAO e GOVERNADOR | ESTADO OU REGIAO.
+     OUTRAS TELAS (recolhido): 1o turno, Camara, Senado, Assembleias,
+       2022, Jornalismo. Clique no titulo para abrir.
+   PREVIA: "previa antes do ar" ligada = o clique so prepara; vai ao ar
+     no CORTAR (ou ESPACO/ENTER).
+   TECLADO: 1-9 favoritos, A automatico, P previa, ESPACO corta, setas
+     anterior/proximo, E presidente eleito, ? ajuda.
+   TELA SEM DADO: o botao some e o rodizio pula (ex.: "Quem foi as urnas"
+     ate o TSE publicar). "mostrar" deixa ver mesmo assim.
 
 ---------------------------------------------------------------------------
- GERENCIADOR - SAIDAS SDI DA DECKLINK (operador escolhe o que vai ao ar)
+ 3. ANTES DO DIA
 ---------------------------------------------------------------------------
-
-   GERENCIADOR.bat abre a tela de gerenciamento (navegador, monitor do
-   Windows) com duas colunas: SAIDA HORIZONTAL e SAIDA VERTICAL.
-   Clicou numa tela = vai NA HORA para aquela saida; previa ao vivo;
-   controles do giro (27 siglas) e do resumo (7 telas).
-   "escolher as telas do rodizio" (em cada saida): marca quais telas
-   entram na Apresentacao automatica - graficos do Presidente, telas do
-   Resumo e Governador + Senador de qualquer estado - e quantos segundos
-   cada uma fica. "voltar ao padrao" = lista do apresentacao-config.js.
-   Fotos dos candidatos a Governador e Senador (giro e Resumo, tela do
-   estado) vem direto do TSE, como no Presidente (so no pacote COM-FOTOS).
-   Cada saida chega a DeckLink por um OBS de "ponte" que o proprio
-   GERENCIADOR.bat monta e abre, a partir do OBS instalado (nada de
-   extrair ou criar pasta). Na mao, so UMA vez em cada OBS: escolher o
-   canal da DeckLink. Passo a passo: OBS-DECKLINK.txt (ABRIR-OBS.bat
-   reabre um OBS fechado; ENDERECOS-OBS.bat = plano B na mao).
+   - PREPARAR-WINDOWS.bat (1 vez): tela sempre ligada, sem suspender, sem
+     notificacao por cima.
+   - OBS: OBS-DECKLINK.txt (1 vez por maquina).
+   - Painel > "dados do TSE" > ATUALIZAR TUDO (ou ATUALIZAR-DADOS.bat):
+     copia local do TSE (1o turno, 2022, fotos), candidatos (genero,
+     reeleitos), perfil do eleitor. De novo no SABADO 24/10.
+   - Selo "Codigos 2o turno: OK (6258/6260)". Se vermelho: clique nele (ou
+     CODIGOS-2-TURNO.bat) e responda S.
+   - ENSAIO.bat com a equipe: noite simulada, dados FICTICIOS riscados
+     "ENSAIO", gerenciador na porta 8096 (nada chega ao OBS do ar).
+   - Copia de seguranca (botao "copia" ou COPIA-DE-SEGURANCA.bat): o .zip
+     num pendrive / outra maquina.
+   - Maquina reserva: a mesma pasta e config, coletando junto.
 
 ---------------------------------------------------------------------------
- ARTE DA TV (2.17)
+ 4. NO DIA (25/10)
 ---------------------------------------------------------------------------
-
-   Fundo e logo ELEICOES 2026 em todas as artes: web\arte\fundo-h.jpg
-   (1920x1080), fundo-v.jpg (1080x1920) e logo.png. Para trocar, substitua
-   o arquivo com o MESMO nome. Cores de partido: PT vermelho, PL azul
-   (graficos.js, CORES_PARTIDO); config-graficos.json "cores" manda mais.
-   O pacote NAO traz web\dados.js nem web\estados.js: quem grava sao o
-   GRAFICOS.bat e o ESTADOS.bat (extrair o zip nao apaga o dado do dia).
-
----------------------------------------------------------------------------
- RESULTADO FINAL (2.16) - telas novas no gerenciador e no rodizio
----------------------------------------------------------------------------
-
-   Presidente - 2o turno ... so os dois do 2o turno (TSE), foto, % e votos
-   Senado: atual x 2027 .... hemiciclo de 81 cadeiras + tabela por partido.
-                             Numeros em web\senado-config.js (nao saem do
-                             boletim do TSE): confira; "fonte" = credito.
-   2018 x 2022 x 2026 ...... abstencao, brancos e nulos. 2026 ao vivo do
-                             TSE; 2018 (e 2022 sem o ESTADOS.bat) em
-                             web\comparativo-config.js.
+   16h30 GERENCIADOR.bat. Selos verdes (antes das 17h o normal e "TSE
+         ainda nao publicou"). Ligue o SOM. Rodizio "Abertura".
+   17h   primeiros boletins: "Presidente: OK", numeros no bloco 2o TURNO.
+         Rodizio "Apuracao" ou telas na mao.
+   Cada hora: copia de seguranca.
+   ELEITO: o TSE declara -> aviso verde + som e a tela "Presidente eleito"
+         vai ao ar nas DUAS saidas sozinha (se "no ar automatico" ligado).
+   Fim: rodizio "Fechamento". Depois ARQUIVO-HISTORICO-2026.bat, copia
+         final, relatorio da noite (link no painel) em PDF.
 
 ---------------------------------------------------------------------------
- EVOLUCAO MINUTO A MINUTO (2.20) - 1o x 2o colocado de Presidente
+ 5. SE ALGO SAIR DO LUGAR
 ---------------------------------------------------------------------------
-
-   Tela "Evolucao minuto a minuto (1o x 2o)" (horizontal e vertical, no
-   gerenciador e no rodizio): uma linha por candidato com o % dos votos
-   validos a cada atualizacao do TSE, hora embaixo (com % de urnas),
-   valores de inicio e do ultimo ponto, linha de 50% e marca de VIRADA
-   quando o 1o e o 2o trocam de posicao. Os dois candidatos sao o 1o e o
-   2o do boletim atual do TSE.
-
-   O TSE NAO publica o historico - so o ultimo boletim. Os pontos vem de:
-
-   a) 1o TURNO (04/10) - IMPORTAR-EVOLUCAO.bat
-      O sistema das tarjas escreveu no log, a cada mudanca, a linha que
-      foi ao ar ("NO ARQUIVO  PRESIDENTE BRASIL  urnas ...% | 1o ... | 2o
-      ..."). Sao os numeros do TSE naquela hora. Para usar:
-        1. No computador das TARJAS, pasta do gctse, pasta logs: copie
-           gctse-2026-10-04.log (e gctse-2026-10-05.log, se a apuracao
-           passou da meia-noite).
-        2. No computador dos GRAFICOS: arraste os arquivos (ou a pasta logs
-           inteira) sobre IMPORTAR-EVOLUCAO.bat. Ou ponha-os na pasta
-           "importar" ao lado do .bat e de dois cliques. Com dois cliques
-           ele procura tambem na Area de Trabalho, em Downloads e nas
-           pastas "logs" vizinhas (gctse no mesmo computador). Nome
-           trocado na copia ("gctse-2026-10-04 (1).log", .txt) serve.
-           Nao achou? a janela lista onde procurou.
-        3. A janela mostra quantos pontos entraram e o ultimo valor de
-           cada um. Confira com o resultado final. No fim ela confere se
-           a tela recebeu a linha ("PRONTO"). Se pedir, FECHE e ABRA o
-           GRAFICOS.bat (janela aberta antes de atualizar para a 3.0 fica
-           na versao velha e nao rele o historico).
-           Deu erro? tudo o que apareceu fica em IMPORTAR-EVOLUCAO.txt.
-      So entram as linhas PRESIDENTE BRASIL entre 16h30 do dia da eleicao
-      e 8h do dia seguinte (o dia sai do boletim do TSE; outro dia:
-      importar-evolucao.ps1 -Dia AAAA-MM-DD). Hora = a do computador das
-      tarjas; o rodape diz "gravados pelo sistema de tarjas no ar".
-      O arquivo anterior fica salvo como ...json.antes-da-importacao.
-
-      SEM LOG DAS TARJAS: o IMPORTAR-EVOLUCAO.bat usa o log deste
-      exibidor (logs\graficos-2026-10-04.log e -05.log, gravados pelo
-      GRAFICOS.bat a cada 20 s). Esse log guarda SO O 1o COLOCADO: a tela
-      mostra a linha dele a noite toda e o 2o so com o resultado final do
-      TSE (a legenda diz "so o resultado final"). Nada e completado por
-      estimativa. Nao precisa copiar nada: e so dar dois cliques.
-      Se na noite o GRAFICOS.bat rodou de OUTRA pasta (versao antiga em
-      Downloads, outro disco), o importador procura sozinho em todos os
-      discos (1 a 2 minutos) e mostra onde achou ("achei: ...").
-
-   b) 2o TURNO (ao vivo) - o proprio GRAFICOS.bat
-      Grava cada boletim novo do Brasil (hora do TSE) em
-      evolucao-<ciclo>-<eleicao>-oficial.json, na pasta do programa.
-        - abra antes das 17h e NAO feche ate o fim: so existe ponto de
-          quando ele estava aberto (fechou e abriu = o trecho vira reta);
-        - troque "eleicao_presidente" no config-graficos.json pelo codigo
-          do 2o turno publicado pelo TSE: o grafico comeca arquivo novo.
-      Para recomecar do zero: feche o GRAFICOS.bat e apague o arquivo.
+   Janela GRAFICOS/ESTADOS fechou ... o gerenciador reabre sozinho (ou
+                                      dois cliques no .bat).
+   Gerenciador "SEM CONEXAO" ....... abra o GERENCIADOR.bat de novo: as
+                                      saidas voltam no que estava no ar.
+   OBS "FECHADO" ................... ABRIR-OBS.bat. Plano B: ENDERECOS-OBS
+                                      .bat (enderecos para montar na mao).
+   "SEM RESPOSTA DO TSE" ........... nao mexa no config; a tela fica no
+                                      ultimo dado; confira a internet. O
+                                      1o turno sai da copia local.
+   Janela preta parada ............. clique nela pausa: aperte ESC.
+   AVISO DO TSE: 404 em excesso bloqueia o IP por 10 min. O sistema ja
+     espaca os pedidos (estados so depois do Brasil, governador so nos
+     estados com 2o turno). Nao rode outras ferramentas que fiquem pedindo
+     ao TSE na mesma rede.
 
 ---------------------------------------------------------------------------
- CAMARA DOS DEPUTADOS (2.19) - bancadas eleitas por partido
+ 6. ARQUIVOS .bat
 ---------------------------------------------------------------------------
-
-   Tela "Camara: bancadas 2027" (horizontal e vertical, no gerenciador e
-   no rodizio): hemiciclo de 513 cadeiras + tabela por partido.
-
-   De onde vem: o ESTADOS.bat le, a cada 3 ciclos, o boletim de DEPUTADO
-   FEDERAL (cargo 6) dos 27 estados e conta os candidatos que o PROPRIO TSE
-   marcou como eleitos ("Eleito por QP" / "Eleito por media"). Nada e
-   calculado: suplente e nao eleito nao entram. Enquanto faltar estado, o
-   subtitulo diz "X de 513 cadeiras definidas pelo TSE" e as cadeiras que
-   faltam ficam vazias no hemiciclo.
-
-   Partidos alem do 14o viram "OUTROS (n)" (cinza na tabela e no hemiciclo).
-
-   web\camara-config.js (opcional):
-     cores ........ cor de cada partido (PT vermelho, PL azul ja vem).
-     atual ........ composicao ATUAL da Camara por partido. NAO vem do
-                    boletim do TSE: so preencha com numeros oficiais da
-                    Camara e ponha a fonte em fonte_atual. Preenchido, a
-                    tabela vira ATUAL / 2027 / SALDO. Vazio = CADEIRAS / %.
-
-   Depois de atualizar: feche e abra o ESTADOS.bat (a Camara aparece no
-   1o ciclo; o log mostra "camara: 27/27 estados, N deputados ...").
+   GERENCIADOR.bat ........... abre tudo (o unico do dia a dia)
+   GRAFICOS.bat / ESTADOS.bat  coletas (o gerenciador abre e reabre)
+   ATUALIZAR-DADOS.bat ....... dados do TSE fora do boletim (= botao)
+     GUARDAR-DADOS-TSE.bat / IMPORTAR-CANDIDATOS.bat /
+     IMPORTAR-PERFIL-ELEITOR.bat: cada etapa sozinha (aceitam arquivo
+     arrastado, se o download automatico falhar)
+   CODIGOS-2-TURNO.bat ....... grava os codigos do 2o turno do TSE (pede S)
+   COPIA-DE-SEGURANCA.bat .... .zip da pasta inteira (= botao "copia")
+   ARQUIVO-HISTORICO-2026.bat  depois do resultado: 1o e 2o turno completos
+   ENSAIO.bat ................ noite simulada (porta 8096, dados ficticios)
+   ABRIR-OBS.bat / ENDERECOS-OBS.bat  OBS (reabrir / montar na mao)
+   PREPARAR-WINDOWS.bat ...... ajuste do Windows (1 vez)
 
 ---------------------------------------------------------------------------
- TELAS NOVAS (3.3) - todas com ELEITO no candidato eleito
+ 7. CONFIG (config-graficos.json, Bloco de Notas)
 ---------------------------------------------------------------------------
-
-   Apuracao: regioes e estados .. % de secoes totalizadas por regiao e por
-                                  estado, mapa pintado pela apuracao e o
-                                  Brasil no circulo.
-   Presidente + mapa ............ cartoes com foto, % e "na frente em N
-                                  estados"; mapa pela cor de quem lidera
-                                  (PT vermelho, PL azul). 1o turno: 3
-                                  cartoes; 2o turno: os 2.
-   Presidente + mapa - 1o turno . no 2o turno, o mapa FINAL do 1o turno.
-   Presidente | Regioes ......... 5 colunas: % apurado, mini-mapa da regiao
-                                  e os primeiros com foto, % e votos.
-   Presidente | estado/regiao ... escolhido no gerenciador (NORTE... ou a
-                                  sigla): mapa da area + lista com foto,
-                                  barra, votos e %. No rodizio tambem.
-   Governadores (1o verde, 2o azul) foto de cada estado: eleito no 1o turno
-                                  borda/mapa VERDE; eleito no 2o turno
-                                  AZUL; aguardando o 2o turno sem foto,
-                                  azul hachurado.
-   Governadores por partido ..... mesma grade; mapa pela cor do partido do
-                                  eleito, 2o turno hachurado.
-   1o x 2o turno ................ comparecimento, abstencao, brancos e nulos
-                                  do 1o (final) e do 2o turno (ao vivo), com a
-                                  diferenca em pontos. Aparece no 2o turno.
-   Evolucao minuto a minuto ..... no 2o turno grava sozinho desde o 1o
-                                  boletim do TSE, com marca de VIRADA.
-
-   SELETORES DE ESTADO (Governador) no gerenciador - giro, "Estado em
-   destaque" do Resumo e estados do rodizio: VERDE = governador eleito no
-   1o turno; CINZA = vai ao 2o turno (ou ainda apurando). No 2o turno os
-   estados do 2o turno continuam CINZA mesmo depois de definidos, para
-   nao errar na hora de escolher. Mouse em cima: nome do eleito / "2o
-   TURNO: fulano x beltrano".
-
-   GERENCIADOR: blocos por assunto (Presidente, Presidente | estado ou
-   regiao, Apuracao, Governador e Senado, Camara, Comparativos) e o menu
-   de regioes e siglas. No rodizio: "Presidente | Regiao" e "| Estado".
+   tse.eleicao_presidente / eleicao_estaduais ... 2o turno: 6258 / 6260
+   tse.eleicao_presidente_1turno / _estaduais_1turno ... 6257 / 6259
+   tse.eleicao_camara ........................... 6259
+   intervalo_segundos (20) / intervalo_estados_segundos (30)
+   porta_gerenciador (8098), obs_fps, girar_saida_vertical (90/-90/0)
+   cores: cor de cada candidato (numero ou sigla -> #rrggbb)
+   opcionais: "presidente_eleito_no_ar": false, "reabrir_coletas": false,
+     "atualizar_dados_ao_abrir": false,
+     "comparar_2022": { "eleicao_2turno": "545", "eleicao_estaduais": "546",
+                        "eleicao_estaduais_2turno": "547" }
+   web\apresentacao-config.js: rodizios prontos, favoritos, tempos.
 
 ---------------------------------------------------------------------------
- BANCADA FEMININA (3.5) - deputadas eleitas 2026 x 2022
+ 8. DE ONDE VEM CADA DADO
 ---------------------------------------------------------------------------
-
-   O boletim de resultados do TSE NAO traz o genero do candidato. Ele vem
-   do arquivo oficial "Candidatos" do Portal de Dados Abertos do TSE:
-     1. dadosabertos.tse.jus.br > Candidatos 2026 > baixe
-        consulta_cand_2026.zip  (e Candidatos 2022 > consulta_cand_2022.zip,
-        para a comparacao).
-     2. Ponha os .zip na pasta "importar" (ou deixe em Downloads).
-     3. Dois cliques em IMPORTAR-CANDIDATOS.bat (le o zip direto; ~1 min).
-     4. No gerenciador, clique de novo na tela "Camara: bancada feminina".
-   A tela mostra: deputadas eleitas em 2022 e 2026 (n e % das 513), a
-   diferenca, os partidos com mais mulheres eleitas, quantas mulheres
-   foram candidatas (candidaturas APTAS a Deputado Federal), a variacao
-   sobre 2022 e o % das candidaturas.
-   Eleitas de 2026 = eleitos do boletim de resultados (ESTADOS.bat) cujo
-   registro no arquivo de candidatos e FEMININO. 2022 = situacao do
-   proprio arquivo de 2022. Sem o arquivo: a tela avisa, sem numero.
-   Os numeros de candidaturas podem diferir de reportagens que contam
-   tambem as indeferidas/renuncias: aqui sao as APTAS (dito na tela).
-
----------------------------------------------------------------------------
- DEPUTADOS FEDERAIS ELEITOS (3.2) - foto, nome e votos, 5 por tela
----------------------------------------------------------------------------
-
-   Tela "Deputados federais eleitos" (horizontal e vertical, no
-   gerenciador e no rodizio). Cada tela mostra 5 eleitos de UM estado:
-   foto oficial do TSE, nome de urna, partido e numero, votos e a
-   situacao do TSE (ELEITO POR QP / POR MEDIA). Troca sozinha a cada 8 s.
-   Ordem: regiao (Norte, Nordeste, Centro-Oeste, Sudeste, Sul), estado em
-   ordem alfabetica dentro da regiao, e no estado do mais votado ao menos.
-   Com os 10 estados do pacote: 318 deputados em 68 telas (~9 minutos).
-
-   De onde vem: o ESTADOS.bat (boletim de deputado federal, so quem o TSE
-   marcou eleito). Depois de atualizar, FECHE e ABRA o ESTADOS.bat - antes
-   disso a tela diz "aguardando os eleitos do TSE".
-
-   web\deputados-config.js (Bloco de Notas):
-     estados ..... siglas dos estados (padrao: CE PR PE SP MG RN RJ SC PA RS)
-     por_tela .... candidatos por tela (ate 5)
-     segundos .... tempo de cada tela
-   Foto que o TSE nao tiver: aparecem as iniciais. Pacote SEM-FOTOS: so
-   iniciais.
-
-   SO OS 5 MAIS VOTADOS (3.6): cada estado tem UMA tela, com os 5 mais
-   votados (deputados-config.js, apenas_mais_votados: true; false = todos
-   os eleitos de 5 em 5, como antes).
-
-   GERENCIADOR, bloco "DEPUTADOS FEDERAIS | ESTADO OU REGIAO":
-     sigla (SP, BA...) .. tela FIXA com os 5 mais votados do estado.
-     regiao (NORTE...) .. passa pelos estados da regiao, 5 mais votados de
-                          cada, trocando a cada "segundos" (8).
-     setas .............. estado anterior / proximo (aparecem com a tela
-                          no ar).
-     "Deputados federais eleitos (troca automatica)", no bloco CAMARA:
-                          volta ao rodizio dos estados do deputados-config.js.
-   Trocar de estado com a tela ja no ar e instantaneo (sem recarregar).
-
-   ESTADO TRACEJADO no gerenciador = ainda sem eleitos na tela. Passe o
-   mouse: aparece o motivo (ex.: "TSE ainda nao publicou", "o TSE ainda
-   nao marcou eleitos"). O ESTADOS.bat tenta esse estado de novo A CADA
-   ciclo e escreve na janela "camara XX: motivo". Clicado, a tela mostra
-   "aguardando os eleitos do TSE" daquele estado. Na regiao, o estado que
-   falta e pulado ate chegar. Conferir: VER-ELEITO.bat, sigla do estado -
-   mostra o que o TSE manda de Deputado Federal e o que a tela recebeu. No rodizio, de a esta tela um tempo maior no gerenciador -
-   ela continua trocando dentro do proprio tempo e recomeca do 1o estado
-   cada vez que entra.
-
----------------------------------------------------------------------------
- VER-ELEITO.bat - estado eleito no site do TSE mas sem ELEITO na tela?
----------------------------------------------------------------------------
-
-   ELEITO aparece quando o TSE escreve (Eleito / Matematicamente eleito)
-   OU quando a conta com os numeros do TSE ja garante: Governador com mais
-   da metade dos votos mesmo se TODOS os eleitores que faltam votarem no
-   adversario; Senador que nem o 1o fora das vagas alcanca.
-   2o TURNO de Governador pela conta: ninguem passa de 50% nem com todos
-   os que faltam E o 3o nao alcanca o 2o. Se o TSE escreveu a situacao,
-   vale o TSE.
-
-   Pergunta a sigla e mostra, para Governador e Senador: o que o TSE
-   manda (e=, st=) e o que a tela recebeu (versao do coletor e eleito=).
-   Grava VER-ELEITO.txt para mandar ao suporte.
-
----------------------------------------------------------------------------
- PREPARAR O WINDOWS (uma vez em cada maquina que vai ao ar)
----------------------------------------------------------------------------
-
-   PREPARAR-WINDOWS.bat, opcao P:
-     - tela nunca desliga, computador nunca suspende/hiberna
-     - protecao de tela desligada
-     - notificacoes do Windows desligadas (nao aparecem por cima do ar)
-     - abre a tela do Windows Update: clique em "Pausar" (na mao)
-   Os valores de antes ficam em windows-antes.json. Depois da eleicao,
-   PREPARAR-WINDOWS.bat, opcao D, volta tudo como estava.
-   Se aparecer "NAO consegui mudar", faca na mao em Configuracoes >
-   Sistema > Energia e > Notificacoes.
-
----------------------------------------------------------------------------
- O QUE APARECE NO GRAFICO
----------------------------------------------------------------------------
-
-   Selo no alto:  AGUARDANDO APURACAO .... antes da 1a urna (cinza)
-                  PARCIAL ................ apuracao em andamento
-                  100% DAS URNAS ......... todas as secoes apuradas, o TSE
-                                           ainda nao marcou como final
-                  TOTALIZACAO FINAL ...... o TSE fechou o Brasil
-
-   ELEITO / 2o TURNO: quando o TSE escreve isso na situacao do candidato
-   OU quando a conta com os numeros do proprio TSE ja garante (regra em
-   VER-ELEITO.bat, acima). Se o TSE escreveu a situacao, vale o TSE.
-
-   Sem dado do TSE, o grafico mostra "aguardando o primeiro boletim" e
-   zeros - nunca numero inventado. Sem resposta do TSE por mais de 60 s,
-   a janela preta mostra o quadro vermelho "NAO ESTAMOS RECEBENDO DADOS DO
-   TSE" e a pagina do operador fica vermelha; os graficos ficam no ultimo
-   dado real recebido.
-
-   Antes das 17h o TSE responde "ainda nao publicado" (404): a pagina do
-   operador fica AMARELA com "O TSE RESPONDE, MAS AINDA NAO PUBLICOU" -
-   e normal. Nesse periodo so o arquivo do Brasil e consultado (1 vez por
-   minuto); os 27 estados entram sozinhos quando o Brasil sair. Se passar
-   das 17h10 assim, avise.
-
-   Cores: cada candidato tem UMA cor a noite toda (nao muda quando troca
-   de posicao). As 3 primeiras cores vao para os primeiros que aparecem na
-   frente - sao as que continuam distinguiveis no mapa, inclusive para
-   daltonicos. A atribuicao fica gravada em cores-atribuidas-oficial.json.
-   Para usar a cor do partido: config-graficos.json, "cores":
-        "cores": { "13": "#c0392b", "PSDB": "#1f5fbf" }
-   (numero de urna ou sigla do partido -> cor)
-   A pagina do operador (ABRIR-GRAFICOS.bat) mostra o quadro "Cores dos
-   candidatos": numero, nome, partido e a cor de cada um, e se a cor veio
-   do config ou e automatica. Depois de mudar o config, feche e abra de
-   novo o GRAFICOS.bat.
-
----------------------------------------------------------------------------
- PRESIDENTE - LEITURA NA TELA
----------------------------------------------------------------------------
-
-   - "% dos votos validos": o percentual e sobre os validos (regra do
-     TSE; brancos e nulos ficam de fora).
-   - Marca branca nos 50% de cada barra: quem passa dela vence no 1o
-     turno.
-   - Mais candidatos do que linhas: a ultima linha vira "OUTROS N
-     CANDIDATOS" com a soma (a tela fecha 100%).
-   - Embaixo: "FULANO a frente por X pontos (N votos)".
-   - Tela nova "Abstencao, brancos e nulos" (horizontal e vertical),
-     tambem na apresentacao.
-   - MAPA DA ABSTENCAO (horizontal e vertical, tambem na apresentacao):
-     cada estado pela % de eleitores que nao votaram, 5 faixas fixas
-     (ate 15% ... acima de 24%), Brasil e os 3 maiores / 3 menores.
-
----------------------------------------------------------------------------
- PAGINA DO OPERADOR (ABRIR-GRAFICOS.bat) - NAO VAI AO AR
----------------------------------------------------------------------------
-
-   - Situacao das duas coletas (Presidente e estados).
-   - AVISOS DE VIRADA: quando muda o 1o colocado de Presidente (Brasil e
-     cada estado) ou de Governador, ou quem ocupa as 2 vagas do Senado.
-     Ex.: "19:42 - VIROU - GO Governador: FULANO passou BELTRANO".
-     Botao "limpar" zera a lista.
-
----------------------------------------------------------------------------
- GIRO DOS ESTADOS - GOVERNADOR E SENADOR (resultado final)
----------------------------------------------------------------------------
-
-   GIRO-ESTADOS-HORIZONTAL.bat -> tela cheia 1920x1080
-   GIRO-ESTADOS-VERTICAL.bat   -> tela cheia 1080x1920
-
-   Um estado por vez, GOVERNADOR e SENADOR lado a lado, so o resultado:
-     ELEITO / ELEITOS (verde) ...... o nome em destaque, partido e %
-     VAO AO 2o TURNO (azul) ........ os dois nomes, partido e %
-     sem resultado ainda ........... 1o e 2o com % e barra, selo
-                                     EM APURACAO ou AGUARDANDO
-   ELEITO e 2o TURNO: o que o TSE escreve, ou a conta matematica com os
-   numeros do TSE (ver VER-ELEITO.bat). Senado 2026: 2 vagas, os dois
-   aparecem como ELEITOS.
-
-   O atalho abre sozinho o ESTADOS.bat (a coleta de Governador e Senador
-   dos 27 estados, separada da de Presidente). Deixe a janela dele aberta.
-
-   TROCAR DE ESTADO (no proprio computador, sem segundo monitor):
-     seta direita / clique / roda do mouse p/ baixo / passador .. proximo
-     seta esquerda / botao direito / roda p/ cima ............... anterior
-     digitar a sigla (P e depois R) ............................. Parana
-     Home ........................................................ primeiro
-     ENTER ............................... liga/desliga o giro automatico
-     Alt+F4 .................................................... fecha
-
-   Ordem dos estados e tempo do giro automatico:
-   web\giro-config.js (Bloco de Notas). Depois de salvar, F5 na tela.
-
----------------------------------------------------------------------------
- RESUMO - 7 TELAS DE FECHAMENTO
----------------------------------------------------------------------------
-
-   RESUMO-HORIZONTAL.bat (1920x1080) / RESUMO-VERTICAL.bat (1080x1920)
-   (7 telas; teclas 1 a 7)
-     1  Mapa dos governadores: eleito (verde), 2o turno (azul),
-        em apuracao (cinza-azul), aguardando (escuro) + placar
-     2  Governadores por partido (so quem o TSE declarou ELEITO)
-     3  Senado - eleitos por partido (de 54 vagas)
-     4  Presidente por regiao (soma dos estados, sem o exterior)
-     5  Comparecimento por estado
-     6  Estado em destaque (Parana): Presidente no estado, Governador e
-        Senado lado a lado. Outro estado: web\giro-config.js,
-        estado_destaque: "pr"
-     7  2026 x 2022: comparecimento, abstencao, brancos e nulos. Os
-        numeros de 2022 vem dos arquivos do PROPRIO TSE (o ESTADOS.bat
-        procura 1 vez a cada 10 min). Sem eles a tela diz "ainda nao
-        foram encontrados" - nunca um numero digitado.
-   Abre sozinho o GRAFICOS.bat e o ESTADOS.bat se nao estiverem rodando.
-   Troca: seta / clique / roda / passador; teclas 1 a 7 vao direto;
-   ENTER liga o giro automatico; Alt+F4 fecha.
-
----------------------------------------------------------------------------
- FOTOS DOS CANDIDATOS - DIRETO DO TSE
----------------------------------------------------------------------------
-
-   Presidente (graficos e apresentacao) e o giro dos estados (ELEITO e
-   2o TURNO) mostram a foto oficial que o TSE publica, pelo endereco do
-   proprio TSE. Nao precisa de pasta de fotos.
-   Foto que o TSE nao tiver simplesmente nao aparece (a tela fica como
-   sem foto). Se as 3 primeiras falharem, as fotos se desligam sozinhas
-   (o TSE avisa que muitos erros 404 podem bloquear o IP).
-   LIGAR / DESLIGAR AS FOTOS: web\fotos-config.js (Bloco de Notas)
-        window.GCTSE_FOTOS_DO_TSE = true;    com fotos
-        window.GCTSE_FOTOS_DO_TSE = false;   sem fotos (nenhum pedido de
-                                             foto ao TSE)
-   Depois de mudar, feche e abra de novo a tela (ou F5).
-   O PNG (tecla P) sai sempre sem fotos: o navegador nao deixa colocar
-   imagem de outro site dentro do PNG.
-   As fotos precisam de internet para o site do TSE (como os dados).
-
----------------------------------------------------------------------------
- 2o TURNO (25/10) - O QUE MUDAR
----------------------------------------------------------------------------
-
-   1. config-graficos.json: troque SO "eleicao_presidente" e
-      "eleicao_estaduais" pelos codigos do 2o turno que o TSE publicar.
-      Nao chute codigo: confira no site de resultados do TSE.
-      NAO mude "eleicao_presidente_1turno" (6257), "eleicao_estaduais_1turno"
-      (6259) nem "eleicao_camara" (6259): com eles o 1o turno continua na
-      tela - governadores eleitos no 1o turno, senadores, Camara, deputados,
-      mapa do 1o turno e o comparativo 1o x 2o turno.
-   2. Abra GRAFICOS.bat e ESTADOS.bat antes das 17h e deixe abertos.
-   3. Tela "Presidente - 2o turno" e "Evolucao minuto a minuto" ja servem
-      para o 2o turno (so os dois candidatos).
-   4. web\senado-config.js, web\camara-config.js e
-      web\comparativo-config.js nao mudam (Senado e Camara sao do 1o turno).
-
----------------------------------------------------------------------------
- CREDITOS
----------------------------------------------------------------------------
-
-   Dados: TSE - Divulgacao de Resultados (resultados.tse.jus.br).
-   Mapa: @svg-maps/brazil, de Victor Cazanave, licenca CC BY 4.0
-   (web\MAPA-LICENCA-CC-BY-4.0.md). Nas telas aparece so "Fonte: TSE";
-   o credito do mapa fica registrado aqui e no arquivo de licenca.
+   Ao vivo: resultados.tse.jus.br (Divulgacao de Resultados do TSE).
+   1o turno: o mesmo, guardado ao vivo e em tse-local (GUARDAR-DADOS-TSE).
+   2022: boletins de 2022 do TSE (formato dados-simplificados ...-r.json).
+   Genero, idade, escolaridade, cor/raca, reeleitos: arquivo "Candidatos"
+     do TSE (Dados Abertos). Reeleito = eleito deputado federal em 2022 pelo
+     mesmo estado (o arquivo de 2026 nao informa reeleicao).
+   Perfil do eleitor: perfil do eleitorado / comparecimento por perfil do
+     TSE (Dados Abertos). Renda/classe social: o TSE nao coleta.
+   O que nao e do TSE fica em arquivo de config com a fonte na tela.
+   Historico de versoes e detalhes antigos: LEIA-ME-HISTORICO.txt.

@@ -21,7 +21,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "3.23 - 10/10/2026"
+$Versao = "3.24 - 10/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -748,7 +748,7 @@ $script:EvolucaoNomes = [ordered]@{}
 $script:EvolucaoOrigem = ""
 $script:EvolucaoNovoEm = $null
 $script:EvolucaoLidaEm = [datetime]::MinValue
-# Le (ou rele) o arquivo. O IMPORTAR-EVOLUCAO.bat pode gravar nele com este
+# Le (ou rele) o arquivo. Outro programa pode gravar nele com este
 # programa aberto: quando a data do arquivo muda, a lista e recarregada.
 function Carregar-Evolucao {
     if (-not (Test-Path $ArquivoEvolucao)) { return }
