@@ -21,7 +21,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "3.21 - 09/10/2026"
+$Versao = "3.22 - 10/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -668,6 +668,7 @@ function Ler-Municipios {
 }
 function Url-Mun([string] $Uf, [string] $Cd, [string] $Ele) {
     $e6 = "{0:000000}" -f ([int] $Ele)
+    if ($Cd -match '^\d{1,4}$') { $Cd = $Cd.PadLeft(5, '0') }   # o TSE exige 5 digitos (zeros a esquerda)
     return "$Base/$Ciclo/$Ele/dados/$Uf/$Uf$Cd-c0001-e$e6-u.json"
 }
 function Resumo-Mun($bruto, [string] $chave, $m) {

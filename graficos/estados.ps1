@@ -17,7 +17,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "3.21 - 09/10/2026"
+$Versao = "3.22 - 10/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -709,7 +709,14 @@ function Urls-2022([string] $Ele, [string] $Abr, [int] $Cargo) {
     $e6 = "{0:000000}" -f ([int] $Ele); $c4 = "{0:0000}" -f $Cargo
     return @("$Base/$Ciclo2022/$Ele/dados-simplificados/$Abr/$Abr-c$c4-e$e6-r.json", "$Base/$Ciclo2022/$Ele/dados/$Abr/$Abr-c$c4-e$e6-r.json", "$Base/$Ciclo2022/$Ele/dados/$Abr/$Abr-c$c4-e$e6-u.json")
 }
-function Obter-2022-Um([string[]] $Urls) { foreach ($u0 in $Urls) { $o0 = Obter-2022 $u0; if ($null -ne $o0) { return $o0 } }; return $null }
+# o formato que funcionou fica lembrado: depois, 1 pedido por arquivo (menos 404)
+$script:Fmt2022 = -1
+$script:Sig2T = ""
+function Obter-2022-Um([string[]] $Urls) {
+    if ($script:Fmt2022 -ge 0) { return Obter-2022 $Urls[$script:Fmt2022] }
+    for ($i0 = 0; $i0 -lt $Urls.Count; $i0++) { $o0 = Obter-2022 $Urls[$i0]; if ($null -ne $o0) { $script:Fmt2022 = $i0; return $o0 } }
+    return $null
+}
 # candidatos de um boletim de 2022, nos dois formatos
 function Cands-2022($Obj) {
     $out = @()
@@ -735,7 +742,7 @@ function Cands-2022($Obj) {
 
 function Buscar-2022 {
     if ($null -ne $script:Ref2022 -or (Get-Date) -lt $script:Prox2022) { return }
-    $script:Prox2022 = (Get-Date).AddMinutes(10)
+    $script:Prox2022 = (Get-Date).AddMinutes(30)
     $e6 = "{0:000000}" -f ([int] $Eleicao2022)
     $urls = Urls-2022 $Eleicao2022 "br" 1
     foreach ($url in $urls) {
@@ -761,7 +768,7 @@ function Buscar-2022 {
             return
         }
     }
-    Escrever-Log "2022 (TSE) para comparacao: ainda nao encontrado - tento de novo em 10 min" "AVISO"
+    Escrever-Log "2022 (TSE) para comparacao: ainda nao encontrado - tento de novo em 30 min" "AVISO"
 }
 
 # --------------------------------- 2o TURNO DE 2022 (Presidente), por estado
@@ -817,12 +824,12 @@ function Eleito-2022($Obj) {
 function Buscar-2022-Gov {
     if ($null -ne $script:Ref2022Gov -and $script:Ref2022Gov.completo) { return }
     if ((Get-Date) -lt $script:Prox2022Gov) { return }
-    $script:Prox2022Gov = (Get-Date).AddMinutes(10)
+    $script:Prox2022Gov = (Get-Date).AddMinutes(30)
     $e1 = "{0:000000}" -f ([int] $Est2022); $e2 = "{0:000000}" -f ([int] $Est2022T2)
     $porUf = [ordered]@{}
     foreach ($u in $UFs) {
         $b1 = Obter-2022-Um (Urls-2022 $Est2022 $u 3)
-        if ($null -eq $b1) { if ($u -eq "ac") { Escrever-Log "governadores de 2022 (TSE, eleicao $Est2022): nao encontrado - tento de novo em 10 min (outro codigo: comparar_2022.eleicao_estaduais no config)" "AVISO"; return }; continue }
+        if ($null -eq $b1) { if ($u -eq "ac") { Escrever-Log "governadores de 2022 (TSE, eleicao $Est2022): nao encontrado - tento de novo em 30 min (outro codigo: comparar_2022.eleicao_estaduais no config)" "AVISO"; return }; continue }
         $x = Eleito-2022 $b1; $turno = 1
         if ($null -eq $x.eleito -and $x.turno2) { $x = Eleito-2022 (Obter-2022-Um (Urls-2022 $Est2022T2 $u 3)); $turno = 2 }
         if ($x.eleito) { $porUf[$u] = [pscustomobject]@{ partido = $x.eleito.partido; nome = $x.eleito.nome; pct = $x.eleito.pct; turno = $turno } }
@@ -834,13 +841,13 @@ function Buscar-2022-2T {
     if (-not $Eleicao1T) { return }                      # so no modo 2o turno
     if ($null -ne $script:Ref2022T2 -and $script:Ref2022T2.completo) { return }
     if ((Get-Date) -lt $script:Prox2022T2) { return }
-    $script:Prox2022T2 = (Get-Date).AddMinutes(10)
+    $script:Prox2022T2 = (Get-Date).AddMinutes(30)
     $e6 = "{0:000000}" -f ([int] $Eleicao2022T2)
     $porUf = [ordered]@{}; $br = $null
     foreach ($abr in @("br") + $UFs + @("zz")) {
         $o22 = Obter-2022-Um (Urls-2022 $Eleicao2022T2 $abr 1)
         $ps = $(if ($null -ne $o22) { Partidos-2022 $o22 } else { $null })
-        if ($abr -eq "br") { if ($null -eq $ps -or $ps.Count -lt 2) { Escrever-Log "2o turno de 2022 (TSE, eleicao $Eleicao2022T2): nao encontrado - tento de novo em 10 min" "AVISO"; return }; $br = $ps }
+        if ($abr -eq "br") { if ($null -eq $ps -or $ps.Count -lt 2) { Escrever-Log "2o turno de 2022 (TSE, eleicao $Eleicao2022T2): nao encontrado - tento de novo em 30 min" "AVISO"; return }; $br = $ps }
         elseif ($null -ne $ps -and $ps.Count -ge 2) { $porUf[$abr] = [pscustomobject] $ps }
     }
     $nUf = @($porUf.Keys | Where-Object { $_ -ne "zz" }).Count
@@ -915,12 +922,24 @@ do {
     try {
         if (-not $Eleicao1T) { foreach ($u in $UFs) { foreach ($cg in $Cargos) { Ler-Abrangencia $u $cg } } }
         else {
-            # 2o turno: Governador do 2o turno (so os estados que tem) a cada
-            # ciclo; 1o turno (Governador e Senador, resultado final) a cada 3.
-            foreach ($u in $UFs) { Ler-Abrangencia $u 3 }
+            # 1o turno (Governador e Senador, resultado final) a cada 3 ciclos.
             if (($script:NumCiclo % 3) -eq 1) {
                 foreach ($u in $UFs) { Ler-Abrangencia $u 3 $Eleicao1T "$u-3-1t"; Ler-Abrangencia $u 5 $Eleicao1T }
             }
+            # Governador do 2o turno SO nos estados que foram ao 2o turno (no
+            # 1o turno ninguem foi eleito): nos outros o arquivo nunca existe e
+            # 404 em excesso bloqueia o IP (aviso do TSE). Enquanto nenhum
+            # boletim do 2o turno apareceu (antes das 17h), so 1 estado por
+            # ciclo, em rodizio; quando o primeiro sai, todos os do 2o turno.
+            $com2T = @($UFs | Where-Object { $cx1 = $script:Cache["$_-3-1t"]; $null -eq $cx1 -or @(@($cx1.candidatos) | Where-Object { $_.eleito }).Count -eq 0 })
+            $ja2T = @($com2T | Where-Object { $script:Cache.ContainsKey("$_-3") }).Count -gt 0
+            $assin2T = "$($com2T.Count)|$ja2T"
+            if ($assin2T -ne $script:Sig2T) {
+                $script:Sig2T = $assin2T
+                Escrever-Log ("governador 2o turno: {0} estados com 2o turno ({1}){2}" -f $com2T.Count, (($com2T | ForEach-Object { $_.ToUpper() }) -join " "), $(if ($ja2T) { " - lendo todos" } else { " - aguardando o 1o boletim (1 estado por ciclo)" })) "INFO"
+            }
+            if ($ja2T) { foreach ($u in $com2T) { Ler-Abrangencia $u 3 } }
+            elseif ($com2T.Count) { Ler-Abrangencia $com2T[$script:NumCiclo % $com2T.Count] 3 }
         }
         try { Buscar-2022 } catch { Escrever-Log "2022: $($_.Exception.Message)" "AVISO" }
         try { Buscar-2022-2T } catch { Escrever-Log "2o turno de 2022: $($_.Exception.Message)" "AVISO" }

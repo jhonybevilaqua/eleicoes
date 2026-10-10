@@ -119,6 +119,8 @@ function SemAcento([string] $t) {
     foreach ($ch in $n.ToCharArray()) { if ([Globalization.CharUnicodeInfo]::GetUnicodeCategory($ch) -ne [Globalization.UnicodeCategory]::NonSpacingMark) { [void] $sb.Append($ch) } }
     return $sb.ToString().ToUpper().Trim()
 }
+# codigo do municipio com 5 digitos (o TSE exige os zeros a esquerda)
+function Cd5([string] $cd) { if ($cd -match '^\d{1,4}$') { return $cd.PadLeft(5, '0') }; return $cd }
 function Guardar-Municipios([string] $ele, [string] $rotulo) {
     $e6 = "{0:000000}" -f [int] $ele
     $cfgMun = Guardar "$Base/$Ciclo/$ele/config/mun-e$e6-cm.json"
@@ -127,9 +129,9 @@ function Guardar-Municipios([string] $ele, [string] $rotulo) {
     foreach ($u in $UFs) {
         $c = @($ms | Where-Object { $_.uf -eq $u -and $_.c -eq "S" }) | Select-Object -First 1
         if ($null -eq $c) { $c = @($ms | Where-Object { $_.uf -eq $u -and (SemAcento $_.nm) -eq $NomesCap[$u] }) | Select-Object -First 1 }
-        if ($c -and (Guardar "$Base/$Ciclo/$ele/dados/$u/$u$($c.cd)-c0001-e$e6-u.json")) { $nCap++ }
+        if ($c -and (Guardar "$Base/$Ciclo/$ele/dados/$u/$u$(Cd5 $c.cd)-c0001-e$e6-u.json")) { $nCap++ }
     }
-    foreach ($m in @($ms | Where-Object { $_.uf -eq "zz" })) { if (Guardar "$Base/$Ciclo/$ele/dados/zz/zz$($m.cd)-c0001-e$e6-u.json") { $nExt++ } }
+    foreach ($m in @($ms | Where-Object { $_.uf -eq "zz" })) { if (Guardar "$Base/$Ciclo/$ele/dados/zz/zz$(Cd5 $m.cd)-c0001-e$e6-u.json") { $nExt++ } }
     Anotar ("   {0}: capitais {1}/27 | cidades do exterior {2}" -f $rotulo, $nCap, $nExt)
 }
 
@@ -158,16 +160,21 @@ Anotar "2022 (comparacoes) e lista de eleicoes..." "Cyan"
 [void] (Guardar (Url "ele2022" $E2022 "br" 1))
 # 2022 esta no formato daquele ano (dados-simplificados ...-r.json); tenta
 # esse primeiro e depois o novo (-u), como o ESTADOS.bat
+$script:Fmt22 = -1
+$Fmts22 = @(@("r", "dados-simplificados"), @("r", "dados"), @("u", "dados"))
 function Guardar-2022([string] $ele, [string] $abr, [int] $cargo) {
-    foreach ($tent in @(@("r", "dados-simplificados"), @("r", "dados"), @("u", "dados"))) { $o = Guardar (Url "ele2022" $ele $abr $cargo $tent[0] $tent[1]); if ($o) { return $o } }
+    if ($script:Fmt22 -ge 0) { $tf = $Fmts22[$script:Fmt22]; return Guardar (Url "ele2022" $ele $abr $cargo $tf[0] $tf[1]) }
+    for ($i2 = 0; $i2 -lt $Fmts22.Count; $i2++) { $tf = $Fmts22[$i2]; $o = Guardar (Url "ele2022" $ele $abr $cargo $tf[0] $tf[1]); if ($o) { $script:Fmt22 = $i2; return $o } }
     return $null
 }
-$n22 = 0; foreach ($abr in @("br") + $UFs + @("zz")) { if (Guardar-2022 $E2022T2 $abr 1) { $n22++ } }
+# sem o arquivo do Brasil de 2022, nao pede os 28 restantes (404 em excesso bloqueia o IP)
+$n22 = 0; if (Guardar-2022 $E2022T2 "br" 1) { $n22++; foreach ($abr in $UFs + @("zz")) { if (Guardar-2022 $E2022T2 $abr 1) { $n22++ } } }
 Anotar ("   2022 Presidente 2o turno (eleicao {0}): {1} de 29 (Brasil, 27 estados, exterior)" -f $E2022T2, $n22)
 $G22 = "546"; $G22T2 = "547"
 if ($c22) { if ("$(Prop $c22 'eleicao_estaduais')") { $G22 = "$(Prop $c22 'eleicao_estaduais')" }; if ("$(Prop $c22 'eleicao_estaduais_2turno')") { $G22T2 = "$(Prop $c22 'eleicao_estaduais_2turno')" } }
 $ng = 0; $ng2 = 0
 foreach ($u in $UFs) {
+    if ($u -ne "ac" -and $ng -eq 0) { break }   # o 1o estado nao veio: nao insiste nos outros 26
     $bol22 = Guardar-2022 $G22 $u 3
     if ($bol22) { $ng++; if (@(Cands $bol22 | Where-Object { $_.turno2 }).Count) { if (Guardar-2022 $G22T2 $u 3) { $ng2++ } } }
 }

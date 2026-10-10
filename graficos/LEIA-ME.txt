@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 3.21 - apuracao em graficos (versao final)
+ gctse GRAFICOS 3.22 - apuracao em graficos (versao final)
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
 
@@ -22,6 +22,26 @@
    GIRO DOS ESTADOS (Governador e Senador, um estado por vez)
    RESUMO (7 telas de fechamento)
    GERENCIADOR (escolhe o que vai para as saidas SDI da DeckLink)
+
+ NOVO NA 3.22 - CODIGOS DO 2o TURNO (TSE, 10/10) E MENOS 404
+   O TSE publicou o pleito 3221 (25/10/2026): 6258 = Eleicao Geral Federal
+   (Presidente) e 6260 = Eleicoes Gerais Estaduais (Governador). O
+   config-graficos.json deste pacote JA vem com eles:
+     eleicao_presidente 6258 | eleicao_estaduais 6260
+     1o turno (comparacoes): 6257 / 6259 | Camara: 6259
+   Quem ja tem a pasta: CODIGOS-2-TURNO.bat le a lista do TSE e grava os
+   mesmos codigos (as suplementares e plebiscitos do pleito sao ignorados).
+   Ate 17h do dia 25 o 2o turno nao tem boletim: o normal e "TSE ainda nao
+   publicou".
+   AVISO DO TSE: 404 em excesso bloqueia o IP por 10 min. Agora:
+     - ESTADOS.bat pede o Governador do 2o turno SO nos estados que tem 2o
+       turno (os outros ficam com o 1o turno) e, antes do 1o boletim, so 1
+       estado por ciclo. A janela mostra: "governador 2o turno: N estados".
+     - GRAFICOS.bat ja so pede os estados depois que o Brasil sai.
+     - 2022: o formato que funcionou fica lembrado (1 pedido por arquivo),
+       nova tentativa a cada 30 min; GUARDAR-DADOS-TSE nao insiste nos
+       estados se o Brasil (ou o 1o estado) de 2022 nao vier.
+     - codigo de municipio sempre com 5 digitos (zeros a esquerda).
 
  NOVO NA 3.21 - PERFIL DA CAMARA E SENADORAS ELEITAS
    PERFIL DA NOVA CAMARA, bloco RENOVACAO: o arquivo de candidatos de 2026
