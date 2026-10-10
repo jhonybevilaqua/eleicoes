@@ -444,7 +444,7 @@ function Resumir-Boletim {
                             eleito  = $eleito
                             segundo_turno = $vaiTurno
                             situacao = $st
-                            valido  = ("$(Obter-Campo $c @('dvt') '')" -eq "" -or "$(Obter-Campo $c @('dvt') '')" -match '^V')
+                            valido  = ((Decodificar-Entidades "$(Obter-Campo $c @('dvt') '')") -notmatch '^\s*anula')
                             calculado = $false
                         }
                     }
@@ -452,9 +452,13 @@ function Resumir-Boletim {
             }
         }
     }
-    # voto ANULADO (sub judice, registro indeferido): o TSE nao conta como
-    # valido - vai para o fim da lista, nunca aparece como lider no mapa.
-    $cands = @($cands | Sort-Object -Property @{Expression = { [bool] $_.valido }; Descending = $true}, @{Expression = "votos"; Descending = $true}, numero)
+    # voto ANULADO (registro indeferido, direitos politicos suspensos, sub
+    # judice - ex.: RJ 2026, votos de Garotinho anulados pelo TSE e governador
+    # retotalizado pelo TRE-RJ): o TSE nao conta como valido. O candidato SAI
+    # da disputa em todas as telas (fica so em "anulados", com os votos).
+    $cands = @($cands | Sort-Object -Property @{Expression = "votos"; Descending = $true}, numero)
+    $anulados = @($cands | Where-Object { -not ([bool] $_.valido) } | ForEach-Object { [pscustomobject]@{ numero = $_.numero; nome = $_.nome; partido = $_.partido; votos = $_.votos } })
+    $cands = @($cands | Where-Object { [bool] $_.valido })
 
     # MATEMATICAMENTE ELEITO (conta com os numeros do proprio TSE), so se o
     # TSE ainda nao escreveu a situacao. Pior caso para quem lidera: TODOS os
@@ -532,6 +536,7 @@ function Resumir-Boletim {
         comparec_pct = $pctComparec
         vagas      = $vagas
         candidatos = $cands
+        anulados   = $anulados
     }
 }
 

@@ -96,6 +96,12 @@
      Presidente 1o turno (Brasil e estados), 2o turno de 2022, governadores
      (1o turno 2026 e eleitos em 2022) e senadores eleitos.
 
+   VOTO ANULADO PELO TSE (ex.: RJ 2026 - votos de Garotinho anulados e
+     governador retotalizado pelo TRE-RJ em 10/10): o candidato marcado
+     "Anulado" no boletim do TSE SAI de todas as telas (os votos ficam so
+     em "anulados" no estados.js / dados.js). Depois de uma retotalizacao,
+     clique em "dados do TSE" > ATUALIZAR TUDO para renovar a copia local.
+
 ---------------------------------------------------------------------------
  3. ANTES DO DIA
 ---------------------------------------------------------------------------

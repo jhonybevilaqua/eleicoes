@@ -144,6 +144,9 @@ function RespGovernador([string] $uf, [bool] $turno2) {
     if (-not $turno2) {
         if ($SEG2 -contains $uf) { $cs = @((Cand 11 $sqA $nA $sg1 ($t * 0.44) 44 "2o turno" "n"), (Cand 22 $sqB $nB $sg2 ($t * 0.38) 38 "2o turno" "n")) }
         else { $cs = @((Cand 11 $sqA $nA $sg1 ($t * 0.56) 56 "Eleito" "s"), (Cand 22 $sqB $nB $sg2 ($t * 0.30) 30 "Nao eleito" "n")) }
+        # caso RJ 2026 (votos anulados pelo TSE e retotalizacao): no AP o mais
+        # votado tem os votos ANULADOS; o sistema deve ignora-lo
+        if ($uf -eq "ap") { $x = Cand 44 ($sqA + 900) "GOVERNADOR X ANULADO (AP)" "PSOL" ($t * 0.62) 0 "Nao eleito" "n"; $x.cand[0].dvt = "Anulado"; $cs = @($x) + $cs }
         return Boletim 3 1 $cs 100 "f" $te "04/10/2026" "23:50:00"
     }
     if ($SEG2 -notcontains $uf) { return $null }

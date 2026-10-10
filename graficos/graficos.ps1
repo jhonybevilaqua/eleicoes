@@ -490,9 +490,13 @@ function Resumir-Boletim {
             }
         }
     }
-    # voto ANULADO (sub judice, registro indeferido): o TSE nao conta como
-    # valido - vai para o fim da lista, nunca aparece como lider no mapa.
-    $cands = @($cands | Sort-Object -Property @{Expression = { "$($_.destinacao)" -eq '' -or "$($_.destinacao)" -match '^V' }; Descending = $true}, @{Expression = "votos"; Descending = $true}, numero)
+    # voto ANULADO (registro indeferido, direitos politicos suspensos, sub
+    # judice - ex.: RJ 2026, votos de Garotinho anulados pelo TSE e governador
+    # retotalizado pelo TRE-RJ): o TSE nao conta como valido. O candidato SAI
+    # da disputa em todas as telas (fica so em "anulados", com os votos).
+    $cands = @($cands | Sort-Object -Property @{Expression = "votos"; Descending = $true}, numero)
+    $anulados = @($cands | Where-Object { "$($_.destinacao)" -match '^\s*anula' } | ForEach-Object { [pscustomobject]@{ numero = $_.numero; nome = $_.nome; partido = $_.partido; votos = $_.votos } })
+    $cands = @($cands | Where-Object { "$($_.destinacao)" -notmatch '^\s*anula' })
 
     $validos = Inteiro-Ou-Nulo (Numero-De $v @('vv'))
     $brancos = Inteiro-Ou-Nulo (Numero-De $v @('vb'))
@@ -540,6 +544,7 @@ function Resumir-Boletim {
             nulos   = $nulos;   pct_nulos   = $pNulos
         }
         candidatos = $cands
+        anulados   = $anulados
     }
 }
 
