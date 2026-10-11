@@ -74,6 +74,13 @@
        mapa, governador x presidente, por partido, 2022 x 2026) e um botao
        por estado com o nome e o % (verde = eleito no 1o turno, azul =
        eleito no 2o, cinza = em disputa). Regiao = troca sozinha.
+       GIROS AUTOMATICOS (troca sozinha a cada 10 s; o numero = estados):
+         GIRO DOS ELEITOS ......... so estados com governador eleito (1o
+                                    turno + os do 2o conforme o TSE declara)
+         GIRO DO 2o TURNO ......... so os que ainda disputam; o estado
+                                    decidido sai do giro sozinho
+         GIRO DOS 27 ESTADOS ...... todos
+       Ex.: VERTICAL no giro dos eleitos e HORIZONTAL na apuracao.
      * FAVORITOS (teclas 1-9) e AUTOMATICO (rodizios prontos: Abertura,
        Apuracao, Fechamento; "escolher as telas do rodizio").
      PRESIDENTE | ESTADO OU REGIAO.

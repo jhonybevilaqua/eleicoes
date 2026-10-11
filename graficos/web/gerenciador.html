@@ -238,6 +238,9 @@
   .gov-eleito2 { background: #d8e7fb !important; border-color: #1f6fc0 !important; color: #0d3f78 !important; }
   :root.escuro .gov-eleito2 { background: #123a66 !important; border-color: #4ea1ff !important; color: #dcebff !important; }
   .leg-gov i.gov-eleito2 { background: #d8e7fb; border-color: #1f6fc0; }
+  .girosgov { margin: 2px 0 8px; } .girosgov button { font-weight: 800; background: var(--azul) !important; border-color: var(--azul-borda) !important; color: #fff !important; }
+  .girosgov button:disabled { opacity: .4; cursor: default; }
+  .girosgov button.ativo { background: var(--verm) !important; border-color: var(--verm-borda) !important; }
 </style>
 <script>try { if (localStorage.getItem("gctse-tema") === "escuro") document.documentElement.className = "escuro"; } catch (e) { }</script>
 </head>
@@ -370,12 +373,21 @@
     t = parseFloat(cfgA.tempo_segundos);
     return t >= 3 ? t : 15;
   }
+  function nomeGiroGov(a) {
+    a = String(a || "");
+    if (a.indexOf("uf:") === 0) return a.slice(3).toUpperCase();
+    if (a.indexOf("reg:") === 0) return "região (" + a.slice(4).toUpperCase() + ")";
+    if (a === "filtro:eleitos") return "giro dos ELEITOS";
+    if (a === "filtro:disputa") return "giro do 2º TURNO em apuração";
+    if (a === "todos") return "giro dos 27 estados";
+    return "giro";
+  }
   function nomeTela(id, S) {
     if (id === "apresentacao") return "Apresentação automática (" + rodizioAtual(S).length + " telas, " + tempoAtual(S) + " s cada)";
     if (id === "giro") return "Giro dos estados";
     if (id === "resumo") return "Resumo (7 telas)";
     if (/^deputados-/.test(id)) { var pdn = posDep(S.id); return "Deputados federais — " + (!pdn ? "troca automática" : pdn.regiao ? "região " + pdn.nome : pdn.uf.toUpperCase() + " (5 mais votados)"); }
-    if (id === "girogov") { var ag = estado && estado[S.id] ? String(estado[S.id].acao || "") : ""; return "Governador — " + (ag.indexOf("uf:") === 0 ? ag.slice(3).toUpperCase() : ag.indexOf("reg:") === 0 ? "região (" + ag.slice(4).toUpperCase() + ")" : "giro"); }
+    if (id === "girogov") { var ag = estado && estado[S.id] ? String(estado[S.id].acao || "") : ""; return "Governador — " + nomeGiroGov(ag); }
     if (/^assembleia-/.test(id)) { var aa = estado && estado[S.id] ? String(estado[S.id].acao || "") : ""; return "Assembleia Legislativa — " + (aa.indexOf("alvo:") === 0 ? aa.slice(5).toUpperCase() : "SP"); }
     if (/^presloc(1t)?-/.test(id)) { var a = estado && estado[S.id] ? String(estado[S.id].acao || "") : ""; return "Presidente" + (/^presloc1t-/.test(id) ? " 1º turno" : "") + " | " + (a.indexOf("alvo:") === 0 ? a.slice(5).toUpperCase() : "estado ou região"); }
     var g = window.GCTSE_GRAFICOS.lista.filter(function (x) { return x.id === id; })[0];
@@ -409,7 +421,7 @@
     var n = /^deputados-/.test(p.tela) ? "Deputados federais — " + (!p.acao ? "troca automática" : p.acao.indexOf("dep:r-") === 0 ? "região " + p.acao.slice(6).toUpperCase() : p.acao.slice(4, 6).toUpperCase())
       : /^presloc(1t)?-/.test(p.tela) ? "Presidente" + (/^presloc1t-/.test(p.tela) ? " 1º turno" : "") + " | " + (p.acao.slice(5).toUpperCase() || "estado ou região")
       : p.tela === "giro" ? "Giro dos estados — " + p.acao.slice(3).toUpperCase()
-      : p.tela === "girogov" ? "Governador — " + (p.acao.indexOf("reg:") === 0 ? "região (" + p.acao.slice(4).toUpperCase() + ")" : p.acao.slice(3).toUpperCase())
+      : p.tela === "girogov" ? "Governador — " + nomeGiroGov(p.acao)
       : /^assembleia-/.test(p.tela) ? "Assembleia Legislativa — " + p.acao.slice(5).toUpperCase()
       : p.tela === "resumo" ? "Resumo (7 telas)" : p.tela === "apresentacao" ? "Apresentação automática" : nomeTela(p.tela, S);
     return n;
@@ -608,6 +620,13 @@
     // disputa). Estado = o governador daquele estado no ar; regiao = troca
     // sozinha entre os estados dela.
     var gG = bloco("estados govs", "GOVERNADORES — 27 ESTADOS");
+    // GIROS AUTOMATICOS do governador (a lista se refaz sozinha a cada dado)
+    var gx = document.createElement("div"); gx.className = "botoes girosgov";
+    [["filtro:eleitos", "▶ GIRO DOS ELEITOS", "eleitos"], ["filtro:disputa", "▶ GIRO DO 2º TURNO (em apuração)", "disputa"], ["todos", "▶ GIRO DOS 27 ESTADOS", "todos"]].forEach(function (it) {
+      var b = botao(it[1], function () { definir(S.id, "girogov", it[0]); }, "girogov|" + it[0]);
+      b.dataset.giro = it[2]; b.dataset.rot = it[1]; gx.appendChild(b);
+    });
+    gG.appendChild(gx);
     botoesEm(gG, itensDe(["gov2t", "gov12", "governadores", "govpres", "govpartido", "gov22"]));
     gG.appendChild(legendaGov());
     var gregs = document.createElement("div"); gregs.className = "regs govgrade";
@@ -899,6 +918,13 @@
   }
   function marcarGov() {
     marcarAsm();
+    var nEl = 0, nDi = 0;
+    NOMES_UF.forEach(function (u) { var st = govSit(u); if (st.tipo === "eleito1" || (st.tipo === "segundo" && st.c)) nEl++; else if (st.tipo === "segundo") nDi++; });
+    document.querySelectorAll(".girosgov button").forEach(function (b) {
+      var n = b.dataset.giro === "eleitos" ? nEl : b.dataset.giro === "disputa" ? nDi : 27;
+      var tx = b.dataset.rot + " · " + n; if (b.textContent !== tx) b.textContent = tx;
+      b.disabled = n === 0; b.title = n === 0 ? "nenhum estado nesta situação agora" : "troca sozinha entre os " + n + " estados a cada " + (cfg.tempo_auto_segundos || 10) + " s; a lista se atualiza com a apuração";
+    });
     document.querySelectorAll("[data-gov]").forEach(function (el) {
       var u = el.dataset.gov, st = govSit(u);
       el.classList.toggle("gov-eleito", st.tipo === "eleito1");

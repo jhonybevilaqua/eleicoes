@@ -13,6 +13,25 @@
   // ?ordem=pr,rs,sc (regiao escolhida no gerenciador): so esses estados
   var soEstes = (q.get("ordem") || "").toLowerCase().split(",").filter(function (u) { return T.nomes[u]; });
   if (soEstes.length) ordem = soEstes;
+  // ?filtro=eleitos (so os estados com governador ELEITO, 1o e 2o turno) ou
+  // ?filtro=disputa (so os que ainda disputam o 2o turno). A lista se refaz
+  // sozinha a cada dado novo: estado decidido entra/sai do giro.
+  var FILTRO = (q.get("filtro") || "").toLowerCase(), ordemBase = ordem.slice();
+  function lista(x) { return Array.isArray(x) ? x : (x && Array.isArray(x.value) ? x.value : []); }
+  function situacaoGov(u) {
+    var e = ((T.dados() || {}).ufs || {})[u], g = e && e.gov && e.gov.tem ? e.gov : null;
+    if (!g) return "";
+    if (lista(g.candidatos).some(function (c) { return c.eleito; })) return "eleitos";
+    return +g.turno === 2 ? "disputa" : "";
+  }
+  function filtrar() {
+    if (!FILTRO) return;
+    var l = ordemBase.filter(function (u) { return situacaoGov(u) === FILTRO; });
+    var antes = ordem[atual];
+    ordem = l.length ? l : ordem;   // vazio (ex.: todos ja decididos): fica na ultima lista
+    var i = ordem.indexOf(antes); atual = i >= 0 ? i : Math.min(atual, ordem.length - 1);
+  }
+  filtrar();
   var transicao = parseFloat(cfg.transicao_segundos);
   if (!(transicao >= 0)) transicao = 0.5;
   var tempoAuto = parseFloat(cfg.tempo_auto_segundos);
@@ -35,6 +54,7 @@
   function chave() { return JSON.stringify([T.dados().modo, T.dados().ufs]); }
 
   function mostrar(i) {
+    filtrar();
     atual = (i + ordem.length) % ordem.length;
     var prox = camadas[1 - visivel];
     desenharEm(prox, ordem[atual]);
@@ -59,7 +79,11 @@
     sc.src = "estados.js?t=" + Date.now();
     sc.onload = function () {
       sc.remove();
-      if (chave() !== chaveDados) { chaveDados = chave(); desenharEm(camadas[visivel], ordem[atual]); }
+      if (chave() !== chaveDados) {
+        chaveDados = chave(); var antes = ordem[atual]; filtrar();
+        // o estado na tela saiu do filtro (ex.: foi decidido no giro do 2o turno): vai ao proximo
+        if (ordem[atual] !== antes) mostrar(atual); else desenharEm(camadas[visivel], ordem[atual]);
+      }
     };
     sc.onerror = function () { sc.remove(); };
     document.head.appendChild(sc);
