@@ -206,6 +206,16 @@ function Linhas-Tarja {
     return $h
 }
 
+function Uf-Da-Tarja {
+    # Qual estado o arquivo da tarja mostra agora (pelo nome da praca).
+    param([string] $Arquivo)
+    $t = Ler-Json $Arquivo
+    $nome = "$(Campo $t 'abrangencia' '')"
+    if (-not $nome) { return "" }
+    foreach ($p in $cfg.selecao.pracas) { if ("$($p.nome)" -eq $nome) { return "$($p.uf)" } }
+    return ""
+}
+
 function Estados-Do-Painel {
     # Os 27 estados, na ordem do config, com o que o coletor sabe de cada um.
     $d = Ler-Json "painel-dados"
@@ -220,6 +230,7 @@ function Estados-Do-Painel {
         $lista += [pscustomobject]@{
             uf = $p.uf; nome = $p.nome; sit = $sit
             g1 = (Campo $e "gov_1t"); g2 = $g2; sen = (Campo $e "senador"); eleito2t = $eleito2t
+            nao2 = [bool] (Campo $e "gov_2t_404" $false); url2 = "$(Campo $e 'gov_2t_url' '')"
         }
     }
     return $lista
@@ -310,14 +321,21 @@ function Montar-Pagina {
     $al = Ler-Alertas
     $estados = Estados-Do-Painel
 
-    # O que esta no ar, segundo o coletor (ja com o turno resolvido).
-    $noAr = Campo $dados "no_ar"
-    $ufGov = "$(Campo (Campo $noAr 'governador') 'uf' '')"
-    $tGov = "$(Campo (Campo $noAr 'governador') 'turno' '')"
-    $ufSen = "$(Campo (Campo $noAr 'senador') 'uf' '')"
-    $tPres = "$(Campo (Campo $noAr 'presidente') 'turno' '2')"
-    if (-not $ufGov) { $ufGov = (Ler-Texto $ArquivoSelecao) -replace ':.*$', '' }
+    # O que esta no ar: o ESTADO vem do proprio arquivo da tarja (o que o GC
+    # mostra de verdade) e o TURNO da selecao de agora, resolvido com a mesma
+    # regra do coletor. 7.0.1: antes vinha do painel-dados.json, gravado so
+    # no fim do ciclo - no giro o painel marcava o estado ANTERIOR.
+    $ufGov = Uf-Da-Tarja "tarja-governador"
+    $ufSen = Uf-Da-Tarja "tarja-senador"
+    $selGov = Ler-Texto $ArquivoSelecao
+    if (-not $ufGov) { $ufGov = $selGov -replace ':.*$', '' }
     if (-not $ufSen) { $ufSen = (Ler-Texto $ArquivoSelecaoSenador) -replace ':.*$', '' }
+    $tGov = "2"
+    $eGov = $estados | Where-Object { $_.uf -eq $ufGov } | Select-Object -First 1
+    if ($null -ne $eGov -and $eGov.sit -ne "2t") { $tGov = "1" }
+    elseif (($selGov -replace ':.*$', '') -eq $ufGov -and $selGov -match ':1t$') { $tGov = "1" }
+    $tPres = "2"
+    if ((Ler-Texto $ArquivoSelecaoPresidente) -match '^1') { $tPres = "1" }
 
     # Previas pendentes (modo 2 cliques)
     $prevGov = Ler-Texto "PREVIA.txt"
@@ -428,7 +446,7 @@ function Montar-Pagina {
             if ($noArAqui -and $tGov -eq "2") { $b2 += " on" }
             if ($noArAqui -and $tGov -eq "1") { $b1 += " on" }
             $cards2t += "<div class='$cls'><div class='uftopo'><b>$(Html-Seguro $e.nome)</b><span class='urnas'>$(Html-Seguro $urn) urnas</span></div>" +
-                        "$marca$(Linhas-Resumo $e.g2)" +
+                        "$marca$(if ($e.nao2) { "<p class='tse404'>O TSE ainda NÃO publicou o 2º turno deste estado (resposta 404). A coleta tenta de novo sozinha.<br><small>$(Html-Seguro $e.url2)</small></p>" } else { Linhas-Resumo $e.g2 })" +
                         "<div class='botoes'><a class='$b2' href='/gov?uf=$($e.uf)&t=2'>2º TURNO AO VIVO</a>" +
                         "<a class='$b1' href='/gov?uf=$($e.uf)&t=1'>1º TURNO</a></div></div>`n"
         } elseif ($e.sit -eq "eleito") {
@@ -618,6 +636,8 @@ h2.h2t{color:var(--azul)} h2.h1t{color:var(--verde)}
 .turno{font-size:10.5px;font-weight:800;letter-spacing:.06em;padding:2px 8px;border-radius:999px;color:#fff}
 .turno.t2{background:var(--azul)} .turno.t1{background:var(--verde)}
 .nada{color:var(--tinta3);font-size:13px;margin:6px 0}
+.tse404{color:#8a1f1f;background:#fdecec;border:1px solid #e7a9a9;border-radius:6px;font-size:12px;font-weight:600;margin:6px 0;padding:6px 8px}
+.tse404 small{font-weight:400;word-break:break-all;color:#6b3a3a}
 .nota{color:var(--tinta2);font-size:13px;margin:0 0 12px}
 /* abas */
 .abas{display:flex;gap:6px;margin:22px 0 4px;border-bottom:2px solid var(--fio)}

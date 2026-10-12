@@ -35,7 +35,7 @@ param(
 # Versao impressa na partida e no painel. Sem carimbo, "qual versao esta
 # rodando ai?" so se responde abrindo arquivo e comparando a olho - e no
 # meio de um teste com janela de horario ninguem faz isso.
-$Versao = "7.0 - 12/10/2026"
+$Versao = "7.0.1 - 12/10/2026"
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
@@ -579,6 +579,8 @@ function Atender-Troca-De-Praca {
         if ($null -ne $praca) { Limpar-Alerta $praca.uf $saida.cargo }
     }
     Escrever-Alertas
+    # 7.0.1: o painel ve a troca na hora, sem esperar o fim do ciclo.
+    try { Escrever-Dados-Painel } catch { }
     if ($descongelou) { Escrever-Log "descongelado: $agora entra no ar agora" "OK" }
     else { Escrever-Log "selecao trocada: $agora" "OK" }
     return $true
@@ -1669,9 +1671,12 @@ function Situacao-1T {
     $chave = Chave-Boletim $Uf 3 1
     if (-not $script:CacheBoletins.ContainsKey($chave)) { return "" }
     $b = $script:CacheBoletins[$chave]
+    if (@($b.Candidatos).Count -eq 0) { return "" }
     foreach ($c in @($b.Candidatos)) { if ($c.Eleito -eq "1") { return "eleito" } }
-    foreach ($c in @($b.Candidatos)) { if ((Tem-Propriedade $c "SegundoTurno") -and $c.SegundoTurno -eq "1") { return "2t" } }
-    return ""
+    # 7.0.1: resultado FINAL do 1o turno sem ninguem eleito = 2o turno, mesmo
+    # que o TSE nao escreva "2o turno" na situacao dos dois primeiros (assim
+    # um estado ficava fora da lista do 2o turno). Mesma regra dos GRAFICOS.
+    return "2t"
 }
 
 function Ler-Turno-Presidente {
@@ -2171,8 +2176,11 @@ function Escrever-Dados-Painel {
         $sit = Situacao-1T $p.uf
         $gov2 = $null
         if ($sit -ne "eleito") { $gov2 = Resumo-Boletim $g2 3 }
+        # 7.0.1: o 2o turno deste estado deu 404 (o TSE nao publicou o arquivo)?
+        $url2 = Montar-Url $p.uf 3 "" 2
+        $nao2 = ($null -eq $g2 -and $sit -eq "2t" -and $script:Ausentes.ContainsKey($url2))
         $estados[$p.uf] = [ordered]@{
-            nome = "$($p.nome)"; situacao_1t = $sit
+            nome = "$($p.nome)"; situacao_1t = $sit; gov_2t_404 = $nao2; gov_2t_url = $(if ($sit -eq "2t") { $url2 } else { "" })
             gov_1t = (Resumo-Boletim $g1 3); gov_2t = $gov2; senador = (Resumo-Boletim $sn 5)
         }
     }
@@ -2219,12 +2227,15 @@ function Executar-Ciclo {
         if ($script:Ciclo -eq 1) { Escrever-Log "lendo o resultado do 1o turno (presidente, governadores e senadores)..." }
         Ler-Primeiro-Turno $Modo
         if ($script:Ciclo -eq 1) {
-            $eleitos1 = @(); $disputa2 = @()
+            $eleitos1 = @(); $disputa2 = @(); $semLer = @()
             foreach ($p in $cfg.selecao.pracas) {
                 $sit = Situacao-1T $p.uf
-                if ($sit -eq "eleito") { $eleitos1 += $p.uf.ToUpper() } elseif ($sit -eq "2t") { $disputa2 += $p.uf.ToUpper() }
+                if ($sit -eq "eleito") { $eleitos1 += $p.uf.ToUpper() } elseif ($sit -eq "2t") { $disputa2 += $p.uf.ToUpper() } else { $semLer += $p.uf.ToUpper() }
             }
             Escrever-Log ("1o turno lido: governador eleito em {0} estados; 2o turno em {1}: {2}" -f $eleitos1.Count, $disputa2.Count, ($disputa2 -join " ")) "OK"
+            if ($semLer.Count -gt 0) {
+                Escrever-Log ("1o turno de governador NAO lido em {0}: {1} - tento de novo na releitura" -f $semLer.Count, ($semLer -join " ")) "AVISO"
+            }
         }
     }
 
