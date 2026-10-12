@@ -3232,8 +3232,6 @@
   }
   function telaExterior(v, porPais) {
     var f = fontePres(false), ls = agruparExterior(porPais), W = v ? 540 : 1280, H = v ? 960 : 720, o, nCid = +D().exterior_cidades || 0;
-    var zt = D().exterior_total, ztVotos = zt && zt.tem && candidatos(zt).some(function (c) { return +c.votos > 0; });
-    if (!ztVotos && !ls.length) { var tv = porPais ? "BRASILEIROS NO EXTERIOR" : "EXTERIOR — POR CIDADE"; return svg(W, H, marcaVazio() + (v ? r(35, 48, 6, 38, C.destaque) + t(53, 80, tv, { s: 26, b: true, ls: 1, max: 450 }) : t(73, 57, tv, { s: 36, b: true, ls: 1 })) + t(W / 2, H / 2, "aguardando a apuração do exterior", { s: v ? 18 : 24, c: C.apagado, a: "middle" })); }
     var venc = {}; ls.forEach(function (a) { if (a.nome !== "OUTROS PAÍSES" && a.lista[0]) venc[a.lista[0].numero] = (venc[a.lista[0].numero] || 0) + 1; });
     var csBr = br() ? candidatos(br()).slice(0, 2) : [], nGrupos = ls.filter(function (a) { return a.nome !== "OUTROS PAÍSES"; }).length;
     var resumo = porPais && nGrupos ? csBr.map(function (c) { return nomeCurto(c) + " vence em " + (venc[c.numero] || 0); }).join(" · ") + " de " + nGrupos + " países" : "";
@@ -3263,7 +3261,7 @@
     var W = v ? 540 : 1280, H = v ? 960 : 720, f = fontePres(false), z2 = D().exterior_total, z1 = ((D().turno1 || {}).ufs || {}).zz, o;
     var tit = v ? "EXTERIOR: 1º × 2º" : "EXTERIOR: 1º × 2º TURNO";
     var cab = v ? r(35, 48, 6, 38, C.destaque) + t(53, 80, tit, { s: 28, b: true, ls: 1, max: 450 }) : t(73, 57, tit, { s: 36, b: true, ls: 1, max: 600 });
-    if (f.turno !== 2 || !z1 || !z1.tem || !z2 || !z2.tem || !candidatos(z2).some(function (c) { return +c.votos > 0; })) return svg(W, H, marcaVazio() + cab + t(W / 2, H / 2, "disponível no 2º turno (compara com o 1º turno guardado do exterior)", { s: v ? 15 : 22, c: C.apagado, a: "middle", max: W - 60 }));
+    if (f.turno !== 2 || !z1 || !z1.tem || !z2 || !z2.tem) return svg(W, H, marcaVazio() + cab + t(W / 2, H / 2, "disponível no 2º turno (compara com o 1º turno guardado do exterior)", { s: v ? 15 : 22, c: C.apagado, a: "middle", max: W - 60 }));
     cab += v ? seloV(W, seloDe({ br: z2 })) : seloH(W, seloDe({ br: z2 }));
     var fin = candidatos(z2).slice(0, 2), e1 = z1.eleitorado || {}, e2 = z2.eleitorado || {}, v1 = z1.votos || {}, v2 = z2.votos || {}, pu = (z2.secoes || {}).pct;
     function vDe(x, n) { var cs = candidatos(x); for (var i = 0; i < cs.length; i++) if (String(cs[i].numero) === String(n)) return cs[i]; return null; }
@@ -3796,19 +3794,9 @@
   // com o nome da tela. Volta sozinha quando o dado chega.
   var SEM_PRESIDENTE = /^(pres1t|presloc1t|presmapa1t|senado|comparativo|mulheres|perfilcamara|camara|deputados|topdep|topfem|topsenfem|perfileleitor|foiurnas|menosvot|senvotos|gov22|assembleia|assembleias|governadores|govpartido|gov2t|gov12|senadores|senadores1|senadores2)-/;
   var DE_ESTADOS = /^(camara|deputados|topdep|topfem|topsenfem|menosvot|senvotos|gov22|assembleia|assembleias|governadores|govpartido|gov2t|gov12|senadores|senadores1|senadores2|govpres)-/;
-  // Presidente "tem dado" so com a apuracao COMECADA: no 2o turno o TSE
-  // publica o boletim zerado antes das 17h - zero nao vai ao ar.
-  function temPresidente() {
-    var b = D().br; if (!b || !b.tem) return false;
-    if (b.secoes && +b.secoes.pct > 0) return true;
-    return candidatos(b).some(function (c) { return +c.votos > 0; });
-  }
-  // Governador do 2o turno com apuracao comecada em algum estado
-  function temGov2T() {
-    var u = (window.GCTSE_ESTADOS || {}).ufs || {};
-    return Object.keys(u).some(function (k) { var g = u[k] && u[k].gov; return g && g.tem && +g.turno === 2 && (+g.urnas_pct > 0 || comoLista(g.candidatos).some(function (c) { return +c.votos > 0; })); });
-  }
-  var GOV_2T = /^(gov2t|gov12)-/;
+  // Presidente "tem dado" com o boletim do TSE publicado - inclusive ZERADO
+  // (o 2o turno sai com 0% antes das 17h: e o dado real, como no app do TSE).
+  function temPresidente() { var b = D().br; return !!(b && b.tem); }
   function temEstados() { return !!(window.GCTSE_ESTADOS && window.GCTSE_ESTADOS.gravado_em); }
   function telaAguardando(id) {
     var v = /-v$/.test(id), W = v ? 540 : 1280, H = v ? 960 : 720;
@@ -3824,7 +3812,7 @@
   function desenharTela(id) {
     if (!G[id]) return null;
     VAZIA = false;
-    var out = ((!SEM_PRESIDENTE.test(id) && !temPresidente()) || (DE_ESTADOS.test(id) && !temEstados()) || (GOV_2T.test(id) && !temGov2T())) ? telaAguardando(id) : G[id]();
+    var out = ((!SEM_PRESIDENTE.test(id) && !temPresidente()) || (DE_ESTADOS.test(id) && !temEstados())) ? telaAguardando(id) : G[id]();
     if (VAZIA && typeof out === "string") out = out.replace("<svg", '<svg data-vazia="1"');
     return out;
   }

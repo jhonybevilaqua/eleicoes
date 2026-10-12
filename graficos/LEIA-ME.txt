@@ -18,8 +18,7 @@
    4. Nao feche nenhuma janela preta ate o fim da noite.
    So vai ao ar numero do TSE. Tela sem dado nao aparece no painel.
    2o turno ZERADO (o TSE publica antes das 17h): as telas do 2o turno
-   ficam escondidas ate o 1o voto apurado; aparecem so as do 1o turno,
-   Senado, Camara, governadores eleitos, Jornalismo e perfil do eleitor.
+   mostram 0% - e o dado real do TSE, igual ao app de resultados.
 
 ---------------------------------------------------------------------------
  1. O QUE O GERENCIADOR.bat ABRE SOZINHO
