@@ -644,6 +644,7 @@ $script:ProxMun = [datetime]::MinValue
 $script:Capitais = [ordered]@{}     # uf -> resumo do boletim da capital
 $script:Capitais1T = [ordered]@{}   # uf -> lider do 1o turno na capital (2o turno)
 $script:Exterior = [ordered]@{}     # cd -> resumo da cidade
+$script:Exterior1T = [ordered]@{}   # cd -> resumo da cidade no 1o turno (so no 2o turno)
 $script:ExteriorVez = 0
 function Visitar-Mun($o, [string] $uf, $saida) {
     if ($null -eq $o) { return }
@@ -729,6 +730,15 @@ function Ler-Exterior {
         if ($null -ne $bruto -and "$bruto" -ne "SEM-MUDANCA") { $x = Resumo-Mun $bruto "zz-$($m.cd)" $m; if ($x) { $script:Exterior[$m.cd] = $x } }
     }
     $script:ExteriorVez = ($script:ExteriorVez + 30) % [math]::Max(1, $n)
+    # 2o turno: o 1o turno de cada cidade do exterior (resultado final) e
+    # lido UMA vez, 10 por ciclo - para o "VIROU" por pais/cidade
+    if ($Eleicao1T) {
+        $faltam1 = @($ext | Where-Object { -not $script:Exterior1T.Contains($_.cd) } | Select-Object -First 10)
+        foreach ($m in $faltam1) {
+            $b1 = Obter-Boletim (Url-Mun "zz" $m.cd $Eleicao1T)
+            if ($null -ne $b1 -and "$b1" -ne "SEM-MUDANCA") { $x1 = Resumo-Mun $b1 "zz1-$($m.cd)" $m; if ($x1 -and $x1.andamento -eq "f") { $script:Exterior1T[$m.cd] = $x1 } }
+        }
+    }
 }
 
 # ------------------------------------------------------ cor de cada candidato
@@ -871,6 +881,7 @@ function Gravar-Dados {
         cidades       = [pscustomobject] $script:Cidades
         cidades_1t    = [pscustomobject] $script:Cidades1T
         exterior      = @($script:Exterior.Values)
+        exterior_1t   = @($script:Exterior1T.Values)
         exterior_cidades = $(if ($script:Mun) { $script:Mun.exterior.Count } else { 0 })
         turno1        = $(if ($Eleicao1T) { [pscustomobject]@{ eleicao = $Eleicao1T; br = $(if ($script:Turno1.Contains("br")) { $script:Turno1["br"] } else { [pscustomobject]@{ tem = $false } }); ufs = [pscustomobject] $script:Turno1 } } else { $null })
         evolucao      = [pscustomobject]@{ origem = $script:EvolucaoOrigem; nomes = [pscustomobject] $script:EvolucaoNomes; pontos = @($script:Evolucao) }

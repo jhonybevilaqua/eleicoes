@@ -3169,9 +3169,9 @@
   function chaveCidade(n) { return String(n || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase().trim(); }
   function paisDe(x) { var P = window.GCTSE_EXTERIOR_PAISES || {}; return x.pais ? chaveCidade(x.pais) : (P[chaveCidade(x.nome)] || ""); }
   function exteriorSemPais() { return comoLista(D().exterior).filter(function (x) { return !paisDe(x); }).map(function (x) { return x.nome; }); }
-  function agruparExterior(porPais) {
+  function agruparExterior(porPais, t1) {
     var g = {};
-    comoLista(D().exterior).forEach(function (x) {
+    comoLista(t1 ? D().exterior_1t : D().exterior).forEach(function (x) {
       var k = porPais ? (paisDe(x) || "OUTROS PAÍSES") : String(x.nome || "").toUpperCase();
       var a = g[k] = g[k] || { nome: k, validos: 0, cs: {}, cidades: 0, aptos: 0, comp: 0 };
       a.cidades++; a.validos += +(x.votos || {}).validos || 0; a.aptos += +(x.eleitorado || {}).aptos || 0; a.comp += +(x.eleitorado || {}).comparecimento || 0;
@@ -3211,14 +3211,21 @@
     if (f.turno === 2 && t1 && t1.tem && h <= 400) { var c1 = candidatos(t1)[0]; if (c1) o += t(x + 20, yb + 40 * k2, "1º turno no exterior: " + nomeCurto(c1) + " " + pct(c1.pct), { s: Math.round(12 * k2), c: C.apagado, max: w - 40 }); }
     return o;
   }
-  function linhasExterior(lista, x, y, w, passo, n, fs, rotulo) {
-    var o = t(x, y - passo * 0.55, rotulo, { s: fs - 2, b: true, c: C.apagado, ls: 1 });
+  function linhasExterior(lista, x, y, w, passo, n, fs, rotulo, l1) {
+    var o = t(x, y - passo * 0.55, rotulo, { s: fs - 2, b: true, c: C.apagado, ls: 1 }), m1 = {};
+    (l1 || []).forEach(function (a) { m1[a.nome] = a.lista[0]; });
     lista.slice(0, n).forEach(function (a, i) {
-      var yy = y + i * passo, c = a.lista[0], c2 = a.lista[1];
+      var yy = y + i * passo, c = a.lista[0], c2 = a.lista[1], p1 = m1[a.nome];
       o += r(x - 6, yy - passo * 0.62, w + 12, passo - 4, i % 2 ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.07)", 3);
       o += t(x, yy, a.nome, { s: fs, b: true, max: w * 0.36 }) + t(x, yy + fs * 0.95, inteiro(a.validos) + " votos válidos" + (a.cidades > 1 ? " · " + a.cidades + " cidades" : ""), { s: fs - 5, c: C.apagado, max: w * 0.36 });
       if (c) o += r(x + w * 0.39, yy - fs * 0.8, 5, fs + 2, cor(c), 2) + t(x + w * 0.39 + 12, yy, nomeCurto(c) + " " + pct(c.pct), { s: fs, b: true, max: w * 0.36 });
-      if (c2) o += t(x + w, yy, nomeCurto(c2).split(" ")[0] + " " + pct(c2.pct), { s: fs - 2, c: C.apagado, a: "end", max: w * 0.22 });
+      // 2o turno: quem liderava ali no 1o turno (e VIROU, se mudou)
+      if (c && p1) {
+        var virou = String(p1.numero) !== String(c.numero);
+        o += t(x + w * 0.39 + 12, yy + fs * 0.95, "1º turno: " + nomeCurto(p1) + " " + pct(p1.pct), { s: fs - 5, c: virou ? "#ffd43b" : C.apagado, max: w * 0.36 });
+        if (virou) o += r(x + w * 0.79, yy - fs * 0.85, 52, fs + 2, "#ffd43b", 3) + t(x + w * 0.79 + 26, yy + 1, "VIROU", { s: fs - 6, b: true, c: "#0b1220", a: "middle" });
+      }
+      if (c2 && !l1) o += t(x + w, yy, nomeCurto(c2) + " " + pct(c2.pct), { s: fs - 2, c: C.apagado, a: "end", max: w * 0.22 });
     });
     return o;
   }
@@ -3234,18 +3241,67 @@
       o += caixaExteriorTotal(73, 106, 440, 568, 1);
       o += r(533, 106, 674, 568, "rgba(8,14,32,0.60)", 10);
       if (!ls.length) o += t(870, 390, "aguardando os boletins das cidades", { s: 18, c: C.apagado, a: "middle" });
-      else o += linhasExterior(ls, 553, 160, 634, 42.5, 12, 17, porPais ? "PAÍSES COM MAIS VOTOS" : "CIDADES COM MAIS VOTOS");
+      else o += linhasExterior(ls, 553, 160, 634, 42.5, 12, 17, porPais ? "PAÍSES COM MAIS VOTOS" : "CIDADES COM MAIS VOTOS", f.turno === 2 ? agruparExterior(porPais, true) : null);
       return svg(W, H, o + t(73, 704, rod, { s: 11, c: C.apagado2, max: 1134 }));
     }
     o = r(35, 48, 6, 38, C.destaque) + t(53, 80, porPais ? "NO EXTERIOR" : "EXTERIOR: CIDADES", { s: 30, b: true, ls: 1 }) + t(53, 106, "Presidente · " + turnoTxt(f), { s: 14, c: C.apagado }) + seloV(W, seloDe(f));
     o += caixaExteriorTotal(35, 160, 470, 330, 0.95);
-    if (ls.length) o += linhasExterior(ls, 45, 540, 450, 40, 10, 15, porPais ? "PAÍSES COM MAIS VOTOS" : "CIDADES COM MAIS VOTOS");
+    if (ls.length) o += linhasExterior(ls, 45, 540, 450, 40, 10, 15, porPais ? "PAÍSES COM MAIS VOTOS" : "CIDADES COM MAIS VOTOS", f.turno === 2 ? agruparExterior(porPais, true) : null);
     return svg(W, H, o + t(35, 950, "Fonte: TSE" + (porPais ? " · país: tabela da emissora" : ""), { s: 10, c: C.apagado2 }));
   }
   G["exterior-h"] = function () { return telaExterior(false, true); };
   G["exterior-v"] = function () { return telaExterior(true, true); };
   G["excidades-h"] = function () { return telaExterior(false, false); };
   G["excidades-v"] = function () { return telaExterior(true, false); };
+
+  // ---- EXTERIOR: 1o x 2o TURNO --------------------------------------------
+  // 1o turno: boletim ZZ guardado (turno1.ufs.zz); 2o: exterior_total ao vivo.
+  function telaExComp(v) {
+    var W = v ? 540 : 1280, H = v ? 960 : 720, f = fontePres(false), z2 = D().exterior_total, z1 = ((D().turno1 || {}).ufs || {}).zz, o;
+    var tit = v ? "EXTERIOR: 1º × 2º" : "EXTERIOR: 1º × 2º TURNO";
+    var cab = v ? r(35, 48, 6, 38, C.destaque) + t(53, 80, tit, { s: 28, b: true, ls: 1, max: 450 }) : t(73, 57, tit, { s: 36, b: true, ls: 1, max: 600 });
+    if (f.turno !== 2 || !z1 || !z1.tem || !z2 || !z2.tem) return svg(W, H, marcaVazio() + cab + t(W / 2, H / 2, "disponível no 2º turno (compara com o 1º turno guardado do exterior)", { s: v ? 15 : 22, c: C.apagado, a: "middle", max: W - 60 }));
+    cab += v ? seloV(W, seloDe({ br: z2 })) : seloH(W, seloDe({ br: z2 }));
+    var fin = candidatos(z2).slice(0, 2), e1 = z1.eleitorado || {}, e2 = z2.eleitorado || {}, v1 = z1.votos || {}, v2 = z2.votos || {}, pu = (z2.secoes || {}).pct;
+    function vDe(x, n) { var cs = candidatos(x); for (var i = 0; i < cs.length; i++) if (String(cs[i].numero) === String(n)) return cs[i]; return null; }
+    var linhas = [["Comparecimento", e1.pct_comparec, e2.pct_comparec], ["Abstenção", e1.pct_abstencao, e2.pct_abstencao], ["Brancos", v1.pct_brancos, v2.pct_brancos], ["Nulos", v1.pct_nulos, v2.pct_nulos]];
+    var parcial = !(pu >= 100), sub = "Presidente · brasileiros no exterior · urnas do 2º turno " + pct(pu) + (parcial ? " (o ganho de votos só vale com 100%)" : "");
+    if (!v) {
+      o = cab + t(73, 85, sub, { s: 16, c: C.apagado, max: 600 });
+      fin.forEach(function (c, i) {
+        var X = 73 + i * 575, a = vDe(z1, c.numero), cc = cor(c), g = a ? (+c.votos || 0) - (+a.votos || 0) : null;
+        o += r(X, 106, 559, 250, "rgba(8,14,32,0.84)", 10) + r(X, 106, 559, 7, cc, 4);
+        o += t(X + 20, 150, c.nome, { s: 22, b: true, max: 380 }) + t(X + 20, 172, c.partido, { s: 14, c: C.apagado });
+        o += t(X + 20, 222, "1º turno", { s: 13, c: C.apagado }) + t(X + 20, 252, a ? pct(a.pct) : "—", { s: 28, b: true, c: "#c9d6e6" }) + t(X + 20, 274, a ? inteiro(a.votos) + " votos" : "", { s: 13, c: C.apagado });
+        o += t(X + 290, 222, "2º turno", { s: 13, c: C.apagado }) + t(X + 290, 252, pct(c.pct), { s: 34, b: true }) + t(X + 290, 274, inteiro(c.votos) + " votos", { s: 13, c: C.apagado });
+        if (g != null && !parcial) o += t(X + 20, 330, "ganhou " + sinalVotos(g) + " votos" + (a && a.votos ? " (" + (g >= 0 ? "+" : "−") + pct1(Math.abs(100 * g / a.votos)) + ")" : ""), { s: 18, b: true, c: g >= 0 ? "#69db7c" : "#ff8787", max: 520 });
+        else if (g != null) o += t(X + 20, 330, "ganho de votos: aguardando 100% das urnas do exterior", { s: 14, c: C.apagado, max: 520 });
+      });
+      o += r(73, 376, 1134, 300, "rgba(8,14,32,0.84)", 10) + t(93, 412, "", {}) + t(600, 412, "1º TURNO", { s: 13, b: true, c: C.apagado, a: "end", ls: 1 }) + t(820, 412, "2º TURNO", { s: 13, b: true, c: C.apagado, a: "end", ls: 1 }) + t(1050, 412, "DIFERENÇA", { s: 13, b: true, c: C.apagado, a: "end", ls: 1 });
+      linhas.forEach(function (L, i) {
+        var y = 470 + i * 52, d = L[1] != null && L[2] != null ? L[2] - L[1] : null;
+        o += t(110, y, L[0], { s: 22, b: true }) + t(600, y, pct(L[1]), { s: 22, c: "#c9d6e6", a: "end" }) + t(820, y, pct(L[2]), { s: 24, b: true, a: "end" }) + t(1050, y, d == null ? "—" : difPP(d), { s: 20, b: true, a: "end", c: Math.abs(d || 0) < 0.05 ? C.apagado : "#ffd43b" });
+      });
+      return svg(W, H, o + t(73, 704, "Fonte: TSE — boletim do exterior (ZZ): 1º turno final × 2º turno · eleitores aptos no exterior: " + inteiro(e2.aptos), { s: 11, c: C.apagado2, max: 1134 }));
+    }
+    o = cab + t(53, 106, "Presidente · urnas " + pct(pu), { s: 14, c: C.apagado });
+    fin.forEach(function (c, i) {
+      var Y = 160 + i * 200, a = vDe(z1, c.numero), cc = cor(c), g = a ? (+c.votos || 0) - (+a.votos || 0) : null;
+      o += r(35, Y, 470, 186, "rgba(8,14,32,0.84)", 8) + r(35, Y, 7, 186, cc, 3) + t(55, Y + 34, c.nome, { s: 20, b: true, max: 430 });
+      o += t(55, Y + 70, "1º turno", { s: 12, c: C.apagado }) + t(55, Y + 100, a ? pct(a.pct) : "—", { s: 24, b: true, c: "#c9d6e6" });
+      o += t(280, Y + 70, "2º turno", { s: 12, c: C.apagado }) + t(280, Y + 100, pct(c.pct), { s: 28, b: true });
+      o += t(55, Y + 128, (a ? inteiro(a.votos) : "—") + " → " + inteiro(c.votos) + " votos", { s: 13, c: C.apagado, max: 430 });
+      if (g != null && !parcial) o += t(55, Y + 164, "ganhou " + sinalVotos(g) + " votos", { s: 17, b: true, c: g >= 0 ? "#69db7c" : "#ff8787", max: 430 });
+    });
+    o += r(35, 572, 470, 300, "rgba(8,14,32,0.84)", 8) + t(330, 604, "1º T", { s: 12, b: true, c: C.apagado, a: "end" }) + t(420, 604, "2º T", { s: 12, b: true, c: C.apagado, a: "end" }) + t(495, 604, "DIF.", { s: 12, b: true, c: C.apagado, a: "end" });
+    linhas.forEach(function (L, i) {
+      var y = 650 + i * 56, d = L[1] != null && L[2] != null ? L[2] - L[1] : null;
+      o += t(52, y, L[0], { s: 18, b: true, max: 190 }) + t(330, y, pct1(L[1] || 0), { s: 16, c: "#c9d6e6", a: "end" }) + t(420, y, pct1(L[2] || 0), { s: 18, b: true, a: "end" }) + t(495, y, d == null ? "—" : difPP(d, true), { s: 14, b: true, a: "end", c: "#ffd43b" });
+    });
+    return svg(W, H, o + t(35, 950, "Fonte: TSE — exterior, 1º turno final × 2º turno", { s: 10, c: C.apagado2 }));
+  }
+  G["excomp-h"] = function () { return telaExComp(false); };
+  G["excomp-v"] = function () { return telaExComp(true); };
 
   // =====================================================================
   // MAIS COMPARATIVOS (3.13): saldo por estado, mudou de lado desde 2022,
@@ -3806,6 +3862,7 @@
       { id: "faltam-h", nome: "Onde ainda há votos para apurar", f: "h" },
       { id: "exterior-h", nome: "Brasileiros no exterior (por país)", f: "h" },
       { id: "excidades-h", nome: "Exterior: por cidade", f: "h" },
+      { id: "excomp-h", nome: "Exterior: 1º × 2º turno", f: "h" },
       { id: "saldo-h", nome: "De onde veio a vantagem (saldo por estado)", f: "h" },
       { id: "mudou22-h", nome: "Mudou de lado desde 2022", f: "h" },
       { id: "intensidade-h", nome: "Intensidade da vitória (mapa)", f: "h" },
@@ -3867,6 +3924,7 @@
       { id: "faltam-v", nome: "Onde ainda há votos para apurar", f: "v" },
       { id: "exterior-v", nome: "Brasileiros no exterior (por país)", f: "v" },
       { id: "excidades-v", nome: "Exterior: por cidade", f: "v" },
+      { id: "excomp-v", nome: "Exterior: 1º × 2º turno", f: "v" },
       { id: "saldo-v", nome: "De onde veio a vantagem (saldo por estado)", f: "v" },
       { id: "mudou22-v", nome: "Mudou de lado desde 2022", f: "v" },
       { id: "intensidade-v", nome: "Intensidade da vitória (mapa)", f: "v" },

@@ -573,7 +573,7 @@
     var nb = document.createElement("div"); nb.className = "nums"; nb.id = "nums-" + S.id; nb.textContent = "…"; g2.appendChild(nb);
     function sub2(tit, itens) { if (!itens.length) return; var d = document.createElement("div"); d.className = "sub2"; d.innerHTML = '<span class="rot2">' + tit + "</span>"; g2.appendChild(d); botoesEm(d, itens); }
     sub2("PRESIDENTE", itensDe(["pres2t", "presmapa", "evolucao", "virar", "faltam", "viradas", "margem", "decisivos", "regioes", "saldo", "cidades", "eleito"]));
-    sub2("COMPARATIVOS 1º × 2º", itensDe(["pres1t", "ganho", "ganhouf", "abstuf", "brnulos", "turnos", "presmapa1t", "apuracao"]));
+    sub2("COMPARATIVOS 1º × 2º", itensDe(["pres1t", "ganho", "ganhouf", "abstuf", "brnulos", "turnos", "excomp", "presmapa1t", "apuracao"]));
     // FAVORITOS (apresentacao-config.js): atalhos, sem tirar a tela do bloco dela
     var favs = (((cfgA.favoritos || {})[S.f]) || []).map(function (id) { return lista.filter(function (x) { return x.id === id; })[0]; }).filter(Boolean);
     if (favs.length) botoesEm(bloco("fav", "★ FAVORITOS  (teclas 1–9)"), favs.map(function (g, i) { return [g.id, (i < 9 ? (i + 1) + " · " : "") + g.nome]; }));

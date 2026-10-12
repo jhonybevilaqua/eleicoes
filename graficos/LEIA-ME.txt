@@ -69,7 +69,11 @@
         COMPARATIVOS 1o x 2o: Presidente 1o turno (todos os candidatos,
           resultado final), ganho de votos, onde cada um cresceu (por
           estado, so com 100%), abstencao e brancos/nulos por estado,
-          1o x 2o, presidente + mapa do 1o turno, apuracao.
+          1o x 2o, EXTERIOR 1o x 2o (ganho de votos, comparecimento,
+          abstencao, brancos e nulos), presidente + mapa do 1o turno,
+          apuracao (com abstencao por estado e regiao).
+        Exterior por pais/cidade: no 2o turno mostra quem liderava ali no
+          1o turno e VIROU (o 1o turno de cada cidade e lido uma vez).
      * GOVERNADORES - 27 ESTADOS: as telas (placar do 2o turno, 1o x 2o,
        mapa, governador x presidente, por partido, 2022 x 2026) e um botao
        por estado com o nome e o % (verde = eleito no 1o turno, azul =
