@@ -242,6 +242,7 @@
   .girosgov button:disabled { opacity: .4; cursor: default; }
   .girosgov button.ativo { background: var(--verm) !important; border-color: var(--verm-borda) !important; }
   #navColetas { font-weight: 800; } #navColetas.falta { background: var(--verm); border-color: var(--verm-borda); color: #fff; }
+  .sec.local .todasreg { width: 100%; font-weight: 800; margin-bottom: 6px; }
 </style>
 <script>try { if (localStorage.getItem("gctse-tema") === "escuro") document.documentElement.className = "escuro"; } catch (e) { }</script>
 </head>
@@ -600,8 +601,11 @@
     botoesEm(bloco("presidente", "PRESIDENTE"), itensDe(["eleito", "presidente", "presmapa", "presmapa1t", "regioes", "pres2t", "evolucao", "virar", "viradas", "margem", "decisivos", "saldo", "mudou22", "intensidade", "concentracao", "capitais", "exterior", "excidades", "estados", "lideranca"]));
     // Presidente | estado ou regiao (como no telao); o do 1o turno sai do
     // boletim final guardado e some sozinho se ele nao existir
-    function blocoLocal(tela, titulo) {
+    function blocoLocal(tela, titulo, todas) {
       var gL = bloco("local", titulo);
+      // TODAS AS REGIOES numa tela so (Presidente | Regioes)
+      var gt = lista.filter(function (x) { return x.id === todas + S.f; })[0];
+      if (gt) { usados[gt.id] = 1; var bt = botao("▦ TODAS AS REGIÕES (uma tela)", function () { definir(S.id, gt.id, ""); }, gt.id); bt.className = "todasreg"; var bxT = document.createElement("div"); bxT.className = "botoes"; bxT.appendChild(bt); gL.appendChild(bxT); }
       var regs = document.createElement("div"); regs.className = "regs";
       REGIOES_MENU.forEach(function (rg) {
         var br0 = botao(rg[0], function () { definir(S.id, tela + S.f, "alvo:" + rg[1]); }, tela + S.f + "|alvo:" + rg[1]);
@@ -613,8 +617,8 @@
       gL.appendChild(regs);
       return gL;
     }
-    var gL = blocoLocal("presloc-", "PRESIDENTE | ESTADO OU REGIÃO");
-    blocoLocal("presloc1t-", "PRESIDENTE 1º TURNO | ESTADO OU REGIÃO — resultado final");
+    var gL = blocoLocal("presloc-", "PRESIDENTE | ESTADO OU REGIÃO", "regioes-");
+    blocoLocal("presloc1t-", "PRESIDENTE 1º TURNO | ESTADO OU REGIÃO — resultado final", "regioes1t-");
     botoesEm(bloco("apuracao", "APURAÇÃO"), itensDe(["apuracao", "urnas"]));
     var gE = bloco("estados", "SENADO, GIRO E RESUMO DOS ESTADOS");
     // GOVERNADORES - tudo num lugar so: as telas e os 27 estados (verde =

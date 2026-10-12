@@ -1816,6 +1816,8 @@
   }
   G["regioes-h"] = function () { return telaRegioes(false, false); };
   G["regioes-v"] = function () { return telaRegioes(false, true); };
+  G["regioes1t-h"] = function () { if (!temTurno1()) return svg(1280, 720, marcaVazio() + t(640, 360, "1º turno ainda não guardado", { s: 24, c: C.apagado, a: "middle" })); return telaRegioes(true, false); };
+  G["regioes1t-v"] = function () { if (!temTurno1()) return svg(540, 960, marcaVazio() + t(270, 480, "1º turno ainda não guardado", { s: 20, c: C.apagado, a: "middle" })); return telaRegioes(true, true); };
 
   // ---- PRESIDENTE | ESTADO ou REGIAO (escolhido no gerenciador) ------------
   // alvo: sigla do estado ("sp") ou regiao ("norte"); vem da URL (?a=) ou do
@@ -3792,7 +3794,7 @@
   // Tela no ar sem o dado de que ela depende (antes das 17h, boletim ainda nao
   // lido, coleta recem-aberta): em vez de numeros zerados, uma tela limpa
   // com o nome da tela. Volta sozinha quando o dado chega.
-  var SEM_PRESIDENTE = /^(pres1t|presloc1t|presmapa1t|senado|comparativo|mulheres|perfilcamara|camara|deputados|topdep|topfem|topsenfem|perfileleitor|foiurnas|menosvot|senvotos|gov22|assembleia|assembleias|governadores|govpartido|gov2t|gov12|senadores|senadores1|senadores2)-/;
+  var SEM_PRESIDENTE = /^(pres1t|presloc1t|presmapa1t|regioes1t|senado|comparativo|mulheres|perfilcamara|camara|deputados|topdep|topfem|topsenfem|perfileleitor|foiurnas|menosvot|senvotos|gov22|assembleia|assembleias|governadores|govpartido|gov2t|gov12|senadores|senadores1|senadores2)-/;
   var DE_ESTADOS = /^(camara|deputados|topdep|topfem|topsenfem|menosvot|senvotos|gov22|assembleia|assembleias|governadores|govpartido|gov2t|gov12|senadores|senadores1|senadores2|govpres)-/;
   // Presidente "tem dado" com o boletim do TSE publicado - inclusive ZERADO
   // (o 2o turno sai com 0% antes das 17h: e o dado real, como no app do TSE).
@@ -3844,6 +3846,7 @@
       { id: "regioes-h", nome: "Presidente | Regiões", f: "h" },
       { id: "presloc-h", nome: "Presidente | Estado ou região", f: "h" },
       { id: "presloc1t-h", nome: "Presidente 1º turno | Estado ou região", f: "h" },
+      { id: "regioes1t-h", nome: "Presidente 1º turno | Regiões", f: "h" },
       { id: "pres1t-h", nome: "Presidente — 1º turno (todos os candidatos)", f: "h" },
       { id: "governadores-h", nome: "Governadores (1º verde · 2º azul)", f: "h" },
       { id: "govpartido-h", nome: "Governadores por partido", f: "h" },
@@ -3906,6 +3909,7 @@
       { id: "regioes-v", nome: "Presidente | Regiões", f: "v" },
       { id: "presloc-v", nome: "Presidente | Estado ou região", f: "v" },
       { id: "presloc1t-v", nome: "Presidente 1º turno | Estado ou região", f: "v" },
+      { id: "regioes1t-v", nome: "Presidente 1º turno | Regiões", f: "v" },
       { id: "pres1t-v", nome: "Presidente — 1º turno (todos os candidatos)", f: "v" },
       { id: "governadores-v", nome: "Governadores (1º verde · 2º azul)", f: "v" },
       { id: "govpartido-v", nome: "Governadores por partido", f: "v" },
