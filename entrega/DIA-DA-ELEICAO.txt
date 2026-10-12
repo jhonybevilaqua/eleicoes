@@ -1,6 +1,6 @@
 ===========================================================================
  DIA DA ELEICAO - 25/10/2026 (2o turno) - passo a passo
- gctse 7.1 - pasta D:\ELEICOES\GCTSE
+ gctse 7.2 - pasta D:\ELEICOES\GCTSE
 ===========================================================================
 
  AS TARJAS SAO AS MESMAS DO 1o TURNO. Mesmos arquivos (tarja-presidente,
@@ -49,12 +49,15 @@
  1. Feche todas as janelas pretas antigas.
 
  2. Abra o INICIAR.bat perto das 16h45.
-    A janela deve dizer: gctse versao 7.1 ... modo AR
+    A janela deve dizer: gctse versao 7.2 ... modo AR
     e, no primeiro ciclo:
       "1o turno lido: governador eleito em NN estados; 2o turno em NN: ..."
     Essa linha confirma que a separacao 1o x 2o turno esta certa.
 
- 3. Abra o PAINEL.bat (abre sozinho no Chrome, http://localhost:8099).
+ 3. O PAINEL abre SOZINHO: o INICIAR.bat abre a janela do PAINEL.bat, e o
+    painel abre o Chrome em http://localhost:8099. Se o painel ja estiver
+    aberto, o INICIAR nao abre outro. (Fechou o painel sem querer? Abra o
+    PAINEL.bat de novo - a coleta nao para.)
 
  4. No painel:
       NO AR AGORA ..... o que esta nos tres arquivos, com o turno de cada um

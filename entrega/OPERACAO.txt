@@ -214,8 +214,9 @@
                          cair, a janela reinicia sozinha em 10 segundos -
                          por isso ela precisa ficar aberta, nao minimizada
                          num canto onde ninguem olha.
- 2. PAINEL.bat           abre e fica aberto
- 3. navegador            localhost:8099, num canto de tela
+ 2. PAINEL.bat           abre SOZINHO junto com o INICIAR (7.2) e fica
+                         aberto. Se fechar, abra o PAINEL.bat de novo.
+ 3. navegador            o painel abre o Chrome em localhost:8099
  4. LiveBoard            auto update de 2 a 5 segundos
  5. VALIDAR-OFICIAL.bat  uma vez, no comeco, para conferir por escrito
 
