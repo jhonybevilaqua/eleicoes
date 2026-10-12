@@ -1,87 +1,100 @@
 ===========================================================================
- DIA DA ELEICAO - 04/10/2026 (1o turno) - passo a passo
- gctse 6.8 - pasta D:\ELEICOES\GCTSE
+ DIA DA ELEICAO - 25/10/2026 (2o turno) - passo a passo
+ gctse 7.0 - pasta D:\ELEICOES\GCTSE
 ===========================================================================
 
- Codigos do TSE ja no config.json (pagina oficial do TSE):
-   https://resultados.tse.jus.br/oficial - pleito 3220
-   6257 = Eleicao Geral Federal ........ Presidente
-   6259 = Eleicoes Gerais Estaduais .... Governador e Senador
+ AS TARJAS SAO AS MESMAS DO 1o TURNO. Mesmos arquivos (tarja-presidente,
+ tarja-governador, tarja-senador, listas e rodizio), mesmos campos, mesma
+ ordem. A cena do Castalia/LiveBoard NAO muda. So mudou de onde vem o dado.
+
+ Codigos do TSE ja no config.json (ambiente oficial):
+   2o turno - pleito 3221
+     6258 = Presidente ...... apuracao AO VIVO
+     6260 = Governador ...... apuracao AO VIVO (so os estados com 2o turno)
+   1o turno - pleito 3220 (resultado final, para consulta e giro)
+     6257 = Presidente
+     6259 = Governador e Senador
  Nao precisa mexer em nada no config.json.
 
 ---------------------------------------------------------------------------
- ANTES - sexta 02/10 ou sabado 03/10
+ O QUE CADA TARJA MOSTRA NO 2o TURNO
 ---------------------------------------------------------------------------
 
- 1. Duplo clique em DIAGNOSTICO-OFICIAL.bat e envie o DIAGNOSTICO.txt.
-    O esperado:
-      - OFICIAL RESPONDE, ou "ALCANCADO, mas o TSE nao publicou (404)".
-        Os dois querem dizer que a maquina chega no TSE. So "NAO RESPONDE"
-        (tempo esgotado, conexao recusada) e problema de rede.
-      - tarjas VAZIAS / "nada foi conferido": NORMAL. O TSE so publica os
-        boletins no dia. O que importa aqui e o item 1.
+ PRESIDENTE   o painel escolhe:
+                2o TURNO AO VIVO  (padrao) - apuracao de agora
+                1o TURNO          - resultado de 04/10, os dois com o selo
+                                    SEGUNDO TURNO
 
- 2. No LiveBoard, confira que o DataSource aponta para
-      D:\ELEICOES\GCTSE\TARJAS\tarja-*.json
-    e nao para uma copia em outra pasta.
+ GOVERNADOR   estado COM 2o turno: o painel escolhe
+                2o TURNO AO VIVO  - apuracao de agora
+                1o TURNO          - resultado de 04/10 (selo SEGUNDO TURNO)
+              estado DECIDIDO no 1o turno: sempre o resultado do 1o turno,
+                1o colocado com o selo ELEITO NO 1o TURNO (no mesmo campo
+                cand1_eleito de sempre) e o 2o colocado embaixo, sem selo.
 
- 3. No painel, deixe o modo em 2 CLIQUES (previa + COLOCAR NO AR).
+ SENADOR      Senado nao tem 2o turno: resultado do 1o turno (os dois mais
+              votados com ELEITO, como em 04/10).
 
- 4. FOTOS DO PRESIDENTE. A foto e procurada na pasta FOTOS pelo NUMERO
-    oficial do candidato (13.png, 22.jpg...) ou pelo nome de urna. As
-    fotos preparadas para o simulado NAO servem no dia: nomes e numeros
-    do simulado sao ficticios ("CANDIDATO 9987" era o numero 68). Salve
-    cada foto com o numero oficial de urna. Foto que nao for achada vira a silhueta sem-foto.png
-    - nunca a foto de outro candidato.
-    No dia, depois que o TSE publicar, o FOTOS-QUAIS-NOMES.bat lista os
-    candidatos reais e o nome certo de cada arquivo.
+ Candidato com os votos ANULADOS pelo TSE (ex.: retotalizacao do RJ em
+ 10/10) nao aparece: a tarja mostra quem o TSE declarou eleito e o 2o
+ colocado valido.
+
+ O 2o turno comeca ZERADO (0,00%): e o dado real do TSE ate as urnas
+ comecarem a ser apuradas.
 
 ---------------------------------------------------------------------------
- NO DIA - 04/10
+ NO DIA - 25/10
 ---------------------------------------------------------------------------
 
  1. Feche todas as janelas pretas antigas.
 
- 2. Abra o INICIAR.bat PERTO DAS 16h45 - nao de manha.
-    Antes da divulgacao o TSE responde 404 (arquivo ainda nao existe), e o
-    TSE avisa que muitos 404 podem bloquear o IP por um tempo. O sistema ja
-    espaca as tentativas, mas horas de janela aberta sao centenas de 404
-    sem necessidade.
-    A janela deve dizer: gctse versao 6.8 ... modo AR
+ 2. Abra o INICIAR.bat perto das 16h45.
+    A janela deve dizer: gctse versao 7.0 ... modo AR
+    e, no primeiro ciclo:
+      "1o turno lido: governador eleito em NN estados; 2o turno em NN: ..."
+    Essa linha confirma que a separacao 1o x 2o turno esta certa.
 
- 3. Abra o PAINEL.bat e o navegador em http://localhost:8099
+ 3. Abra o PAINEL.bat (abre sozinho no Chrome, http://localhost:8099).
 
- 4. Ate o TSE publicar (depois das 17h, quando fecha a votacao):
-      - janela: quadro VERMELHO "NAO ESTAMOS RECEBENDO DADOS DO TSE"
-      - painel: faixa vermelha com a mesma frase
-      - tarjas vazias
-    Isso e NORMAL antes da divulgacao. A coleta segue tentando sozinha.
+ 4. No painel:
+      NO AR AGORA ..... o que esta nos tres arquivos, com o turno de cada um
+      aba GOVERNADOR .. em cima, os estados do 2o TURNO (cinza/azul) com a
+                        apuracao ao vivo e dois botoes:
+                          2o TURNO AO VIVO  |  1o TURNO
+                        embaixo, os ELEITOS NO 1o TURNO (verde): um clique
+                        poe o estado na tarja com ELEITO NO 1o TURNO.
+      aba PRESIDENTE .. 2o TURNO AO VIVO NA TARJA  |  1o TURNO NA TARJA
+      aba SENADOR ..... os 27 estados (resultado do 1o turno)
 
- 5. Quando o TSE publicar:
-      - janela: "VOLTAMOS A RECEBER DADOS DO TSE" (verde) e as linhas
-        "NO ARQUIVO ..." com os numeros de cada tarja
-      - painel: a faixa vermelha some e o placar de numeros novos sobe
-    A tarja no ar recebe o dado em ate ~1 minuto; os outros estados, em
-    poucos minutos.
+ 5. GIRO DOS GOVERNADORES NA TARJA (aba GOVERNADOR, faixa GIRAR NA TARJA):
+      Eleitos no 1o turno ............ so os decididos em 04/10
+      2o turno ao vivo ............... so os estados em apuracao
+      Todos os eleitos (1o e 2o) ..... fim da noite: os eleitos no 1o turno
+                                       e os que o TSE ja declarou no 2o
+      Os 27 estados .................. todos, cada um no seu turno
+    O tempo de cada estado (6 a 20 s) fica logo abaixo. PARAR O GIRO para.
+    Clicar num governador na mao tambem para o giro.
+    O giro mora no painel: fechar o PAINEL.bat para o giro (a tarja fica
+    no ultimo estado).
 
  6. Durante a apuracao:
-      - escolha o estado no painel (previa -> COLOCAR NO AR)
+      - modo 2 CLIQUES (previa + COLOCAR NO AR) continua valendo para as
+        tres tarjas; o giro nao passa pela previa (o diretor ja decidiu)
       - CONGELAR AS TARJAS quando o apresentador for ler os numeros;
         DESCONGELAR depois
-      - pode clicar na janela preta: da 6.0 em diante ela nao congela
 
 ---------------------------------------------------------------------------
  ELEITO
 ---------------------------------------------------------------------------
 
-   Campo cand1_eleito / cand2_eleito: texto "ELEITO" ou vazio.
-   Tambem aparece a etiqueta verde ELEITO no painel, ao lado do nome.
+   Campo cand1_eleito / cand2_eleito (texto) - o mesmo de sempre:
+     ELEITO .............. o TSE declarou (ou a conta com os numeros do
+                           proprio boletim ja garante) no 2o turno
+     ELEITO NO 1o TURNO .. governador decidido em 04/10
+     SEGUNDO TURNO ....... resultado do 1o turno de quem foi ao 2o
+     vazio ............... apuracao em andamento
 
-   So acende quando o TSE escreve "Eleito" na situacao do candidato:
-     - Presidente e Governador SEM maioria: vai a 2o turno -> fica VAZIO
-       (a janela avisa: "... situacao '2o turno' - NAO mostro ELEITO")
-     - Senador: duas vagas -> os DOIS primeiros podem acender juntos
-   Quem declara eleito e o TSE. Sem o TSE declarar, nada acende.
+   O texto ELEITO NO 1o TURNO fica no config.json, texto.rotulo_eleito_1t.
 
 ---------------------------------------------------------------------------
  SE ALGO PARECER ERRADO
@@ -92,6 +105,13 @@
                                                reabra
    Faixa vermelha "NAO ESTAMOS RECEBENDO" .... rode DIAGNOSTICO-OFICIAL.bat
                                                e envie o DIAGNOSTICO.txt
+   Painel sem os estados (faixa laranja
+   "painel-dados.json") ...................... o INICIAR.bat nao e o 7.0, ou
+                                               o primeiro ciclo nao fechou
+   Estado na lista "SEM O RESULTADO DO
+   1o TURNO" ................................. o TSE nao respondeu o 1o turno
+                                               daquele estado; a coleta tenta
+                                               de novo a cada ~10 minutos
    Duvida sobre o TSE ........................ formulario do TSE:
                                                https://30308800.tse.jus.br/
                                                Descricao: "Resultados -

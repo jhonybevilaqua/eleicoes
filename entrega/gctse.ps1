@@ -35,7 +35,7 @@ param(
 # Versao impressa na partida e no painel. Sem carimbo, "qual versao esta
 # rodando ai?" so se responde abrindo arquivo e comparando a olho - e no
 # meio de um teste com janela de horario ninguem faz isso.
-$Versao = "6.8 - 04/10/2026"
+$Versao = "7.0 - 12/10/2026"
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
@@ -342,6 +342,30 @@ if (Tem-Propriedade $cfg.texto "rotulo_eleito") { $RotuloEleito = "$($cfg.texto.
 # sem campo novo (ver a REGRA das colunas). Vazio no config = nunca mostra.
 $RotuloSegundoTurno = "SEGUNDO TURNO"
 if (Tem-Propriedade $cfg.texto "rotulo_segundo_turno") { $RotuloSegundoTurno = "$($cfg.texto.rotulo_segundo_turno)" }
+# 7.0: governador decidido no 1o turno sai com este texto no MESMO campo do
+# selo (cand1_eleito / cand1_eleito_rotulo). Nenhum campo novo.
+$RotuloEleito1T = "ELEITO NO 1" + [char] 0x00BA + " TURNO"
+if (Tem-Propriedade $cfg.texto "rotulo_eleito_1t") { $RotuloEleito1T = "$($cfg.texto.rotulo_eleito_1t)" }
+
+# ------------------------------------------------------------ 2o turno (7.0)
+#
+# No 2o turno as tarjas sao AS MESMAS (mesmos arquivos, mesmos campos, mesma
+# ordem - a cena do Castalia nao muda). O que muda e DE ONDE vem o dado:
+#   - eleicao_por_cargo     = eleicoes do 2o turno (Presidente, Governador)
+#   - eleicao_por_cargo_1t  = eleicoes do 1o turno (resultado final, para os
+#                             estados decididos no 1o turno, para o Senado e
+#                             para mostrar o 1o turno quando o diretor pedir)
+# Turno 1 = le o 1o turno; turno 2 = le o 2o turno (padrao).
+$script:SegundoTurno = $false
+$script:Releitura1T = 30
+if ((Tem-Propriedade $cfg "segundo_turno") -and (Tem-Propriedade $cfg.segundo_turno "ativo")) {
+    $script:SegundoTurno = [bool] $cfg.segundo_turno.ativo
+    if (Tem-Propriedade $cfg.segundo_turno "releitura_1t_ciclos") { $script:Releitura1T = [math]::Max(1, [int] $cfg.segundo_turno.releitura_1t_ciclos) }
+}
+$ArquivoSelecaoPresidente = "SELECAO-PRESIDENTE.txt"
+if ((Tem-Propriedade $cfg "segundo_turno") -and (Tem-Propriedade $cfg.segundo_turno "arquivo_selecao_presidente")) {
+    $ArquivoSelecaoPresidente = "$($cfg.segundo_turno.arquivo_selecao_presidente)"
+}
 $PastaFotos = ""
 if (Tem-Propriedade $cfg.texto "pasta_fotos") { $PastaFotos = "$($cfg.texto.pasta_fotos)" }
 if ($PastaFotos -and -not [IO.Path]::IsPathRooted($PastaFotos)) {
@@ -447,7 +471,15 @@ function Obter-Eleicao {
     # a Federal (Presidente) e 21272 a Estadual (Governador, Senador). Usar
     # um codigo so para tudo devolve 404 em metade das tarjas, e a tela fica
     # sem governador sem ninguem entender por que.
-    param([int] $Cargo)
+    param([int] $Cargo, [int] $Turno = 2)
+    # 7.0: Senado nao tem 2o turno - sempre o 1o. Turno 1 = resultado do 1o.
+    if ($script:SegundoTurno -and ($Turno -eq 1 -or $Cargo -eq 5) -and (Tem-Propriedade $cfg.tse "eleicao_por_cargo_1t")) {
+        $mapa1 = $cfg.tse.eleicao_por_cargo_1t
+        if (Tem-Propriedade $mapa1 "$Cargo") {
+            $v1 = $mapa1."$Cargo"
+            if ($v1) { return "$v1" }
+        }
+    }
     if (Tem-Propriedade $cfg.tse "eleicao_por_cargo") {
         $mapa = $cfg.tse.eleicao_por_cargo
         if (Tem-Propriedade $mapa "$Cargo") {
@@ -464,7 +496,7 @@ function Montar-Url {
     # pode mexer nisso de novo antes de outubro. Por isso o caminho e um
     # molde no config.json, e nao codigo: descobrir o caminho certo no
     # CONFERIR e usa-lo vira edicao de uma linha, nao versao nova.
-    param([string] $Abrangencia, [int] $Cargo, [string] $Molde = "")
+    param([string] $Abrangencia, [int] $Cargo, [string] $Molde = "", [int] $Turno = 2)
     $dir = $Abrangencia
     if ($Abrangencia.Length -gt 2) { $dir = $Abrangencia.Substring(0, 2) }
     if (-not $Molde) {
@@ -477,7 +509,7 @@ function Montar-Url {
     $u = $u.Replace("{base}", $cfg.tse.base_url.TrimEnd('/'))
     $u = $u.Replace("{ciclo}", "$($cfg.tse.ciclo)")
     $u = $u.Replace("{pleito}", "$($cfg.tse.pleito)")
-    $ele = Obter-Eleicao $Cargo
+    $ele = Obter-Eleicao $Cargo $Turno
     $u = $u.Replace("{eleicao6}", ("{0:000000}" -f ([int] $ele)))
     $u = $u.Replace("{eleicao}", "$ele")
     $u = $u.Replace("{cargo4}", ("{0:0000}" -f $Cargo))
@@ -506,7 +538,7 @@ function Atender-Troca-De-Praca {
     # errado no ar. Esta funcao so le cache e grava arquivo, nao faz
     # requisicao nenhuma, entao pode ser chamada de dentro do ciclo.
     if (-not (Tem-Propriedade $cfg "selecao")) { return $false }
-    $agora = (($cfg.selecao.saidas | ForEach-Object { (Ler-Selecao $_.cargo).uf }) -join ",")
+    $agora = Assinatura-Selecao
     # Descongelar tambem e uma troca. Sem isto, sair do congelamento so
     # entrava no ar no ciclo seguinte - ate 20 segundos com o numero velho
     # na tela depois de alguem ter mandado liberar. Ao vivo, 20 segundos e
@@ -528,12 +560,20 @@ function Atender-Troca-De-Praca {
         foreach ($saida in $cfg.selecao.saidas) {
             $praca = Ler-Selecao $saida.cargo
             if ($null -eq $praca) { continue }
-            if ($script:CacheBoletins.ContainsKey("$($praca.uf)-$($saida.cargo)")) { continue }
+            if ($script:CacheBoletins.ContainsKey((Chave-Boletim $praca.uf $saida.cargo $praca.turno))) { continue }
             if ($script:Requisicoes.Count -ge ($limiteT - 5)) { continue }
-            $null = Buscar-Praca $praca.uf $saida.cargo $praca.nome $script:Modo
+            $null = Buscar-Praca $praca.uf $saida.cargo $praca.nome $script:Modo $praca.turno
+        }
+        # 7.0: presidente tambem troca na hora (2o turno ao vivo / 1o turno)
+        $turnoP = Ler-Turno-Presidente
+        foreach ($tarjaP in @($cfg.tarjas)) {
+            if ($script:CacheBoletins.ContainsKey((Chave-Boletim $tarjaP.abrangencia $tarjaP.cargo $turnoP))) { continue }
+            if ($script:Requisicoes.Count -ge ($limiteT - 5)) { continue }
+            $null = Buscar-Praca $tarjaP.abrangencia $tarjaP.cargo $tarjaP.praca $script:Modo $turnoP
         }
     }
     $null = Publicar-Selecionada $script:CacheBoletins
+    $null = Publicar-Presidente
     foreach ($saida in $cfg.selecao.saidas) {
         $praca = Ler-Selecao $saida.cargo
         if ($null -ne $praca) { Limpar-Alerta $praca.uf $saida.cargo }
@@ -941,7 +981,7 @@ function Calcular-Definicao {
     #     todos os candidatos + faltam). 2o TURNO se ninguem passa de 50%
     #     dos validos nem com todos os que faltam E o 3o nao alcanca o 2o.
     #   Senador (nv vagas): ELEITO se votos > (nv+1)-esimo + faltam.
-    param($Bruto, $Candidatos)
+    param($Bruto, $Candidatos, [switch] $SemSegundoTurno)
     $lista = @($Candidatos)
     if ($lista.Count -eq 0) { return }
     if (@($lista | Where-Object { $_.Eleito -eq "1" -or $_.SegundoTurno -eq "1" }).Count -gt 0) { return }
@@ -994,7 +1034,7 @@ function Calcular-Definicao {
         if ($lider.Valido -and $lider.Votos -gt 0 -and (2.0 * $lider.Votos) -gt ($soma + $faltam)) {
             $lider.Eleito = "1"; $lider.Calculado = $true
             Avisar-Definicao $praca $cdLog ("ELEITO " + $lider.Nome) $faltam $fonte
-        } elseif ($lista.Count -ge 2) {
+        } elseif ($lista.Count -ge 2 -and -not $SemSegundoTurno) {
             $maior = 0.0
             foreach ($k in $lista) { if ($k.Valido -and [double] $k.Votos -gt $maior) { $maior = [double] $k.Votos } }
             $terceiro = 0.0
@@ -1022,7 +1062,7 @@ function Calcular-Definicao {
 
 function Normalizar-Boletim {
     # JSON do TSE -> objeto simples, com o que as tarjas usam.
-    param($Bruto, [string] $Praca)
+    param($Bruto, [string] $Praca, [int] $Turno = 2, [int] $CodCargo = 0)
 
     $secoes = Obter-Campo $Bruto @("s")
     $pct = Converter-Decimal (Obter-Campo $secoes @("pst") (Obter-Campo $Bruto @("pst")))
@@ -1060,8 +1100,19 @@ function Normalizar-Boletim {
             }
         }
     }
+    # 7.0: resultado do 1o turno (e Senado) = resultado FINAL. Candidato com
+    # os votos ANULADOS (dvt "Anulado..." - ex.: retotalizacao do RJ em
+    # 10/10/2026) sai da disputa: nao pode aparecer como 1o colocado nem
+    # como 2o lugar. Os outros ficam com o percentual que o TSE publica.
+    $leu1T = $script:SegundoTurno -and ($Turno -eq 1 -or $CodCargo -eq 5)
+    if ($leu1T) {
+        $candidatos = @($candidatos | Where-Object { "$($_.Situacao)" -notmatch '^\s*anula' })
+    }
     $candidatos = @($candidatos | Sort-Object -Property @{Expression = "Votos"; Descending = $true}, Numero)
-    Calcular-Definicao $Bruto $candidatos
+    # 2o turno ao vivo: so dois candidatos, nao existe "vai ao 2o turno".
+    $le2T = $script:SegundoTurno -and (-not $leu1T)
+    if ($le2T) { foreach ($k in $candidatos) { $k.SegundoTurno = "0" } }
+    Calcular-Definicao $Bruto $candidatos -SemSegundoTurno:$le2T
 
     $fase = "$(Obter-Campo $Bruto @('f') '')".ToUpper()
     $nome = "$(Obter-Campo $Bruto @('nmabr') $Praca)"
@@ -1081,6 +1132,7 @@ function Normalizar-Boletim {
         # vazia. O que precisa ser barrado no ar e o simulado e o teste.
         Oficial     = ($fase -ne "S" -and $fase -ne "T")
         Praca       = $nome
+        Turno       = $(if ($leu1T) { 1 } else { 2 })
         PctUrnas    = $pct
         Geracao     = "$(Obter-Campo $Bruto @('dg') '') $(Obter-Campo $Bruto @('hg') '')"
         Candidatos  = $candidatos
@@ -1380,7 +1432,13 @@ function Montar-Tarja {
             # nome do campo e o mesmo desde a 5.8, entao a posicao que o
             # Castalia guarda nao muda (ver a REGRA la em cima).
             $seloCand = ""
-            if ($c.Eleito -eq "1") { $seloCand = $RotuloEleito }
+            if ($c.Eleito -eq "1") {
+                $seloCand = $RotuloEleito
+                # 7.0: governador/presidente decidido no 1o turno, mostrado
+                # durante o 2o: "ELEITO NO 1o TURNO" (o 2o lugar segue sem selo).
+                if ($script:SegundoTurno -and (Tem-Propriedade $Boletim "Turno") -and [int] $Boletim.Turno -eq 1 -and
+                    ([int] $Tarja.cargo -eq 1 -or [int] $Tarja.cargo -eq 3) -and $RotuloEleito1T) { $seloCand = $RotuloEleito1T }
+            }
             elseif ((Tem-Propriedade $c "SegundoTurno") -and $c.SegundoTurno -eq "1") { $seloCand = $RotuloSegundoTurno }
             $saida[$p + "eleito"] = $seloCand
             # Campo de TEXTO para o selo: a cena vincula um objeto de texto
@@ -1537,6 +1595,9 @@ function Ler-Selecao {
     # A praca escolhida pelo operador, por cargo. Governador e senador tem
     # selecao independente: o operador pode estar mostrando governador de SP
     # e senador do PR ao mesmo tempo.
+    # 7.0: o SELECAO.txt do governador pode trazer o turno: "pr" (automatico:
+    # 2o turno ao vivo se o estado tem 2o turno, senao o resultado do 1o),
+    # "pr:2t" ou "pr:1t". Devolve uf, nome e turno (1 ou 2).
     param([int] $Cargo = 3)
     if (-not (Tem-Propriedade $cfg "selecao")) { return $null }
 
@@ -1548,17 +1609,21 @@ function Ler-Selecao {
     }
 
     $uf = $cfg.selecao.padrao
+    $pedido = ""
     if (Test-Path $arq) {
         try {
             $lido = (Get-Content $arq -Raw -ErrorAction Stop).Trim().ToLower()
-            if ($lido) { $uf = $lido }
+            if ($lido -match '^([a-z]{2})\s*:\s*([12])t$') { $uf = $Matches[1]; $pedido = $Matches[2] }
+            elseif ($lido -match '^([a-z]{2})\s*:') { $uf = $Matches[1] }
+            elseif ($lido) { $uf = $lido }
         } catch { }
     }
-    foreach ($p in $cfg.selecao.pracas) { if ($p.uf -eq $uf) { return $p } }
+    $achada = $null
+    foreach ($p in $cfg.selecao.pracas) { if ($p.uf -eq $uf) { $achada = $p } }
     # UF que nao existe na lista: cair na primeira praca poe um estado
     # qualquer no ar sem ninguem pedir. Melhor voltar ao padrao configurado
     # e dizer em voz alta que o arquivo de selecao esta com lixo.
-    if ($uf -ne $cfg.selecao.padrao) {
+    if ($null -eq $achada -and $uf -ne $cfg.selecao.padrao) {
         # Uma vez por valor ruim, e nao uma vez por chamada: esta funcao e
         # consultada dezenas de vezes por ciclo (uma por praca, por cargo),
         # e o mesmo aviso repetido 41 vezes empurra o resumo do ciclo para
@@ -1567,9 +1632,72 @@ function Ler-Selecao {
             $script:SelecaoRuimAvisada = $uf
             Escrever-Log "selecao '$uf' nao existe na lista de pracas: usando o padrao '$($cfg.selecao.padrao)'" "AVISO"
         }
-        foreach ($p in $cfg.selecao.pracas) { if ($p.uf -eq $cfg.selecao.padrao) { return $p } }
+        foreach ($p in $cfg.selecao.pracas) { if ($p.uf -eq $cfg.selecao.padrao) { $achada = $p } }
     }
-    return $cfg.selecao.pracas[0]
+    if ($null -eq $achada) { $achada = $cfg.selecao.pracas[0] }
+    $turno = 2
+    if ($script:SegundoTurno) {
+        if ($Cargo -eq 5) { $turno = 1 }
+        elseif ($Cargo -eq 3) {
+            $sit = Situacao-1T $achada.uf
+            # Estado decidido no 1o turno nao tem 2o turno: o arquivo do 2o nao
+            # existe (404). Sempre o resultado do 1o, qualquer que seja o pedido.
+            if ($sit -eq "eleito") { $turno = 1 }
+            elseif ($pedido -eq "1") { $turno = 1 }
+            elseif ($pedido -eq "2") { $turno = 2 }
+            elseif ($sit -eq "2t") { $turno = 2 }
+            # 1o turno ainda nao lido: o 2o turno so existe nos estados que o
+            # tem - tentar 2o no escuro daria tarja vazia. Mostra o 1o ate saber.
+            else { $turno = 1 }
+        }
+    }
+    return [pscustomobject]@{ uf = "$($achada.uf)"; nome = "$($achada.nome)"; turno = $turno }
+}
+
+function Chave-Boletim {
+    # Chave do cache: "pr-3" = 2o turno (ou o unico turno, fora do 2o turno);
+    # "pr-3-1t" = 1o turno. Senado e sempre o 1o turno e fica em "pr-5".
+    param([string] $Uf, [int] $Cargo, [int] $Turno = 2)
+    if ($script:SegundoTurno -and $Turno -eq 1 -and $Cargo -ne 5) { return "$Uf-$Cargo-1t" }
+    return "$Uf-$Cargo"
+}
+
+function Situacao-1T {
+    # "eleito" = governador decidido no 1o turno; "2t" = estado com 2o turno;
+    # "" = o 1o turno daquele estado ainda nao foi lido.
+    param([string] $Uf)
+    $chave = Chave-Boletim $Uf 3 1
+    if (-not $script:CacheBoletins.ContainsKey($chave)) { return "" }
+    $b = $script:CacheBoletins[$chave]
+    foreach ($c in @($b.Candidatos)) { if ($c.Eleito -eq "1") { return "eleito" } }
+    foreach ($c in @($b.Candidatos)) { if ((Tem-Propriedade $c "SegundoTurno") -and $c.SegundoTurno -eq "1") { return "2t" } }
+    return ""
+}
+
+function Ler-Turno-Presidente {
+    # SELECAO-PRESIDENTE.txt: "2t" (padrao, apuracao ao vivo) ou "1t"
+    # (resultado do 1o turno). Fora do 2o turno, sempre o unico turno.
+    if (-not $script:SegundoTurno) { return 2 }
+    if (Test-Path $ArquivoSelecaoPresidente) {
+        try {
+            $lido = (Get-Content $ArquivoSelecaoPresidente -Raw -ErrorAction Stop).Trim().ToLower()
+            if ($lido -match '^1') { return 1 }
+        } catch { }
+    }
+    return 2
+}
+
+function Assinatura-Selecao {
+    # O que esta escolhido agora, numa linha so: muda = trocar a tarja na hora.
+    $partes = @()
+    if (Tem-Propriedade $cfg "selecao") {
+        foreach ($saida in $cfg.selecao.saidas) {
+            $p = Ler-Selecao $saida.cargo
+            if ($null -ne $p) { $partes += "$($p.uf):$($p.turno)" }
+        }
+    }
+    $partes += "br:$(Ler-Turno-Presidente)"
+    return ($partes -join ",")
 }
 
 function Converter-Geracao {
@@ -1682,8 +1810,8 @@ $script:FaseAvisada = @{}
 function Buscar-Praca {
     # Le uma praca/cargo do TSE (ou do simulador), guarda em cache e acende o
     # alerta se o numero mudou. Uma praca por ciclo, no maximo.
-    param([string] $Uf, [int] $Cargo, [string] $Nome, [string] $Modo)
-    $chave = "$Uf-$Cargo"
+    param([string] $Uf, [int] $Cargo, [string] $Nome, [string] $Modo, [int] $Turno = 2)
+    $chave = Chave-Boletim $Uf $Cargo $Turno
     if ($script:VistosNesteCiclo.ContainsKey($chave)) {
         if ($script:CacheBoletins.ContainsKey($chave)) { return $script:CacheBoletins[$chave] }
         return $null
@@ -1691,7 +1819,7 @@ function Buscar-Praca {
     $script:VistosNesteCiclo[$chave] = $true
 
     $b = $null
-    $urlPraca = Montar-Url $Uf $Cargo
+    $urlPraca = Montar-Url $Uf $Cargo "" $Turno
     $bruto = Obter-Boletim $urlPraca -Prioritario:(Esta-No-Ar $Uf $Cargo)
     # Falha de rede de UM pedido nao apaga o que ja se sabe: fica o ultimo
     # boletim bom, como no 304. Antes o resumo dizia "sem dado" para uma
@@ -1703,7 +1831,7 @@ function Buscar-Praca {
         if ($script:CacheBoletins.ContainsKey($chave)) { return $script:CacheBoletins[$chave] }
         return $null
     }
-    if ($null -ne $bruto) { $b = Normalizar-Boletim $bruto $Nome }
+    if ($null -ne $bruto) { $b = Normalizar-Boletim $bruto $Nome $Turno $Cargo }
     if ($null -ne $b -and (-not $b.Oficial) -and $Modo -eq "AR") {
         if (-not $script:FaseAvisada.ContainsKey("rejeitada-$($b.Fase)")) {
             $script:FaseAvisada["rejeitada-$($b.Fase)"] = $true
@@ -1777,7 +1905,9 @@ function Buscar-Praca {
     }
     if ($null -ne $b) {
         Avisar-Candidato-Nao-Valido $chave $b $Uf $Cargo
-        Marcar-Alerta $Uf $Cargo $b
+        # 7.0: o 1o turno e resultado fechado - o alerta de "boletim novo" e
+        # so da apuracao ao vivo (2o turno).
+        if (-not ($script:SegundoTurno -and [int] $b.Turno -eq 1)) { Marcar-Alerta $Uf $Cargo $b }
         $script:CacheBoletins[$chave] = $b
     }
     return $b
@@ -1890,7 +2020,7 @@ function Publicar-Selecionada {
     foreach ($saida in $cfg.selecao.saidas) {
         $praca = Ler-Selecao $saida.cargo
         if ($null -eq $praca) { continue }
-        $chave = "$($praca.uf)-$($saida.cargo)"
+        $chave = Chave-Boletim $praca.uf $saida.cargo $praca.turno
         $b = $null
         if ($Cache.ContainsKey($chave)) { $b = $Cache[$chave] }
         if ($null -eq $b) {
@@ -1898,7 +2028,7 @@ function Publicar-Selecionada {
             # arquivo como estava: mostraria o estado ANTERIOR com o operador
             # achando que selecionou outro. Publica vazio, com o nome certo.
             $b = [pscustomobject]@{
-                Fase = "O"; Oficial = $true; Praca = $praca.nome
+                Fase = "O"; Oficial = $true; Praca = $praca.nome; Turno = $praca.turno
                 PctUrnas = 0.0; Geracao = ""; Candidatos = @(); Encerrada = "0"
             }
         } else {
@@ -1928,23 +2058,17 @@ function Publicar-Selecionada {
     return $publicados
 }
 
-# --------------------------------------------------------------------- ciclo
-
-function Executar-Ciclo {
-    param([string] $Modo)
-    $script:Ciclo++
-    $script:VistosNesteCiclo = @{}
-    $linhas = @()
-
-    $ciclosVarredura = 3
-    if (Tem-Propriedade $cfg "ciclos_varredura") { $ciclosVarredura = [math]::Max(1, [int] $cfg.ciclos_varredura) }
-    # Varredura completa de vez em quando; o resto do tempo so o que esta no
-    # ar. E o que permite cobrir 27 estados sem estourar o limite do TSE.
-    $varredura = (($script:Ciclo - 1) % $ciclosVarredura) -eq 0
-
-    # --- tarjas fixas (presidente) : todo ciclo
+function Publicar-Presidente {
+    # 7.0: grava a tarja do presidente a partir do cache, no turno escolhido
+    # no painel (2o turno ao vivo ou resultado do 1o). Nao consulta o TSE.
+    # Devolve uma linha por tarja para o resumo do ciclo.
+    $linhasP = @()
+    if (-not (Tem-Propriedade $cfg "tarjas")) { return $linhasP }
+    $turnoP = Ler-Turno-Presidente
     foreach ($tarja in $cfg.tarjas) {
-        $b = Buscar-Praca $tarja.abrangencia $tarja.cargo $tarja.praca $Modo
+        $chave = Chave-Boletim $tarja.abrangencia $tarja.cargo $turnoP
+        $b = $null
+        if ($script:CacheBoletins.ContainsKey($chave)) { $b = $script:CacheBoletins[$chave] }
         $situacao = "sem dado"
         if ($null -ne $b) {
             $montada = Montar-Tarja $b $tarja
@@ -1955,6 +2079,7 @@ function Executar-Ciclo {
                 # linha continua saindo no log e a impressao NAO e guardada,
                 # para que ao descongelar o arquivo seja reescrito na hora.
                 $situacao = "congelada"
+                $Impressoes[$tarja.arquivo] = ""
             } elseif ($Impressoes[$tarja.arquivo] -eq $hash -and
                       (Arquivo-Igual (Join-Path $PastaSaida "$($tarja.arquivo).json") $hash)) {
                 $situacao = "sem mudanca"
@@ -1974,25 +2099,151 @@ function Executar-Ciclo {
                 $p2 = "$($b.Candidatos[1].Nome) ($($b.Candidatos[1].Partido))"
                 $q2 = Formatar-Percentual $b.Candidatos[1].Percentual
             }
-            $linhas += [pscustomobject]@{
+            $linhasP += [pscustomobject]@{
                 Tarja = $tarja.arquivo; Praca = $b.Praca
                 Urnas = (Formatar-Percentual $b.PctUrnas)
                 Primeiro = $p1; Pct1 = $q1; Segundo = $p2; Pct2 = $q2; Situacao = $situacao
             }
         } else {
-            $linhas += [pscustomobject]@{
+            $linhasP += [pscustomobject]@{
                 Tarja = $tarja.arquivo; Praca = $tarja.praca; Urnas = ""
                 Primeiro = ""; Pct1 = ""; Segundo = ""; Pct2 = ""; Situacao = $situacao
             }
         }
     }
+    return $linhasP
+}
+
+function Ler-Primeiro-Turno {
+    # 7.0: resultado FINAL do 1o turno - presidente (Brasil), governador e
+    # senador dos 27 estados. Lido na partida e depois a cada
+    # 'releitura_1t_ciclos' ciclos (retotalizacao, como a do RJ em 10/10).
+    # Com o ETag, a releitura de arquivo que nao mudou volta 304.
+    param([string] $Modo)
+    if (-not $script:SegundoTurno) { return }
+    foreach ($tarja in @($cfg.tarjas)) {
+        $null = Buscar-Praca $tarja.abrangencia $tarja.cargo $tarja.praca $Modo 1
+    }
+    if (-not (Tem-Propriedade $cfg "selecao")) { return }
+    foreach ($p in $cfg.selecao.pracas) {
+        foreach ($saida in $cfg.selecao.saidas) {
+            $null = Buscar-Praca $p.uf $saida.cargo $p.nome $Modo 1
+        }
+    }
+}
+
+function Resumo-Boletim {
+    # Para o painel: o que a tarja mostraria com este boletim.
+    param($B, [int] $Cargo)
+    if ($null -eq $B) { return $null }
+    $cands = @()
+    $limite = 2
+    foreach ($c in @($B.Candidatos)) {
+        if ($cands.Count -ge $limite) { break }
+        $selo = ""
+        if ($c.Eleito -eq "1") {
+            $selo = $RotuloEleito
+            if ($script:SegundoTurno -and [int] $B.Turno -eq 1 -and ($Cargo -eq 1 -or $Cargo -eq 3)) { $selo = $RotuloEleito1T }
+        } elseif ((Tem-Propriedade $c "SegundoTurno") -and $c.SegundoTurno -eq "1") { $selo = $RotuloSegundoTurno }
+        $cands += [ordered]@{
+            nome = "$($c.Nome)"; partido = "$($c.Partido)"
+            percentual = (Formatar-Percentual $c.Percentual); votos = [int64] $c.Votos
+            eleito = $(if ($c.Eleito -eq "1") { 1 } else { 0 }); selo = $selo
+        }
+    }
+    return [ordered]@{
+        turno = [int] $B.Turno; urnas = (Formatar-Percentual $B.PctUrnas)
+        encerrada = "$($B.Encerrada)"; candidatos = $cands
+    }
+}
+
+function Escrever-Dados-Painel {
+    # 7.0: arquivo SO DO PAINEL (o Castalia nao le). Tudo o que o painel
+    # precisa para separar 2o turno x eleitos no 1o turno, sem ele consultar
+    # o TSE. Nenhuma tarja muda por causa dele.
+    if (-not (Tem-Propriedade $cfg "selecao")) { return }
+    $estados = [ordered]@{}
+    foreach ($p in $cfg.selecao.pracas) {
+        $g1 = $null; $g2 = $null; $sn = $null
+        $k = Chave-Boletim $p.uf 3 1; if ($script:CacheBoletins.ContainsKey($k)) { $g1 = $script:CacheBoletins[$k] }
+        $k = Chave-Boletim $p.uf 3 2; if ($script:CacheBoletins.ContainsKey($k)) { $g2 = $script:CacheBoletins[$k] }
+        $k = Chave-Boletim $p.uf 5 1; if ($script:CacheBoletins.ContainsKey($k)) { $sn = $script:CacheBoletins[$k] }
+        $sit = Situacao-1T $p.uf
+        $gov2 = $null
+        if ($sit -ne "eleito") { $gov2 = Resumo-Boletim $g2 3 }
+        $estados[$p.uf] = [ordered]@{
+            nome = "$($p.nome)"; situacao_1t = $sit
+            gov_1t = (Resumo-Boletim $g1 3); gov_2t = $gov2; senador = (Resumo-Boletim $sn 5)
+        }
+    }
+    $pres1 = $null; $pres2 = $null
+    foreach ($tarja in @($cfg.tarjas)) {
+        $k = Chave-Boletim $tarja.abrangencia $tarja.cargo 1; if ($script:CacheBoletins.ContainsKey($k)) { $pres1 = Resumo-Boletim $script:CacheBoletins[$k] 1 }
+        $k = Chave-Boletim $tarja.abrangencia $tarja.cargo 2; if ($script:CacheBoletins.ContainsKey($k)) { $pres2 = Resumo-Boletim $script:CacheBoletins[$k] 1 }
+    }
+    $gov = Ler-Selecao 3; $sen = Ler-Selecao 5
+    $corpo = [ordered]@{
+        atualizado_em = (Get-Date -Format "HH:mm:ss")
+        segundo_turno = $script:SegundoTurno
+        no_ar = [ordered]@{
+            governador = [ordered]@{ uf = $gov.uf; turno = $gov.turno }
+            senador = [ordered]@{ uf = $sen.uf; turno = $sen.turno }
+            presidente = [ordered]@{ turno = (Ler-Turno-Presidente) }
+        }
+        presidente_1t = $pres1; presidente_2t = $pres2
+        estados = $estados
+    }
+    $json = ($corpo | ConvertTo-Json -Depth 8)
+    $hash = Obter-Hash $json
+    if ($Impressoes["painel-dados"] -ne $hash) {
+        if (Escrever-Arquivo (Join-Path $PastaSaida "painel-dados.json") $json) { $Impressoes["painel-dados"] = $hash }
+    }
+}
+
+# --------------------------------------------------------------------- ciclo
+
+function Executar-Ciclo {
+    param([string] $Modo)
+    $script:Ciclo++
+    $script:VistosNesteCiclo = @{}
+    $linhas = @()
+
+    $ciclosVarredura = 3
+    if (Tem-Propriedade $cfg "ciclos_varredura") { $ciclosVarredura = [math]::Max(1, [int] $cfg.ciclos_varredura) }
+    # Varredura completa de vez em quando; o resto do tempo so o que esta no
+    # ar. E o que permite cobrir 27 estados sem estourar o limite do TSE.
+    $varredura = (($script:Ciclo - 1) % $ciclosVarredura) -eq 0
+
+    # --- 7.0: resultado do 1o turno (fechado): na partida e a cada N ciclos
+    if ($script:SegundoTurno -and ((($script:Ciclo - 1) % $script:Releitura1T) -eq 0)) {
+        if ($script:Ciclo -eq 1) { Escrever-Log "lendo o resultado do 1o turno (presidente, governadores e senadores)..." }
+        Ler-Primeiro-Turno $Modo
+        if ($script:Ciclo -eq 1) {
+            $eleitos1 = @(); $disputa2 = @()
+            foreach ($p in $cfg.selecao.pracas) {
+                $sit = Situacao-1T $p.uf
+                if ($sit -eq "eleito") { $eleitos1 += $p.uf.ToUpper() } elseif ($sit -eq "2t") { $disputa2 += $p.uf.ToUpper() }
+            }
+            Escrever-Log ("1o turno lido: governador eleito em {0} estados; 2o turno em {1}: {2}" -f $eleitos1.Count, $disputa2.Count, ($disputa2 -join " ")) "OK"
+        }
+    }
+
+    # --- tarjas fixas (presidente) : todo ciclo, no turno escolhido no painel
+    $turnoPres = Ler-Turno-Presidente
+    foreach ($tarja in $cfg.tarjas) {
+        $null = Buscar-Praca $tarja.abrangencia $tarja.cargo $tarja.praca $Modo $turnoPres
+        # 2o turno ao vivo e lido sempre, mesmo com o 1o no ar: o painel
+        # precisa do numero para o diretor decidir a volta.
+        if ($script:SegundoTurno -and $turnoPres -eq 1) { $null = Buscar-Praca $tarja.abrangencia $tarja.cargo $tarja.praca $Modo 2 }
+    }
+    $linhas += @(Publicar-Presidente)
 
     # --- pracas selecionadas : todo ciclo, para o que esta no ar ficar fresco
     if (Tem-Propriedade $cfg "selecao") {
         foreach ($saida in $cfg.selecao.saidas) {
             $praca = Ler-Selecao $saida.cargo
             if ($null -eq $praca) { continue }
-            $null = Buscar-Praca $praca.uf $saida.cargo $praca.nome $Modo
+            $null = Buscar-Praca $praca.uf $saida.cargo $praca.nome $Modo $praca.turno
         }
         # Grava a tarja NO AR agora, antes de varrer as outras 26 pracas.
         # Antes ela so era gravada no fim do ciclo: o dado da praca no ar
@@ -2020,6 +2271,16 @@ function Executar-Ciclo {
         $feitas = 0
         foreach ($p in $cfg.selecao.pracas) {
             foreach ($saida in $cfg.selecao.saidas) {
+                if ($script:SegundoTurno) {
+                    # 7.0: na varredura so o que esta sendo apurado - o 2o turno
+                    # de governador dos estados que o tem. Senado e estado
+                    # decidido no 1o turno ja estao no cache (Ler-Primeiro-Turno),
+                    # e pedir o 2o turno de quem nao tem daria 404.
+                    if ([int] $saida.cargo -ne 3) { continue }
+                    if ((Situacao-1T $p.uf) -ne "2t") { continue }
+                    $null = Buscar-Praca $p.uf $saida.cargo $p.nome $Modo 2
+                    continue
+                }
                 $null = Buscar-Praca $p.uf $saida.cargo $p.nome $Modo
             }
             $feitas++
@@ -2051,6 +2312,12 @@ function Executar-Ciclo {
             $boletins = @{}
             foreach ($p in $listaCfg.pracas) {
                 $chave = "$($p.uf)-$($listaCfg.cargo)"
+                # 7.0: governador decidido no 1o turno entra na lista com o
+                # resultado do 1o; quem tem 2o turno, com a apuracao ao vivo.
+                # Mesma estrutura de registro de sempre.
+                if ($script:SegundoTurno -and [int] $listaCfg.cargo -eq 3 -and (Situacao-1T $p.uf) -ne "2t") {
+                    $chave = Chave-Boletim $p.uf 3 1
+                }
                 $bb = $null
                 if ($script:CacheBoletins.ContainsKey($chave)) { $bb = $script:CacheBoletins[$chave] }
                 if ($null -ne $bb) {
@@ -2090,6 +2357,7 @@ function Executar-Ciclo {
 
     Expirar-Alertas
     Escrever-Alertas
+    try { Escrever-Dados-Painel } catch { Escrever-Log "painel-dados.json nao gravado: $($_.Exception.Message)" "AVISO" }
     Escrever-Painel $linhas ([int] $cfg.intervalo_segundos) $Modo
     return $linhas
 }
@@ -2253,6 +2521,9 @@ function Adotar-Codigos {
     $cfg.tse.pleito = $Encontrado.pleito
     $cfg.tse.eleicao = $Encontrado.eleicao
     $mapa = @{}
+    # 7.0: o pleito do 2o turno so tem Presidente e Governador. Cargo que o
+    # TSE nao listou (Senado, que vem do 1o turno) fica como estava.
+    foreach ($prop in $cfg.tse.eleicao_por_cargo.PSObject.Properties) { $mapa[$prop.Name] = $prop.Value }
     foreach ($num in $Encontrado.cargos.Keys) { $mapa[$num] = $Encontrado.cargos[$num] }
     $cfg.tse.eleicao_por_cargo = [pscustomobject] $mapa
     Escrever-Log "o codigo do config estava velho: $Antes virou $($Encontrado.pleito)/$($Encontrado.eleicao)" "OK"
@@ -2918,15 +3189,22 @@ if ($Validar) {
     $alvos = @()
     # A chave 'praca' precisa existir em todos: sob StrictMode, ler chave
     # ausente de hashtable e erro, nao valor vazio.
+    # 7.0: o turno do governador escolhido depende do 1o turno daquele
+    # estado (decidido ou nao). Le o 1o turno dele antes de montar a conferencia.
+    if ($script:SegundoTurno -and (Tem-Propriedade $cfg "selecao")) {
+        $pracaG = Ler-Selecao 3
+        if ($null -ne $pracaG) { $null = Buscar-Praca $pracaG.uf 3 $pracaG.nome "AR" 1 }
+        $script:VistosNesteCiclo = @{}
+    }
     $alvos += @{ abr = "br"; cargo = 1; rotulo = "PRESIDENTE - BRASIL"
-                 arquivo = "tarja-presidente"; praca = "BRASIL" }
+                 arquivo = "tarja-presidente"; praca = "BRASIL"; turno = (Ler-Turno-Presidente) }
     if (Tem-Propriedade $cfg "selecao") {
         foreach ($saida in $cfg.selecao.saidas) {
             $praca = Ler-Selecao $saida.cargo
             if ($null -eq $praca) { continue }
             $alvos += @{ abr = $praca.uf; cargo = [int] $saida.cargo
                          rotulo = "$(Obter-NomeCargo ([int] $saida.cargo)) - $($praca.nome)"
-                         arquivo = $saida.arquivo; praca = $praca.nome }
+                         arquivo = $saida.arquivo; praca = $praca.nome; turno = [int] $praca.turno }
         }
     }
 
@@ -2936,7 +3214,8 @@ if ($Validar) {
         Diz ""
         Diz "-----------------------------------------------------------"
         Diz $alvo.rotulo
-        $url = Montar-Url $alvo.abr $alvo.cargo
+        $url = Montar-Url $alvo.abr $alvo.cargo "" $alvo.turno
+        if ($script:SegundoTurno) { Diz "   ($($alvo.turno)o turno)" }
         Diz "   $url"
         $bruto = Obter-Boletim $url
         if ($bruto -eq "SEM-MUDANCA" -or $null -eq $bruto) {
@@ -2947,7 +3226,7 @@ if ($Validar) {
         $script:Conferidos = $script:Conferidos + 1
         $nomePraca = $alvo.praca
         if (-not $nomePraca) { $nomePraca = "BRASIL" }
-        $b = Normalizar-Boletim $bruto $nomePraca
+        $b = Normalizar-Boletim $bruto $nomePraca $alvo.turno $alvo.cargo
 
         Diz ""
         Diz "   O QUE O TSE MANDOU, CRU:"
@@ -3670,7 +3949,7 @@ if ($Modo -ne "AR") {
 # Fotografa a selecao antes do primeiro ciclo: sem isto, a primeira olhada
 # leria "mudou" e publicaria tarja vazia por cima do que estiver na pasta.
 if (Tem-Propriedade $cfg "selecao") {
-    $script:UltimaSelecao = (($cfg.selecao.saidas | ForEach-Object { (Ler-Selecao $_.cargo).uf }) -join ",")
+    $script:UltimaSelecao = Assinatura-Selecao
 }
 
 do {

@@ -2,9 +2,13 @@
  COMO A OPERACAO ESTA MONTADA
 ===========================================================================
 
+ 2o TURNO (7.0): o passo a passo do dia esta no DIA-DA-ELEICAO.txt. As
+ tarjas sao as mesmas do 1o turno; o painel agora escolhe tambem o TURNO
+ (2o turno ao vivo ou resultado do 1o) e tem o giro dos governadores.
+
  TRES JANELAS, TRES PAPEIS DIFERENTES
 
-   TESTE.bat / INICIAR.bat     E O UNICO QUE ESCREVE DADO.
+   INICIAR.bat                 E O UNICO QUE ESCREVE DADO.
    (janela preta)              Le o TSE e grava os arquivos da pasta
                                TARJAS. Se essa janela fechar, NADA mais
                                atualiza - o painel continua respondendo,

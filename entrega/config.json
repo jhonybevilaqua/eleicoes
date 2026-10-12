@@ -1,26 +1,30 @@
 {
-  "_comentario": "Preencha pleito e eleicao. Rode DESCOBRIR.bat para saber quais sao.",
+  "_comentario": "2o TURNO 25/10/2026 - ambiente OFICIAL do TSE. Pleito 3221 (2o turno): 6258 = Presidente, 6260 = Governador. Pleito 3220 (1o turno, resultado final): 6257 = Presidente, 6259 = Governador e Senador.",
   "tse": {
     "base_url": "https://resultados.tse.jus.br/oficial",
-    "base_url_simulado": "https://resultados-sim.tse.jus.br/simulado/simulado2026",
     "ciclo": "ele2026",
-    "pleito": "3220",
-    "eleicao": "6257",
+    "pleito": "3221",
+    "eleicao": "6258",
     "eleicao_por_cargo": {
+      "1": "6258",
+      "3": "6260"
+    },
+    "_comentario_1t": "Resultado FINAL do 1o turno: estados com governador eleito no 1o turno, Senado e o botao '1o TURNO' do painel.",
+    "pleito_1t": "3220",
+    "eleicao_por_cargo_1t": {
       "1": "6257",
       "3": "6259",
       "5": "6259"
     },
-    "pleito_simulado": "17801",
-    "eleicao_simulado": "21270",
-    "eleicao_por_cargo_simulado": {
-      "1": "21270",
-      "3": "21272",
-      "5": "21272"
-    },
     "user_agent": "",
     "padrao_url": "{base}/{ciclo}/{eleicao}/dados/{dir}/{abr}-c{cargo4}-e{eleicao6}-u.json",
     "padrao_url_foto": "{base}/{ciclo}/{eleicao}/fotos/{dir}/{sqcand}.jpeg"
+  },
+  "_comentario_segundo_turno": "ativo: true = 2o turno. As tarjas sao as MESMAS (mesmos arquivos e campos). Governador: estado com 2o turno mostra a apuracao ao vivo; estado decidido no 1o turno mostra o resultado do 1o com ELEITO NO 1o TURNO. O painel escolhe 2o turno ao vivo ou 1o turno para presidente e governador. releitura_1t_ciclos: de quantos em quantos ciclos o 1o turno e relido (retotalizacao).",
+  "segundo_turno": {
+    "ativo": true,
+    "releitura_1t_ciclos": 30,
+    "arquivo_selecao_presidente": "SELECAO-PRESIDENTE.txt"
   },
   "intervalo_segundos": 20,
   "_comentario_limite": "O TSE bloqueia IP que passa do limite por minuto. 304 CONTA como requisicao. O gctse segura a fila sozinho; se estourar, aumente intervalo_segundos ou tire pracas.",
@@ -43,6 +47,7 @@
     "selo_nao_oficial": "PARCIAL - NAO OFICIAL",
     "rotulo_eleito": "ELEITO",
     "rotulo_segundo_turno": "SEGUNDO TURNO",
+    "rotulo_eleito_1t": "ELEITO NO 1º TURNO",
     "pasta_fotos": "FOTOS",
     "foto_reserva": "sem-foto.png",
     "foto_nome_fixo": true,

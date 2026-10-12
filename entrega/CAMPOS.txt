@@ -1,6 +1,6 @@
 ===========================================================================
  CAMPOS DE CADA ARQUIVO - referencia para vincular no Castalia
- gctse 6.8
+ gctse 7.0
 ===========================================================================
 
  REGRA: as 19 PRIMEIRAS posicoes sao iguais nas tres tarjas e NUNCA
@@ -136,6 +136,21 @@
    100%). Ligue em cand1_barra_px. Candidato com 48% -> Shape com 48% da
    largura. No config.json, trilho_px = 100 nas tres tarjas (antes era
    560/300, em pixels - o Shape leria 269 como 269% e estouraria a tela).
+
+ 2o TURNO (7.0) - NENHUM CAMPO NOVO
+   As tarjas do 2o turno sao as MESMAS: mesmos arquivos, mesmos campos,
+   mesma ordem. O que muda e so o VALOR:
+     - estado com 2o turno: a apuracao do 2o turno (ou, se o painel
+       mandar, o resultado do 1o com SEGUNDO TURNO nos dois);
+     - estado decidido no 1o turno: o resultado do 1o turno, com
+       cand1_eleito / cand1_eleito_rotulo = "ELEITO NO 1o TURNO" (texto do
+       config.json, texto.rotulo_eleito_1t) e o 2o colocado em cand2_;
+     - presidente: 2o turno ao vivo ou resultado do 1o, escolhido no painel;
+     - senador: resultado do 1o turno (o Senado nao tem 2o turno).
+   As listas (lista-governador, tarja-rodizio) trazem cada estado no seu
+   turno: o 2o ao vivo onde ha 2o turno, o resultado do 1o onde nao ha.
+   O arquivo painel-dados.json, na mesma pasta, e SO DO PAINEL - nao
+   vincule nada nele no Castalia.
 
  SELO DE ELEITO / SEGUNDO TURNO (6.7)
    O mesmo campo do selo (cand1_eleito e cand1_eleito_rotulo) mostra:
