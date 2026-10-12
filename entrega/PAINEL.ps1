@@ -247,13 +247,18 @@ $GirosNomes = @{
     eleitos1t = "Eleitos no 1º turno"
     disputa   = "2º turno ao vivo"
     eleitos   = "Todos os eleitos (1º e 2º turno)"
-    todos     = "Os 27 estados"
+    todos     = "Todos os estados"
 }
 
 function Lista-Do-Giro {
     param([string] $Tipo)
     $itens = @()
     foreach ($e in (Estados-Do-Painel)) {
+        # 7.2.1: estado com 2o turno SEM boletim do 2o turno (o TSE nao
+        # publicou - ex.: Tocantins, sem numero nem candidatos no app do
+        # TSE) nao entra no giro: poria tarja vazia no ar.
+        $sem2T = ($e.sit -eq "2t" -and @(Campo $e.g2 "candidatos" @()).Count -eq 0)
+        if ($sem2T) { continue }
         switch ($Tipo) {
             "eleitos1t" { if ($e.sit -eq "eleito") { $itens += "$($e.uf):1t" } }
             "disputa"   { if ($e.sit -eq "2t") { $itens += "$($e.uf):2t" } }
