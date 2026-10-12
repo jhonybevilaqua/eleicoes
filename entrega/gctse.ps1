@@ -35,7 +35,7 @@ param(
 # Versao impressa na partida e no painel. Sem carimbo, "qual versao esta
 # rodando ai?" so se responde abrindo arquivo e comparando a olho - e no
 # meio de um teste com janela de horario ninguem faz isso.
-$Versao = "7.0.1 - 12/10/2026"
+$Versao = "7.1 - 12/10/2026"
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
@@ -2154,6 +2154,7 @@ function Resumo-Boletim {
             nome = "$($c.Nome)"; partido = "$($c.Partido)"
             percentual = (Formatar-Percentual $c.Percentual); votos = [int64] $c.Votos
             eleito = $(if ($c.Eleito -eq "1") { 1 } else { 0 }); selo = $selo
+            calculado = $(if ((Tem-Propriedade $c "Calculado") -and $c.Calculado) { 1 } else { 0 })
         }
     }
     return [ordered]@{

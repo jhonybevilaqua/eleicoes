@@ -1,6 +1,6 @@
 ===========================================================================
  DIA DA ELEICAO - 25/10/2026 (2o turno) - passo a passo
- gctse 7.0.1 - pasta D:\ELEICOES\GCTSE
+ gctse 7.1 - pasta D:\ELEICOES\GCTSE
 ===========================================================================
 
  AS TARJAS SAO AS MESMAS DO 1o TURNO. Mesmos arquivos (tarja-presidente,
@@ -49,7 +49,7 @@
  1. Feche todas as janelas pretas antigas.
 
  2. Abra o INICIAR.bat perto das 16h45.
-    A janela deve dizer: gctse versao 7.0.1 ... modo AR
+    A janela deve dizer: gctse versao 7.1 ... modo AR
     e, no primeiro ciclo:
       "1o turno lido: governador eleito em NN estados; 2o turno em NN: ..."
     Essa linha confirma que a separacao 1o x 2o turno esta certa.
@@ -82,6 +82,35 @@
         tres tarjas; o giro nao passa pela previa (o diretor ja decidiu)
       - CONGELAR AS TARJAS quando o apresentador for ler os numeros;
         DESCONGELAR depois
+
+---------------------------------------------------------------------------
+ CORES E ELEITO AUTOMATICO (7.1)
+---------------------------------------------------------------------------
+
+   ATUALIZOU (amarelo) ... o numero do estado (ou do presidente) mudou no
+                           ultimo minuto. Presidente: faixa amarela no alto
+                           e a aba PRESIDENTE piscando. Governador: cartao
+                           amarelo com a hora, e a aba GOVERNADOR com a
+                           quantidade de estados que mudaram.
+
+   ELEITO (verde, com bip) - prioridade maxima. Acende quando o 2o turno de
+                           governador ou de presidente tem eleito: o TSE
+                           declarou OU a conta com os numeros do proprio
+                           boletim ja garante (MATEMATICAMENTE ELEITO: nem
+                           com todos os eleitores que faltam o outro alcanca).
+                           Com o botao "ELEITO VAI AO AR SOZINHO: LIGADO":
+                             - presidente: a tarja vai na hora para o 2o turno
+                             - governador: PARA O GIRO e poe o estado no ar;
+                               varios ao mesmo tempo entram em fila, um a
+                               cada 20 s
+                           Desligado: so o aviso, com COLOCAR NO AR AGORA.
+                           Cada eleito dispara UMA vez (AUTO-ELEITOS.txt).
+                           CIENTE apaga o aviso da tela.
+                           O som so toca depois do primeiro clique na pagina
+                           (regra do Chrome).
+
+   O selo ELEITO da tarja (cand1_eleito) acende com a MESMA conta - nao
+   depende de o TSE escrever "Eleito" (no 1o turno a 6.6 nao tinha a conta).
 
 ---------------------------------------------------------------------------
  ELEITO

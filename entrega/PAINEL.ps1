@@ -307,6 +307,140 @@ function Parar-Giro {
     Write-Host ("{0} giro PARADO ({1})" -f (Get-Date -Format "HH:mm:ss"), $Motivo)
 }
 
+# ------------------------------------------------- vigia de eleito (7.1)
+#
+# O painel le o painel-dados.json (gravado pela coleta) a cada ~1 s e:
+#   - marca a hora em que cada numero MUDOU (presidente e governadores do
+#     2o turno), para o cartao mudar de cor;
+#   - quando o 2o turno de governador ou de presidente tem ELEITO (o TSE
+#     declarou ou a conta com os numeros do boletim ja garante), acende o
+#     aviso verde e - com o AUTOMATICO ligado - poe a tarja no ar sozinho,
+#     interrompendo o giro. Cada eleito dispara UMA vez (AUTO-ELEITOS.txt).
+
+$script:DadosHora = [datetime]::MinValue
+$script:Assinaturas = @{}      # "br" / "sp" -> numeros da ultima leitura
+$script:Mudou = @{}            # "br" / "sp" -> quando o numero mudou
+$script:Eventos = New-Object System.Collections.ArrayList
+$script:FilaAuto = New-Object System.Collections.ArrayList
+$script:ProximoAuto = [datetime]::MinValue
+$script:SeqEvento = 0
+$SegundosCorAtualizou = 60
+$SegundosEntreAutos = 20
+$ArquivoEleitosFeitos = "AUTO-ELEITOS.txt"
+
+function Auto-Eleito-Ligado {
+    return ((Ler-Texto "AUTO-ELEITO.txt") -ne "nao")
+}
+
+function Eleitos-Feitos {
+    $c = Join-Path $Raiz $ArquivoEleitosFeitos
+    if (-not (Test-Path $c)) { return @() }
+    try { return @(Get-Content $c -Encoding UTF8 -ErrorAction Stop | Where-Object { $_ }) } catch { return @() }
+}
+
+function Assinatura-Resumo {
+    param($R)
+    if ($null -eq $R) { return "" }
+    $partes = @("$(Campo $R 'urnas' '')")
+    foreach ($c in @(Campo $R "candidatos" @())) { $partes += "$(Campo $c 'nome' ''):$(Campo $c 'percentual' ''):$(Campo $c 'eleito' 0)" }
+    return ($partes -join "|")
+}
+
+function Eleito-Do-Resumo {
+    param($R)
+    foreach ($c in @(Campo $R "candidatos" @())) { if ("$(Campo $c 'eleito' 0)" -eq "1") { return $c } }
+    return $null
+}
+
+function Novo-Evento {
+    param([string] $Chave, [string] $Uf, [string] $Cargo, $Cand, $Resumo)
+    $script:SeqEvento++
+    $calc = ("$(Campo $Cand 'calculado' 0)" -eq "1")
+    $ev = @{
+        id = $script:SeqEvento; chave = $Chave; uf = $Uf; cargo = $Cargo
+        praca = $(if ($Uf -eq "br") { "BRASIL" } else { Nome-Da-Praca $Uf })
+        nome = "$(Campo $Cand 'nome' '')"; partido = "$(Campo $Cand 'partido' '')"; pct = "$(Campo $Cand 'percentual' '')"
+        urnas = "$(Campo $Resumo 'urnas' '')"; calculado = $calc
+        hora = (Get-Date -Format "HH:mm:ss"); estado = "aviso"; noar = ""; ciente = $false
+    }
+    [void] $script:Eventos.Add($ev)
+    try { Add-Content -Path (Join-Path $Raiz $ArquivoEleitosFeitos) -Value $Chave -Encoding UTF8 } catch { }
+    $como = "ELEITO (TSE)"; if ($calc) { $como = "MATEMATICAMENTE ELEITO" }
+    Write-Host ("{0} *** {1} {2}: {3} ({4}) {5} - {6} das urnas" -f $ev.hora, $Cargo, $ev.praca, $ev.nome, $ev.partido, $como, $ev.urnas) -ForegroundColor Green
+    if (Auto-Eleito-Ligado) {
+        if ($Cargo -eq "PRESIDENTE") {
+            # Presidente tem tarja propria: entra na hora.
+            Gravar-Texto $ArquivoSelecaoPresidente "2t"
+            Remove-Item (Join-Path $Raiz "PREVIA-PRESIDENTE.txt") -Force -ErrorAction SilentlyContinue
+            $ev.estado = "noar"; $ev.noar = (Get-Date -Format "HH:mm:ss")
+            Write-Host ("{0} AUTOMATICO: presidente 2o turno NO AR" -f $ev.noar) -ForegroundColor Green
+        } else {
+            $ev.estado = "fila"
+            [void] $script:FilaAuto.Add($ev)
+        }
+    }
+}
+
+function Vigiar-Dados {
+    $arq = Join-Path $PastaSaida "painel-dados.json"
+    if (-not (Test-Path $arq)) { return }
+    $hora = (Get-Item $arq).LastWriteTime
+    if ($hora -ne $script:DadosHora) {
+        $script:DadosHora = $hora
+        $d = Ler-Json "painel-dados"
+        # Arquivo velho (coleta fechada, sessao anterior) nao dispara nada.
+        if (((Get-Date) - $hora).TotalSeconds -gt 120) { $d = $null }
+        if ($null -ne $d) {
+            $feitos = Eleitos-Feitos
+            $olhar = @()
+            $olhar += ,@("br", "br", "PRESIDENTE", (Campo $d "presidente_2t"))
+            if (Tem-Propriedade $d "estados") {
+                foreach ($p in $cfg.selecao.pracas) {
+                    $e = Campo $d.estados $p.uf
+                    if ("$(Campo $e 'situacao_1t' '')" -ne "2t") { continue }
+                    $olhar += ,@($p.uf, $p.uf, "GOVERNADOR", (Campo $e "gov_2t"))
+                }
+            }
+            foreach ($o in $olhar) {
+                $k = $o[0]; $r = $o[3]
+                if ($null -eq $r) { continue }
+                $sig = Assinatura-Resumo $r
+                if ($script:Assinaturas.ContainsKey($k) -and $script:Assinaturas[$k] -ne $sig) { $script:Mudou[$k] = Get-Date }
+                $script:Assinaturas[$k] = $sig
+                $el = Eleito-Do-Resumo $r
+                if ($null -ne $el) {
+                    $chaveEv = "$k|$(Campo $el 'nome' '')"
+                    if ($feitos -notcontains $chaveEv) { Novo-Evento $chaveEv $o[1] $o[2] $el $r; $feitos += $chaveEv }
+                }
+            }
+        }
+    }
+    # Fila de governadores eleitos: um por vez no ar, $SegundosEntreAutos s cada.
+    if ($script:FilaAuto.Count -gt 0 -and (Get-Date) -ge $script:ProximoAuto) {
+        $ev = $script:FilaAuto[0]; $script:FilaAuto.RemoveAt(0)
+        if (Auto-Eleito-Ligado) {
+            Parar-Giro "governador ELEITO entrou automatico"
+            Gravar-Texto $ArquivoSelecao "$($ev.uf):2t"
+            Remove-Item (Join-Path $Raiz "PREVIA.txt") -Force -ErrorAction SilentlyContinue
+            $ev.estado = "noar"; $ev.noar = (Get-Date -Format "HH:mm:ss")
+            $script:ProximoAuto = (Get-Date).AddSeconds($SegundosEntreAutos)
+            Write-Host ("{0} AUTOMATICO: governador {1} ELEITO NO AR" -f $ev.noar, $ev.praca) -ForegroundColor Green
+        } else { $ev.estado = "aviso" }
+    }
+}
+
+function Vigiar-E-Girar {
+    try { Vigiar-Dados } catch { Write-Host ("{0} FALHA na vigia de eleito: {1}" -f (Get-Date -Format "HH:mm:ss"), $_.Exception.Message) -ForegroundColor Red }
+    try { Girar-Agora } catch { Write-Host ("{0} FALHA no giro: {1}" -f (Get-Date -Format "HH:mm:ss"), $_.Exception.Message) -ForegroundColor Red }
+}
+
+function Idade-Mudanca {
+    # Segundos desde que o numero mudou; -1 = nao mudou desde que o painel abriu.
+    param([string] $Chave)
+    if (-not $script:Mudou.ContainsKey($Chave)) { return -1 }
+    return [int] ((Get-Date) - $script:Mudou[$Chave]).TotalSeconds
+}
+
 # ------------------------------------------------------------------- pagina
 
 function Rotulo-Turno {
@@ -362,7 +496,10 @@ function Montar-Pagina {
         elseif ($t[0] -eq "tarja-senador") { $turnoTxt = "1º turno" }
         $clsT = "t2"; if ($turnoTxt -like "1*") { $clsT = "t1" }
         $selo = ""; if ("$(Campo $d 'selo' '')") { $selo = "<span class='selo'>$(Html-Seguro $d.selo)</span>" }
-        $cardsAr += "<div class='card noar'><h3>$($t[1]) <span class='turno $clsT'>$turnoTxt</span> $selo</h3>" +
+        $clsAr = "card noar"
+        $idadeP = Idade-Mudanca "br"
+        if ($t[0] -eq "tarja-presidente" -and $tPres -eq "2" -and $idadeP -ge 0 -and $idadeP -le $SegundosCorAtualizou) { $clsAr += " atualizou" }
+        $cardsAr += "<div class='$clsAr'><h3>$($t[1]) <span class='turno $clsT'>$turnoTxt</span> $selo</h3>" +
                     "<div class='praca'>$(Html-Seguro (Campo $d 'abrangencia' ''))" +
                     "<span class='urnas'>$(Html-Seguro (Campo $d 'apuracao_pct' '')) das urnas</span></div>$(Linhas-Tarja $d)</div>"
     }
@@ -423,12 +560,12 @@ function Montar-Pagina {
     $giroHtml += "<div class='tempos'>cada estado fica <span>$tempos</span> no ar durante o giro</div>"
 
     $cards2t = ""; $cards1t = ""; $cardsSem = ""
-    $n2 = 0; $n1 = 0; $ns = 0
+    $n2 = 0; $n1 = 0; $ns = 0; $nAtualizou = 0
     foreach ($e in $estados) {
-        $novo = $false
-        if ($null -ne $al -and (Tem-Propriedade $al "estados") -and (Tem-Propriedade $al.estados $e.uf)) {
-            if ($al.estados.($e.uf).governador) { $novo = $true }
-        }
+        # 7.1: "atualizou" = o numero deste estado mudou no ultimo minuto
+        $idadeG = Idade-Mudanca $e.uf
+        $novo = ($idadeG -ge 0 -and $idadeG -le $SegundosCorAtualizou)
+        if ($novo) { $nAtualizou++ }
         $noArAqui = ($e.uf -eq $ufGov)
         $naPrevia = ($prevGov -and (($prevGov -replace ':.*$', '') -eq $e.uf))
         if ($e.sit -eq "2t") {
@@ -441,7 +578,8 @@ function Montar-Pagina {
             $marca = ""
             if ($noArAqui) { $marca = "<u class='m-ar'>NO AR &middot; $(Rotulo-Turno $tGov)</u>" }
             elseif ($naPrevia) { $marca = "<u class='m-prev'>na prévia</u>" }
-            elseif ($novo) { $marca = "<u class='m-novo'>boletim novo</u>" }
+            if ($e.eleito2t) { $marca = "<u class='m-e2'>ELEITO NO 2º TURNO</u>" + $marca }
+            if ($novo) { $marca += "<u class='m-novo'>ATUALIZOU $($script:Mudou[$e.uf].ToString('HH:mm:ss'))</u>" }
             $b2 = "b2"; $b1 = "b1"
             if ($noArAqui -and $tGov -eq "2") { $b2 += " on" }
             if ($noArAqui -and $tGov -eq "1") { $b1 += " on" }
@@ -579,6 +717,53 @@ function Montar-Pagina {
         $pendente = "<div class='pendente'><span>Há escolha só na <b>PRÉVIA</b> - ainda NÃO está no ar. Clique em <b>COLOCAR NO AR</b> para trocar a tarja.</span></div>"
     }
 
+    # --- 7.1: avisos de ELEITO (verde, o mais importante da tela)
+    $avisosEleito = ""
+    $ultimoEv = 0
+    $mostrados = 0
+    $abertos = @($script:Eventos | Where-Object { -not $_.ciente }).Count
+    foreach ($ev in @($script:Eventos | Sort-Object { $_.id } -Descending)) {
+        if ($ev.id -gt $ultimoEv) { $ultimoEv = $ev.id }
+        if ($ev.ciente) { continue }
+        $mostrados++
+        # Os 2 mais novos em destaque; os outros em linha compacta, para a
+        # tela nao virar so aviso quando varios estados decidem juntos.
+        $clsEv = "eleitoav"; if ($mostrados -gt 2) { $clsEv = "eleitoav compacto" }
+        $como = "ELEITO - declarado pelo TSE"
+        if ($ev.calculado) { $como = "MATEMATICAMENTE ELEITO - nem com todos os votos que faltam o outro alcança" }
+        $situ = ""
+        if ($ev.estado -eq "noar") { $situ = "<b class='ev-ar'>COLOCADO NO AR AUTOMATICAMENTE às $($ev.noar)</b>" }
+        elseif ($ev.estado -eq "fila") {
+            $pos = $script:FilaAuto.IndexOf($ev)
+            $seg = [int] [math]::Max(0, ($script:ProximoAuto - (Get-Date)).TotalSeconds) + [math]::Max(0, $pos) * $SegundosEntreAutos
+            $situ = "<b class='ev-fila'>na fila: $($pos + 1)º &middot; entra no ar em ~${seg}s</b>"
+        } else {
+            $rota = "/eleitonoar?id=$($ev.id)"
+            $situ = "<a class='ev-btn' href='$rota'>COLOCAR NO AR AGORA</a>"
+        }
+        $avisosEleito += "<div class='$clsEv'><div><span class='ev-tit'>$(Html-Seguro $ev.cargo) &middot; $(Html-Seguro $ev.praca)</span>" +
+                         "<span class='ev-nome'>$(Html-Seguro $ev.nome) <i>$(Html-Seguro $ev.partido)</i> $(Html-Seguro $ev.pct)</span>" +
+                         "<span class='ev-como'>$como &middot; $(Html-Seguro $ev.urnas) das urnas &middot; às $($ev.hora)</span></div>" +
+                         "<div class='ev-acoes'>$situ<a class='ev-ok' href='/ciente?id=$($ev.id)'>CIENTE</a></div></div>"
+    }
+    if ($abertos -gt 1) { $avisosEleito += "<p class='ev-todos'><a href='/ciente?id=0'>CIENTE EM TODOS ($abertos)</a></p>" }
+    $avisosEleito = "<div id='eventos' data-ultimo='$ultimoEv'>$avisosEleito</div>"
+    # --- 7.1: presidente atualizou (ambar, logo abaixo)
+    $avisoPres = ""
+    $idadeBr = Idade-Mudanca "br"
+    $presMudou = ($idadeBr -ge 0 -and $idadeBr -le $SegundosCorAtualizou)
+    if ($presMudou) {
+        $p2a = Campo $dados "presidente_2t"
+        $cs = @(Campo $p2a "candidatos" @())
+        $txt = ""
+        foreach ($c in $cs) { $txt += " &middot; $(Html-Seguro $c.nome) <b>$(Html-Seguro $c.percentual)</b>" }
+        $avisoPres = "<div class='presatual'><b>PRESIDENTE ATUALIZOU</b> às $($script:Mudou['br'].ToString('HH:mm:ss')) &middot; " +
+                     "$(Html-Seguro (Campo $p2a 'urnas' '')) das urnas$txt</div>"
+    }
+    $autoLig = Auto-Eleito-Ligado
+    $botaoAuto = "<a class='btnauto lig' href='/autoeleito?m=nao' title='desligar'>ELEITO VAI AO AR SOZINHO: LIGADO</a>"
+    if (-not $autoLig) { $botaoAuto = "<a class='btnauto' href='/autoeleito?m=sim' title='ligar'>ELEITO VAI AO AR SOZINHO: DESLIGADO</a>" }
+
     $nomeGov = Nome-Da-Praca $ufGov
     $nomeSen = Nome-Da-Praca $ufSen
     $turnoGovTxt = ""; if ($tGov) { $turnoGovTxt = " &middot; " + (Rotulo-Turno $tGov) }
@@ -660,7 +845,36 @@ h2.h2t{color:var(--azul)} h2.h1t{color:var(--verde)}
 .uf.eleito1t .vice{color:var(--tinta2)} .uf.eleito1t .vice .pct{font-size:13px;font-weight:700}
 .uf.semdado{border-style:dashed}
 .uf.ar{outline:3px solid var(--verm);outline-offset:-1px}
-.uf.novo{box-shadow:0 0 0 3px var(--ambar-borda)}
+.uf.novo{background:#fff1d6;border-color:#f0b24d;box-shadow:0 0 0 3px #f6c977}
+.uf.disputa.decidido{background:#d9f2e2;border-color:var(--verde-borda)}
+.card.atualizou{background:#fff4dc;box-shadow:0 0 0 3px #f6c977}
+.m-e2{background:var(--verde);color:#fff}
+#eventos:empty{display:none}
+.eleitoav{display:flex;gap:16px;align-items:center;justify-content:space-between;background:#0b7a3b;color:#fff;border-radius:12px;padding:14px 18px;margin-bottom:10px;box-shadow:0 0 0 4px #9fd6b5;animation:pulsaverde 1.2s ease-in-out infinite}
+@keyframes pulsaverde{0%,100%{box-shadow:0 0 0 4px #9fd6b5}50%{box-shadow:0 0 0 10px rgba(159,214,181,.35)}}
+.eleitoav span{display:block}
+.eleitoav.compacto{padding:6px 14px;animation:none;box-shadow:none;margin-bottom:6px}
+.eleitoav.compacto span{display:inline;margin-right:10px}
+.eleitoav.compacto .ev-nome{font-size:16px}
+.eleitoav.compacto .ev-como{display:none}
+.eleitoav.compacto .ev-ar,.eleitoav.compacto .ev-fila,.eleitoav.compacto .ev-btn,.eleitoav.compacto .ev-ok{padding:3px 10px;font-size:12px}
+.ev-todos{text-align:right;margin:0 0 12px}
+.ev-todos a{color:#0b7a3b;font-weight:800;text-decoration:none;border:2px solid #0b7a3b;border-radius:7px;padding:5px 12px;font-size:12.5px}
+.ev-tit{font-size:12px;font-weight:800;letter-spacing:.12em;opacity:.9}
+.ev-nome{font-size:24px;font-weight:800}
+.ev-nome i{font-style:normal;font-size:14px;background:rgba(255,255,255,.2);border-radius:4px;padding:1px 6px;vertical-align:middle}
+.ev-como{font-size:13px;opacity:.95}
+.ev-acoes{display:flex;gap:10px;align-items:center;flex:none}
+.ev-ar{background:#fff;color:#0b7a3b;border-radius:7px;padding:7px 12px;font-size:13px}
+.ev-fila{background:#ffe9b0;color:#5c4405;border-radius:7px;padding:7px 12px;font-size:13px}
+.ev-btn{background:#fff;color:#0b7a3b;font-weight:800;text-decoration:none;border-radius:7px;padding:9px 14px}
+.ev-ok{color:#fff;font-weight:800;text-decoration:none;border:2px solid #fff;border-radius:7px;padding:7px 14px}
+.presatual{background:#ffe7b3;border:2px solid #e8a317;color:#4a3203;border-radius:10px;padding:10px 16px;margin-bottom:12px;font-size:15px}
+.abas button[data-sinal=atualizou]{background:#ffe7b3;border-radius:8px 8px 0 0;color:#7a4b00;animation:pisca 1.4s ease-in-out infinite}
+.abas button i{font-style:normal;background:#e8a317;color:#fff;border-radius:999px;padding:0 7px;font-size:11px;margin-left:4px}
+@keyframes pisca{0%,100%{opacity:1}50%{opacity:.55}}
+.btnauto{padding:8px 14px;border-radius:8px;border:1px solid #c3d0de;background:#fff;color:#5b6b82;font-size:12px;font-weight:800;text-decoration:none}
+.btnauto.lig{background:#e6f5ec;border-color:#9fd6b5;color:#0b7a3b}
 .m-ar{background:var(--verm);color:#fff}
 .m-prev{background:var(--ambar);color:#fff}
 .m-novo{background:var(--ambar-claro);color:var(--ambar)}
@@ -695,8 +909,9 @@ h2.h2t{color:var(--azul)} h2.h1t{color:var(--verde)}
 .badge{background:var(--ambar);color:#fff;font-size:10px;padding:2px 8px;border-radius:999px}
 .visto{font-size:10.5px;color:var(--azul)}
 .barra{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:12px 0 0;font-size:13px}
+.barra .btnauto{margin-left:auto}
 .trocaclique{font-size:12.5px;color:var(--azul);text-decoration:none;border:1px solid var(--azul-borda);border-radius:7px;padding:4px 10px;background:#fff}
-.btncongela{margin-left:auto;padding:8px 16px;border-radius:8px;border:1px solid #c3d0de;background:#fff;color:#24405f;font-size:12.5px;font-weight:800;text-decoration:none}
+.btncongela{padding:8px 16px;border-radius:8px;border:1px solid #c3d0de;background:#fff;color:#24405f;font-size:12.5px;font-weight:800;text-decoration:none}
 .btncongela.ativo{background:#24405f;color:#fff}
 footer{color:var(--tinta3);font-size:12px;margin-top:30px;padding-top:12px;border-top:1px solid var(--fio)}
 </style></head><body>
@@ -710,6 +925,8 @@ footer{color:var(--tinta3);font-size:12px;margin-top:30px;padding-top:12px;borde
   </div>
 </header>
 <main id="vivo">
+$avisosEleito
+$avisoPres
 $paradoAviso
 $semDados
 $congeladoAviso
@@ -717,11 +934,11 @@ $pendente
 $placar
 <h2>No ar agora &middot; o que está nos arquivos das tarjas</h2>
 <div class="cards">$cardsAr</div>
-<div class="barra">$explicaClique<a class="btncongela$(if ($congelado) { ' ativo' })" href="/congelar">$rotuloCongelar</a></div>
+<div class="barra">$explicaClique$botaoAuto<a class="btncongela$(if ($congelado) { ' ativo' })" href="/congelar">$rotuloCongelar</a></div>
 $blocoPrevia
 <nav class="abas">
-  <button data-aba="gov">GOVERNADOR</button>
-  <button data-aba="pres">PRESIDENTE</button>
+  <button data-aba="gov" data-sinal="$(if ($nAtualizou -gt 0) { 'atualizou' })">GOVERNADOR$(if ($nAtualizou -gt 0) { " <i>$nAtualizou</i>" })</button>
+  <button data-aba="pres" data-sinal="$(if ($presMudou) { 'atualizou' })">PRESIDENTE</button>
   <button data-aba="sen">SENADOR</button>
 </nav>
 <section class="aba" id="aba-gov">$abaGov</section>
@@ -766,6 +983,28 @@ As tarjas são as mesmas de sempre - nenhum campo mudou. A página se atualiza s
       .then(function () { window.scrollTo(0, y); })
       .catch(function () { location.href = href; });
   });
+  // 7.1: aviso sonoro quando aparece ELEITO novo (o Chrome so toca som
+  // depois do primeiro clique na pagina).
+  var visto = -1;
+  function bip() {
+    try {
+      var C = window.AudioContext || window.webkitAudioContext, ctx = new C();
+      [0, 0.35, 0.7].forEach(function (t) {
+        var o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = 880; o.connect(g); g.connect(ctx.destination);
+        g.gain.setValueAtTime(0.25, ctx.currentTime + t); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.3);
+        o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + 0.3);
+      });
+    } catch (e) { }
+  }
+  function olharEventos() {
+    var el = document.getElementById('eventos'); if (!el) return;
+    var u = parseInt(el.getAttribute('data-ultimo') || '0', 10);
+    if (visto >= 0 && u > visto && el.children.length) bip();
+    visto = u;
+  }
+  var redesenharAntigo = redesenhar;
+  redesenhar = function (t) { redesenharAntigo(t); olharEventos(); };
+  olharEventos();
   aplicarAba();
   setInterval(function () {
     if (parado) return;
@@ -839,7 +1078,7 @@ $pendenteCtx = $ouvinte.GetContextAsync()
 while ($ouvinte.IsListening) {
     $ctx = $null
     try {
-        if (-not $pendenteCtx.Wait(300)) { Girar-Agora; continue }
+        if (-not $pendenteCtx.Wait(300)) { Vigiar-E-Girar; continue }
         $ctx = $pendenteCtx.Result
     } catch {
         Write-Host ("{0} FALHA na espera do painel: {1}" -f (Get-Date -Format "HH:mm:ss"), $_.Exception.Message) -ForegroundColor Red
@@ -962,6 +1201,35 @@ while ($ouvinte.IsListening) {
             Responder-Volta $resposta; continue
         }
 
+        if ($caminho -eq "/autoeleito") {
+            $m = "$($q['m'])"
+            if ($m -eq "sim" -or $m -eq "nao") {
+                Gravar-Texto "AUTO-ELEITO.txt" $m
+                Write-Host ("{0} eleito automatico no ar: {1}" -f $hora, $(if ($m -eq "sim") { "LIGADO" } else { "DESLIGADO" }))
+                if ($m -eq "nao") { foreach ($ev in @($script:FilaAuto)) { $ev.estado = "aviso" }; $script:FilaAuto.Clear() }
+            }
+            Responder-Volta $resposta; continue
+        }
+
+        if ($caminho -eq "/ciente") {
+            $id = 0; [void] [int]::TryParse("$($q['id'])", [ref] $id)
+            foreach ($ev in $script:Eventos) { if ($id -eq 0 -or $ev.id -eq $id) { $ev.ciente = $true } }
+            Responder-Volta $resposta; continue
+        }
+
+        if ($caminho -eq "/eleitonoar") {
+            # Botao do aviso verde: poe o eleito no ar AGORA (sem previa).
+            $id = 0; [void] [int]::TryParse("$($q['id'])", [ref] $id)
+            foreach ($ev in $script:Eventos) {
+                if ($ev.id -ne $id) { continue }
+                if ($ev.cargo -eq "PRESIDENTE") { Gravar-Texto $ArquivoSelecaoPresidente "2t" }
+                else { Parar-Giro "eleito colocado no ar"; Gravar-Texto $ArquivoSelecao "$($ev.uf):2t" }
+                $ev.estado = "noar"; $ev.noar = $hora
+                Write-Host ("{0} ELEITO NO AR: {1} {2}" -f $hora, $ev.cargo, $ev.praca) -ForegroundColor Green
+            }
+            Responder-Volta $resposta; continue
+        }
+
         if ($caminho -eq "/girotempo") {
             $s = 0
             if ([int]::TryParse("$($q['s'])", [ref] $s) -and $s -ge 4 -and $s -le 120) { Gravar-Texto "GIRO-SEGUNDOS.txt" "$s" }
@@ -1007,5 +1275,5 @@ while ($ouvinte.IsListening) {
                     $caminho, $_.Exception.Message) -ForegroundColor Red
         try { $resposta.Close() } catch { }
     }
-    Girar-Agora
+    Vigiar-E-Girar
 }
