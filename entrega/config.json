@@ -26,6 +26,12 @@
     "releitura_1t_ciclos": 30,
     "arquivo_selecao_presidente": "SELECAO-PRESIDENTE.txt"
   },
+  "_comentario_painel": "Como o PAINEL abre. giro_ao_abrir: 'disputa' = ja abre girando na tarja de governador os estados do 2o turno (sem os que o TSE nao publicou); 'eleitos1t', 'eleitos', 'todos' ou '' (nao gira). giro_segundos: tempo de cada estado. eleito_automatico: true = o eleito do 2o turno vai ao ar sozinho (o botao do painel ainda liga/desliga durante a noite).",
+  "painel": {
+    "giro_ao_abrir": "disputa",
+    "giro_segundos": 10,
+    "eleito_automatico": true
+  },
   "intervalo_segundos": 20,
   "_comentario_limite": "O TSE bloqueia IP que passa do limite por minuto. 304 CONTA como requisicao. O gctse segura a fila sozinho; se estourar, aumente intervalo_segundos ou tire pracas.",
   "limite_requisicoes_por_minuto": 600,

@@ -307,6 +307,8 @@ function Girar-Agora {
 
 function Parar-Giro {
     param([string] $Motivo)
+    # escolha na mao antes do giro de abertura comecar: ele nao comeca mais
+    $script:GiroInicial = ""
     if ($null -eq $script:Giro) { return }
     $script:Giro = $null
     Write-Host ("{0} giro PARADO ({1})" -f (Get-Date -Format "HH:mm:ss"), $Motivo)
@@ -434,7 +436,35 @@ function Vigiar-Dados {
     }
 }
 
+# 7.3: o painel ja ABRE girando (config.json, painel.giro_ao_abrir) e com o
+# eleito automatico ligado (painel.eleito_automatico). O giro de abertura
+# espera a coleta ter os estados (primeiro ciclo) e entao comeca sozinho.
+$script:GiroInicial = "disputa"
+$segAbrir = 10
+$autoAbrir = $true
+if (Tem-Propriedade $cfg "painel") {
+    if (Tem-Propriedade $cfg.painel "giro_ao_abrir") { $script:GiroInicial = "$($cfg.painel.giro_ao_abrir)" }
+    if (Tem-Propriedade $cfg.painel "giro_segundos") { $segAbrir = [int] $cfg.painel.giro_segundos }
+    if (Tem-Propriedade $cfg.painel "eleito_automatico") { $autoAbrir = [bool] $cfg.painel.eleito_automatico }
+}
+if ($segAbrir -ge 4 -and $segAbrir -le 120) { Gravar-Texto "GIRO-SEGUNDOS.txt" "$segAbrir" }
+Gravar-Texto "AUTO-ELEITO.txt" $(if ($autoAbrir) { "sim" } else { "nao" })
+if (-not $GirosNomes.ContainsKey($script:GiroInicial)) { $script:GiroInicial = "" }
+
+function Iniciar-Giro {
+    param([string] $Tipo)
+    $itens = Lista-Do-Giro $Tipo
+    if ($itens.Count -eq 0) { return $false }
+    $script:Giro = @{ tipo = $Tipo; itens = $itens; i = 0; voltas = 0; atual = ""; proximo = (Get-Date).AddSeconds(-1) }
+    Write-Host ("{0} GIRO iniciado: {1} ({2} estados, {3}s cada)" -f (Get-Date -Format "HH:mm:ss"), $GirosNomes[$Tipo], $itens.Count, (Tempo-Do-Giro))
+    Girar-Agora
+    return $true
+}
+
 function Vigiar-E-Girar {
+    if ($script:GiroInicial -and $null -eq $script:Giro) {
+        try { if (Iniciar-Giro $script:GiroInicial) { $script:GiroInicial = "" } } catch { }
+    }
     try { Vigiar-Dados } catch { Write-Host ("{0} FALHA na vigia de eleito: {1}" -f (Get-Date -Format "HH:mm:ss"), $_.Exception.Message) -ForegroundColor Red }
     try { Girar-Agora } catch { Write-Host ("{0} FALHA no giro: {1}" -f (Get-Date -Format "HH:mm:ss"), $_.Exception.Message) -ForegroundColor Red }
 }
@@ -1194,14 +1224,7 @@ while ($ouvinte.IsListening) {
                 Parar-Giro "botao PARAR"
             } else {
                 $tipo = "$($q['lista'])"
-                if ($GirosNomes.ContainsKey($tipo)) {
-                    $itens = Lista-Do-Giro $tipo
-                    if ($itens.Count -gt 0) {
-                        $script:Giro = @{ tipo = $tipo; itens = $itens; i = 0; voltas = 0; atual = ""; proximo = (Get-Date).AddSeconds(-1) }
-                        Write-Host ("{0} GIRO iniciado: {1} ({2} estados, {3}s cada)" -f $hora, $GirosNomes[$tipo], $itens.Count, (Tempo-Do-Giro))
-                        Girar-Agora
-                    }
-                }
+                if ($GirosNomes.ContainsKey($tipo)) { $script:GiroInicial = ""; $null = Iniciar-Giro $tipo }
             }
             Responder-Volta $resposta; continue
         }
