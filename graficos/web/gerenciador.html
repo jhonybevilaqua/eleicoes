@@ -243,6 +243,18 @@
   .girosgov button.ativo { background: var(--verm) !important; border-color: var(--verm-borda) !important; }
   #navColetas { font-weight: 800; } #navColetas.falta { background: var(--verm); border-color: var(--verm-borda); color: #fff; }
   .sec.local .todasreg { width: 100%; font-weight: 800; margin-bottom: 6px; }
+  /* ---- 3.27: PAINEL EM ABAS ---- */
+  .col-cmd { columns: auto !important; }
+  .col-cmd > .sec.fav { margin: 0 0 8px; }
+  .abas { display: flex; flex-wrap: wrap; gap: 4px; position: sticky; top: calc(var(--topo, 120px) + 52px); z-index: 4; background: var(--fundo); padding: 6px 0; border-bottom: 2px solid var(--linha); margin-bottom: 10px; }
+  .abas button { font-weight: 800; letter-spacing: .5px; padding: 8px 12px; border-radius: 6px 6px 0 0; }
+  .abas button.on { background: var(--azul); border-color: var(--azul-borda); color: #fff; }
+  .aba-corpo { columns: 2 380px; column-gap: 12px; } .aba-corpo[hidden] { display: none; }
+  .aba-corpo > .sec { break-inside: avoid; margin: 0 0 12px; }
+  .aba-corpo > .sec.segundo, .aba-corpo > .sec.govs { column-span: all; }
+  button.brasil { font-weight: 900; letter-spacing: .5px; background: #14202e !important; color: #fff !important; border-color: #14202e !important; }
+  :root.escuro button.brasil { background: #e8eef7 !important; color: #0b1220 !important; }
+  button.brasil.ativo { background: var(--verm) !important; border-color: var(--verm-borda) !important; color: #fff !important; }
 </style>
 <script>try { if (localStorage.getItem("gctse-tema") === "escuro") document.documentElement.className = "escuro"; } catch (e) { }</script>
 </head>
@@ -570,40 +582,41 @@
       });
       return out;
     }
-    // ★ 2o TURNO — AO VIVO: os numeros para o operador e as telas da noite
-    // (Presidente e Governador), em ordem de uso. O resto fica em OUTRAS TELAS.
-    var g2 = bloco("segundo", "★ 2º TURNO — AO VIVO");
-    var nb = document.createElement("div"); nb.className = "nums"; nb.id = "nums-" + S.id; nb.textContent = "…"; g2.appendChild(nb);
-    function sub2(tit, itens) { if (!itens.length) return; var d = document.createElement("div"); d.className = "sub2"; d.innerHTML = '<span class="rot2">' + tit + "</span>"; g2.appendChild(d); botoesEm(d, itens); }
-    sub2("PRESIDENTE", itensDe(["pres2t", "presmapa", "evolucao", "virar", "faltam", "viradas", "margem", "decisivos", "regioes", "saldo", "cidades", "eleito"]));
-    sub2("COMPARATIVOS 1º × 2º", itensDe(["pres1t", "ganho", "ganhouf", "abstuf", "brnulos", "turnos", "excomp", "presmapa1t", "apuracao"]));
-    // FAVORITOS (apresentacao-config.js): atalhos, sem tirar a tela do bloco dela
+    // =============== PAINEL EM ABAS (3.27): cada tela em UM lugar ===============
+    // FAVORITOS sempre visiveis; abaixo, as abas por assunto. Todo seletor de
+    // estado tem BRASIL na primeira linha. Tela nova que nao estiver em
+    // nenhuma aba cai em PRESIDENTE > "outras" (nada some do painel).
+    var ABAS = [["vivo", "★ AO VIVO"], ["gov", "GOVERNADORES"], ["comp", "COMPARATIVOS 1º × 2º"], ["pres", "PRESIDENTE"],
+                ["leg", "SENADO E CÂMARA"], ["est", "ESTADOS E RESUMO"], ["jorn", "JORNALISMO"], ["auto", "AUTOMÁTICO"]];
+    var panes = {}, abaAtual = "vivo";
+    try { abaAtual = localStorage.getItem("gctse-aba-" + S.id) || "vivo"; } catch (e) { }
+    if (!ABAS.some(function (x) { return x[0] === abaAtual; })) abaAtual = "vivo";
+    // FAVORITOS (apresentacao-config.js): atalhos, sem tirar a tela da aba dela
     var favs = (((cfgA.favoritos || {})[S.f]) || []).map(function (id) { return lista.filter(function (x) { return x.id === id; })[0]; }).filter(Boolean);
     if (favs.length) botoesEm(bloco("fav", "★ FAVORITOS  (teclas 1–9)"), favs.map(function (g, i) { return [g.id, (i < 9 ? (i + 1) + " · " : "") + g.nome]; }));
-    var gA = bloco("auto", "AUTOMÁTICO");
-    botoesEm(gA, [["apresentacao", "▶ Apresentação automática"]]);
-    // rodizios prontos: grava a lista no rodizio desta saida e poe no ar
-    var prontos = (cfgA.rodizios_prontos || []).map(function (rp) {
-      var ids = (rp[S.f] || []).filter(function (id) { return /^presloc:/.test(id) || lista.some(function (x) { return x.id === id; }); });
-      return { nome: rp.nome, ids: ids, tempo: Math.max(3, Math.min(300, +rp.tempo || 15)) };
-    }).filter(function (rp) { return rp.ids.length; });
-    if (prontos.length) {
-      var bxP = document.createElement("div"); bxP.className = "botoes prontos"; bxP.style.marginTop = "6px";
-      prontos.forEach(function (rp) {
-        var b = botao("▶ " + rp.nome + " (" + rp.ids.length + " telas)", function () {
-          definir(S.id, "apresentacao", "", { telas: rp.ids.join(","), tempo: rp.tempo });
-        });
-        b.dataset.pronto = rp.ids.join(","); b.title = rp.ids.map(nomeTelaCurto).join(" › ") + " · " + rp.tempo + " s cada"; bxP.appendChild(b);
-      });
-      gA.appendChild(bxP);
+    var barra = document.createElement("div"); barra.className = "abas"; cmd.appendChild(barra);
+    ABAS.forEach(function (ab) {
+      var bt = document.createElement("button"); bt.type = "button"; bt.textContent = ab[1]; bt.dataset.aba = ab[0]; barra.appendChild(bt);
+      var pn = document.createElement("div"); pn.className = "aba-corpo"; pn.dataset.aba = ab[0]; cmd.appendChild(pn); panes[ab[0]] = pn;
+      bt.onclick = function () { mostrarAba(ab[0]); };
+    });
+    function mostrarAba(id) {
+      abaAtual = id; try { localStorage.setItem("gctse-aba-" + S.id, id); } catch (e) { }
+      [].forEach.call(barra.children, function (b) { b.classList.toggle("on", b.dataset.aba === id); });
+      Object.keys(panes).forEach(function (k) { panes[k].hidden = k !== id; });
     }
-    gA.appendChild(painelRodizio(S));
-    botoesEm(bloco("presidente", "PRESIDENTE"), itensDe(["eleito", "presidente", "presmapa", "presmapa1t", "regioes", "pres2t", "evolucao", "virar", "viradas", "margem", "decisivos", "saldo", "mudou22", "intensidade", "concentracao", "capitais", "exterior", "excidades", "estados", "lideranca"]));
+    function blocoEm(aba, classe, titulo) { var g = bloco(classe, titulo); panes[aba].appendChild(g); return g; }
+    // linha BRASIL (total nacional) no alto de cada seletor de estado
+    function linhaBrasil(g, id, acao, txt, k) {
+      var bt = botao("■ BRASIL — " + txt, function () { definir(S.id, id, acao || ""); }, k || id);
+      bt.className = "brasil"; var bx = document.createElement("div"); bx.className = "botoes"; bx.appendChild(bt); g.appendChild(bx); usados[id] = 1;
+    }
+    function existe(id) { return lista.some(function (x) { return x.id === id; }); }
     // Presidente | estado ou regiao (como no telao); o do 1o turno sai do
     // boletim final guardado e some sozinho se ele nao existir
-    function blocoLocal(tela, titulo, todas) {
-      var gL = bloco("local", titulo);
-      // TODAS AS REGIOES numa tela so (Presidente | Regioes)
+    function blocoLocal(aba, tela, titulo, idBrasil, txtBrasil, todas) {
+      var gL = blocoEm(aba, "local", titulo);
+      if (idBrasil && existe(idBrasil + S.f)) linhaBrasil(gL, idBrasil + S.f, "", txtBrasil);
       var gt = lista.filter(function (x) { return x.id === todas + S.f; })[0];
       if (gt) { usados[gt.id] = 1; var bt = botao("▦ TODAS AS REGIÕES (uma tela)", function () { definir(S.id, gt.id, ""); }, gt.id); bt.className = "todasreg"; var bxT = document.createElement("div"); bxT.className = "botoes"; bxT.appendChild(bt); gL.appendChild(bxT); }
       var regs = document.createElement("div"); regs.className = "regs";
@@ -617,23 +630,26 @@
       gL.appendChild(regs);
       return gL;
     }
-    var gL = blocoLocal("presloc-", "PRESIDENTE | ESTADO OU REGIÃO", "regioes-");
-    blocoLocal("presloc1t-", "PRESIDENTE 1º TURNO | ESTADO OU REGIÃO — resultado final", "regioes1t-");
-    botoesEm(bloco("apuracao", "APURAÇÃO"), itensDe(["apuracao", "urnas"]));
-    var gE = bloco("estados", "SENADO, GIRO E RESUMO DOS ESTADOS");
-    // GOVERNADORES - tudo num lugar so: as telas e os 27 estados (verde =
-    // eleito no 1o turno; azul = eleito no 2o turno; cinza = 2o turno em
-    // disputa). Estado = o governador daquele estado no ar; regiao = troca
-    // sozinha entre os estados dela.
-    var gG = bloco("estados govs", "GOVERNADORES — 27 ESTADOS");
-    // GIROS AUTOMATICOS do governador (a lista se refaz sozinha a cada dado)
+
+    // ---------------- ★ AO VIVO: numeros + Presidente do 2o turno ----------------
+    var g2 = blocoEm("vivo", "segundo", "★ 2º TURNO — AO VIVO");
+    var nb = document.createElement("div"); nb.className = "nums"; nb.id = "nums-" + S.id; nb.textContent = "…"; g2.appendChild(nb);
+    function sub2(tit, itens) { if (!itens.length) return; var d = document.createElement("div"); d.className = "sub2"; d.innerHTML = '<span class="rot2">' + tit + "</span>"; g2.appendChild(d); botoesEm(d, itens); }
+    sub2("PRESIDENTE", itensDe(["pres2t", "presmapa", "evolucao", "virar", "faltam", "viradas", "margem", "decisivos", "saldo", "eleito"]));
+    sub2("APURAÇÃO", itensDe(["apuracao", "urnas"]));
+    var gL = blocoLocal("vivo", "presloc-", "PRESIDENTE | ESTADO OU REGIÃO", "presidente-", "Presidente (total nacional)", "regioes-");
+
+    // ---------------- GOVERNADORES: giros, telas e os 27 estados ----------------
+    // verde = eleito no 1o turno; azul = eleito no 2o; cinza = em disputa.
+    var gG = blocoEm("gov", "estados govs", "GOVERNADORES — 27 ESTADOS");
     var gx = document.createElement("div"); gx.className = "botoes girosgov";
     [["filtro:eleitos", "▶ GIRO DOS ELEITOS", "eleitos"], ["filtro:disputa", "▶ GIRO DO 2º TURNO (em apuração)", "disputa"], ["todos", "▶ GIRO DOS 27 ESTADOS", "todos"]].forEach(function (it) {
       var b = botao(it[1], function () { definir(S.id, "girogov", it[0]); }, "girogov|" + it[0]);
       b.dataset.giro = it[2]; b.dataset.rot = it[1]; gx.appendChild(b);
     });
     gG.appendChild(gx);
-    botoesEm(gG, itensDe(["gov2t", "gov12", "governadores", "govpres", "govpartido", "gov22"]));
+    if (existe("governadores-" + S.f)) linhaBrasil(gG, "governadores-" + S.f, "", "todos os governadores (mapa e fotos)");
+    botoesEm(gG, itensDe(["gov2t", "gov12", "govpres", "govpartido", "gov22"]));
     gG.appendChild(legendaGov());
     var gregs = document.createElement("div"); gregs.className = "regs govgrade";
     REGIOES_MENU.forEach(function (rg) {
@@ -648,14 +664,22 @@
       gregs.appendChild(bx);
     });
     gG.appendChild(gregs);
-    botoesEm(gE, itensDe(["senvotos", "senadores", "senadores1", "senadores2", "senado"]).concat([
-      ["giro", "Giro dos estados", "uf:" + (ordem.indexOf(String(cfg.estado_destaque || "pr")) >= 0 ? String(cfg.estado_destaque || "pr") : ordem[0])],
-      ["resumo", "Resumo (7 telas)", "tela:1"]]));
-    botoesEm(bloco("camara", "CÂMARA DOS DEPUTADOS"), itensDe(["camara", "topdep", "menosvot", "deputados", "mulheres", "perfilcamara"]).map(function (it) {
-      return /^deputados-/.test(it[0]) ? [it[0], it[1] + " (troca automática)", "", it[0] + "|"] : it;
-    }));
-    // Deputados federais | estado ou regiao: so os 5 mais votados de cada estado.
-    var gD = bloco("camara", "DEPUTADOS FEDERAIS | ESTADO OU REGIÃO — os 5 mais votados");
+
+    // ---------------- COMPARATIVOS 1o x 2o (e 2022) ----------------
+    botoesEm(blocoEm("comp", "comparativos", "PRESIDENTE: 1º × 2º TURNO"), itensDe(["pres1t", "presmapa1t", "ganho", "ganhouf", "turnos", "abstuf", "brnulos", "excomp"]));
+    blocoLocal("comp", "presloc1t-", "PRESIDENTE 1º TURNO | ESTADO OU REGIÃO — resultado final", "pres1t-", "1º turno (todos os candidatos)", "regioes1t-");
+    botoesEm(blocoEm("comp", "comparativos", "2022 × 2026"), itensDe(["turno22", "abst22", "mudou22", "comparativo"]));
+
+    // ---------------- PRESIDENTE: as demais telas ----------------
+    botoesEm(blocoEm("pres", "presidente", "PRESIDENTE — BRASIL"), itensDe(["votos", "estados", "lideranca", "intensidade", "concentracao", "abstencao", "abstencao-mapa"]));
+    botoesEm(blocoEm("pres", "presidente", "CIDADES E EXTERIOR"), itensDe(["capitais", "cidades", "exterior", "excidades"]));
+
+    // ---------------- SENADO E CAMARA ----------------
+    botoesEm(blocoEm("leg", "estados", "SENADO"), itensDe(["senado", "senadores", "senadores1", "senadores2", "senvotos"]));
+    var gD = blocoEm("leg", "camara", "CÂMARA | ESTADO OU REGIÃO — os 5 mais votados");
+    if (existe("camara-" + S.f)) linhaBrasil(gD, "camara-" + S.f, "", "bancadas 2027 por partido");
+    botoesEm(gD, itensDe(["topdep", "menosvot", "mulheres", "perfilcamara"]).concat(existe("deputados-" + S.f) ? [["deputados-" + S.f, "Deputados eleitos (troca automática)", "", "deputados-" + S.f + "|"]] : []));
+    usados["deputados-" + S.f] = 1;
     var dregs = document.createElement("div"); dregs.className = "regs";
     function irDep(v) {
       var e0 = estado && estado[S.id];
@@ -671,11 +695,11 @@
     });
     gD.appendChild(dregs);
     var dd0 = document.createElement("div"); dd0.className = "dica";
-    dd0.textContent = "Estado = tela fixa com os 5 mais votados. Região = passa pelos estados da região (5 mais votados de cada), trocando a cada " +
-      ((window.GCTSE_DEPUTADOS || {}).segundos || 8) + " s.";
+    dd0.textContent = "Estado = tela fixa com os 5 mais votados. Região = passa pelos estados da região, trocando a cada " + ((window.GCTSE_DEPUTADOS || {}).segundos || 8) + " s.";
     gD.appendChild(dd0);
     // ASSEMBLEIAS LEGISLATIVAS | ESTADO: bancadas por partido (dep. estaduais; DF: distritais)
-    var gAs = bloco("camara", "ASSEMBLEIAS LEGISLATIVAS | ESTADO — bancadas por partido");
+    var gAs = blocoEm("leg", "camara", "ASSEMBLEIAS LEGISLATIVAS | ESTADO — bancadas por partido");
+    linhaBrasil(gAs, "assembleias-" + S.f, "", "total por partido");
     var aregs = document.createElement("div"); aregs.className = "regs";
     REGIOES_MENU.forEach(function (rg) {
       var lb = document.createElement("span"); lb.className = "reg"; lb.textContent = rg[0]; lb.style.cssText = "font-weight:800;letter-spacing:1px;padding:6px 4px"; aregs.appendChild(lb);
@@ -684,32 +708,58 @@
       aregs.appendChild(bx);
     });
     gAs.appendChild(aregs);
-    // Brasil (soma nacional por partido) e o rodizio "estado por estado e, no fim, o Brasil"
+    usados["assembleia-" + S.f] = 1;
     var bxAs = document.createElement("div"); bxAs.className = "botoes"; bxAs.style.marginTop = "8px";
-    var bBr = botao("BRASIL — total por partido", function () { definir(S.id, "assembleias-" + S.f, ""); }, "assembleias-" + S.f); bBr.style.fontWeight = "800"; bxAs.appendChild(bBr);
     var idsAs = REGIOES_MENU.reduce(function (a, rg) { return a.concat(rg[2]); }, []).map(function (u) { return "assembleia:" + u; }).concat(["assembleias-" + S.f]);
     var bTodos = botao("▶ todos os estados + BRASIL no fim (8 s cada)", function () { definir(S.id, "apresentacao", "", { telas: idsAs.join(","), tempo: 8 }); });
     bTodos.dataset.pronto = idsAs.join(","); bxAs.appendChild(bTodos);
     gAs.appendChild(bxAs);
-    botoesEm(bloco("comparativos", "COMPARATIVOS"), itensDe(["turnos", "turno22", "abst22", "brnulos", "ganho", "abstuf", "abstencao", "abstencao-mapa", "comparativo", "comparecimento", "votos"]));
-    // JORNALISMO: pedidos da redacao. Genero = IMPORTAR-CANDIDATOS.bat;
-    // perfil do eleitor = IMPORTAR-PERFIL-ELEITOR.bat (Dados Abertos do TSE).
-    botoesEm(bloco("jornalismo", "JORNALISMO"), itensDe(["topfem", "topsenfem", "perfileleitor", "foiurnas"]));
-    usados["assembleia-" + S.f] = 1;   // vai pelo menu de estados
-    usados["assembleias-" + S.f] = 1;
+
+    // ---------------- ESTADOS E RESUMO (governador + senado por estado) ----------------
+    var gEs = blocoEm("est", "estados", "GIRO DOS ESTADOS — governador e senado | ESTADO");
+    var uf0 = ordem.indexOf(String(cfg.estado_destaque || "pr")) >= 0 ? String(cfg.estado_destaque || "pr") : ordem[0];
+    var bxG = document.createElement("div"); bxG.className = "botoes";
+    bxG.appendChild(botao("▶ Giro dos estados (troca com ◀ ▶ ou automático)", function () { definir(S.id, "giro", "uf:" + uf0); }, "giro|uf:" + uf0));
+    gEs.appendChild(bxG);
+    var eregs = document.createElement("div"); eregs.className = "regs";
+    REGIOES_MENU.forEach(function (rg) {
+      var lb = document.createElement("span"); lb.className = "reg"; lb.textContent = rg[0]; lb.style.cssText = "font-weight:800;letter-spacing:1px;padding:6px 4px"; eregs.appendChild(lb);
+      var bx = document.createElement("div"); bx.className = "ufs";
+      rg[2].forEach(function (u) { var b = botao(u.toUpperCase(), function () { definir(S.id, "giro", "uf:" + u); }, "giro|uf:" + u); b.dataset.gov = u; bx.appendChild(b); });
+      eregs.appendChild(bx);
+    });
+    gEs.appendChild(eregs);
+    var gRs = blocoEm("est", "estados", "RESUMO — as 7 telas (cada uma direto no ar)");
+    botoesEm(gRs, RESUMO.map(function (n, i) { return ["resumo", (i + 1) + " · " + n, acaoResumo(S.id, i + 1), "resumo|" + acaoResumo(S.id, i + 1)]; })
+      .concat([["resumo", "▶ Resumo completo (passa pelas 7)", "tela:1", "resumo|tela:1"]]));
+
+    // ---------------- JORNALISMO ----------------
+    // Genero = IMPORTAR-CANDIDATOS.bat; perfil do eleitor = IMPORTAR-PERFIL-ELEITOR.bat
+    botoesEm(blocoEm("jorn", "jornalismo", "JORNALISMO"), itensDe(["topfem", "topsenfem", "perfileleitor", "foiurnas"]));
+
+    // ---------------- AUTOMATICO ----------------
+    var gA = blocoEm("auto", "auto", "AUTOMÁTICO");
+    botoesEm(gA, [["apresentacao", "▶ Apresentação automática"]]);
+    var prontos = (cfgA.rodizios_prontos || []).map(function (rp) {
+      var ids = (rp[S.f] || []).filter(function (id) { return /^presloc:/.test(id) || lista.some(function (x) { return x.id === id; }); });
+      return { nome: rp.nome, ids: ids, tempo: Math.max(3, Math.min(300, +rp.tempo || 15)) };
+    }).filter(function (rp) { return rp.ids.length; });
+    if (prontos.length) {
+      var bxP = document.createElement("div"); bxP.className = "botoes prontos"; bxP.style.marginTop = "6px";
+      prontos.forEach(function (rp) {
+        var b = botao("▶ " + rp.nome + " (" + rp.ids.length + " telas)", function () {
+          definir(S.id, "apresentacao", "", { telas: rp.ids.join(","), tempo: rp.tempo });
+        });
+        b.dataset.pronto = rp.ids.join(","); b.title = rp.ids.map(nomeTelaCurto).join(" › ") + " · " + rp.tempo + " s cada"; bxP.appendChild(b);
+      });
+      gA.appendChild(bxP);
+    }
+    gA.appendChild(painelRodizio(S));
+
+    // nada some: tela que nao esta em nenhuma aba vai para PRESIDENTE > OUTRAS
     var resto = lista.filter(function (g) { return !usados[g.id]; }).map(function (g) { return [g.id, g.nome]; });
-    if (resto.length) botoesEm(bloco("auto", "OUTRAS TELAS"), resto);
-    // ordem: 2o turno, favoritos, automatico, Presidente|estado, Governador|estado;
-    // o resto (1o turno, Camara, Senado, Assembleias, 2022, Jornalismo) recolhido
-    var frente = [g2, gG].concat(blocos.filter(function (b) { return /\b(fav|auto)\b/.test(b.className) && b.querySelector(".grupo").textContent !== "OUTRAS TELAS"; }), [gL]);
-    var outras = document.createElement("details"); outras.className = "outras";
-    outras.innerHTML = "<summary>OUTRAS TELAS — 1º turno, Câmara, Senado, Assembleias, 2022, Jornalismo</summary>";
-    var corpo = document.createElement("div"); corpo.className = "corpo"; outras.appendChild(corpo);
-    frente.forEach(function (b) { cmd.appendChild(b); });
-    blocos.forEach(function (b) { if (frente.indexOf(b) < 0) corpo.appendChild(b); });
-    cmd.appendChild(outras);
-    try { if (localStorage.getItem("gctse-outras-" + S.id) === "1") outras.open = true; } catch (e) { }
-    outras.addEventListener("toggle", function () { try { localStorage.setItem("gctse-outras-" + S.id, outras.open ? "1" : "0"); } catch (e) { } });
+    if (resto.length) botoesEm(blocoEm("pres", "auto", "OUTRAS TELAS"), resto);
+    mostrarAba(abaAtual);
     // controles do giro / resumo
     var ctl = document.createElement("div"); ctl.className = "controle";
     var l1 = document.createElement("div"); l1.className = "linha";

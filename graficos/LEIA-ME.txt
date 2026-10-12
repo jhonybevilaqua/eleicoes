@@ -29,7 +29,7 @@
                         tem) + 1o turno, Senado e Camara do 1o turno
    - os 2 OBS ......... saida HORIZONTAL e VERTICAL da DeckLink
                         (passo a passo da 1a vez: OBS-DECKLINK.txt)
-   - as 2 janelas do gerenciador, lado a lado (Edge/Chrome) - ou 1, com
+   - as 2 janelas do gerenciador, lado a lado (Chrome; Edge so sem Chrome) - ou 1, com
      "janelas_gerenciador": 1 no config-graficos.json
    - a janela MONITOR (monitor.html): NO AR e PREVIA das duas saidas, no
      2o monitor se houver ("abrir_monitor": false no config = nao abre).
@@ -62,40 +62,25 @@
      acontecido quando o gerenciador abriu nao avisa de novo.
    FAIXA DA SAIDA (fixa): o que esta NO AR, a PREVIA (se ligada) e o
      CORTAR; os controles do giro / deputados quando estao no ar.
-   DIREITA:
-     * 2o TURNO - AO VIVO
-        numeros do Presidente: urnas, os dois candidatos (% e votos),
-          diferenca, "apurando"/"ELEITO";
-        governadores: quantos estados no 2o turno e quantos definidos;
-        PRESIDENTE: 2o turno, + mapa, evolucao, ainda da para virar,
-          estados que viraram, disputa mais apertada, estados decisivos,
-          regioes, de onde veio a vantagem, presidente eleito;
-          + onde ainda ha votos para apurar e as maiores cidades;
-        COMPARATIVOS 1o x 2o: Presidente 1o turno (todos os candidatos,
-          resultado final), ganho de votos, onde cada um cresceu (por
-          estado, so com 100%), abstencao e brancos/nulos por estado,
-          1o x 2o, EXTERIOR 1o x 2o (ganho de votos, comparecimento,
-          abstencao, brancos e nulos), presidente + mapa do 1o turno,
-          apuracao (com abstencao por estado e regiao).
-        Exterior por pais/cidade: no 2o turno mostra quem liderava ali no
-          1o turno e VIROU (o 1o turno de cada cidade e lido uma vez).
-     * GOVERNADORES - 27 ESTADOS: as telas (placar do 2o turno, 1o x 2o,
-       mapa, governador x presidente, por partido, 2022 x 2026) e um botao
-       por estado com o nome e o % (verde = eleito no 1o turno, azul =
-       eleito no 2o, cinza = em disputa). Regiao = troca sozinha.
-       GIROS AUTOMATICOS (troca sozinha a cada 10 s; o numero = estados):
-         GIRO DOS ELEITOS ......... so estados com governador eleito (1o
-                                    turno + os do 2o conforme o TSE declara)
-         GIRO DO 2o TURNO ......... so os que ainda disputam; o estado
-                                    decidido sai do giro sozinho
-         GIRO DOS 27 ESTADOS ...... todos
-       Ex.: VERTICAL no giro dos eleitos e HORIZONTAL na apuracao.
-     * FAVORITOS (teclas 1-9) e AUTOMATICO (rodizios prontos: Abertura,
-       Apuracao, Fechamento; "escolher as telas do rodizio").
-     PRESIDENTE | ESTADO OU REGIAO.
-     OUTRAS TELAS (recolhido): 1o turno (inclui PRESIDENTE 1o TURNO |
-       ESTADO OU REGIAO, resultado final), Camara, Senado, Assembleias,
-       2022, Jornalismo. Clique no titulo para abrir.
+   ABAS (3.27) - cada tela num lugar so; FAVORITOS (teclas 1-9) sempre
+   em cima. Todo seletor de estado tem BRASIL (total nacional) em cima.
+     * AO VIVO ........... numeros do 2o turno, Presidente do 2o turno,
+                           apuracao e PRESIDENTE | ESTADO OU REGIAO
+                           (BRASIL, TODAS AS REGIOES, regiao e estado)
+     * GOVERNADORES ...... giros (eleitos / 2o turno / 27), BRASIL (mapa
+                           e fotos), placar, 1o x 2o, os 27 estados
+     * COMPARATIVOS 1o x 2o  Presidente 1o turno, ganho, abstencao,
+                           brancos/nulos, exterior; Presidente 1o turno
+                           por estado/regiao; 2022 x 2026
+     * PRESIDENTE ........ demais telas nacionais, capitais, cidades,
+                           exterior
+     * SENADO E CAMARA ... Senado; Camara (BRASIL, estado, regiao);
+                           Assembleias (BRASIL e estados)
+     * ESTADOS E RESUMO .. giro dos estados (governador + senado) e as 7
+                           telas do Resumo, cada uma direto no ar
+     * JORNALISMO ........ deputadas, senadoras, perfil do eleitor
+     * AUTOMATICO ........ apresentacao, rodizios prontos, rodizio
+   A aba escolhida fica lembrada em cada janela.
    PREVIA: "previa antes do ar" ligada = o clique so prepara; vai ao ar
      no CORTAR (ou ESPACO/ENTER).
    TECLADO: 1-9 favoritos, A automatico, P previa, ESPACO corta, setas

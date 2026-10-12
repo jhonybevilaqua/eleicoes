@@ -484,9 +484,10 @@ function Abrir-Gerenciador {
     $urls = @(@("h", "http://localhost:$Porta/gerenciador.html?saida=h"), @("v", "http://localhost:$Porta/gerenciador.html?saida=v"))
     if ($script:JanelasGer -eq 1) { $urls = @(, @("hv", "http://localhost:$Porta/gerenciador.html")) }
     $nav = $null
-    foreach ($c in @("${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe", "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe",
-                     "$env:ProgramFiles\Google\Chrome\Application\chrome.exe", "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe",
-                     "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe")) { if ($c -and (Test-Path $c)) { $nav = $c; break } }
+    # CHROME primeiro (pedido da operacao); Edge so se o Chrome nao estiver instalado
+    foreach ($c in @("$env:ProgramFiles\Google\Chrome\Application\chrome.exe", "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe",
+                     "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe",
+                     "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe", "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe")) { if ($c -and (Test-Path $c)) { $nav = $c; break } }
     $x0 = 0; $y0 = 0; $larg = 960; $alt = 1040
     try { Add-Type -AssemblyName System.Windows.Forms; $wa = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea; $x0 = $wa.X; $y0 = $wa.Y; $larg = [int] [math]::Floor($wa.Width / $urls.Count); $alt = $wa.Height } catch { }
     $i = 0
