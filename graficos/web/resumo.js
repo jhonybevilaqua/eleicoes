@@ -74,7 +74,7 @@
     return r(x, y, w, h, C.trilho, 4) + (frac > 0 ? r(x, y, Math.max(8, w * frac), h, c, 4) : "");
   }
   function lista(x) { return Array.isArray(x) ? x : (x && Array.isArray(x.value) ? x.value : []); }
-  // ENSAIO (ENSAIO.bat): toda tela sai riscada - nunca confundir com o ar.
+  // Marca "ENSAIO" (so se o dado vier com ensaio=true; a coleta oficial grava false).
   function ensaioAtivo() { return !!((window.GCTSE_DADOS || {}).ensaio || (window.GCTSE_ESTADOS || {}).ensaio); }
   function marcaEnsaio(W, H) {
     if (!ensaioAtivo()) return "";

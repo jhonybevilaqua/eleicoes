@@ -2,7 +2,7 @@
     gctse GRAFICOS - GOVERNADOR e SENADOR dos 27 estados (giro final)
 
     Le do TSE o boletim de Governador e de Senador de cada estado e grava
-    web\estados.js, que a tela giro-estados.html le sozinha.
+    web\estados.js, que as telas (giro, governadores, painel) leem sozinhas.
 
     Separado do graficos.ps1 (Presidente) de proposito: se este parar, os
     graficos de Presidente continuam. So o ambiente OFICIAL.
@@ -17,7 +17,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "3.26 - 10/10/2026"
+$Versao = "3.27 - 12/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -262,8 +262,7 @@ $Eleicao1T = ""
 if ((Tem-Propriedade $cfg.tse "eleicao_estaduais_1turno") -and $cfg.tse.eleicao_estaduais_1turno -and
     "$($cfg.tse.eleicao_estaduais_1turno)" -ne $Eleicao) { $Eleicao1T = "$($cfg.tse.eleicao_estaduais_1turno)" }
 $Modo    = "OFICIAL"
-$Ensaio = ((Tem-Propriedade $cfg "ensaio") -and $cfg.ensaio -eq $true)   # ENSAIO.bat
-if ($Ensaio) { $Modo = "SIMULADO" }
+$Ensaio = $false   # versao final: so o ambiente OFICIAL do TSE
 $Intervalo = 30
 if (Tem-Propriedade $cfg "intervalo_estados_segundos") { $Intervalo = [math]::Max(15, [int] $cfg.intervalo_estados_segundos) }
 $PastaWeb = Join-Path $Raiz "web"

@@ -9,19 +9,17 @@
     pasta, nenhum arquivo em comum. Um nao derruba o outro.
 
     Uso:
-        GRAFICOS.bat          ambiente OFICIAL (dia 04/10)
-        TESTE-GRAFICOS.bat    ambiente de SIMULADO do TSE (so para conferir)
+        GRAFICOS.bat          ambiente OFICIAL do TSE (config-graficos.json)
 #>
 
 [CmdletBinding()]
 param(
-    [switch] $Teste,
     [switch] $UmaVez
 )
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "3.26 - 10/10/2026"
+$Versao = "3.27 - 12/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -253,19 +251,8 @@ $Base    = "$($cfg.tse.base_url)".TrimEnd('/')
 $Ciclo   = "$($cfg.tse.ciclo)"
 $Eleicao = "$($cfg.tse.eleicao_presidente)"
 $Modo    = "OFICIAL"
-# ENSAIO (ENSAIO.bat): copia separada da pasta, TSE simulado local. Todas as
-# telas saem marcadas "ENSAIO - NAO VAI AO AR".
-$Ensaio = ((Tem-Propriedade $cfg "ensaio") -and $cfg.ensaio -eq $true)
-if ($Ensaio) { $Modo = "SIMULADO" }
-if ($Teste) {
-    if (-not ((Tem-Propriedade $cfg.tse "base_url_simulado") -and $cfg.tse.base_url_simulado)) {
-        Write-Host "Modo TESTE sem 'base_url_simulado' no config-graficos.json." -ForegroundColor Red
-        exit 1
-    }
-    $Base    = "$($cfg.tse.base_url_simulado)".TrimEnd('/')
-    $Eleicao = "$($cfg.tse.eleicao_presidente_simulado)"
-    $Modo    = "SIMULADO"
-}
+# Versao final: so o ambiente OFICIAL do TSE (ensaio e modo teste retirados).
+$Ensaio = $false
 # 2o TURNO: com "eleicao_presidente_1turno" diferente de "eleicao_presidente",
 # o resultado FINAL do 1o turno (Brasil e 27 estados) continua sendo lido
 # (a cada 3 ciclos) para o mapa do 1o turno e as comparacoes.

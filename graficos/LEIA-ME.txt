@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 3.26 - APURACAO DO 2o TURNO (25/10/2026)
+ gctse GRAFICOS 3.27 - APURACAO DO 2o TURNO (25/10/2026)
  Presidente e Governador ao vivo do TSE, com o 1o turno ao lado.
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
@@ -17,6 +17,9 @@
       MONITOR, que abre sozinha no 2o monitor.
    4. Nao feche nenhuma janela preta ate o fim da noite.
    So vai ao ar numero do TSE. Tela sem dado nao aparece no painel.
+   2o turno ZERADO (o TSE publica antes das 17h): as telas do 2o turno
+   ficam escondidas ate o 1o voto apurado; aparecem so as do 1o turno,
+   Senado, Camara, governadores eleitos, Jornalismo e perfil do eleitor.
 
 ---------------------------------------------------------------------------
  1. O QUE O GERENCIADOR.bat ABRE SOZINHO
@@ -127,8 +130,8 @@
      reeleitos), perfil do eleitor. De novo no SABADO 24/10.
    - Selo "Codigos 2o turno: OK (6258/6260)". Se vermelho: clique nele (ou
      CODIGOS-2-TURNO.bat) e responda S.
-   - ENSAIO.bat com a equipe: noite simulada, dados FICTICIOS riscados
-     "ENSAIO", gerenciador na porta 8096 (nada chega ao OBS do ar).
+   - Treino com a equipe usando os dados REAIS do TSE: o 1o turno ja
+     publicado e o 2o turno (zerado ate as 17h do dia 25).
    - Copia de seguranca (botao "copia" ou COPIA-DE-SEGURANCA.bat): o .zip
      num pendrive / outra maquina.
    - Maquina reserva: a mesma pasta e config, coletando junto.
@@ -176,7 +179,6 @@
    CODIGOS-2-TURNO.bat ....... grava os codigos do 2o turno do TSE (pede S)
    COPIA-DE-SEGURANCA.bat .... .zip da pasta inteira (= botao "copia")
    ARQUIVO-HISTORICO-2026.bat  depois do resultado: 1o e 2o turno completos
-   ENSAIO.bat ................ noite simulada (porta 8096, dados ficticios)
    ABRIR-OBS.bat / ENDERECOS-OBS.bat  OBS (reabrir / montar na mao)
    PREPARAR-WINDOWS.bat ...... ajuste do Windows (1 vez)
 
@@ -206,5 +208,12 @@
      mesmo estado (o arquivo de 2026 nao informa reeleicao).
    Perfil do eleitor: perfil do eleitorado / comparecimento por perfil do
      TSE (Dados Abertos). Renda/classe social: o TSE nao coleta.
-   O que nao e do TSE fica em arquivo de config com a fonte na tela.
-   Historico de versoes e detalhes antigos: LEIA-ME-HISTORICO.txt.
+   O que nao e do TSE fica em arquivo de config com a fonte na tela
+   (senado-config.js: bancadas da redacao; comparativo-config.js: 2018
+   oficial do TSE).
+   Codigos oficiais (TSE): 1o turno pleito 3220 - 6257 Federal, 6259
+   Estaduais; 2o turno pleito 3221 - 6258 Federal, 6260 Estaduais. As
+   eleicoes suplementares, consultas e plebiscitos (6282 a 6293) NAO sao
+   lidas. Limite do TSE: 100 pedidos/s por IP; 404 em excesso bloqueia o
+   IP por 10 min - o sistema espaca os pedidos e nunca pede o 2o turno de
+   governador de estado que ja elegeu no 1o.

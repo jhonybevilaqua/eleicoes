@@ -304,7 +304,7 @@
     o += t(30, 950, "Fonte: TSE — " + hora(u) + notaAnulados(g), { s: 11, c: C.apagado2, max: W - 60 });
     return svg(W, H, o);
   }
-  // ENSAIO (ENSAIO.bat): toda tela sai riscada - nunca confundir com o ar.
+  // Marca "ENSAIO" (so se o dado vier com ensaio=true; a coleta oficial grava false).
   function ensaioAtivo() { return !!((window.GCTSE_DADOS || {}).ensaio || (window.GCTSE_ESTADOS || {}).ensaio); }
   function marcaEnsaio(W, H) {
     if (!ensaioAtivo()) return "";

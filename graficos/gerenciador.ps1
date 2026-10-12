@@ -184,7 +184,6 @@ $script:JanelasGer = 2   # "janelas_gerenciador": 2 = H e V lado a lado; 1 = uma
 $script:AbrirMonitor = $true   # "abrir_monitor": false = nao abre a janela MONITOR (NO AR + PREVIA)
 try {
     foreach ($p in $cfg.PSObject.Properties) {
-        if ($p.Name -eq "ensaio" -and $p.Value -eq $true) { $script:Ensaio = $true }
         if ($p.Name -eq "presidente_eleito_no_ar" -and $p.Value -eq $false) { $script:EleitoAuto = $false }
         if ($p.Name -eq "reabrir_coletas" -and $p.Value -eq $false) { $script:Reabrir = $false }
         if ($p.Name -eq "atualizar_dados_ao_abrir" -and $p.Value -eq $false) { $script:DadosAoAbrir = $false }
@@ -192,7 +191,6 @@ try {
         if ($p.Name -eq "abrir_monitor" -and $p.Value -eq $false) { $script:AbrirMonitor = $false }
     }
 } catch { }
-if ($script:Ensaio) { $script:Reabrir = $false }   # o ENSAIO.bat cuida das janelas dele
 $script:Estado.eleito = [ordered]@{ auto = $script:EleitoAuto; feito = ""; nome = ""; quando = ""; cortou = $false }
 $script:Estado.eventos = New-Object System.Collections.ArrayList
 $script:Estado.ensaio = $script:Ensaio
@@ -631,8 +629,7 @@ while ($ouvinte.IsListening) {
             if ($rodar) {
                 $psExe = "powershell"
                 if ($env:WINDIR -and (Test-Path (Join-Path $env:WINDIR "System32\WindowsPowerShell\v1.0\powershell.exe"))) { $psExe = Join-Path $env:WINDIR "System32\WindowsPowerShell\v1.0\powershell.exe" } elseif (-not (Get-Command "powershell" -ErrorAction SilentlyContinue)) { $psExe = "pwsh" }
-                if ($script:Ensaio) { $msgD = "no ENSAIO os dados do TSE nao sao baixados (use o gerenciador de verdade)" }
-                elseif ($rodar -eq "codigos") {
+                if ($rodar -eq "codigos") {
                     try { Start-Process -FilePath (Join-Path $Raiz "CODIGOS-2-TURNO.bat") -WorkingDirectory $Raiz; $msgD = "janela CODIGOS DO 2o TURNO aberta: confira e responda S para gravar" }
                     catch { $msgD = "nao abriu: $($_.Exception.Message)" }
                     Escrever-Log "dados do TSE: CODIGOS-2-TURNO aberto pelo gerenciador" "Green"
@@ -706,27 +703,24 @@ while ($ouvinte.IsListening) {
             # ?abrir=1 abre; sem ele so diz a situacao.
             $sit = [ordered]@{ graficos = (Coletor-Aberto "graficos.ps1"); estados = (Coletor-Aberto "estados.ps1"); obs = @(Get-Process -Name obs64 -ErrorAction SilentlyContinue).Count; abertos = @(); falhas = @(); msg = "" }
             if ("$($req.QueryString['abrir'])" -eq "1") {
-                if ($script:Ensaio) { $sit.msg = "ENSAIO: as coletas do ensaio sao abertas pelo ENSAIO.bat" }
-                else {
-                    foreach ($par in @(@("graficos", "GRAFICOS.bat"), @("estados", "ESTADOS.bat"))) {
-                        if (-not $sit[$par[0]]) {
-                            try { Start-Process -FilePath (Join-Path $Raiz $par[1]) -WorkingDirectory $Raiz; $sit.abertos += $par[1] } catch { $sit.falhas += $par[1]; Evento "alerta" ("nao consegui abrir o {0}: {1}" -f $par[1], $_.Exception.Message) }
-                        }
+                foreach ($par in @(@("graficos", "GRAFICOS.bat"), @("estados", "ESTADOS.bat"))) {
+                    if (-not $sit[$par[0]]) {
+                        try { Start-Process -FilePath (Join-Path $Raiz $par[1]) -WorkingDirectory $Raiz; $sit.abertos += $par[1] } catch { $sit.falhas += $par[1]; Evento "alerta" ("nao consegui abrir o {0}: {1}" -f $par[1], $_.Exception.Message) }
                     }
-                    $obsArq = Join-Path $Raiz "obs-saidas.ps1"
-                    Checar-Obs
-                    $obsFechado = @(@("h", "v") | Where-Object { $null -ne $script:Estado.obs -and "$($script:Estado.obs[$_])" -eq "fechado" }).Count -gt 0
-                    $psExeC = "powershell"
-                    if ($env:WINDIR -and (Test-Path (Join-Path $env:WINDIR "System32\WindowsPowerShell\v1.0\powershell.exe"))) { $psExeC = Join-Path $env:WINDIR "System32\WindowsPowerShell\v1.0\powershell.exe" } elseif (-not (Get-Command "powershell" -ErrorAction SilentlyContinue)) { $psExeC = "pwsh" }
-                    if ((Test-Path $obsArq) -and $obsFechado) {
-                        try { Start-Process -FilePath $psExeC -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ('"' + $obsArq + '"'), "-Auto") -WorkingDirectory $Raiz -WindowStyle Minimized; $sit.abertos += "OBS" } catch { }
-                    }
-                    $partes = @()
-                    if ($sit.abertos.Count) { $partes += "abertos agora: " + ($sit.abertos -join ", ") }
-                    if ($sit.falhas.Count) { $partes += "NAO ABRIU: " + ($sit.falhas -join ", ") + " (abra pelo .bat na pasta)" }
-                    $sit.msg = $(if ($partes.Count) { $partes -join " | " } else { "tudo ja estava aberto" })
-                    Evento "info" ("ABRIR COLETAS (painel): " + $sit.msg)
                 }
+                $obsArq = Join-Path $Raiz "obs-saidas.ps1"
+                Checar-Obs
+                $obsFechado = @(@("h", "v") | Where-Object { $null -ne $script:Estado.obs -and "$($script:Estado.obs[$_])" -eq "fechado" }).Count -gt 0
+                $psExeC = "powershell"
+                if ($env:WINDIR -and (Test-Path (Join-Path $env:WINDIR "System32\WindowsPowerShell\v1.0\powershell.exe"))) { $psExeC = Join-Path $env:WINDIR "System32\WindowsPowerShell\v1.0\powershell.exe" } elseif (-not (Get-Command "powershell" -ErrorAction SilentlyContinue)) { $psExeC = "pwsh" }
+                if ((Test-Path $obsArq) -and $obsFechado) {
+                    try { Start-Process -FilePath $psExeC -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ('"' + $obsArq + '"'), "-Auto") -WorkingDirectory $Raiz -WindowStyle Minimized; $sit.abertos += "OBS" } catch { }
+                }
+                $partes = @()
+                if ($sit.abertos.Count) { $partes += "abertos agora: " + ($sit.abertos -join ", ") }
+                if ($sit.falhas.Count) { $partes += "NAO ABRIU: " + ($sit.falhas -join ", ") + " (abra pelo .bat na pasta)" }
+                $sit.msg = $(if ($partes.Count) { $partes -join " | " } else { "tudo ja estava aberto" })
+                Evento "info" ("ABRIR COLETAS (painel): " + $sit.msg)
             }
             Responder $ctx 200 "application/json; charset=utf-8" ([Text.Encoding]::UTF8.GetBytes(($sit | ConvertTo-Json -Compress)))
         }
