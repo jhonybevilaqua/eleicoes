@@ -37,7 +37,10 @@
    - confere sozinho os CODIGOS do 2o turno com a lista do TSE (a cada
      30 min) - selo "Codigos 2o turno" no alto do painel
    Se GRAFICOS.bat ou ESTADOS.bat fecharem, o gerenciador REABRE sozinho e
-   avisa no painel.
+   avisa no painel. Botao "ABRIR COLETAS" no alto do painel (vermelho =
+   alguma coleta fechada): abre NA HORA o que estiver fechado - GRAFICOS,
+   ESTADOS e os OBS das saidas. Os dados que nao vem ao vivo (copia do TSE,
+   candidatos, perfil): botao "dados do TSE" > ATUALIZAR TUDO.
 
 ---------------------------------------------------------------------------
  2. O PAINEL (cada janela do gerenciador)

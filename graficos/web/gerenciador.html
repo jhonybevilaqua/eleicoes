@@ -241,6 +241,7 @@
   .girosgov { margin: 2px 0 8px; } .girosgov button { font-weight: 800; background: var(--azul) !important; border-color: var(--azul-borda) !important; color: #fff !important; }
   .girosgov button:disabled { opacity: .4; cursor: default; }
   .girosgov button.ativo { background: var(--verm) !important; border-color: var(--verm-borda) !important; }
+  #navColetas { font-weight: 800; } #navColetas.falta { background: var(--verm); border-color: var(--verm-borda); color: #fff; }
 </style>
 <script>try { if (localStorage.getItem("gctse-tema") === "escuro") document.documentElement.className = "escuro"; } catch (e) { }</script>
 </head>
@@ -279,7 +280,8 @@
   <span class="rot rot-mostrar" style="margin-left:10px">MOSTRAR:</span>
   <button type="button" data-mostra="hv">as duas</button><button type="button" data-mostra="h">só horizontal</button><button type="button" data-mostra="v">só vertical</button>
   <a id="outraSaida" href="#" target="_blank" hidden style="font-weight:700"></a>
-  <button type="button" id="navMon" style="margin-left:10px" title="abre a janela MONITOR: NO AR e PRÉVIA das duas saídas (ponha no 2º monitor)">🖥 abrir monitor ↗</button>
+  <button type="button" class="so-local" id="navColetas" style="margin-left:10px" title="abre na hora o que estiver fechado: GRAFICOS.bat (Presidente), ESTADOS.bat (governador, senado, Câmara) e os OBS das saídas">▶ ABRIR COLETAS</button>
+  <button type="button" id="navMon" title="abre a janela MONITOR: NO AR e PRÉVIA das duas saídas (ponha no 2º monitor)">🖥 abrir monitor ↗</button>
   <button type="button" id="navMonModo" title="onde ficam as imagens do NO AR e da PRÉVIA">monitor: …</button>
   <button type="button" class="so-local" id="navDados" style="margin-left:10px" title="baixar e importar os dados do TSE">📥 dados do TSE</button>
   <span id="vazias" hidden></span>
@@ -1253,6 +1255,18 @@
     var bm = document.getElementById("vzMostra");
     if (bm) bm.onclick = function () { mostraVazias = !mostraVazias; document.body.classList.toggle("mostra-vazias", mostraVazias); filtrarVazias(); };
   }
+  // ABRIR COLETAS: situacao a cada 10 s; vermelho = alguma coleta fechada
+  var bCol = document.getElementById("navColetas");
+  function verColetas(abrir) {
+    return fetch("/coletas?" + (abrir ? "abrir=1&" : "") + "t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (c) {
+      var falta = [];
+      if (!c.graficos) falta.push("GRAFICOS"); if (!c.estados) falta.push("ESTADOS");
+      bCol.textContent = falta.length ? "▶ ABRIR COLETAS (fechado: " + falta.join(" e ") + ")" : "✓ coletas abertas";
+      bCol.classList.toggle("falta", falta.length > 0);
+      if (abrir && c.msg && /ENSAIO/.test(c.msg)) toast({ tipo: "info", hora: new Date().toTimeString().slice(0, 8), texto: c.msg });   // o resto vem pelas OCORRENCIAS
+    }).catch(function () { });
+  }
+  if (bCol) { bCol.onclick = function () { bCol.disabled = true; verColetas(true).then(function () { bCol.disabled = false; setTimeout(function () { verColetas(false); }, 6000); }); }; verColetas(false); setInterval(function () { verColetas(false); }, 10000); }
   setTimeout(filtrarVazias, 800);
   setInterval(filtrarVazias, 10000);
   // genero dos candidatos e perfil do eleitor: arquivos dos importadores
