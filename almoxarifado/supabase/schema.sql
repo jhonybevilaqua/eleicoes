@@ -237,7 +237,27 @@ begin
   truncate public.movimentacoes, public.eventos, public.itens restart identity;
 end $$;
 
+-- Admin redefine a senha de alguém (não há envio de e-mail no sistema).
+create or replace function public.redefinir_senha(alvo text, nova text)
+returns void language plpgsql security definer set search_path = public, extensions, auth as $$
+begin
+  if not public.e_admin() then
+    raise exception 'Somente administradores';
+  end if;
+  if length(coalesce(nova, '')) < 8 then
+    raise exception 'A senha precisa ter pelo menos 8 caracteres';
+  end if;
+  update auth.users set encrypted_password = crypt(nova, gen_salt('bf')), updated_at = now()
+   where lower(email) = lower(trim(alvo));
+  if not found then
+    raise exception 'Este e-mail ainda não criou acesso no sistema';
+  end if;
+end $$;
+revoke execute on function public.redefinir_senha(text, text) from public, anon;
+revoke execute on function public.limpar_inventario() from public, anon;
+
 grant execute on function public.meu_papel() to authenticated;
+grant execute on function public.redefinir_senha(text, text) to authenticated;
 grant execute on function public.limpar_inventario() to authenticated;
 
 -- ---------- Primeiro administrador -------------------------------------

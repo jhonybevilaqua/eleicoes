@@ -4,7 +4,7 @@ Sistema web de controle do almoxarifado técnico: inventário, saídas e devolu�
 inspeções, vida útil, linha do tempo de cada item e painel gerencial.
 
 - **Front-end:** React + Vite (hospedado no Vercel)
-- **Banco e login:** Supabase (Postgres + autenticação por código no e-mail)
+- **Banco e login:** Supabase (Postgres + login com e-mail e senha, sem envio de e-mail)
 - **Acesso:** somente e-mails `@tvevangelizar.com.br` e `@evangelizarepreciso.com.br`,
   barrado também no banco (trigger + RLS), não só na tela.
 
@@ -18,6 +18,9 @@ inspeções, vida útil, linha do tempo de cada item e painel gerencial.
 | Atividade | Log automático de tudo (cadastro, edição, inspeção, status, saída, devolução, exclusão), com usuário e data/hora. |
 | Usuários (admin) | Define quem é admin, operador ou leitor. |
 | Importar planilha (admin) | Lê o .xlsx do inventário, normaliza tipos, locais, datas e inspeções, e carrega (substituindo ou somando). |
+
+**Acesso:** cada pessoa cria a própria senha em *Primeiro acesso* (só e-mails dos dois domínios).
+Esqueceu a senha? O admin redefine em *Usuários → Redefinir senha*; depois a pessoa troca em *Alterar senha*.
 
 **Papéis:** qualquer e-mail corporativo entra como *leitor* (só consulta).
 *Operador* cadastra, edita e movimenta. *Admin* também exclui, gerencia usuários e importa.
@@ -33,18 +36,12 @@ inspeções, vida útil, linha do tempo de cada item e painel gerencial.
    values ('seu.nome@tvevangelizar.com.br', 'Seu Nome', 'admin')
    on conflict (email) do update set papel = 'admin';
    ```
-4. **Authentication → Email Templates → Magic Link**: troque o corpo para enviar o código:
-   ```html
-   <h2>Almoxarifado Técnico</h2>
-   <p>Seu código de acesso: <b style="font-size:22px">{{ .Token }}</b></p>
-   ```
-   Faça o mesmo em **Confirm signup** (primeiro acesso de cada pessoa).
-5. **Authentication → URL Configuration**: em *Site URL* coloque o endereço do Vercel
-   (ex.: `https://almoxarifado-tve.vercel.app`).
-6. **Recomendado – SMTP próprio** (*Authentication → SMTP Settings*): o e-mail padrão do
-   Supabase envia poucas mensagens por hora. Use a conta Microsoft 365 da emissora
-   (`smtp.office365.com`, porta 587) ou um serviço como Resend/Brevo.
-7. **Project Settings → API**: copie a *Project URL* e a chave *anon public*.
+4. **Authentication → Sign In / Providers → Email**: mantenha *Email* ligado e **desligue
+   "Confirm email"**. Assim ninguém precisa receber e-mail: a pessoa cria a senha no
+   "Primeiro acesso" e já entra. Só os dois domínios corporativos conseguem criar conta
+   (bloqueio no banco).
+5. **Authentication → URL Configuration**: em *Site URL* coloque o endereço do Vercel.
+6. **Project Settings → API**: copie a *Project URL* e a chave *anon public*.
 
 ### 2. Vercel
 1. *Add New → Project* → importe este repositório.

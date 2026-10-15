@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { LayoutDashboard, Package, ArrowLeftRight, Users, FileUp, LogOut, Menu, History } from 'lucide-react';
+import { LayoutDashboard, Package, ArrowLeftRight, Users, FileUp, LogOut, Menu, History, KeyRound } from 'lucide-react';
 import { supabase, emailCorporativo } from './lib/supabase';
 import { DadosProvider, useDados } from './lib/dados';
 import { Logo } from './Logo';
@@ -13,6 +13,7 @@ import { Atividade } from './pages/Atividade';
 import { Usuarios } from './pages/Usuarios';
 import { Importar } from './pages/Importar';
 import { ItemDrawer } from './pages/ItemDrawer';
+import { SenhaModal } from './pages/Usuarios';
 
 type Pagina = 'painel' | 'inventario' | 'movimentacoes' | 'atividade' | 'usuarios' | 'importar';
 
@@ -57,6 +58,7 @@ function Shell() {
   const [filtro, setFiltro] = useState<Filtro>({});
   const [menu, setMenu] = useState(false);
   const [item, setItem] = useState<number | 'novo' | null>(null);
+  const [senha, setSenha] = useState(false);
 
   useEffect(() => {
     const f = () => setPagina(paginaDoHash());
@@ -103,6 +105,7 @@ function Shell() {
           <div className="rodape">
             <div className="quem"><b>{email.split('@')[0]}</b>{papelRot}</div>
             <BotaoTema comTexto />
+            <button className="nav-btn" onClick={() => { setSenha(true); setMenu(false); }}><KeyRound size={17} /> Alterar senha</button>
             <button className="nav-btn" onClick={() => supabase.auth.signOut()}><LogOut size={17} /> Sair</button>
           </div>
         </aside>
@@ -130,6 +133,7 @@ function Shell() {
         </div>
       </div>
       {item != null && <ItemDrawer id={item} fechar={() => setItem(null)} />}
+      {senha && <SenhaModal fechar={() => setSenha(false)} />}
     </NavCtx.Provider>
   );
 }
