@@ -1,5 +1,7 @@
 # Almoxarifado Técnico · TV Evangelizar
 
+**Acesso:** https://almoxarifado-tve.vercel.app
+
 Sistema web de controle do almoxarifado técnico: inventário, saídas e devoluções,
 inspeções, vida útil, linha do tempo de cada item e painel gerencial.
 
