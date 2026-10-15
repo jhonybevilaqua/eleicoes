@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { LayoutDashboard, Package, ArrowLeftRight, Users, FileUp, LogOut, Menu, History, KeyRound } from 'lucide-react';
-import { supabase, emailCorporativo } from './lib/supabase';
+import { supabase, emailCorporativo, EMAIL_DONO } from './lib/supabase';
 import { DadosProvider, useDados } from './lib/dados';
 import { Logo } from './Logo';
 import { BotaoTema } from './Tema';
@@ -84,7 +84,7 @@ function Shell() {
     { p: 'movimentacoes', rot: 'Saídas e devoluções', Icone: ArrowLeftRight, cont: abertas.length },
     { p: 'atividade', rot: 'Atividade', Icone: History },
     { p: 'usuarios', rot: 'Usuários', Icone: Users, so: !admin },
-    { p: 'importar', rot: 'Importar planilha', Icone: FileUp, so: !admin },
+    { p: 'importar', rot: 'Importar planilha', Icone: FileUp, so: email !== EMAIL_DONO },
   ];
 
   const papelRot = { admin: 'Administrador', operador: 'Operador', leitor: 'Somente leitura' }[papel];
@@ -126,7 +126,7 @@ function Shell() {
                 {pagina === 'movimentacoes' && <Movimentacoes />}
                 {pagina === 'atividade' && <Atividade />}
                 {pagina === 'usuarios' && admin && <Usuarios />}
-                {pagina === 'importar' && admin && <Importar />}
+                {pagina === 'importar' && email === EMAIL_DONO && <Importar />}
               </>
             )}
           </main>

@@ -19,7 +19,7 @@ inspeções, vida útil, linha do tempo de cada item e painel gerencial.
 | Saídas e devoluções | Itens fora agora (atrasados em vermelho), nova saída com carrinho de itens (kit), devolução individual, em lote ou do kit inteiro, condição na volta (OK / avariado / manutenção), histórico e exportação. |
 | Atividade | Log automático de tudo (cadastro, edição, inspeção, status, saída, devolução, exclusão), com usuário e data/hora. |
 | Usuários (admin) | Define quem é admin, operador ou leitor. |
-| Importar planilha (admin) | Lê o .xlsx do inventário, normaliza tipos, locais, datas e inspeções, e carrega (substituindo ou somando). |
+| Importar planilha (só o administrador geral) | Lê o .xlsx do inventário, normaliza tipos, locais, datas e inspeções, e carrega (substituindo ou somando). |
 
 **Acesso:** cada pessoa cria a própria senha em *Primeiro acesso* (só e-mails dos dois domínios).
 Esqueceu a senha? O admin redefine em *Usuários → Redefinir senha*; depois a pessoa troca em *Alterar senha*.

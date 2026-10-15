@@ -15,3 +15,5 @@ export function emailCorporativo(email: string) {
   const d = email.trim().toLowerCase().split('@')[1] || '';
   return DOMINIOS.includes(d);
 }
+
+export const EMAIL_DONO = 'jhony.bevilaqua@tvevangelizar.com.br';

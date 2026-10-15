@@ -61,6 +61,10 @@ $$;
 create or replace function public.e_admin() returns boolean language sql stable as $$
   select public.meu_papel() = 'admin'
 $$;
+-- Dono do sistema: único que pode importar/substituir a planilha.
+create or replace function public.e_dono() returns boolean language sql stable as $$
+  select public.meu_email() = 'jhony.bevilaqua@tvevangelizar.com.br'
+$$;
 
 -- ---------- Itens -------------------------------------------------------
 create table if not exists public.itens (
@@ -228,12 +232,12 @@ drop policy if exists usuarios_admin on public.usuarios;
 create policy usuarios_ler   on public.usuarios for select to authenticated using (public.pode_ler());
 create policy usuarios_admin on public.usuarios for all to authenticated using (public.e_admin()) with check (public.e_admin());
 
--- Usado pela tela "Importar planilha" no modo substituir (só admin).
+-- Usado pela tela "Importar planilha" no modo substituir (só o administrador geral).
 create or replace function public.limpar_inventario()
 returns void language plpgsql security definer set search_path = public as $$
 begin
-  if not public.e_admin() then
-    raise exception 'Somente administradores';
+  if not public.e_dono() then
+    raise exception 'Somente o administrador geral pode substituir o inventário';
   end if;
   truncate public.movimentacoes, public.eventos, public.itens restart identity;
 end $$;
