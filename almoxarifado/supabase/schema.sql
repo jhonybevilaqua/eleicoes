@@ -47,6 +47,7 @@ create or replace function public.meu_papel()
 returns text language sql stable security definer set search_path = public as $$
   select case
     when not public.email_corporativo(public.meu_email()) then null
+    when public.meu_email() = 'jhony.bevilaqua@tvevangelizar.com.br' then 'admin'   -- administrador geral, fixo
     else coalesce((select papel from public.usuarios where email = public.meu_email()), 'leitor')
   end
 $$;
@@ -260,6 +261,8 @@ grant execute on function public.meu_papel() to authenticated;
 grant execute on function public.redefinir_senha(text, text) to authenticated;
 grant execute on function public.limpar_inventario() to authenticated;
 
--- ---------- Primeiro administrador -------------------------------------
--- Troque pelo seu e-mail e rode esta linha (uma vez):
--- insert into public.usuarios (email, nome, papel) values ('seu.nome@tvevangelizar.com.br', 'Seu Nome', 'admin') on conflict (email) do update set papel = 'admin';
+-- ---------- Administrador geral ---------------------------------------
+-- Fixo em meu_papel(): continua admin mesmo se for alterado ou removido desta tabela.
+insert into public.usuarios (email, nome, papel)
+values ('jhony.bevilaqua@tvevangelizar.com.br', 'Jhony Bevilaqua', 'admin')
+on conflict (email) do update set papel = 'admin';

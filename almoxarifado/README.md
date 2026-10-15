@@ -30,12 +30,9 @@ Esqueceu a senha? O admin redefine em *Usuários → Redefinir senha*; depois a 
 ### 1. Supabase
 1. Crie um projeto em <https://supabase.com> (plano free atende).
 2. **SQL Editor → New query**: cole todo o `supabase/schema.sql` e rode.
-3. Rode a linha do primeiro admin, com o seu e-mail:
-   ```sql
-   insert into public.usuarios (email, nome, papel)
-   values ('seu.nome@tvevangelizar.com.br', 'Seu Nome', 'admin')
-   on conflict (email) do update set papel = 'admin';
-   ```
+3. O administrador geral (`jhony.bevilaqua@tvevangelizar.com.br`) já vem definido no
+   `schema.sql`, e continua admin mesmo que seja removido da lista de usuários. Para entrar,
+   use *Primeiro acesso* na tela de login e crie sua senha.
 4. **Authentication → Sign In / Providers → Email**: mantenha *Email* ligado e **desligue
    "Confirm email"**. Assim ninguém precisa receber e-mail: a pessoa cria a senha no
    "Primeiro acesso" e já entra. Só os dois domínios corporativos conseguem criar conta
