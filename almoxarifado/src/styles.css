@@ -20,9 +20,9 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --marca: #4fae74; --marca-2: #6cc95f; --marca-suave: #1b2e23; --marca-btn: #2f7a4f;
-    --bg: #0e1411; --surface: #151d18; --surface-2: #1a241e; --borda: #26332b;
-    --texto: #e6eee9; --texto-2: #95a69c;
+    --marca: #5cc28a; --marca-2: #6cc95f; --marca-suave: rgba(92, 194, 138, .12); --marca-btn: #2f7a4f;
+    --bg: #0f1114; --surface: #171a1f; --surface-2: #1e2228; --borda: #2b3038;
+    --texto: #e8eaed; --texto-2: #9ba2ac;
     --ok: #4cc37f; --ok-bg: #173323; --info: #6aa8f0; --info-bg: #172a40;
     --warn: #e5a74a; --warn-bg: #362813; --bad: #f07a70; --bad-bg: #3a1c1a;
     --mute: #9aa3ad; --mute-bg: #232a30;
@@ -31,9 +31,9 @@
   }
 }
 :root[data-theme='dark'] {
-  --marca: #4fae74; --marca-2: #6cc95f; --marca-suave: #1b2e23; --marca-btn: #2f7a4f;
-  --bg: #0e1411; --surface: #151d18; --surface-2: #1a241e; --borda: #26332b;
-  --texto: #e6eee9; --texto-2: #95a69c;
+  --marca: #5cc28a; --marca-2: #6cc95f; --marca-suave: rgba(92, 194, 138, .12); --marca-btn: #2f7a4f;
+  --bg: #0f1114; --surface: #171a1f; --surface-2: #1e2228; --borda: #2b3038;
+  --texto: #e8eaed; --texto-2: #9ba2ac;
   --ok: #4cc37f; --ok-bg: #173323; --info: #6aa8f0; --info-bg: #172a40;
   --warn: #e5a74a; --warn-bg: #362813; --bad: #f07a70; --bad-bg: #3a1c1a;
   --mute: #9aa3ad; --mute-bg: #232a30;
@@ -213,7 +213,7 @@ td .t2 { font-size: 12px; color: var(--texto-2); }
 }
 
 /* drawer / modal */
-.fundo { position: fixed; inset: 0; z-index: 50; background: rgba(8, 20, 12, .45); display: flex; justify-content: flex-end; }
+.fundo { position: fixed; inset: 0; z-index: 50; background: rgba(0, 0, 0, .5); display: flex; justify-content: flex-end; }
 .fundo.centro { justify-content: center; align-items: center; padding: 16px; }
 .drawer { width: min(560px, 100%); height: 100%; background: var(--surface); display: flex; flex-direction: column; box-shadow: -8px 0 30px rgba(0, 0, 0, .15); }
 .modal { width: min(620px, 100%); max-height: calc(100vh - 32px); background: var(--surface); border-radius: var(--raio); display: flex; flex-direction: column; box-shadow: 0 20px 50px rgba(0, 0, 0, .25); }
