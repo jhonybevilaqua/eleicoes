@@ -1,6 +1,6 @@
 ===========================================================================
  DIA DA ELEICAO - 25/10/2026 (2o turno) - passo a passo
- gctse 7.3 - pasta D:\ELEICOES\GCTSE
+ gctse 7.3.1 - pasta D:\ELEICOES\GCTSE
 ===========================================================================
 
  AS TARJAS SAO AS MESMAS DO 1o TURNO. Mesmos arquivos (tarja-presidente,
@@ -49,7 +49,7 @@
  1. Feche todas as janelas pretas antigas.
 
  2. Abra o INICIAR.bat perto das 16h45.
-    A janela deve dizer: gctse versao 7.3 ... modo AR
+    A janela deve dizer: gctse versao 7.3.1 ... modo AR
     e, no primeiro ciclo:
       "1o turno lido: governador eleito em NN estados; 2o turno em NN: ..."
     Essa linha confirma que a separacao 1o x 2o turno esta certa.

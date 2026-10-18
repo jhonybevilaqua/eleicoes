@@ -35,7 +35,7 @@ param(
 # Versao impressa na partida e no painel. Sem carimbo, "qual versao esta
 # rodando ai?" so se responde abrindo arquivo e comparando a olho - e no
 # meio de um teste com janela de horario ninguem faz isso.
-$Versao = "7.3 - 12/10/2026"
+$Versao = "7.3.1 - 18/10/2026"
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
@@ -2865,9 +2865,9 @@ if ($Diagnostico) {
     function D { param([string] $Texto = "") [void] $linhasD.Add($Texto); Write-Host $Texto }
 
     $exe = (Get-Process -Id $PID).Path
-    $raiz = (Get-Location).Path
+    $pastaD = (Get-Location).Path
     $pastaT = $PastaSaida
-    if (-not [IO.Path]::IsPathRooted($pastaT)) { $pastaT = Join-Path $raiz $pastaT }
+    if (-not [IO.Path]::IsPathRooted($pastaT)) { $pastaT = Join-Path $pastaD $pastaT }
     $modoD = "OFICIAL"
     if ($Teste) { $modoD = "SIMULADO" }
     $argsModo = @()
@@ -2880,7 +2880,7 @@ if ($Diagnostico) {
     D " $(Get-Date -Format 'dd/MM/yyyy HH:mm:ss')   modo: $modoD"
     D " maquina ..: $([Environment]::MachineName)"
     D " versao ...: $Versao"
-    D " pasta ....: $raiz"
+    D " pasta ....: $pastaD"
     D "==========================================================="
 
     # ---- 1. rede
@@ -3151,7 +3151,7 @@ if ($Diagnostico) {
     D "==========================================================="
 
     $utf8d = New-Object System.Text.UTF8Encoding($true)
-    [IO.File]::WriteAllText((Join-Path $raiz "DIAGNOSTICO.txt"), ($linhasD -join "`r`n"), $utf8d)
+    [IO.File]::WriteAllText((Join-Path $pastaD "DIAGNOSTICO.txt"), ($linhasD -join "`r`n"), $utf8d)
     Write-Host ""
     Write-Host "  Gravado em DIAGNOSTICO.txt, nesta pasta. Envie esse arquivo." -ForegroundColor Green
     exit 0

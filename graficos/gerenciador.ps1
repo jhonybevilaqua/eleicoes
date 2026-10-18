@@ -776,7 +776,11 @@ while ($ouvinte.IsListening) {
             }
         }
     } catch {
-        Escrever-Log ("FALHA ao atender {0}: {1}" -f $(if ($ctx) { $ctx.Request.Url.AbsolutePath } else { "?" }), $_.Exception.Message) "Red"
+        # Navegador que fechou/recarregou no meio da resposta nao e falha do
+        # gerenciador: nao enche a janela de vermelho.
+        if ("$($_.Exception.Message)" -notmatch 'transport connection|Broken pipe|forcibly closed|conex.o|network name') {
+            Escrever-Log ("FALHA ao atender {0}: {1}" -f $(if ($ctx) { $ctx.Request.Url.AbsolutePath } else { "?" }), $_.Exception.Message) "Red"
+        }
     } finally {
         if ($ctx) { try { $ctx.Response.Close() } catch { } }
     }

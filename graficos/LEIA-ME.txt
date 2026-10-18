@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 3.27 - APURACAO DO 2o TURNO (25/10/2026)
+ gctse GRAFICOS 3.27.1 - APURACAO DO 2o TURNO (25/10/2026)
  Presidente e Governador ao vivo do TSE, com o 1o turno ao lado.
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================

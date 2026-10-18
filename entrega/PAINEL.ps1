@@ -1286,7 +1286,7 @@ while ($ouvinte.IsListening) {
             Responder-Volta $resposta; continue
         }
 
-        if ($caminho -eq "/favicon.ico") { $resposta.StatusCode = 404; $resposta.Close(); continue }
+        if ($caminho -eq "/favicon.ico") { $resposta.StatusCode = 204; $resposta.Close(); continue }
 
         $html = Montar-Pagina
         $bytes = [Text.Encoding]::UTF8.GetBytes($html)
@@ -1299,8 +1299,13 @@ while ($ouvinte.IsListening) {
         # em silencio e pior: se o clique de COLOCAR NO AR falhar (arquivo
         # preso, disco cheio), o operador ve a pagina voltar normalmente e
         # acredita que trocou. Por isso a falha aparece na janela do painel.
-        Write-Host ("{0} FALHA ao atender {1}: {2}" -f (Get-Date -Format "HH:mm:ss"),
-                    $caminho, $_.Exception.Message) -ForegroundColor Red
+        # Navegador que fechou/recarregou no meio da resposta nao e falha do
+        # painel (nada deixou de ser gravado): nao assusta o operador.
+        $msgF = "$($_.Exception.Message)"
+        if ($msgF -notmatch 'transport connection|Broken pipe|forcibly closed|conex.o|network name') {
+            Write-Host ("{0} FALHA ao atender {1}: {2}" -f (Get-Date -Format "HH:mm:ss"),
+                        $caminho, $msgF) -ForegroundColor Red
+        }
         try { $resposta.Close() } catch { }
     }
     Vigiar-E-Girar
