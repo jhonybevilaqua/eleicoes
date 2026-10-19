@@ -241,6 +241,11 @@ function Ler-Situacao-Dados {
     $o.arquivos.tse = Quando (Join-Path $Raiz "GUARDAR-DADOS-TSE.txt")
     $o.arquivos.candidatos = Quando (Join-Path $Web "candidatos-genero.js")
     $o.arquivos.perfil = Quando (Join-Path $Web "perfil-eleitor.js")
+    $o.arquivos.a2022 = Quando (Join-Path $Raiz "dados-2022.json")
+    $o.arquivos.a2022_nominal = $false; $o.arquivos.a2022_detalhe = $false
+    if ($o.arquivos.a2022) {
+        try { $j = [IO.File]::ReadAllText((Join-Path $Raiz "dados-2022.json")) | ConvertFrom-Json; $o.arquivos.a2022_nominal = "$($j.ref2022_gov.fonte)" -match 'candidato'; $o.arquivos.a2022_detalhe = "$($j.ref2022.fonte)" -match 'detalhe' } catch { }
+    }
     $o.arquivos.comparecimento = $false
     $pf = Join-Path $Web "perfil-eleitor.js"
     if (Test-Path $pf) { try { $o.arquivos.comparecimento = ([IO.File]::ReadAllText($pf)).Contains('"comparecimento"') } catch { } }
@@ -624,7 +629,7 @@ while ($ouvinte.IsListening) {
         elseif ($caminho -eq "/dados") {
             # DADOS DO TSE: roda o atualizar-dados.ps1 (guardar copia do TSE,
             # importar candidatos e perfil do eleitor) numa janela minimizada.
-            # ?rodar=tudo|tse|candidatos|perfil  ou  ?rodar=codigos (abre a
+            # ?rodar=tudo|tse|candidatos|perfil|a2022  ou  ?rodar=codigos (abre a
             # janela do CODIGOS-2-TURNO, que pede confirmacao). Sem ?rodar so
             # devolve a situacao.
             $rodar = "$($req.QueryString['rodar'])"; $msgD = ""
@@ -637,7 +642,7 @@ while ($ouvinte.IsListening) {
                     catch { $msgD = "nao abriu: $($_.Exception.Message)" }
                     Escrever-Log "dados do TSE: CODIGOS-2-TURNO aberto pelo gerenciador" "Green"
                 }
-                elseif (@("tudo", "tse", "candidatos", "perfil") -notcontains $rodar) { $msgD = "pedido invalido" }
+                elseif (@("tudo", "tse", "candidatos", "perfil", "a2022") -notcontains $rodar) { $msgD = "pedido invalido" }
                 elseif ($stD.rodando) { $msgD = "ja esta rodando: " + $stD.etapa }
                 else {
                     $argsD = @{ FilePath = $psExe; WorkingDirectory = $Raiz; ArgumentList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ('"' + (Join-Path $Raiz "atualizar-dados.ps1") + '"'), "-SemPausa", $rodar) }

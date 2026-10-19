@@ -155,6 +155,10 @@ foreach ($u in $UFs) {
     if ($d) { foreach ($c in (Cands $d)) { if ($c.eleito) { [void] $fotos.Add(@($Camara, $u, $c.sq)) } } }
     [void] (Guardar (Url $Ciclo $Camara $u $(if ($u -eq "df") { 8 } else { 7 })))
 }
+# 3.28.1: o TSE tirou 2022 do site de resultados. Com o dados-2022.json
+# (IMPORTAR-2022, Portal de Dados Abertos) nao pede 2022 ao site (404 a toa).
+if (Test-Path (Join-Path $Raiz "dados-2022.json")) { Anotar "2022 (comparacoes): usa o dados-2022.json (IMPORTAR-2022, TSE Dados Abertos) - nada a baixar do site de resultados" "Cyan" }
+else {
 Anotar "2022 (comparacoes) e lista de eleicoes..." "Cyan"
 [void] (Guardar (Url "ele2022" $E2022 "br" 1 "r" "dados-simplificados"))
 [void] (Guardar (Url "ele2022" $E2022 "br" 1))
@@ -180,6 +184,7 @@ foreach ($u in $UFs) {
 }
 Anotar ("   2022 Governador (eleicoes {0}/{1}): 1o turno {2} de 27 | 2o turno {3} estados" -f $G22, $G22T2, $ng, $ng2) $(if ($ng -lt 27) { "Yellow" } else { "Gray" })
 if ($ng -eq 0) { Anotar "   (governadores de 2022 nao vieram: confira o codigo com a engenharia e ponha em comparar_2022.eleicao_estaduais no config)" "Yellow" }
+}
 [void] (Guardar "$Base/comum/config/ele-c.json")
 # ARQUIVO HISTORICO (ARQUIVO-HISTORICO-2026.bat, depois do 2o turno): o 2o
 # turno final tambem, e um .zip com tudo para 2028/2030.

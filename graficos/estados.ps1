@@ -17,7 +17,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "3.28 - 19/10/2026"
+$Versao = "3.28.1 - 19/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -753,6 +753,7 @@ function Cands-2022($Obj) {
 }
 
 function Buscar-2022 {
+    if (Carregar-2022-Importado) { return }
     if ($null -ne $script:Ref2022 -or (Get-Date) -lt $script:Prox2022) { return }
     $script:Prox2022 = (Get-Date).AddMinutes(30)
     $e6 = "{0:000000}" -f ([int] $Eleicao2022)
@@ -834,6 +835,7 @@ function Eleito-2022($Obj) {
     return $r
 }
 function Buscar-2022-Gov {
+    if (Carregar-2022-Importado) { return }
     if ($null -ne $script:Ref2022Gov -and $script:Ref2022Gov.completo) { return }
     if ((Get-Date) -lt $script:Prox2022Gov) { return }
     $script:Prox2022Gov = (Get-Date).AddMinutes(30)
@@ -849,7 +851,29 @@ function Buscar-2022-Gov {
     $script:Ref2022Gov = [pscustomobject]@{ eleicao = $Est2022; eleicao_2turno = $Est2022T2; ufs = [pscustomobject] $porUf; completo = ($porUf.Count -ge 27) }
     Escrever-Log ("governadores de 2022 (TSE): {0} de 27 estados" -f $porUf.Count) $(if ($porUf.Count -ge 27) { "OK" } else { "AVISO" })
 }
+# 3.28.1: 2022 IMPORTADO do Portal de Dados Abertos do TSE (IMPORTAR-2022.bat
+# grava dados-2022.json). O site de resultados do TSE tirou 2022 do ar
+# (NoSuchKey): com o arquivo importado, nao pede mais nada de 2022 ao TSE
+# (pedido que da 404 a toa pode bloquear o IP). Relido se o arquivo mudar.
+$Arq2022 = Join-Path $Raiz "dados-2022.json"
+$script:Lido2022 = [datetime]::MinValue
+function Carregar-2022-Importado {
+    if (-not (Test-Path $Arq2022)) { return $false }
+    $q = (Get-Item $Arq2022).LastWriteTime
+    if ($q -eq $script:Lido2022) { return $true }
+    try {
+        $o = Get-Content $Arq2022 -Raw -Encoding UTF8 | ConvertFrom-Json
+        if ($o.ref2022) { $script:Ref2022 = $o.ref2022 }
+        if ($o.ref2022_2t) { $script:Ref2022T2 = $o.ref2022_2t }
+        if ($o.ref2022_gov) { $script:Ref2022Gov = $o.ref2022_gov }
+        $script:Lido2022 = $q
+        Escrever-Log ("2022 importado do TSE Dados Abertos (dados-2022.json, gerado {0}): Presidente 1o turno {1} | 2o turno {2} | governadores {3}" -f "$($o.gerado_em)",
+            $(if ($o.ref2022) { "ok" } else { "-" }), $(if ($o.ref2022_2t) { "ok" } else { "-" }), $(if ($o.ref2022_gov) { "ok" } else { "-" })) "OK"
+        return $true
+    } catch { Escrever-Log "dados-2022.json com erro ($($_.Exception.Message)) - rode o IMPORTAR-2022.bat de novo" "AVISO"; return $false }
+}
 function Buscar-2022-2T {
+    if (Carregar-2022-Importado) { return }
     if (-not $Eleicao1T) { return }                      # so no modo 2o turno
     if ($null -ne $script:Ref2022T2 -and $script:Ref2022T2.completo) { return }
     if ((Get-Date) -lt $script:Prox2022T2) { return }

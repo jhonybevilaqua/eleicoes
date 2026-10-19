@@ -9,6 +9,8 @@
                     da Camara)
       perfil ...... IMPORTAR-PERFIL-ELEITOR (perfil do eleitorado e, depois da
                     eleicao, quem foi as urnas)
+      a2022 ....... IMPORTAR-2022 (2022 do TSE Dados Abertos: so quando
+                    pedido - nao entra no "tudo", o arquivo e grande)
     Grava o andamento em atualizar-dados.json (o gerenciador mostra).
     Os coletores ao vivo (GRAFICOS.bat e ESTADOS.bat) NAO sao mexidos.
 
@@ -25,12 +27,13 @@ $Status = Join-Path $Raiz "atualizar-dados.json"
 $TODAS = @(
     [ordered]@{ id = "tse"; nome = "Guardar dados do TSE"; ps1 = "guardar-tse.ps1"; args = @("-SemPausa"); log = "GUARDAR-DADOS-TSE.txt" },
     [ordered]@{ id = "candidatos"; nome = "Importar candidatos (genero)"; ps1 = "importar-candidatos.ps1"; args = @(); log = "IMPORTAR-CANDIDATOS.txt" },
-    [ordered]@{ id = "perfil"; nome = "Importar perfil do eleitor"; ps1 = "importar-perfil-eleitor.ps1"; args = @(); log = "IMPORTAR-PERFIL-ELEITOR.txt" }
+    [ordered]@{ id = "perfil"; nome = "Importar perfil do eleitor"; ps1 = "importar-perfil-eleitor.ps1"; args = @(); log = "IMPORTAR-PERFIL-ELEITOR.txt" },
+    [ordered]@{ id = "a2022"; nome = "Importar 2022 (TSE Dados Abertos)"; ps1 = "importar-2022.ps1"; args = @(); log = "IMPORTAR-2022.txt"; tudo = $false }
 )
 $pedidas = @($Etapas | ForEach-Object { "$_".Split(",") } | ForEach-Object { $_.Trim().ToLower() } | Where-Object { $_ })
-if ($pedidas.Count -eq 0 -or $pedidas -contains "tudo") { $pedidas = @($TODAS | ForEach-Object { $_.id }) }
+if ($pedidas.Count -eq 0 -or $pedidas -contains "tudo") { $pedidas = @($TODAS | Where-Object { $_.tudo -ne $false } | ForEach-Object { $_.id }) + @($pedidas | Where-Object { $_ -ne "tudo" }) }
 $fila = @($TODAS | Where-Object { $pedidas -contains $_.id })
-if ($fila.Count -eq 0) { Write-Host "etapa desconhecida: $($Etapas -join ', ') (use tse, candidatos, perfil ou tudo)" -ForegroundColor Red; exit 1 }
+if ($fila.Count -eq 0) { Write-Host "etapa desconhecida: $($Etapas -join ', ') (use tse, candidatos, perfil, a2022 ou tudo)" -ForegroundColor Red; exit 1 }
 
 $psExe = "powershell"
 if ($env:WINDIR -and (Test-Path (Join-Path $env:WINDIR "System32\WindowsPowerShell\v1.0\powershell.exe"))) { $psExe = Join-Path $env:WINDIR "System32\WindowsPowerShell\v1.0\powershell.exe" }

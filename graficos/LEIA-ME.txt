@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 3.28 - APURACAO DO 2o TURNO (25/10/2026)
+ gctse GRAFICOS 3.28.1 - APURACAO DO 2o TURNO (25/10/2026)
  Presidente e Governador ao vivo do TSE, com o 1o turno ao lado.
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
@@ -174,7 +174,7 @@
    GRAFICOS.bat / ESTADOS.bat  coletas (o gerenciador abre e reabre)
    ATUALIZAR-DADOS.bat ....... dados do TSE fora do boletim (= botao)
      GUARDAR-DADOS-TSE.bat / IMPORTAR-CANDIDATOS.bat /
-     IMPORTAR-PERFIL-ELEITOR.bat: cada etapa sozinha (aceitam arquivo
+     IMPORTAR-PERFIL-ELEITOR.bat / IMPORTAR-2022.bat: cada etapa sozinha (aceitam arquivo
      arrastado, se o download automatico falhar)
    CODIGOS-2-TURNO.bat ....... grava os codigos do 2o turno do TSE (pede S)
    COPIA-DE-SEGURANCA.bat .... .zip da pasta inteira (= botao "copia")
@@ -202,7 +202,23 @@
 ---------------------------------------------------------------------------
    Ao vivo: resultados.tse.jus.br (Divulgacao de Resultados do TSE).
    1o turno: o mesmo, guardado ao vivo e em tse-local (GUARDAR-DADOS-TSE).
-   2022: boletins de 2022 do TSE (formato dados-simplificados ...-r.json).
+   2022 (3.28.1): o TSE TIROU 2022 do site de resultados (resposta
+     NoSuchKey). Agora vem do Portal de Dados Abertos do TSE, pelo
+     IMPORTAR-2022.bat, que grava dados-2022.json (o ESTADOS.bat le esse
+     arquivo e nao pede mais 2022 ao site). O pacote ja vem com o
+     dados-2022.json feito dos arquivos oficiais "Votacao em partido por
+     municipio e zona" e "BR - Historico totalizacao Presidente 1o/2o turno".
+     Para completar (nome dos governadores de 2022, Roraima e a abstencao
+     de 2022 de cada estado), baixe em dadosabertos.tse.jus.br >
+     Resultados - 2022:
+       "Votacao nominal por municipio e zona"
+                               (votacao_candidato_munzona_2022.zip)
+       "Detalhe da apuracao por municipio e zona"
+                               (detalhe_votacao_munzona_2022.zip)
+     ponha os .zip (sem abrir) na pasta importar, junto dos que ja usou, e
+     rode IMPORTAR-2022.bat (ou "dados do TSE" > Eleicao de 2022 > rodar).
+     Sem os arquivos, ele tenta baixar do TSE sozinho. O "ATUALIZAR TUDO"
+     nao roda esta parte (arquivos grandes).
    Genero, idade, escolaridade, cor/raca, reeleitos: arquivo "Candidatos"
      do TSE (Dados Abertos). Reeleito = eleito deputado federal em 2022 pelo
      mesmo estado (o arquivo de 2026 nao informa reeleicao).

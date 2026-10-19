@@ -1,0 +1,420 @@
+{
+  "gerado_em": "2026-10-19T02:16:39",
+  "fonte": "TSE - Portal de Dados Abertos (Resultados 2022)",
+  "ref2022": {
+    "pct_comparec": 79.05,
+    "pct_abstencao": 20.95,
+    "pct_brancos": 1.59,
+    "pct_nulos": 2.82,
+    "urnas_pct": 100.0,
+    "fonte": "TSE Dados Abertos - Historico_Totalizacao_Presidente_BR_1T_2022"
+  },
+  "ref2022_2t": {
+    "eleicao": "545",
+    "br": {
+      "PT": 50.9,
+      "_nome_PT": "LULA",
+      "_votos_PT": 60345999,
+      "PL": 49.1,
+      "_nome_PL": "JAIR BOLSONARO",
+      "_votos_PL": 58206354,
+      "_pc": 79.42,
+      "_pa": 20.58,
+      "_aptos": 156454011,
+      "_pvb": 1.42,
+      "_pvn": 3.16
+    },
+    "ufs": {
+      "ac": {
+        "PL": 70.3,
+        "_nome_PL": "",
+        "_votos_PL": 287750,
+        "PT": 29.7,
+        "_nome_PT": "",
+        "_votos_PT": 121566
+      },
+      "al": {
+        "PT": 58.68,
+        "_nome_PT": "",
+        "_votos_PT": 976831,
+        "PL": 41.32,
+        "_nome_PL": "",
+        "_votos_PL": 687827
+      },
+      "ap": {
+        "PL": 51.36,
+        "_nome_PL": "",
+        "_votos_PL": 200547,
+        "PT": 48.64,
+        "_nome_PT": "",
+        "_votos_PT": 189918
+      },
+      "am": {
+        "PT": 51.1,
+        "_nome_PT": "",
+        "_votos_PT": 1004991,
+        "PL": 48.9,
+        "_nome_PL": "",
+        "_votos_PL": 961741
+      },
+      "ba": {
+        "PT": 72.12,
+        "_nome_PT": "",
+        "_votos_PT": 6097815,
+        "PL": 27.88,
+        "_nome_PL": "",
+        "_votos_PL": 2357028
+      },
+      "ce": {
+        "PT": 69.97,
+        "_nome_PT": "",
+        "_votos_PT": 3807891,
+        "PL": 30.03,
+        "_nome_PL": "",
+        "_votos_PL": 1634477
+      },
+      "df": {
+        "PL": 58.81,
+        "_nome_PL": "",
+        "_votos_PL": 1041331,
+        "PT": 41.19,
+        "_nome_PT": "",
+        "_votos_PT": 729295
+      },
+      "es": {
+        "PL": 58.04,
+        "_nome_PL": "",
+        "_votos_PL": 1282145,
+        "PT": 41.96,
+        "_nome_PT": "",
+        "_votos_PT": 926767
+      },
+      "go": {
+        "PL": 58.71,
+        "_nome_PL": "",
+        "_votos_PL": 2193041,
+        "PT": 41.29,
+        "_nome_PT": "",
+        "_votos_PT": 1542115
+      },
+      "ma": {
+        "PT": 71.14,
+        "_nome_PT": "",
+        "_votos_PT": 2668425,
+        "PL": 28.86,
+        "_nome_PL": "",
+        "_votos_PL": 1082749
+      },
+      "mt": {
+        "PL": 65.08,
+        "_nome_PL": "",
+        "_votos_PL": 1216730,
+        "PT": 34.92,
+        "_nome_PT": "",
+        "_votos_PT": 652786
+      },
+      "ms": {
+        "PL": 59.49,
+        "_nome_PL": "",
+        "_votos_PL": 880606,
+        "PT": 40.51,
+        "_nome_PT": "",
+        "_votos_PT": 599547
+      },
+      "mg": {
+        "PT": 50.2,
+        "_nome_PT": "",
+        "_votos_PT": 6190960,
+        "PL": 49.8,
+        "_nome_PL": "",
+        "_votos_PL": 6141310
+      },
+      "pa": {
+        "PT": 54.75,
+        "_nome_PT": "",
+        "_votos_PT": 2509084,
+        "PL": 45.25,
+        "_nome_PL": "",
+        "_votos_PL": 2073895
+      },
+      "pb": {
+        "PT": 66.62,
+        "_nome_PT": "",
+        "_votos_PT": 1601953,
+        "PL": 33.38,
+        "_nome_PL": "",
+        "_votos_PL": 802502
+      },
+      "pr": {
+        "PL": 62.4,
+        "_nome_PL": "",
+        "_votos_PL": 4159343,
+        "PT": 37.6,
+        "_nome_PT": "",
+        "_votos_PT": 2506605
+      },
+      "pe": {
+        "PT": 66.93,
+        "_nome_PT": "",
+        "_votos_PT": 3640933,
+        "PL": 33.07,
+        "_nome_PL": "",
+        "_votos_PL": 1798832
+      },
+      "pi": {
+        "PT": 76.86,
+        "_nome_PT": "",
+        "_votos_PT": 1551383,
+        "PL": 23.14,
+        "_nome_PL": "",
+        "_votos_PL": 467065
+      },
+      "rj": {
+        "PL": 56.53,
+        "_nome_PL": "",
+        "_votos_PL": 5403894,
+        "PT": 43.47,
+        "_nome_PT": "",
+        "_votos_PT": 4156217
+      },
+      "rn": {
+        "PT": 65.1,
+        "_nome_PT": "",
+        "_votos_PT": 1326785,
+        "PL": 34.9,
+        "_nome_PL": "",
+        "_votos_PL": 711381
+      },
+      "rs": {
+        "PL": 56.35,
+        "_nome_PL": "",
+        "_votos_PL": 3733185,
+        "PT": 43.65,
+        "_nome_PT": "",
+        "_votos_PT": 2891851
+      },
+      "ro": {
+        "PL": 70.66,
+        "_nome_PL": "",
+        "_votos_PL": 633236,
+        "PT": 29.34,
+        "_nome_PT": "",
+        "_votos_PT": 262904
+      },
+      "rr": {
+        "PL": 76.08,
+        "_nome_PL": "",
+        "_votos_PL": 213518,
+        "PT": 23.92,
+        "_nome_PT": "",
+        "_votos_PT": 67128
+      },
+      "sc": {
+        "PL": 69.27,
+        "_nome_PL": "",
+        "_votos_PL": 3047630,
+        "PT": 30.73,
+        "_nome_PT": "",
+        "_votos_PT": 1351918
+      },
+      "sp": {
+        "PL": 55.24,
+        "_nome_PL": "",
+        "_votos_PL": 14216587,
+        "PT": 44.76,
+        "_nome_PT": "",
+        "_votos_PT": 11519882
+      },
+      "se": {
+        "PT": 67.21,
+        "_nome_PT": "",
+        "_votos_PT": 862951,
+        "PL": 32.79,
+        "_nome_PL": "",
+        "_votos_PL": 421086
+      },
+      "to": {
+        "PT": 51.36,
+        "_nome_PT": "",
+        "_votos_PT": 434593,
+        "PL": 48.64,
+        "_nome_PL": "",
+        "_votos_PL": 411654
+      },
+      "zz": {
+        "PT": 51.28,
+        "_nome_PT": "",
+        "_votos_PT": 152905,
+        "PL": 48.72,
+        "_nome_PL": "",
+        "_votos_PL": 145264
+      }
+    },
+    "completo": true,
+    "fonte": "TSE Dados Abertos - votacao_partido_munzona_2022"
+  },
+  "ref2022_gov": {
+    "eleicao": "546",
+    "eleicao_2turno": "547",
+    "ufs": {
+      "ac": {
+        "partido": "PP",
+        "nome": "",
+        "pct": 56.75,
+        "turno": 1
+      },
+      "al": {
+        "partido": "MDB",
+        "nome": "",
+        "pct": 52.33,
+        "turno": 2
+      },
+      "ap": {
+        "partido": "SOLIDARIEDADE",
+        "nome": "",
+        "pct": 53.77,
+        "turno": 1
+      },
+      "am": {
+        "partido": "UNIÃO",
+        "nome": "",
+        "pct": 56.65,
+        "turno": 2
+      },
+      "ba": {
+        "partido": "PT",
+        "nome": "",
+        "pct": 52.79,
+        "turno": 2
+      },
+      "ce": {
+        "partido": "PT",
+        "nome": "",
+        "pct": 54.02,
+        "turno": 1
+      },
+      "df": {
+        "partido": "MDB",
+        "nome": "",
+        "pct": 50.31,
+        "turno": 1
+      },
+      "es": {
+        "partido": "PSB",
+        "nome": "",
+        "pct": 53.8,
+        "turno": 2
+      },
+      "go": {
+        "partido": "UNIÃO",
+        "nome": "",
+        "pct": 51.81,
+        "turno": 1
+      },
+      "ma": {
+        "partido": "PSB",
+        "nome": "",
+        "pct": 51.29,
+        "turno": 1
+      },
+      "mt": {
+        "partido": "UNIÃO",
+        "nome": "",
+        "pct": 68.45,
+        "turno": 1
+      },
+      "ms": {
+        "partido": "PSDB",
+        "nome": "",
+        "pct": 56.9,
+        "turno": 2
+      },
+      "mg": {
+        "partido": "NOVO",
+        "nome": "",
+        "pct": 56.2,
+        "turno": 1
+      },
+      "pa": {
+        "partido": "MDB",
+        "nome": "",
+        "pct": 70.41,
+        "turno": 1
+      },
+      "pb": {
+        "partido": "PSB",
+        "nome": "",
+        "pct": 52.51,
+        "turno": 2
+      },
+      "pr": {
+        "partido": "PSD",
+        "nome": "",
+        "pct": 69.76,
+        "turno": 1
+      },
+      "pe": {
+        "partido": "PSDB",
+        "nome": "",
+        "pct": 58.7,
+        "turno": 2
+      },
+      "pi": {
+        "partido": "PT",
+        "nome": "",
+        "pct": 57.62,
+        "turno": 1
+      },
+      "rj": {
+        "partido": "PL",
+        "nome": "",
+        "pct": 58.69,
+        "turno": 1
+      },
+      "rn": {
+        "partido": "PT",
+        "nome": "",
+        "pct": 58.31,
+        "turno": 1
+      },
+      "rs": {
+        "partido": "PSDB",
+        "nome": "",
+        "pct": 57.12,
+        "turno": 2
+      },
+      "ro": {
+        "partido": "UNIÃO",
+        "nome": "",
+        "pct": 52.47,
+        "turno": 2
+      },
+      "sc": {
+        "partido": "PL",
+        "nome": "",
+        "pct": 70.69,
+        "turno": 2
+      },
+      "sp": {
+        "partido": "REPUBLICANOS",
+        "nome": "",
+        "pct": 55.27,
+        "turno": 2
+      },
+      "se": {
+        "partido": "PSD",
+        "nome": "",
+        "pct": 51.7,
+        "turno": 2
+      },
+      "to": {
+        "partido": "REPUBLICANOS",
+        "nome": "",
+        "pct": 58.16,
+        "turno": 1
+      }
+    },
+    "completo": false,
+    "fonte": "TSE Dados Abertos - votacao_partido_munzona_2022"
+  }
+}
