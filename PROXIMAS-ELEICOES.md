@@ -8,9 +8,10 @@ Sistemas usados pela TV Evangelizar na apuração de 2026 (1º turno 04/10 e
 | **TARJAS** (GC — Castalia/LiveBoard) | 7.3.1 | `entrega/` | `entregas/2026/GCTSE-TARJAS-7.3.1.zip` |
 | **GRÁFICOS** (telas 1280×720 e 540×960, OBS) | 3.28.1 | `graficos/` | `entregas/2026/GCTSE-GRAFICOS-3.28.1-COM-FOTOS.zip` e `-SEM-FOTOS.zip` |
 
-A tag **`eleicoes-2026-final`** marca exatamente esta versão. Para baixar
-depois: GitHub → *Tags* → `eleicoes-2026-final` → *Download ZIP*. Os pacotes
-prontos para instalar estão em `entregas/2026/`.
+Esta versão está no branch `claude/gc-tse-api-automation-v3nvef`, que é o
+branch principal do repositório. Para baixar tudo depois: GitHub → botão
+*Code* → *Download ZIP*. Os pacotes prontos para instalar estão em
+`entregas/2026/`.
 
 Manuais de operação (dentro de cada pacote):
 - TARJAS: `entrega/LEIA-ME.txt`, `entrega/DIA-DA-ELEICAO.txt`,
