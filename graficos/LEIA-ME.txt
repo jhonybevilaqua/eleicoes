@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 3.27.1 - APURACAO DO 2o TURNO (25/10/2026)
+ gctse GRAFICOS 3.28 - APURACAO DO 2o TURNO (25/10/2026)
  Presidente e Governador ao vivo do TSE, com o 1o turno ao lado.
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
@@ -27,6 +27,11 @@
                         capitais), 2o turno ao vivo + 1o turno guardado
    - ESTADOS.bat ...... coleta do Governador (2o turno so nos estados que
                         tem) + 1o turno, Senado e Camara do 1o turno
+   - MUNICIPIOS.bat ... (3.28) Presidente em cada uma das 5.570 cidades, para
+                        o mapa por municipio. Devagar de proposito (8 pedidos
+                        por segundo: uma volta pelas cidades leva ~12 min);
+                        o 1o turno das cidades e lido uma vez so e guardado.
+                        Desligar: "municipios": { "ativo": false } no config.
    - os 2 OBS ......... saida HORIZONTAL e VERTICAL da DeckLink
                         (passo a passo da 1a vez: OBS-DECKLINK.txt)
    - as 2 janelas do gerenciador, lado a lado (Chrome; Edge so sem Chrome) - ou 1, com
@@ -38,7 +43,7 @@
      TSE, candidatos, perfil do eleitor), numa janela minimizada
    - confere sozinho os CODIGOS do 2o turno com a lista do TSE (a cada
      30 min) - selo "Codigos 2o turno" no alto do painel
-   Se GRAFICOS.bat ou ESTADOS.bat fecharem, o gerenciador REABRE sozinho e
+   Se GRAFICOS.bat, ESTADOS.bat ou MUNICIPIOS.bat fecharem, o gerenciador REABRE sozinho e
    avisa no painel. Botao "ABRIR COLETAS" no alto do painel (vermelho =
    alguma coleta fechada): abre NA HORA o que estiver fechado - GRAFICOS,
    ESTADOS e os OBS das saidas. Os dados que nao vem ao vivo (copia do TSE,
@@ -79,6 +84,17 @@
      * ESTADOS E RESUMO .. giro dos estados (governador + senado) e as 7
                            telas do Resumo, cada uma direto no ar
      * JORNALISMO ........ deputadas, senadoras, perfil do eleitor
+     * ANALISE POLITICA .. (3.28) 10 telas para o debate da bancada:
+         PODER ....... Governabilidade (deputados, senadores e governadores
+                       da coligacao de cada finalista) e Voto cruzado
+                       (governador x presidente no mesmo estado)
+         O VOTO ...... Para onde foram os votos (ESTIMATIVA pela diferenca
+                       entre os turnos), A abstencao decidiu?, Capital x
+                       interior, Perfil do eleitorado x resultado
+         A DISPUTA ... A hora da definicao, Sem este estado quem venceria?,
+                       Quanto cada estado se moveu (2022 x 2026)
+         MAPA ........ Presidente em cada cidade (BRASIL ou um estado)
+       Tela sem dado ainda fica escondida, como as outras ("mostrar" no alto).
      * AUTOMATICO ........ apresentacao, rodizios prontos, rodizio
    A aba escolhida fica lembrada em cada janela.
    PREVIA: "previa antes do ar" ligada = o clique so prepara; vai ao ar
@@ -192,6 +208,12 @@
      mesmo estado (o arquivo de 2026 nao informa reeleicao).
    Perfil do eleitor: perfil do eleitorado / comparecimento por perfil do
      TSE (Dados Abertos). Renda/classe social: o TSE nao coleta.
+     3.28: o importador grava tambem o perfil POR ESTADO (tela "Perfil do
+     eleitorado x resultado"). Quem ja importou antes da 3.28: rode o
+     IMPORTAR-PERFIL-ELEITOR.bat de novo uma vez.
+   Mapa por municipio: resultado de cada cidade = TSE (MUNICIPIOS.bat);
+     desenho das cidades = malha municipal do IBGE (dominio publico, CC0),
+     em web\mapa-municipios.js.
    O que nao e do TSE fica em arquivo de config com a fonte na tela
    (senado-config.js: bancadas da redacao; comparativo-config.js: 2018
    oficial do TSE).

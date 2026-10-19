@@ -15,6 +15,11 @@
   "abrir_monitor": true,
   "intervalo_segundos": 20,
   "intervalo_estados_segundos": 30,
+  "_comentario_municipios": "MUNICIPIOS.bat: Presidente em cada uma das 5.570 cidades (tela Mapa por municipio, aba ANALISE POLITICA). req_por_segundo: devagar de proposito (o TSE limita 100/s por IP, somando as coletas). ativo: false = nao coleta.",
+  "municipios": {
+    "ativo": true,
+    "req_por_segundo": 8
+  },
   "_comentario_obs": "OBS automatico das saidas DeckLink (GERENCIADOR.bat). obs_fps: 29.97 = 1080i59.94 | 59.94 = 1080p59.94. girar_saida_vertical: 90 ou -90 (o sentido tambem troca por botao no gerenciador).",
   "obs_fps": "29.97",
   "girar_saida_vertical": 90,

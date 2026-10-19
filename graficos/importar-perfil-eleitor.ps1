@@ -150,6 +150,7 @@ function Achar($Ix, [string[]] $Nomes) { foreach ($nm in $Nomes) { if ($Ix.Conta
 # agregado: tipo|ano|turno -> @{ total = long[2]; dims = @{ dim = @{ rotulo = long[2] } } }
 # long[0] = eleitores (eleitorado) ou aptos (comparecimento); long[1] = comparecimento
 $Agg = @{}
+$script:PorUf = @{}   # 3.28: "tipo|ano|turno<TAB>uf<TAB>dim<TAB>rotulo" -> [aptos, comparecimento]
 
 # Leitura rapida: o laco das linhas em C# (compilado pelo proprio Windows na
 # hora); o arquivo do TSE tem milhoes de linhas e o PowerShell puro levaria
@@ -187,8 +188,9 @@ public static class GctsePerfil {
     }
     static string Pega(string[] p, int i, string padrao) { return (i >= 0 && i < p.Length) ? p[i] : padrao; }
     static long Num(string[] p, int i) { long x; if (i >= 0 && i < p.Length && long.TryParse(p[i], out x)) return x; return 0; }
-    // ix: ano, turno, sexo, idade, escolaridade, cor, qt0, qt1, abstencao
-    public static long Ler(TextReader rd, int[] ix, string anoArq, Dictionary<string, long[]> combo) {
+    // ix: ano, turno, sexo, idade, escolaridade, cor, qt0, qt1, abstencao, uf
+    // porUf (3.28): soma por ESTADO de cada dimensao (sexo, idade, escolaridade)
+    public static long Ler(TextReader rd, int[] ix, string anoArq, Dictionary<string, long[]> combo, Dictionary<string, long[]> porUf) {
         long n = 0; string linha;
         while ((linha = rd.ReadLine()) != null) {
             n++;
@@ -200,6 +202,16 @@ public static class GctsePerfil {
             long[] v;
             if (!combo.TryGetValue(k, out v)) { v = new long[2]; combo[k] = v; }
             v[0] += q0; v[1] += q1;
+            if (ix.Length > 9 && ix[9] >= 0) {
+                string pre = Pega(p, ix[0], anoArq) + "|" + Pega(p, ix[1], "") + "\t" + Pega(p, ix[9], "").ToLower() + "\t";
+                for (int d = 2; d <= 4; d++) {
+                    if (ix[d] < 0) continue;
+                    string ku = pre + d + "\t" + Pega(p, ix[d], "");
+                    long[] u;
+                    if (!porUf.TryGetValue(ku, out u)) { u = new long[2]; porUf[ku] = u; }
+                    u[0] += q0; u[1] += q1;
+                }
+            }
         }
         return n;
     }
@@ -208,7 +220,7 @@ public static class GctsePerfil {
     }
     $script:Rapido = $true
 } catch { Anotar "aviso: leitura rapida indisponivel ($($_.Exception.Message)); usando a lenta (pode demorar)." "Yellow" }
-function Ler-Lento($Rd, [int[]] $Ix, [string] $AnoArq, $Combo) {
+function Ler-Lento($Rd, [int[]] $Ix, [string] $AnoArq, $Combo, $PorUf) {
     $n = 0
     while ($null -ne ($linha = $Rd.ReadLine())) {
         $n++
@@ -225,6 +237,15 @@ function Ler-Lento($Rd, [int[]] $Ix, [string] $AnoArq, $Combo) {
         $cv = $null
         if (-not $Combo.TryGetValue($k, [ref] $cv)) { $cv = (New-Object long[] 2); $Combo[$k] = $cv }
         $cv[0] += $q0; $cv[1] += $q1
+        if ($Ix.Count -gt 9 -and $Ix[9] -ge 0 -and $Ix[9] -lt $p.Count) {
+            $pre = $v[0] + "|" + $v[1] + "`t" + $p[$Ix[9]].ToLower() + "`t"
+            for ($d = 2; $d -le 4; $d++) {
+                if ($Ix[$d] -lt 0) { continue }
+                $ku = $pre + $d + "`t" + $v[$d]; $uv = $null
+                if (-not $PorUf.TryGetValue($ku, [ref] $uv)) { $uv = (New-Object long[] 2); $PorUf[$ku] = $uv }
+                $uv[0] += $q0; $uv[1] += $q1
+            }
+        }
     }
     return $n
 }
@@ -243,6 +264,7 @@ foreach ($a in $arquivos) {
             $iRac = -1; foreach ($k in $ix.Keys) { if ($k -match '^DS_.*(RACA|COR_RACA)') { $iRac = $ix[$k] } }
             $iTur = Achar $ix @("NR_TURNO")
             $iAno = Achar $ix @("ANO_ELEICAO")
+            $iUf = Achar $ix @("SG_UF")
             if ($tipo -eq "eleitorado") {
                 $iQ0 = Achar $ix @("QT_ELEITORES_PERFIL", "QT_ELEITORES"); $iQ1 = -1; $iAbs = -1
                 if ($iQ0 -lt 0) { throw "coluna QT_ELEITORES_PERFIL nao encontrada" }
@@ -254,11 +276,17 @@ foreach ($a in $arquivos) {
             $dimsIx = [ordered]@{ genero = $iGen; idade = $iIda; escolaridade = $iEsc; raca = $iRac }
             Anotar ("lendo {0} ({1}) - colunas: sexo {2}, idade {3}, escolaridade {4}, cor/raca {5}" -f $f.nome, $tipo,
                 $(if ($iGen -ge 0) { "sim" } else { "NAO" }), $(if ($iIda -ge 0) { "sim" } else { "NAO" }), $(if ($iEsc -ge 0) { "sim" } else { "NAO" }), $(if ($iRac -ge 0) { "sim" } else { "NAO (o arquivo nao traz)" })) "Cyan"
-            $ixs = [int[]] @($iAno, $iTur, $iGen, $iIda, $iEsc, $iRac, $iQ0, $iQ1, $iAbs)
+            $ixs = [int[]] @($iAno, $iTur, $iGen, $iIda, $iEsc, $iRac, $iQ0, $iQ1, $iAbs, $iUf)
             $combo = New-Object 'System.Collections.Generic.Dictionary[string,long[]]'
+            $porUfL = New-Object 'System.Collections.Generic.Dictionary[string,long[]]'
             $t0 = Get-Date
-            if ($script:Rapido) { $n = [GctsePerfil]::Ler($rd, $ixs, $anoArq, $combo) }
-            else { $n = Ler-Lento $rd $ixs $anoArq $combo }
+            if ($script:Rapido) { $n = [GctsePerfil]::Ler($rd, $ixs, $anoArq, $combo, $porUfL) }
+            else { $n = Ler-Lento $rd $ixs $anoArq $combo $porUfL }
+            foreach ($kvU in $porUfL.GetEnumerator()) {
+                $chU = "$tipo|" + $kvU.Key
+                if (-not $script:PorUf.ContainsKey($chU)) { $script:PorUf[$chU] = (New-Object long[] 2) }
+                $script:PorUf[$chU][0] += $kvU.Value[0]; $script:PorUf[$chU][1] += $kvU.Value[1]
+            }
             # junta no agregado: chave "ano|turno<TAB>sexo<TAB>idade<TAB>escol.<TAB>cor"
             foreach ($kv in $combo.GetEnumerator()) {
                 $tab = $kv.Key.IndexOf("`t")
@@ -315,6 +343,35 @@ foreach ($tipoS in @("eleitorado", "comparecimento")) {
         else { Anotar ("comparecimento {0}{1}: {2:N0} aptos, {3:N0} compareceram ({4:N1}%)" -f $anoS, $txtT, $ag.total[0], $ag.total[1], $(if ($ag.total[0]) { 100.0 * $ag.total[1] / $ag.total[0] } else { 0 })) "Green" }
     }
     $saida[$tipoS] = [ordered]@{ ano = $anoS; turnos = [pscustomobject] $turnos }
+    # 3.28: perfil POR ESTADO (sexo, idade, escolaridade) do ano mais novo, para
+    # a tela "Perfil x resultado" (Analise Politica).
+    if ($tipoS -eq "eleitorado") {
+        $nomesU = @{ "2" = "genero"; "3" = "idade"; "4" = "escolaridade" }
+        $ufsP = @{}
+        foreach ($kvP in $script:PorUf.GetEnumerator()) {
+            $pp = $kvP.Key.Split("`t")
+            if ($pp.Count -lt 4) { continue }
+            if (($pp[0] -split '\|')[1] -ne $anoS) { continue }
+            $ufP = $pp[1].Trim(); if ($ufP -notmatch '^[a-z]{2}$' -or $ufP -eq "zz") { continue }
+            $dn = $nomesU[$pp[2]]; if (-not $dn) { continue }
+            $rot = $pp[3].Trim(); if (-not $rot) { $rot = "NAO INFORMADO" }
+            if (-not $ufsP.ContainsKey($ufP)) { $ufsP[$ufP] = @{} }
+            if (-not $ufsP[$ufP].ContainsKey($dn)) { $ufsP[$ufP][$dn] = @{} }
+            if (-not $ufsP[$ufP][$dn].ContainsKey($rot)) { $ufsP[$ufP][$dn][$rot] = [long] 0 }
+            $ufsP[$ufP][$dn][$rot] += $kvP.Value[0]
+        }
+        $ufsO = [ordered]@{}
+        foreach ($u in ($ufsP.Keys | Sort-Object)) {
+            $du = [ordered]@{}
+            foreach ($d in @("genero", "idade", "escolaridade")) {
+                if (-not $ufsP[$u].ContainsKey($d)) { continue }
+                $m = [ordered]@{}; foreach ($kv in ($ufsP[$u][$d].GetEnumerator() | Sort-Object Name)) { $m[$kv.Key] = @($kv.Value, 0) }
+                $du[$d] = [pscustomobject] $m
+            }
+            $ufsO[$u] = [pscustomobject] $du
+        }
+        if ($ufsO.Count) { $saida[$tipoS]["ufs"] = [pscustomobject] $ufsO; Anotar ("perfil por estado: {0} estados" -f $ufsO.Count) "Green" }
+    }
 }
 $destino = Join-Path $Raiz "web\perfil-eleitor.js"
 $json = $saida | ConvertTo-Json -Depth 8 -Compress

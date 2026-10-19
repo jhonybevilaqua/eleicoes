@@ -17,7 +17,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "3.27.1 - 18/10/2026"
+$Versao = "3.28 - 19/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -678,6 +678,12 @@ function Ler-Camara {
 
 $script:Ref2022 = $null
 $script:Prox2022 = [datetime]::MinValue
+# 3.28: hora da definicao de cada governador no 2o turno (tela Analise Politica)
+$ArquivoDefGov = Join-Path $Raiz ("definicao-gov-{0}-{1}-{2}.json" -f $Ciclo, $Eleicao, $Modo.ToLower())
+$script:DefGov = [ordered]@{}
+if (Test-Path $ArquivoDefGov) {
+    try { $lidoDG = Get-Content $ArquivoDefGov -Raw -Encoding UTF8 | ConvertFrom-Json; foreach ($pq in $lidoDG.PSObject.Properties) { $script:DefGov[$pq.Name] = $pq.Value } } catch { }
+}
 $Ciclo2022 = "ele2022"; $Eleicao2022 = "544"
 if (Tem-Propriedade $cfg "comparar_2022") {
     if ((Tem-Propriedade $cfg.comparar_2022 "ciclo") -and $cfg.comparar_2022.ciclo) { $Ciclo2022 = "$($cfg.comparar_2022.ciclo)" }
@@ -884,6 +890,16 @@ function Gravar-Dados {
         $g1 = $null
         if ($Eleicao1T -and $turnoG -eq 2 -and $script:Cache.ContainsKey("$u-3-1t")) { $g1 = $script:Cache["$u-3-1t"] }
         $porEstado["$u"] = [pscustomobject]@{ gov = $g; sen = $s; gov1t = $g1 }
+        # 3.28: hora da DEFINICAO do governador no 2o turno (1a vez com eleito:
+        # TSE ou conta matematica). Guardada em arquivo - nao muda se reiniciar.
+        if ($turnoG -eq 2 -and -not $script:DefGov.Contains("$u")) {
+            $el = @(@($g.candidatos) | Where-Object { $_.eleito }) | Select-Object -First 1
+            if ($null -ne $el) {
+                $script:DefGov["$u"] = [pscustomobject]@{ nome = $el.nome; partido = $el.partido; tipo = $(if ($el.calculado) { "matematica" } else { "tse" }); hora = $g.hora; urnas = $g.urnas_pct; registrado_em = (Get-Date).ToString("yyyy-MM-ddTHH:mm:ss") }
+                try { [IO.File]::WriteAllText($ArquivoDefGov, ([pscustomobject] $script:DefGov | ConvertTo-Json -Compress), (New-Object System.Text.UTF8Encoding($false))) } catch { }
+                Escrever-Log ("DEFINIDO governador {0}: {1} ({2}) com {3}% das urnas, boletim das {4}" -f $u.ToUpper(), $el.nome, $el.partido, $g.urnas_pct, $g.hora) "OK"
+            }
+        }
     }
     $ult = ""
     if ($null -ne $script:UltimaResposta) { $ult = $script:UltimaResposta.ToString("HH:mm:ss") }
@@ -904,6 +920,7 @@ function Gravar-Dados {
         ref2022       = $script:Ref2022
         ref2022_2t    = $script:Ref2022T2
         ref2022_gov   = $script:Ref2022Gov
+        definicoes_gov = [pscustomobject] $script:DefGov
         ufs           = $porEstado
         camara        = [pscustomobject] $script:Camara
         camara_motivos = [pscustomobject] $script:CamaraMotivo

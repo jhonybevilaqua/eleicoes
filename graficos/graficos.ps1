@@ -19,7 +19,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "3.27.1 - 18/10/2026"
+$Versao = "3.28 - 19/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -445,6 +445,10 @@ function Resumir-Boletim {
             if (-not (Tem-Propriedade $cargo "agr")) { continue }
             foreach ($agr in $cargo.agr) {
                 if (-not (Tem-Propriedade $agr "par")) { continue }
+                # 3.28: COLIGACAO = os partidos do mesmo agrupamento do TSE (agr)
+                # - para a tela de governabilidade (Analise Politica).
+                $coligacao = @($agr.par | ForEach-Object { Decodificar-Entidades "$(Obter-Campo $_ @('sg','nm') '')" } | Where-Object { $_ })
+                $nomeColig = Decodificar-Entidades "$(Obter-Campo $agr @('nm','nmc') '')"
                 foreach ($par in $agr.par) {
                     $sigla = Decodificar-Entidades "$(Obter-Campo $par @('sg','nm') '')"
                     if (-not (Tem-Propriedade $par "cand")) { continue }
@@ -471,6 +475,8 @@ function Resumir-Boletim {
                             eleito  = $eleito
                             segundo_turno = $vaiTurno
                             destinacao = Decodificar-Entidades "$(Obter-Campo $c @('dvt') '')"
+                            coligacao = $coligacao
+                            coligacao_nome = $nomeColig
                         }
                     }
                 }
@@ -832,6 +838,34 @@ function Registrar-Evolucao {
     } catch { Escrever-Log "evolucao: nao gravei o historico ($($_.Exception.Message))" "AVISO" }
 }
 
+# ------------------------------------------ hora da definicao (3.28, Brasil)
+# Primeira vez que o 2o turno de Presidente ficou DEFINIDO: o TSE escreveu
+# "Eleito" ou a conta com o proprio boletim ja garante (o 1o tem mais votos
+# que o 2o MAIS todos os eleitores das secoes ainda nao totalizadas - e.esnt).
+# Guarda a hora do BOLETIM do TSE e o % de urnas. Fica num arquivo para nao
+# mudar se o coletor reiniciar.
+$ArquivoDefinicao = Join-Path $Raiz ("definicao-{0}-{1}-{2}.json" -f $Ciclo, $Eleicao, $Modo.ToLower())
+$script:Definicao = $null
+if (Test-Path $ArquivoDefinicao) { try { $script:Definicao = Get-Content $ArquivoDefinicao -Raw -Encoding UTF8 | ConvertFrom-Json } catch { } }
+function Registrar-Definicao {
+    if ($null -ne $script:Definicao -or -not $Eleicao1T) { return }
+    if (-not $script:Cache.ContainsKey("br")) { return }
+    $b = $script:Cache["br"]; $cs = @($b.candidatos)
+    if ($cs.Count -lt 2) { return }
+    $l = $cs[0]; $s2 = $cs[1]; $tipo = ""
+    $falt = $null; if ($b.eleitorado) { $falt = $b.eleitorado.faltam }
+    if ($l.eleito) { $tipo = "tse" }
+    elseif ($null -ne $falt -and [int64] $l.votos -gt 0 -and ([int64] $l.votos - [int64] $s2.votos) -gt [int64] $falt) { $tipo = "matematica" }
+    if (-not $tipo) { return }
+    $script:Definicao = [pscustomobject]@{
+        numero = $l.numero; nome = $l.nome; partido = $l.partido; tipo = $tipo
+        hora = $b.hora; geracao = $b.geracao; urnas = $b.secoes.pct
+        votos = $l.votos; votos_2 = $s2.votos; faltam = $falt; registrado_em = (Get-Date).ToString("yyyy-MM-ddTHH:mm:ss")
+    }
+    try { [IO.File]::WriteAllText($ArquivoDefinicao, ($script:Definicao | ConvertTo-Json -Compress), (New-Object System.Text.UTF8Encoding($false))) } catch { }
+    Escrever-Log ("DEFINIDO: {0} ({1}) - {2}, com {3}% das urnas, boletim das {4}" -f $l.nome, $l.partido, $(if ($tipo -eq "tse") { "eleito pelo TSE" } else { "matematicamente eleito" }), $b.secoes.pct, $b.hora) "OK"
+}
+
 # ------------------------------------------------------------- gravar dados
 
 function Gravar-Dados {
@@ -872,6 +906,7 @@ function Gravar-Dados {
         exterior_cidades = $(if ($script:Mun) { $script:Mun.exterior.Count } else { 0 })
         turno1        = $(if ($Eleicao1T) { [pscustomobject]@{ eleicao = $Eleicao1T; br = $(if ($script:Turno1.Contains("br")) { $script:Turno1["br"] } else { [pscustomobject]@{ tem = $false } }); ufs = [pscustomobject] $script:Turno1 } } else { $null })
         evolucao      = [pscustomobject]@{ origem = $script:EvolucaoOrigem; nomes = [pscustomobject] $script:EvolucaoNomes; pontos = @($script:Evolucao) }
+        definicao     = $script:Definicao
     }
     $json = $dados | ConvertTo-Json -Depth 8 -Compress
     $conteudo = "window.GCTSE_DADOS = $json;"
@@ -925,6 +960,7 @@ do {
             try { Ler-Turno1; Escrever-Log ("1o turno guardado: {0} de 29 boletins (eleicao {1})" -f $script:Turno1.Count, $Eleicao1T) } catch { Escrever-Log "1o turno: $($_.Exception.Message)" "AVISO" }
         }
         Registrar-Evolucao
+        try { Registrar-Definicao } catch { Escrever-Log "definicao: $($_.Exception.Message)" "AVISO" }
         Gravar-Dados                       # o Brasil vai para a tela antes dos estados
         # Estados so depois que o Brasil saiu: antes das 17h seriam 27
         # pedidos com 404 por ciclo (o TSE avisa que 404 em excesso bloqueia

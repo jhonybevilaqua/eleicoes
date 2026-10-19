@@ -286,8 +286,8 @@ function Coletor-Aberto([string] $Ps1) {
     } catch { }
     try { return @(Get-Process -ErrorAction SilentlyContinue | Where-Object { $c = $null; try { $c = $_.CommandLine } catch { }; $c -and $c -match $alvo }).Count -gt 0 } catch { return $true }
 }
-$script:Vigia = @{ prox = [datetime]::MinValue; lidoP = [datetime]::MinValue; lidoE = [datetime]::MinValue; lideres = @{}; parouP = $false; parouE = $false
-    semTse = $false; viSemEleito = $false; reabriuP = [datetime]::MinValue; reabriuE = [datetime]::MinValue; nomes = @{}
+$script:Vigia = @{ prox = [datetime]::MinValue; lidoP = [datetime]::MinValue; lidoE = [datetime]::MinValue; lideres = @{}; parouP = $false; parouE = $false; parouM = $false
+    semTse = $false; viSemEleito = $false; reabriuP = [datetime]::MinValue; reabriuE = [datetime]::MinValue; reabriuM = [datetime]::MinValue; nomes = @{}
     marcos = @{}; marcosP = $false; marcosE = $false; govLider = @{} }
 # MARCOS DA APURACAO (avisos para a bancada e o operador): cada um uma vez
 # por eleicao. O que ja tinha passado quando o gerenciador abriu NAO avisa.
@@ -334,10 +334,10 @@ function Vigiar-Coleta([string] $Qual, [string] $Js, [string] $Ps1, [string] $Ba
     $chave = "parou$Qual"; $chaveR = "reabriu$Qual"
     if ($idade -gt $Limite -and -not $script:Vigia[$chave]) {
         $script:Vigia[$chave] = $true
-        Evento "alerta" ("COLETA {0} PAROU ha {1:N0} s ({2})" -f $(if ($Qual -eq "P") { "DE PRESIDENTE" } else { "DOS ESTADOS" }), $idade, $Bat)
+        Evento "alerta" ("COLETA {0} PAROU ha {1:N0} s ({2})" -f $(if ($Qual -eq "P") { "DE PRESIDENTE" } elseif ($Qual -eq "M") { "DOS MUNICIPIOS" } else { "DOS ESTADOS" }), $idade, $Bat)
     } elseif ($idade -le $Limite -and $script:Vigia[$chave]) {
         $script:Vigia[$chave] = $false
-        Evento "ok" ("coleta {0} voltou" -f $(if ($Qual -eq "P") { "de Presidente" } else { "dos estados" }))
+        Evento "ok" ("coleta {0} voltou" -f $(if ($Qual -eq "P") { "de Presidente" } elseif ($Qual -eq "M") { "dos municipios" } else { "dos estados" }))
     }
     if ($script:Vigia[$chave] -and $script:Reabrir -and ((Get-Date) - $script:Vigia[$chaveR]).TotalSeconds -gt 120) {
         $script:Vigia[$chaveR] = Get-Date
@@ -353,6 +353,8 @@ function Vigiar {
     $script:Vigia.prox = (Get-Date).AddSeconds(3)
     Vigiar-Coleta "P" "dados.js" "graficos.ps1" "GRAFICOS.bat" 90
     Vigiar-Coleta "E" "estados.js" "estados.ps1" "ESTADOS.bat" 150
+    # municipios (3.28): grava a cada ~400 cidades; volta inteira leva minutos
+    Vigiar-Coleta "M" "municipios.js" "municipios.ps1" "MUNICIPIOS.bat" 600
     try { Vigiar-Estados } catch { }
     $arq = Join-Path $Web "dados.js"
     if (-not (Test-Path $arq)) { return }
@@ -702,9 +704,9 @@ while ($ouvinte.IsListening) {
             # ABRIR COLETAS (botao do painel): abre na hora o que estiver
             # fechado - GRAFICOS.bat, ESTADOS.bat e os OBS das saidas.
             # ?abrir=1 abre; sem ele so diz a situacao.
-            $sit = [ordered]@{ graficos = (Coletor-Aberto "graficos.ps1"); estados = (Coletor-Aberto "estados.ps1"); obs = @(Get-Process -Name obs64 -ErrorAction SilentlyContinue).Count; abertos = @(); falhas = @(); msg = "" }
+            $sit = [ordered]@{ graficos = (Coletor-Aberto "graficos.ps1"); estados = (Coletor-Aberto "estados.ps1"); municipios = (Coletor-Aberto "municipios.ps1"); obs = @(Get-Process -Name obs64 -ErrorAction SilentlyContinue).Count; abertos = @(); falhas = @(); msg = "" }
             if ("$($req.QueryString['abrir'])" -eq "1") {
-                foreach ($par in @(@("graficos", "GRAFICOS.bat"), @("estados", "ESTADOS.bat"))) {
+                foreach ($par in @(@("graficos", "GRAFICOS.bat"), @("estados", "ESTADOS.bat"), @("municipios", "MUNICIPIOS.bat"))) {
                     if (-not $sit[$par[0]]) {
                         try { Start-Process -FilePath (Join-Path $Raiz $par[1]) -WorkingDirectory $Raiz; $sit.abertos += $par[1] } catch { $sit.falhas += $par[1]; Evento "alerta" ("nao consegui abrir o {0}: {1}" -f $par[1], $_.Exception.Message) }
                     }

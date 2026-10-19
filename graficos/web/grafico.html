@@ -37,7 +37,11 @@
   var tela = document.getElementById("tela");
   var ultimo = "";
   // Camara e comparativo tambem leem estados.js (coletor ESTADOS.bat).
-  var usaEstados = /^(camara|comparativo|deputados|governadores|govpartido|mulheres|senadores|gov2t|gov12|govpres|perfilcamara|assembleia|turno22|topdep|topfem|topsenfem|mudou22|abst22|menosvot|senvotos|gov22|exterior|excidades)/.test(id);
+  var usaEstados = /^(camara|comparativo|deputados|governadores|govpartido|mulheres|senadores|gov2t|gov12|govpres|perfilcamara|assembleia|turno22|topdep|topfem|topsenfem|mudou22|abst22|menosvot|senvotos|gov22|exterior|excidades|governab|cruzado|pendulo|definicao)/.test(id);
+  // 3.28: mapa por municipio - a malha do IBGE (1,9 MB) e o resultado das
+  // cidades (MUNICIPIOS.bat) so carregam nesta tela.
+  var usaMun = /^munmapa/.test(id);
+  if (usaMun) { ["mapa-municipios.js", "municipios.js"].forEach(function (a) { var sm = document.createElement("script"); sm.charset = "utf-8"; sm.src = a; sm.onload = function () { ultimo = ""; desenhar(); }; document.head.appendChild(sm); }); }
   // Deputados: a tela troca sozinha (deputados-config.js, "segundos").
   var paginada = /^deputados/.test(id);
 
@@ -45,7 +49,7 @@
     var d = window.GCTSE_GRAFICOS.dados();
     var e = window.GCTSE_ESTADOS || {};
     var pg = paginada ? window.GCTSE_GRAFICOS.pagina(id) : "";
-    var chave = JSON.stringify([d.modo, d.br, d.ufs, d.capitais, d.exterior, d.exterior_total, d.cor_slot, d.cores, usaEstados ? [e.camara, e.ref2022, e.ref2022_2t, e.ref2022_gov, e.assembleia, e.ufs] : 0, d.turno1, pg]);
+    var chave = JSON.stringify([d.modo, d.br, d.ufs, d.capitais, d.exterior, d.exterior_total, d.cor_slot, d.cores, usaEstados ? [e.camara, e.ref2022, e.ref2022_2t, e.ref2022_gov, e.assembleia, e.ufs, e.definicoes_gov] : 0, d.turno1, pg, d.definicao, usaMun ? [(window.GCTSE_MUN || {}).gravado_em, !!window.MAPA_MUN] : 0]);
     if (chave === ultimo) return;       // so redesenha quando o dado mudou
     var trocouPagina = paginada && ultimo && JSON.parse(ultimo)[7] !== pg;
     ultimo = chave;
@@ -69,6 +73,14 @@
       se.src = "estados.js?t=" + Date.now();
       se.onload = se.onerror = function () { se.remove(); };
       document.head.appendChild(se);
+    }
+    if (usaMun && window.MAPA_MUN && (!recarregar.mun || Date.now() - recarregar.mun > 20000)) {
+      recarregar.mun = Date.now();
+      var sm = document.createElement("script");
+      sm.charset = "utf-8";
+      sm.src = "municipios.js?t=" + Date.now();
+      sm.onload = sm.onerror = function () { sm.remove(); };
+      document.head.appendChild(sm);
     }
     var sc = document.createElement("script");
     sc.charset = "utf-8";

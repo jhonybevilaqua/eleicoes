@@ -3790,12 +3790,500 @@
     return svg(W, H, o + t(35, 950, (s ? "urnas " + pct(s.pct) + " · " : "") + "Fonte: TSE", { s: 12, c: C.apagado2 }));
   };
 
+  // ======================= ANALISE POLITICA (3.28) ==========================
+  // 10 telas para o debate da bancada. So numero do TSE (e, no Senado, da
+  // tabela da redacao em senado-config.js). Conta que e ESTIMATIVA aparece
+  // escrita como estimativa no rodape.
+  function cabAn(v, W, tit, sub, f) {
+    return v ? r(35, 48, 6, 38, C.destaque) + t(53, 80, tit, { s: 26, b: true, ls: 1, max: 450 }) + t(53, 106, sub, { s: 13, c: C.apagado, max: 470 }) + seloV(W, seloDe(f))
+             : t(73, 57, tit, { s: 34, b: true, ls: 1, max: 640 }) + t(73, 85, sub, { s: 15, c: C.apagado, max: 640 }) + seloH(W, seloDe(f));
+  }
+  function vazioAn(v, tit, sub, f, msg) {
+    var W = v ? 540 : 1280, H = v ? 960 : 720;
+    return svg(W, H, marcaVazio() + cabAn(v, W, tit, sub, f) + t(W / 2, H / 2, msg, { s: v ? 16 : 22, c: C.apagado, a: "middle", max: W - 60 }));
+  }
+  function rodAn(v, txt) { return v ? t(35, 950, txt, { s: 10, c: C.apagado2, max: 470 }) : t(73, 708, txt, { s: 11, c: C.apagado2, max: 1134 }); }
+  function ppTxt(d, casas) { return (d > 0.0001 ? "+" : d < -0.0001 ? "−" : "") + Math.abs(d).toFixed(casas == null ? 1 : casas).replace(".", ",") + " p.p."; }
+  function milTxt(n) {
+    n = Math.abs(n || 0);
+    if (n >= 1e6) return (n / 1e6).toFixed(n >= 1e7 ? 1 : 2).replace(".", ",") + " mi";
+    if (n >= 1e4) return Math.round(n / 1e3) + " mil";
+    return inteiro(n);
+  }
+  function pctCandAn(x, c) { var k = x ? candidatos(x).filter(function (y) { return String(y.numero) === String(c.numero); })[0] : null; return k && k.pct != null ? +k.pct : null; }
+  function fin2(f) { if (!f.br || f.turno !== 2) return null; var cs = candidatos(f.br).slice(0, 2); return cs.length === 2 ? cs : null; }
+  function painelAn(x, y, w, h) { return r(x, y, w, h, "rgba(8,14,32,0.84)", 8); }
+  function chip(x, y, txt, fundo, cTxt, s) { s = s || 12; var w = Math.round(txt.length * s * 0.62 + 14); return r(x, y - s - 3, w, s + 8, fundo, 3) + t(x + w / 2, y, txt, { s: s, b: true, c: cTxt || "#0b1220", a: "middle" }); }
+  function hhmmTse(h) { var m = /^(\d{1,2}):(\d{2})/.exec(String(h || "")); return m ? ("0" + m[1]).slice(-2) + ":" + m[2] : "—"; }
+  // barra dividida A | B (fracao de A entre os dois)
+  function barraAB(x, y, w, h, fa, A, B) {
+    fa = Math.max(0, Math.min(1, fa));
+    return r(x, y, w, h, cor(B), 3) + (fa > 0 ? r(x, y, Math.max(3, w * fa), h, cor(A), 3) : "") + r(x + w / 2 - 1, y - 2, 2, h + 4, "rgba(255,255,255,0.65)", 0);
+  }
+  var ALIAS_SG = { "REP": "REPUBLICANOS", "PCDOB": "PCDOB", "SOLIDARIEDADE": "SOLIDARIEDADE", "UNIAO": "UNIÃO" };
+  function normSg(s) { var k = String(s || "").toUpperCase().replace(/[\s.]+/g, ""); return ALIAS_SG[k] || k; }
+  function coligDe(c) {
+    var l = comoLista(c && c.coligacao);
+    if (!l.length && c) {
+      var t1 = fontePres(true), k = t1.guardado ? candidatos(t1.br).filter(function (x) { return String(x.numero) === String(c.numero); })[0] : null;
+      l = comoLista(k && k.coligacao);
+    }
+    if (!l.length && c && c.partido) l = [c.partido];
+    var vistos = {}; return l.map(normSg).filter(function (s) { if (!s || vistos[s]) return false; vistos[s] = 1; return true; });
+  }
+
+  // ---- A1. GOVERNABILIDADE: a base de cada finalista -----------------------
+  function baseDe(c) {
+    var cl = coligDe(c), cm = camara(), sn = senado(), nCam = 0, nSen = 0, nGov = 0, govs = [], dec = 0;
+    cm.ps.forEach(function (p) { if (cl.indexOf(normSg(p.sigla)) >= 0) nCam += +p.em2027 || 0; });
+    sn.ps.forEach(function (p) { if (cl.indexOf(normSg(p.sigla)) >= 0) nSen += +p.em2027 || 0; });
+    Object.keys(DEP_UF).forEach(function (k) {
+      var st = govEstado(k);
+      if ((st.tipo === "eleito1" || st.tipo === "eleito2") && st.c) { dec++; if (cl.indexOf(normSg(st.c.partido)) >= 0) { nGov++; govs.push(k.toUpperCase()); } }
+    });
+    return { cl: cl, cam: nCam, camTot: cm.vagas || 513, camLidos: cm.eleitos, sen: nSen, senTot: sn.total2027 || 81, gov: nGov, govs: govs, govDec: dec };
+  }
+  function medidor(x, y, w, n, tot, marcas, c, rot, k) {
+    var o = t(x, y, rot, { s: Math.round(13 * k), b: true, c: "#c9d6e6", ls: 1 }) + t(x + w, y, n + " de " + tot, { s: Math.round(20 * k), b: true, a: "end" });
+    var yb = y + 10 * k, hb = 16 * k;
+    o += r(x, yb, w, hb, C.trilho, 4) + (n > 0 ? r(x, yb, Math.max(4, w * Math.min(1, n / tot)), hb, c, 4) : "");
+    // rotulos das marcas: o 1o termina na marca, o 2o comeca nela (nao se encostam)
+    marcas.forEach(function (m, i) { var xm = x + w * m[0] / tot; o += r(xm - 1, yb - 4, 2, hb + 8, "#ffffff", 0) + t(xm + (i ? 4 : -4), yb + hb + 14 * k, m[1], { s: Math.round(10 * k), c: C.apagado, a: i ? "start" : "end" }); });
+    return o;
+  }
+  function telaGovernab(v) {
+    var f = fontePres(false), cs = fin2(f), W = v ? 540 : 1280, H = v ? 960 : 720, tit = "GOVERNABILIDADE";
+    var sub = "a base de cada finalista: partidos da coligação no Congresso de 2027 e governadores eleitos";
+    if (!cs) return vazioAn(v, tit, sub, f, "disponível no 2º turno");
+    var cm = camara();
+    if (!cm.eleitos) return vazioAn(v, tit, sub, f, "aguardando a Câmara (ESTADOS.bat)");
+    var o = cabAn(v, W, tit, sub, f), k = v ? 0.8 : 1;
+    cs.forEach(function (c, i) {
+      var b = baseDe(c), x = v ? 35 : 73 + i * 575, y = v ? 170 + i * 380 : 108, w = v ? 470 : 559, hh = v ? 365 : 560, cc = cor(c);
+      o += painelAn(x, y, w, hh) + r(x, y, w, 6, cc, 3);
+      o += t(x + 18, y + 40 * k, c.nome, { s: Math.round(24 * k), b: true, max: w - 36 }) + t(x + 18, y + 64 * k, c.partido + (c.eleito ? " · ELEITO" : ""), { s: Math.round(15 * k), c: C.apagado });
+      o += t(x + 18, y + 92 * k, "COLIGAÇÃO: " + b.cl.join(" · "), { s: Math.round(13 * k), c: "#c9d6e6", max: w - 36 });
+      var x0 = x + 18, wm = w - 36, y0 = y + (v ? 125 : 140);
+      o += medidor(x0, y0, wm, b.cam, b.camTot, [[257, "maioria 257"], [308, "PEC 308"]], cc, "CÂMARA (deputados de 2027)", k);
+      o += medidor(x0, y0 + (v ? 78 : 120), wm, b.sen, b.senTot, [[41, "maioria 41"], [49, "PEC 49"]], cc, "SENADO (a partir de 2027)", k);
+      o += medidor(x0, y0 + (v ? 156 : 240), wm, b.gov, 27, [[14, "metade 14"]], cc, "GOVERNADORES ELEITOS", k);
+      var falta = 257 - b.cam;
+      o += t(x0, y0 + (v ? 222 : 340), falta > 0 ? "faltam " + falta + " deputados para a maioria simples" : "a coligação já tem maioria simples na Câmara",
+        { s: Math.round(15 * k), b: true, c: falta > 0 ? "#ffd8a8" : "#8ce99a", max: wm });
+      if (!v && b.govs.length) o += t(x0, y0 + 368, "Estados: " + b.govs.join(" "), { s: 13, c: C.apagado, max: wm });
+      if (!v) o += t(x0, y0 + 396, b.govDec + " de 27 governadores já definidos" + (cm.eleitos < 513 ? " · Câmara: " + cm.eleitos + " de 513 eleitos lidos" : ""), { s: 12, c: C.apagado2, max: wm });
+    });
+    return svg(W, H, o + rodAn(v, "Fonte: TSE (coligação registrada, Câmara, governadores) e senado-config.js (Senado, tabela da redação) · partidos fora da coligação podem aderir depois"));
+  }
+  G["governab-h"] = function () { return telaGovernab(false); };
+  G["governab-v"] = function () { return telaGovernab(true); };
+
+  // ---- A2. CAPITAL × INTERIOR -----------------------------------------------
+  function capInt() {
+    var f = fontePres(false), cs = fin2(f); if (!cs) return null;
+    var cp = D().capitais || {}, A = cs[0], B = cs[1], sa = { ac: 0, bc: 0, ai: 0, bi: 0 };
+    var ls = Object.keys(DEP_UF).map(function (k) {
+      var x = f.uf(k), c = cp[k]; if (!x || !c || !c.tem) return null;
+      var ac = votosDe(c, A), bc = votosDe(c, B), ai = votosDe(x, A) - ac, bi = votosDe(x, B) - bc;
+      if (ac + bc <= 0 || ai + bi <= 0) return null;
+      sa.ac += ac; sa.bc += bc; sa.ai += ai; sa.bi += bi;
+      var pc = ac / (ac + bc), pi = ai / (ai + bi);
+      return { k: k, cap: String(c.nome || "").toUpperCase(), pc: pc, pi: pi, div: (pc > 0.5) !== (pi > 0.5), gap: Math.abs(pc - pi) };
+    }).filter(Boolean);
+    return { f: f, A: A, B: B, ls: ls, bc: sa.ac + sa.bc > 0 ? sa.ac / (sa.ac + sa.bc) : null, bi: sa.ai + sa.bi > 0 ? sa.ai / (sa.ai + sa.bi) : null };
+  }
+  function telaCapInt(v) {
+    var ci = capInt(), f = fontePres(false), W = v ? 540 : 1280, H = v ? 960 : 720, tit = "CAPITAL × INTERIOR";
+    var sub = "Presidente · em cada estado, a capital comparada com o resto do estado (interior = estado − capital)";
+    if (!ci) return vazioAn(v, tit, sub, f, "disponível no 2º turno");
+    if (!ci.ls.length) return vazioAn(v, tit, sub, f, "aguardando os boletins das capitais (GRAFICOS.bat)");
+    var A = ci.A, B = ci.B, o = cabAn(v, W, tit, sub, f), divs = ci.ls.filter(function (l) { return l.div; });
+    function resumo(x, y, w, rot, fa, k) {
+      return t(x, y, rot, { s: Math.round(13 * k), b: true, c: "#c9d6e6", ls: 2 }) + barraAB(x, y + 10 * k, w, 18 * k, fa, A, B) +
+        t(x, y + 46 * k, nomeCurto(A) + " " + pct(100 * fa), { s: Math.round(15 * k), b: true }) + t(x + w, y + 46 * k, pct(100 - 100 * fa) + " " + nomeCurto(B), { s: Math.round(15 * k), b: true, a: "end" });
+    }
+    if (!v) {
+      o += painelAn(73, 100, 1134, 78) + resumo(93, 124, 520, "TODAS AS CAPITAIS", ci.bc || 0, 1) + resumo(667, 124, 520, "TODO O INTERIOR", ci.bi || 0, 1);
+      o += t(73, 204, divs.length ? divs.length + " estado(s) onde a capital e o interior escolheram lados diferentes:" : "em todos os estados lidos, capital e interior têm o mesmo líder", { s: 16, b: true, c: divs.length ? "#ffd8a8" : C.apagado });
+      var ls = ci.ls.slice().sort(function (p, q) { return (q.div - p.div) || (q.gap - p.gap); });
+      ls.slice(0, 26).forEach(function (l, i) {
+        var col = i < 13 ? 0 : 1, li = col ? i - 13 : i, x = 73 + col * 575, y = 220 + li * 36;
+        o += r(x, y, 559, 32, l.div ? "rgba(255,216,168,0.10)" : (li % 2 ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.06)"), 4);
+        o += t(x + 10, y + 22, l.k.toUpperCase(), { s: 15, b: true });
+        o += t(x + 50, y + 14, "capital", { s: 10, c: C.apagado }) + barraAB(x + 50, y + 18, 150, 9, l.pc, A, B) + t(x + 210, y + 26, pct(100 * l.pc), { s: 12, b: true });
+        o += t(x + 280, y + 14, "interior", { s: 10, c: C.apagado }) + barraAB(x + 280, y + 18, 150, 9, l.pi, A, B) + t(x + 440, y + 26, pct(100 * l.pi), { s: 12, b: true });
+        if (l.div) o += chip(x + 495, y + 21, "DIVIDIDO", "#ffd8a8", "#0b1220", 10);
+      });
+      return svg(W, H, o + rodAn(false, "Fonte: TSE — boletim de Presidente do estado e da capital · % = " + nomeCurto(A) + " entre os dois finalistas · interior = estado menos a capital"));
+    }
+    o += painelAn(35, 165, 470, 150) + resumo(53, 190, 434, "TODAS AS CAPITAIS", ci.bc || 0, 0.9) + resumo(53, 258, 434, "TODO O INTERIOR", ci.bi || 0, 0.9);
+    o += t(35, 345, divs.length ? "CAPITAL ≠ INTERIOR: " + divs.length + " estado(s)" : "capital e interior com o mesmo líder em todos", { s: 15, b: true, c: divs.length ? "#ffd8a8" : C.apagado, max: 470 });
+    var lv = ci.ls.slice().sort(function (p, q) { return (q.div - p.div) || (q.gap - p.gap); }).slice(0, 14);
+    lv.forEach(function (l, i) {
+      var y = 362 + i * 40;
+      o += r(35, y, 470, 36, l.div ? "rgba(255,216,168,0.10)" : "rgba(255,255,255,0.05)", 4) + t(45, y + 24, l.k.toUpperCase(), { s: 15, b: true });
+      o += barraAB(85, y + 8, 150, 8, l.pc, A, B) + t(245, y + 16, "cap " + pct(100 * l.pc), { s: 11, b: true });
+      o += barraAB(85, y + 22, 150, 8, l.pi, A, B) + t(245, y + 30, "int " + pct(100 * l.pi), { s: 11, b: true });
+      if (l.div) o += chip(410, y + 23, "DIVIDIDO", "#ffd8a8", "#0b1220", 10);
+    });
+    return svg(W, H, o + rodAn(true, "Fonte: TSE · % de " + nomeCurto(A) + " entre os dois · interior = estado − capital"));
+  }
+  G["capint-h"] = function () { return telaCapInt(false); };
+  G["capint-v"] = function () { return telaCapInt(true); };
+
+  // ---- A3. PARA ONDE FORAM OS VOTOS (estimativa) ----------------------------
+  function transfDe(x1, x2, A, B) {
+    var a1 = pctCandAn(x1, A), b1 = pctCandAn(x1, B), a2 = pctCandAn(x2, A), b2 = pctCandAn(x2, B);
+    if (a1 == null || b1 == null || a2 == null || b2 == null || !(a2 + b2 > 0)) return null;
+    var da = a2 - a1, db = b2 - b1, ok = da >= 0 && db >= 0 && da + db > 0;
+    return { a1: a1, b1: b1, a2: a2, b2: b2, outros: Math.max(0, 100 - a1 - b1), da: da, db: db, shA: ok ? da / (da + db) : null };
+  }
+  function telaTransf(v) {
+    var f1 = fontePres(true), f2 = fontePres(false), cs = fin2(f2), W = v ? 540 : 1280, H = v ? 960 : 720, tit = "PARA ONDE FORAM OS VOTOS";
+    var sub = "Presidente · quanto cada finalista cresceu do 1º para o 2º turno (em pontos dos votos válidos)";
+    if (!cs) return vazioAn(v, tit, sub, f2, "disponível no 2º turno");
+    if (!f1.guardado) return vazioAn(v, tit, sub, f2, "1º turno ainda não guardado");
+    if (!(f2.br.secoes && f2.br.secoes.pct > 0)) return vazioAn(v, tit, sub, f2, "aguardando as primeiras urnas do 2º turno");
+    var A = cs[0], B = cs[1], tb = transfDe(f1.br, f2.br, A, B), o = cabAn(v, W, tit, sub, f2), k = v ? 0.82 : 1;
+    if (!tb) return vazioAn(v, tit, sub, f2, "os finalistas não estão no boletim do 1º turno guardado");
+    var elim = candidatos(f1.br).filter(function (c) { return String(c.numero) !== String(A.numero) && String(c.numero) !== String(B.numero) && c.votos > 0; }).slice(0, 3);
+    var txtElim = elim.map(function (c) { return nomeCurto(c) + " " + pct(c.pct); }).join(" · ");
+    var xP = v ? 35 : 73, wP = v ? 470 : 1134, yP = v ? 165 : 100, hP = v ? 250 : 200;
+    o += painelAn(xP, yP, wP, hP);
+    o += t(xP + 20, yP + 34 * k, "NO 1º TURNO, " + pct(tb.outros).replace("%", "") + "% VOTARAM EM OUTROS CANDIDATOS", { s: Math.round(19 * k), b: true, max: wP - 40 });
+    o += t(xP + 20, yP + 58 * k, txtElim, { s: Math.round(14 * k), c: C.apagado, max: wP - 40 });
+    var wb = wP - 40, yb = yP + (v ? 85 : 84);
+    if (tb.shA != null) {
+      o += barraAB(xP + 20, yb, wb, 26 * k, tb.shA, A, B);
+      if (v) o += t(xP + 20, yb + 50, nomeCurto(A) + " " + ppTxt(tb.da), { s: 19, b: true, max: wb }) + t(xP + 20 + wb, yb + 76, ppTxt(tb.db) + " " + nomeCurto(B), { s: 19, b: true, a: "end", max: wb });
+      else o += t(xP + 20, yb + 56 * k, nomeCurto(A) + " " + ppTxt(tb.da), { s: Math.round(22 * k), b: true }) + t(xP + 20 + wb, yb + 56 * k, ppTxt(tb.db) + " " + nomeCurto(B), { s: Math.round(22 * k), b: true, a: "end" });
+      o += t(xP + 20, yb + (v ? 102 : 82 * k), "estimativa: " + nomeCurto(A) + " ficou com " + pct(100 * tb.shA).replace(",00", "") + " do crescimento", { s: Math.round(14 * k), c: "#c9d6e6", max: wb });
+    } else {
+      o += t(xP + 20, yb + 30 * k, nomeCurto(A) + " " + ppTxt(tb.da) + "   ·   " + nomeCurto(B) + " " + ppTxt(tb.db), { s: Math.round(22 * k), b: true, max: wb });
+      o += t(xP + 20, yb + 58 * k, "um dos dois perdeu pontos: a divisão não se aplica", { s: Math.round(14 * k), c: C.apagado, max: wb });
+    }
+    var ls = Object.keys(DEP_UF).map(function (kk) { var x = transfDe(f1.uf(kk), f2.uf(kk), A, B); return x && x.shA != null && f2.uf(kk).secoes && f2.uf(kk).secoes.pct > 0 ? { k: kk, x: x } : null; }).filter(Boolean);
+    ls.sort(function (p, q) { return q.x.shA - p.x.shA; });
+    var y0 = yP + hP + (v ? 34 : 34);
+    o += t(xP, y0 - 8, "POR ESTADO · parte do crescimento que foi para " + nomeCurto(A), { s: Math.round(13 * k), b: true, c: "#c9d6e6", ls: 1, max: wP });
+    var nCol = v ? 1 : 3, porCol = v ? 13 : 9, wCol = v ? 470 : 366, passo = v ? 30 : 38;
+    ls.slice(0, nCol * porCol).forEach(function (l, i) {
+      var col = Math.floor(i / porCol), li = i % porCol, x = xP + col * (wCol + 18), y = y0 + li * passo;
+      o += r(x, y, wCol, passo - 4, li % 2 ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.06)", 4) + t(x + 10, y + passo / 2 + 4, l.k.toUpperCase(), { s: Math.round(14 * k), b: true });
+      o += barraAB(x + 50, y + (passo - 4) / 2 - 5, wCol - 140, 10, l.x.shA, A, B) + t(x + wCol - 10, y + passo / 2 + 4, pct(100 * l.x.shA).replace(",00", ""), { s: Math.round(14 * k), b: true, a: "end" });
+    });
+    return svg(W, H, o + rodAn(v, "ESTIMATIVA pela diferença de percentuais entre os turnos (TSE) — não é pesquisa: mistura quem mudou de voto, quem só votou num turno e quem anulou"));
+  }
+  G["transf-h"] = function () { return telaTransf(false); };
+  G["transf-v"] = function () { return telaTransf(true); };
+
+  // ---- A4. A ABSTENCAO DECIDIU? ----------------------------------------------
+  function abstDec(f1, f2, A, B, x1, x2) {
+    var e1 = x1 && x1.eleitorado, e2 = x2 && x2.eleitorado; if (!e1 || !e2) return null;
+    var a1 = +e1.pct_abstencao, a2 = +e2.pct_abstencao; if (!(a1 >= 0) || !(a2 >= 0)) return null;
+    var base = +e2.em_totalizadas || ((+e2.comparecimento || 0) + (+e2.abstencao || 0)); if (!(base > 0)) return null;
+    var extra = (a2 - a1) / 100 * base, marg = Math.abs(votosDe(x2, A) - votosDe(x2, B));
+    return { a1: a1, a2: a2, d: a2 - a1, extra: extra, marg: marg, supera: extra > 0 && extra > marg };
+  }
+  function telaAbstDec(v) {
+    var f1 = fontePres(true), f2 = fontePres(false), cs = fin2(f2), W = v ? 540 : 1280, H = v ? 960 : 720, tit = "A ABSTENÇÃO DECIDIU?";
+    var sub = "eleitores que ficaram em casa a mais no 2º turno × a diferença entre os dois finalistas (nas urnas já apuradas)";
+    if (!cs) return vazioAn(v, tit, sub, f2, "disponível no 2º turno");
+    if (!f1.guardado) return vazioAn(v, tit, sub, f2, "1º turno ainda não guardado");
+    if (!(f2.br.secoes && f2.br.secoes.pct > 0)) return vazioAn(v, tit, sub, f2, "aguardando as primeiras urnas do 2º turno");
+    var A = cs[0], B = cs[1], nb = abstDec(f1, f2, A, B, f1.br, f2.br), o = cabAn(v, W, tit, sub, f2), k = v ? 0.82 : 1;
+    var ls = Object.keys(DEP_UF).map(function (kk) { var x = abstDec(f1, f2, A, B, f1.uf(kk), f2.uf(kk)); return x && f2.uf(kk).secoes && f2.uf(kk).secoes.pct > 0 ? { k: kk, x: x } : null; }).filter(Boolean);
+    ls.sort(function (p, q) { return (q.x.supera - p.x.supera) || (q.x.extra - p.x.extra); });
+    var nSup = ls.filter(function (l) { return l.x.supera; }).length, xP = v ? 35 : 73, wP = v ? 470 : 1134;
+    o += painelAn(xP, v ? 165 : 100, wP, v ? 150 : 96);
+    if (nb) {
+      o += t(xP + 20, (v ? 195 : 132), "BRASIL: abstenção " + pct(nb.a1) + " no 1º turno → " + pct(nb.a2) + " no 2º (" + ppTxt(nb.d) + ")", { s: Math.round(19 * k), b: true, max: wP - 40 });
+      o += t(xP + 20, (v ? 225 : 162), (nb.extra > 0 ? milTxt(nb.extra) + " eleitores a mais em casa" : milTxt(-nb.extra) + " eleitores a mais foram votar") + "  ·  diferença entre os dois: " + milTxt(nb.marg) + " votos",
+        { s: Math.round(16 * k), c: nb.supera ? "#ffd8a8" : "#c9d6e6", max: wP - 40 });
+      if (v) o += t(xP + 20, 255, nb.supera ? "a abstenção a mais é MAIOR que a diferença" : "a diferença é maior que a abstenção a mais", { s: 14, b: true, c: nb.supera ? "#ffd8a8" : "#8ce99a" });
+      if (!v) o += t(xP + wP - 20, 132, nb.supera ? "SUPERA A DIFERENÇA" : "NÃO SUPERA", { s: 15, b: true, a: "end", c: nb.supera ? "#ffd8a8" : "#8ce99a" });
+    }
+    var y0 = v ? 345 : 222;
+    o += t(xP, y0 - 10, nSup ? "EM " + nSup + " ESTADO(S) A ABSTENÇÃO A MAIS SUPERA A DIFERENÇA ENTRE OS DOIS" : "EM NENHUM ESTADO A ABSTENÇÃO A MAIS SUPERA A DIFERENÇA", { s: Math.round(13 * k), b: true, c: nSup ? "#ffd8a8" : "#c9d6e6", ls: 1, max: wP });
+    var nCol = v ? 1 : 2, porCol = v ? 14 : 12, wCol = v ? 470 : 559, passo = v ? 40 : 38;
+    ls.slice(0, nCol * porCol).forEach(function (l, i) {
+      var col = Math.floor(i / porCol), li = i % porCol, x = xP + col * (wCol + 16), y = y0 + li * passo, x2 = l.x;
+      o += r(x, y, wCol, passo - 4, x2.supera ? "rgba(255,216,168,0.10)" : (li % 2 ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.06)"), 4);
+      o += t(x + 10, y + 23, l.k.toUpperCase(), { s: 15, b: true });
+      o += t(x + 50, y + 15, "abstenção " + pct1v(x2.a1) + " → " + pct1v(x2.a2) + " (" + ppTxt(x2.d) + ")", { s: Math.round(12 * k), c: "#c9d6e6", max: wCol - 60 });
+      o += t(x + 50, y + 30, (x2.extra >= 0 ? "+" + milTxt(x2.extra) + " em casa" : milTxt(-x2.extra) + " a mais votaram") + " · diferença " + milTxt(x2.marg), { s: Math.round(12 * k), b: true, max: wCol - 170 });
+      if (x2.supera) o += chip(x + wCol - (v ? 120 : 140), y + 24, "SUPERA A DIFERENÇA", "#ffd8a8", "#0b1220", v ? 9 : 10);
+    });
+    return svg(W, H, o + rodAn(v, "Fonte: TSE — abstenção do 1º turno (final) × 2º turno, sobre o eleitorado das seções já apuradas · não diz em quem o ausente votaria"));
+  }
+  G["abstdec-h"] = function () { return telaAbstDec(false); };
+  G["abstdec-v"] = function () { return telaAbstDec(true); };
+
+  // ---- A5. A HORA DA DEFINICAO ----------------------------------------------
+  function trocasLideranca() {
+    var ev = D().evolucao, ps = comoLista(ev && ev.pontos), n = 0, ant = null, desde = null;
+    ps.forEach(function (p) {
+      var c = p.c || {}, best = null, bv = -1;
+      Object.keys(c).forEach(function (k) { if (+c[k] > bv) { bv = +c[k]; best = k; } });
+      if (best == null) return;
+      if (ant != null && best !== ant) { n++; desde = p; }
+      if (ant == null) desde = p;
+      ant = best;
+    });
+    var nm = ev && ev.nomes && ant ? ev.nomes[ant] : null;
+    return { trocas: n, lider: nm ? nm.nome : "", desde: desde };
+  }
+  function telaDefinicao(v) {
+    var f = fontePres(false), cs = fin2(f), W = v ? 540 : 1280, H = v ? 960 : 720, tit = "A HORA DA DEFINIÇÃO";
+    var sub = "quando cada disputa do 2º turno ficou decidida (horário do boletim do TSE)";
+    if (!cs) return vazioAn(v, tit, sub, f, "disponível no 2º turno");
+    var o = cabAn(v, W, tit, sub, f), df = D().definicao, tl = trocasLideranca(), k = v ? 0.85 : 1;
+    var xP = v ? 35 : 73, wP = v ? 470 : 520, yP = v ? 165 : 100, hP = v ? 255 : 580;
+    o += painelAn(xP, yP, wP, hP) + t(xP + 20, yP + 30, "PRESIDENTE", { s: 14, b: true, c: "#c9d6e6", ls: 2 });
+    if (df && df.nome) {
+      var cE = cs.filter(function (c) { return String(c.numero) === String(df.numero); })[0] || cs[0];
+      o += r(xP + 20, yP + 46, 6, 66 * k, cor(cE), 2) + t(xP + 36, yP + 76 * k, df.nome, { s: Math.round(26 * k), b: true, max: wP - 60 });
+      o += t(xP + 36, yP + 104 * k, df.tipo === "tse" ? "ELEITO — declarado pelo TSE" : "MATEMATICAMENTE ELEITO", { s: Math.round(15 * k), b: true, c: "#8ce99a" });
+      o += t(xP + 20, yP + 160 * k, hhmmTse(df.hora), { s: Math.round(60 * k), b: true }) + t(xP + 20, yP + 186 * k, "com " + pct(df.urnas) + " das urnas apuradas", { s: Math.round(16 * k), c: "#c9d6e6" });
+    } else {
+      o += t(xP + 20, yP + 80 * k, "AINDA NÃO DEFINIDO", { s: Math.round(26 * k), b: true });
+      o += t(xP + 20, yP + 108 * k, "urnas: " + pct(f.br.secoes ? f.br.secoes.pct : 0) + " · " + diferenca(cs), { s: Math.round(13 * k), c: "#c9d6e6", max: wP - 40 });
+    }
+    var yT = yP + (v ? 222 : 240);
+    o += t(xP + 20, yT, "LIDERANÇA TROCOU DE MÃOS: " + tl.trocas + (tl.trocas === 1 ? " VEZ" : " VEZES"), { s: Math.round(15 * k), b: true, max: wP - 40 });
+    if (tl.desde && tl.lider) o += t(xP + 20, yT + 24 * k, tl.lider + " lidera desde " + hhmm(Date.parse(tl.desde.t)) + " (" + pct(tl.desde.u) + " das urnas)", { s: Math.round(13 * k), c: "#c9d6e6", max: wP - 40 });
+    if (!v) o += t(xP + 20, yT + 60, "MATEMATICAMENTE ELEITO = o 1º tem mais votos que o 2º", { s: 12, c: C.apagado }) + t(xP + 20, yT + 78, "somado a TODOS os eleitores das seções que faltam", { s: 12, c: C.apagado });
+    // governadores
+    var dg = E().definicoes_gov || {}, lst = Object.keys(dg).map(function (kk) { var x = dg[kk]; return { k: kk, x: x, h: hhmmTse(x.hora) }; });
+    lst.sort(function (p, q) { return p.h.localeCompare(q.h) || p.k.localeCompare(q.k); });
+    var abertos = Object.keys(DEP_UF).filter(function (kk) { var st = govEstado(kk); return st.tipo === "segundo" && !dg[kk]; });
+    var xG = v ? 35 : 613, wG = v ? 470 : 594, yG = v ? 440 : 100, hG = v ? 480 : 580;
+    o += painelAn(xG, yG, wG, hG) + t(xG + 20, yG + 30, "GOVERNADORES DO 2º TURNO — ORDEM DA DEFINIÇÃO", { s: Math.round(14 * k), b: true, c: "#c9d6e6", ls: 1, max: wG - 40 });
+    if (!lst.length) o += t(xG + 20, yG + 70, "nenhum governador definido ainda", { s: Math.round(18 * k), c: C.apagado });
+    var passo = v ? 34 : 40;
+    lst.slice(0, v ? 11 : 12).forEach(function (l, i) {
+      var y = yG + 52 + i * passo;
+      o += r(xG + 14, y, wG - 28, passo - 5, i % 2 ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.07)", 4);
+      o += t(xG + 26, y + passo / 2 + 3, l.h, { s: Math.round(18 * k), b: true }) + t(xG + 96, y + passo / 2 + 3, l.k.toUpperCase(), { s: Math.round(16 * k), b: true, c: "#7fb8ff" });
+      o += t(xG + 140, y + passo / 2 + 3, l.x.nome + " (" + l.x.partido + ")", { s: Math.round(14 * k), b: true, max: wG - 300 });
+      o += t(xG + wG - 26, y + passo / 2 + 3, pct(l.x.urnas) + (l.x.tipo === "tse" ? " · TSE" : " · matemático"), { s: Math.round(12 * k), c: "#c9d6e6", a: "end" });
+    });
+    if (abertos.length) o += t(xG + 20, yG + hG - 18, "ainda em aberto: " + abertos.map(function (x) { return x.toUpperCase(); }).join(" "), { s: Math.round(14 * k), b: true, c: "#ffd8a8", max: wG - 40 });
+    return svg(W, H, o + rodAn(v, "Fonte: TSE — hora do boletim em que a disputa ficou decidida (TSE ou conta com os números do próprio boletim)"));
+  }
+  G["definicao-h"] = function () { return telaDefinicao(false); };
+  G["definicao-v"] = function () { return telaDefinicao(true); };
+
+  // ---- A6. SEM ESTE ESTADO, QUEM VENCERIA? ----------------------------------
+  function telaSemUf(v) {
+    var f = fontePres(false), cs = fin2(f), W = v ? 540 : 1280, H = v ? 960 : 720, tit = "SEM ESTE ESTADO, QUEM VENCERIA?";
+    var sub = "Presidente · a diferença nacional tirando os votos de um estado de cada vez";
+    if (!cs) return vazioAn(v, tit, sub, f, "disponível no 2º turno");
+    var A = cs[0], B = cs[1], M = votosDe(f.br, A) - votosDe(f.br, B);
+    if (!(M > 0)) return vazioAn(v, tit, sub, f, "aguardando as primeiras urnas do 2º turno");
+    var ls = Object.keys(DEP_UF).map(function (k) { var x = f.uf(k); if (!x) return null; var d = votosDe(x, A) - votosDe(x, B); return { k: k, d: d, sem: M - d }; }).filter(Boolean);
+    ls.sort(function (p, q) { return q.d - p.d; });
+    var vira = ls.filter(function (l) { return l.sem < 0; }), o = cabAn(v, W, tit, sub, f), k = v ? 0.82 : 1, xP = v ? 35 : 73, wP = v ? 470 : 1134;
+    o += painelAn(xP, v ? 165 : 100, wP, v ? 120 : 90);
+    o += t(xP + 20, v ? 198 : 134, nomeCurto(A) + " à frente por " + inteiro(M) + " votos", { s: Math.round(24 * k), b: true, max: wP - 40 });
+    o += t(xP + 20, v ? 228 : 166, vira.length ? vira.length + (vira.length === 1 ? " estado" : " estados") + " sozinho(s) mudaria(m) o resultado: " + vira.map(function (l) { return l.k.toUpperCase(); }).join(" ") : "nenhum estado sozinho muda o resultado: a vantagem é maior que o saldo de qualquer estado",
+      { s: Math.round(16 * k), b: true, c: vira.length ? "#ffd8a8" : "#8ce99a", max: wP - 40 });
+    var y0 = v ? 320 : 222, n = v ? 14 : 12, passo = v ? 42 : 38, max = Math.max.apply(null, ls.map(function (l) { return Math.abs(l.d); }).concat([1]));
+    o += t(xP, y0 - 10, "OS ESTADOS QUE MAIS PESAM (saldo de " + nomeCurto(A) + " sobre " + nomeCurto(B) + ")", { s: Math.round(13 * k), b: true, c: "#c9d6e6", ls: 1, max: wP });
+    var top = ls.slice().sort(function (p, q) { return Math.abs(q.d) - Math.abs(p.d); }).slice(0, v ? n : 2 * n);
+    top.forEach(function (l, i) {
+      var col = v ? 0 : Math.floor(i / n), li = v ? i : i % n, wC = v ? 470 : 559, x = xP + col * (wC + 16), y = y0 + li * passo;
+      var c = l.d >= 0 ? A : B, wBar = v ? 110 : 150, wb = wBar * Math.abs(l.d) / max, pn = function (cc) { return String(cc.nome || "").split(" ")[0]; };
+      o += r(x, y, wC, passo - 4, l.sem < 0 ? "rgba(255,216,168,0.12)" : (li % 2 ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.06)"), 4);
+      o += t(x + 10, y + passo / 2 + 4, l.k.toUpperCase(), { s: 15, b: true }) + r(x + 50, y + passo / 2 - 6, Math.max(3, wb), 12, cor(c), 3);
+      o += t(x + 58 + wBar, y + passo / 2 + 4, (l.d >= 0 ? "+" : "−") + milTxt(l.d) + " " + pn(c), { s: Math.round(13 * k), b: true, max: 130 });
+      o += t(x + wC - 10, y + passo / 2 + 4, l.sem < 0 ? "sem ele: " + pn(B) + " vence" : "sem ele: " + pn(A) + " +" + milTxt(l.sem), { s: Math.round(13 * k), b: l.sem < 0, c: l.sem < 0 ? "#ffd8a8" : "#c9d6e6", a: "end", max: wC - wBar - 200 });
+    });
+    return svg(W, H, o + rodAn(v, "Fonte: TSE — conta: diferença nacional (inclui o exterior) menos a diferença do estado · só matemática, sem projeção"));
+  }
+  G["semuf-h"] = function () { return telaSemUf(false); };
+  G["semuf-v"] = function () { return telaSemUf(true); };
+
+  // ---- A7. QUANTO CADA ESTADO SE MOVEU: 2022 -> 2026 ------------------------
+  function telaPendulo(v) {
+    var f = fontePres(false), cs = fin2(f), R = ref22(), W = v ? 540 : 1280, H = v ? 960 : 720, tit = "QUANTO CADA ESTADO SE MOVEU";
+    var sub = "Presidente · 2º turno de 2022 × 2º turno de 2026 · diferença entre os partidos dos dois finalistas";
+    if (!cs) return vazioAn(v, tit, sub, f, "disponível no 2º turno");
+    if (!R) return vazioAn(v, tit, sub, f, "aguardando o 2º turno de 2022 do TSE (ESTADOS.bat)");
+    var A = cs[0], B = cs[1], sa = String(A.partido).toUpperCase(), sb = String(B.partido).toUpperCase();
+    function mov(r22, x26) {
+      if (!r22 || r22[sa] == null || r22[sb] == null || !x26) return null;
+      var a = pctCandAn(x26, A), b = pctCandAn(x26, B); if (a == null || b == null || !(a + b > 0)) return null;
+      var m22 = +r22[sa] - +r22[sb], m26 = a - b; return { m22: m22, m26: m26, s: m26 - m22 };
+    }
+    var nb = mov(R.br, f.br);
+    if (!nb) return vazioAn(v, tit, sub, f, sa + " ou " + sb + " não disputou o 2º turno de 2022: não há o que comparar");
+    var ls = Object.keys(DEP_UF).map(function (k) { var x = f.uf(k); var m = x && x.secoes && x.secoes.pct > 0 ? mov((R.ufs || {})[k], x) : null; return m ? { k: k, m: m } : null; }).filter(Boolean);
+    ls.sort(function (p, q) { return q.m.s - p.m.s; });
+    var o = cabAn(v, W, tit, sub, f), k = v ? 0.82 : 1, xP = v ? 35 : 73, wP = v ? 470 : 1134;
+    function lado(m) { return m >= 0 ? sa + " +" + Math.abs(m).toFixed(1).replace(".", ",") : sb + " +" + Math.abs(m).toFixed(1).replace(".", ","); }
+    o += painelAn(xP, v ? 165 : 100, wP, v ? 110 : 80);
+    o += t(xP + 20, v ? 196 : 132, "BRASIL: 2022 " + lado(nb.m22) + " → 2026 " + lado(nb.m26), { s: Math.round(20 * k), b: true, max: wP - 40 });
+    o += t(xP + 20, v ? 226 : 160, "o país se moveu " + Math.abs(nb.s).toFixed(1).replace(".", ",") + " pontos na direção do " + (nb.s >= 0 ? sa : sb), { s: Math.round(15 * k), c: "#c9d6e6", max: wP - 40 });
+    var y0 = v ? 305 : 210, n = v ? 15 : 13, passo = v ? 40 : 34, max = Math.max.apply(null, ls.map(function (l) { return Math.abs(l.m.s); }).concat([1]));
+    var lv = v ? ls.slice(0, 8).concat(ls.slice(-7)) : ls;
+    lv.slice(0, v ? n : 2 * n + 1).forEach(function (l, i) {
+      var col = v ? 0 : Math.floor(i / (n + 1)), li = v ? i : i % (n + 1), wC = v ? 470 : 559, x = xP + col * (wC + 16), y = y0 + li * passo;
+      var meio = x + 60 + (wC - 200) / 2, wb = ((wC - 200) / 2) * Math.abs(l.m.s) / max, c = l.m.s >= 0 ? A : B;
+      o += r(x, y, wC, passo - 4, li % 2 ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.06)", 4) + t(x + 10, y + passo / 2 + 4, l.k.toUpperCase(), { s: 15, b: true });
+      o += r(meio - 1, y + 3, 2, passo - 10, "rgba(255,255,255,0.35)", 0);
+      o += l.m.s >= 0 ? r(meio + 1, y + passo / 2 - 7, Math.max(3, wb), 12, cor(A), 3) : r(meio - 1 - Math.max(3, wb), y + passo / 2 - 7, Math.max(3, wb), 12, cor(B), 3);
+      o += t(x + wC - 10, y + passo / 2 + 4, Math.abs(l.m.s).toFixed(1).replace(".", ",") + " p.p. → " + (l.m.s >= 0 ? sa : sb), { s: Math.round(12 * k), b: true, a: "end", c: "#c9d6e6" });
+    });
+    return svg(W, H, o + rodAn(v, "Fonte: TSE — 2º turno de Presidente 2022 (final) e 2026 · diferença " + sa + " − " + sb + " em pontos dos votos válidos · 2018 por estado não está nos arquivos do TSE"));
+  }
+  G["pendulo-h"] = function () { return telaPendulo(false); };
+  G["pendulo-v"] = function () { return telaPendulo(true); };
+
+  // ---- A8. VOTO CRUZADO: governador × presidente ----------------------------
+  function telaCruzado(v) {
+    var f = fontePres(false), cs = fin2(f), W = v ? 540 : 1280, H = v ? 960 : 720, tit = "VOTO CRUZADO";
+    var sub = "governador eleito × quem lidera para Presidente no estado · campo = partidos da coligação de cada finalista";
+    if (!cs) return vazioAn(v, tit, sub, f, "disponível no 2º turno");
+    var cA = coligDe(cs[0]), cB = coligDe(cs[1]), grupos = { mesmo: [], oposto: [], fora: [] };
+    Object.keys(DEP_UF).forEach(function (k) {
+      var st = govEstado(k), lp = liderF(f, k);
+      if (!(st.tipo === "eleito1" || st.tipo === "eleito2") || !st.c || !lp) return;
+      var g = normSg(st.c.partido), meu = String(lp.numero) === String(cs[0].numero) ? cA : cB, outro = meu === cA ? cB : cA;
+      var cls = meu.indexOf(g) >= 0 ? "mesmo" : outro.indexOf(g) >= 0 ? "oposto" : "fora";
+      grupos[cls].push({ k: k, gov: st.c, pres: lp });
+    });
+    var n = grupos.mesmo.length + grupos.oposto.length + grupos.fora.length;
+    if (!n) return vazioAn(v, tit, sub, f, "aguardando governadores eleitos e o Presidente nos estados");
+    var o = cabAn(v, W, tit, sub, f), k = v ? 0.82 : 1;
+    var cols = [["oposto", "CAMPO OPOSTO", "#ffd8a8", "governador da coligação do adversário de quem lidera ali"], ["mesmo", "MESMO CAMPO", "#8ce99a", "governador da coligação de quem lidera ali"], ["fora", "FORA DAS DUAS", "#c9d6e6", "partido do governador não está em nenhuma das duas coligações"]];
+    cols.forEach(function (cc, j) {
+      var ls = grupos[cc[0]], x = v ? 35 : 73 + j * 383, y = v ? 165 + j * 255 : 100, w = v ? 470 : 367, h = v ? 245 : 580;
+      o += painelAn(x, y, w, h) + r(x, y, w, 5, cc[2], 3);
+      o += t(x + 16, y + 36 * k, cc[1], { s: Math.round(20 * k), b: true, c: cc[2] }) + t(x + w - 16, y + 36 * k, ls.length + (ls.length === 1 ? " estado" : " estados"), { s: Math.round(18 * k), b: true, a: "end" });
+      o += t(x + 16, y + 56 * k, cc[3], { s: Math.round(11 * k), c: C.apagado, max: w - 32 });
+      var passo = v ? 28 : 44, max = v ? 5 : 11;
+      ls.slice(0, max).forEach(function (l, i) {
+        var yy = y + (v ? 78 : 78) + i * passo;
+        o += t(x + 16, yy + 16, l.k.toUpperCase(), { s: Math.round(15 * k), b: true });
+        o += t(x + 56, yy + (v ? 16 : 10), "gov " + l.gov.nome + " (" + l.gov.partido + ")", { s: Math.round(12 * k), b: true, max: w - 72 });
+        if (!v) o += t(x + 56, yy + 28, "pres: " + nomeCurto(l.pres) + " " + pct(l.pres.pct), { s: 12, c: "#c9d6e6", max: w - 72 });
+      });
+      if (ls.length > max) o += t(x + 16, y + h - 12, "+ " + (ls.length - max) + ": " + ls.slice(max).map(function (l) { return l.k.toUpperCase(); }).join(" "), { s: Math.round(12 * k), c: C.apagado, max: w - 32 });
+    });
+    return svg(W, H, o + rodAn(v, "Fonte: TSE — governador eleito (1º ou 2º turno), Presidente no estado e coligações registradas · " + nomeCurto(cs[0]) + ": " + cA.join(", ") + " · " + nomeCurto(cs[1]) + ": " + cB.join(", ")));
+  }
+  G["cruzado-h"] = function () { return telaCruzado(false); };
+  G["cruzado-v"] = function () { return telaCruzado(true); };
+
+  // ---- A9. PERFIL DO ELEITORADO × RESULTADO --------------------------------
+  function perfilUf(k) {
+    var P = window.GCTSE_PERFIL, x = P && P.eleitorado && P.eleitorado.ufs ? P.eleitorado.ufs[k] : null; if (!x) return null;
+    function fr(d, rots) { var gp = agruparPerfil(x, d); if (!gp || !gp.inf) return null; var s = 0; gp.itens.forEach(function (it) { if (rots.indexOf(it.rot) >= 0) s += it.a; }); return 100 * s / gp.inf; }
+    return { sup: fr("escolaridade", ["Superior"]), jov: fr("idade", ["16 e 17", "18 a 24"]), ido: fr("idade", ["60 a 69", "70 ou mais"]), mul: fr("genero", ["Mulheres"]) };
+  }
+  function telaPerfilRes(v) {
+    var f = fontePres(false), cs = fin2(f), W = v ? 540 : 1280, H = v ? 960 : 720, tit = "PERFIL DO ELEITORADO × RESULTADO";
+    var sub = "os estados com mais eleitores de cada perfil e quem lidera para Presidente em cada um";
+    if (!cs) return vazioAn(v, tit, sub, f, "disponível no 2º turno");
+    var ls = Object.keys(DEP_UF).map(function (k) { var p = perfilUf(k), l = liderF(f, k); return p && l ? { k: k, p: p, l: l } : null; }).filter(Boolean);
+    if (!ls.length) return vazioAn(v, tit, sub, f, "importe o perfil do eleitorado por estado (IMPORTAR-PERFIL-ELEITOR.bat)");
+    var o = cabAn(v, W, tit, sub, f), k = v ? 0.82 : 1;
+    var pain = [["sup", "MAIS ENSINO SUPERIOR"], ["jov", "MAIS JOVENS (16 A 24 ANOS)"], ["ido", "MAIS IDOSOS (60 ANOS OU MAIS)"], ["supMenos", "MENOS ENSINO SUPERIOR"]];
+    pain.forEach(function (pn, j) {
+      var campo = pn[0] === "supMenos" ? "sup" : pn[0], vs = ls.filter(function (l) { return l.p[campo] != null; }).sort(function (a, b) { return pn[0] === "supMenos" ? a.p[campo] - b.p[campo] : b.p[campo] - a.p[campo]; }).slice(0, v ? 5 : 6);
+      var x = v ? 35 : 73 + (j % 2) * 575, y = v ? 165 + j * 192 : 100 + Math.floor(j / 2) * 296, w = v ? 470 : 559, h = v ? 182 : 284;
+      var placar = {}; vs.forEach(function (l) { placar[l.l.numero] = (placar[l.l.numero] || 0) + 1; });
+      var cTop = cs.filter(function (c) { return placar[c.numero]; }).sort(function (a, b) { return placar[b.numero] - placar[a.numero]; })[0];
+      o += painelAn(x, y, w, h) + t(x + 16, y + 28 * k, pn[1], { s: Math.round(14 * k), b: true, c: "#c9d6e6", ls: 1, max: w - 32 });
+      if (cTop) o += t(x + w - 16, y + 28 * k, String(cTop.nome).split(" ")[0] + " lidera em " + placar[cTop.numero] + " de " + vs.length, { s: Math.round(13 * k), b: true, a: "end", c: "#ffd8a8" });
+      var passo = v ? 28 : 40;
+      vs.forEach(function (l, i) {
+        var yy = y + (v ? 42 : 46) + i * passo;
+        o += r(x + 12, yy, w - 24, passo - 4, i % 2 ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.07)", 4);
+        o += t(x + 22, yy + passo / 2 + 3, l.k.toUpperCase(), { s: Math.round(15 * k), b: true }) + t(x + 64, yy + passo / 2 + 3, pct1v(l.p[campo]) + " do eleitorado", { s: Math.round(13 * k), c: "#c9d6e6" });
+        o += r(x + w - 230, yy + 5, 5, passo - 14, cor(l.l), 2) + t(x + w - 218, yy + passo / 2 + 3, String(l.l.nome).split(" ")[0], { s: Math.round(13 * k), b: true, max: 120 }) + t(x + w - 22, yy + passo / 2 + 3, pct(l.l.pct), { s: Math.round(14 * k), b: true, a: "end" });
+      });
+    });
+    return svg(W, H, o + rodAn(v, "Fonte: TSE — perfil do eleitorado 2026 (Dados Abertos) e boletim de Presidente · descrição lado a lado: não mostra em quem cada grupo votou"));
+  }
+  G["perfilres-h"] = function () { return telaPerfilRes(false); };
+  G["perfilres-v"] = function () { return telaPerfilRes(true); };
+
+  // ---- A10. PRESIDENTE EM CADA CIDADE (mapa por municipio) ------------------
+  var IDX_MUN = { em: "", ibge: {}, nome: {} };
+  function indiceMun() {
+    var R = window.GCTSE_MUN; if (!R || !R.ufs) return null;
+    if (IDX_MUN.em === R.gravado_em) return IDX_MUN;
+    var ib = {}, nm = {};
+    Object.keys(R.ufs).forEach(function (u) { var m = R.ufs[u]; Object.keys(m).forEach(function (cd) { var x = comoLista(m[cd]); var rec = { uf: u, cd: cd, cdi: x[0], nome: x[1], urnas: x[2], votos: x[3] || {}, l1: x[4], p1: x[5] }; if (rec.cdi) ib[rec.cdi] = rec; nm[u + "|" + semAcento(rec.nome)] = rec; }); });
+    IDX_MUN = { em: R.gravado_em, ibge: ib, nome: nm };
+    return IDX_MUN;
+  }
+  function alvoMun() {
+    var a = String(window.__gctseAlvo || "").toLowerCase();
+    if (!a) { try { a = (new URLSearchParams(location.search).get("a") || "").toLowerCase(); } catch (e) { a = ""; } }
+    return DEP_UF[a] ? a : "br";
+  }
+  function telaMunMapa(v) {
+    var f = fontePres(false), cs = fin2(f), M = window.MAPA_MUN, R = window.GCTSE_MUN, a = alvoMun(), W = v ? 540 : 1280, H = v ? 960 : 720;
+    var tit = a === "br" ? "PRESIDENTE EM CADA CIDADE" : "CIDADES — " + DEP_UF[a], sub = "quem lidera em cada município · cor forte = vantagem de 15 pontos ou mais";
+    if (!cs) return vazioAn(v, tit, sub, f, "disponível no 2º turno");
+    if (!M || !M.ufs) return vazioAn(v, tit, sub, f, "falta o arquivo do mapa (web\\mapa-municipios.js)");
+    var ix = indiceMun(); if (!ix) return vazioAn(v, tit, sub, f, "aguardando a coleta dos municípios (MUNICIPIOS.bat)");
+    var A = cs[0], B = cs[1], ufsV = a === "br" ? Object.keys(M.ufs) : [a], bb = null;
+    ufsV.forEach(function (u) { var b = M.ufs[u] && M.ufs[u].bbox; if (!b) return; bb = bb ? [Math.min(bb[0], b[0]), Math.min(bb[1], b[1]), Math.max(bb[2], b[2]), Math.max(bb[3], b[3])] : b.slice(); });
+    if (!bb) return vazioAn(v, tit, sub, f, "estado sem mapa");
+    var ax = v ? 35 : 73, ay = v ? 165 : 100, aw = v ? 470 : 700, ah = v ? 520 : 590;
+    var esc0 = Math.min(aw / (bb[2] - bb[0]), ah / (bb[3] - bb[1])), ox = ax + (aw - (bb[2] - bb[0]) * esc0) / 2 - bb[0] * esc0, oy = ay + (ah - (bb[3] - bb[1]) * esc0) / 2 - bb[1] * esc0;
+    var cont = { A: 0, B: 0, sem: 0, virouA: 0, virouB: 0, lidos: 0, fim: 0 }, paths = "", sw = (0.5 / esc0).toFixed(2);
+    ufsV.forEach(function (u) {
+      var mm = (M.ufs[u] || {}).mun || {};
+      Object.keys(mm).forEach(function (ib) {
+        var mun = mm[ib], rec = ix.ibge[ib] || ix.nome[u + "|" + semAcento(mun[0])], va = rec ? +rec.votos[A.numero] || 0 : 0, vb = rec ? +rec.votos[B.numero] || 0 : 0, fill = C.semDado, op = 1;
+        if (rec) { cont.lidos++; if (+rec.urnas >= 100) cont.fim++; }
+        if (va + vb > 0) {
+          var lA = va >= vb, mg = Math.abs(va - vb) / (va + vb) * 100; fill = cor(lA ? A : B); op = mg >= 15 ? 1 : mg >= 5 ? 0.72 : 0.45;
+          if (lA) cont.A++; else cont.B++;
+          if (rec.l1 && String(rec.l1) !== String(lA ? A.numero : B.numero) && (String(rec.l1) === String(A.numero) || String(rec.l1) === String(B.numero))) { if (lA) cont.virouA++; else cont.virouB++; }
+        } else cont.sem++;
+        paths += '<path d="' + mun[1] + '" fill="' + fill + '"' + (op < 1 ? ' fill-opacity="' + op + '"' : "") + ' stroke="#0b1220" stroke-width="' + sw + '"/>';
+      });
+    });
+    var o = cabAn(v, W, tit, sub, f) + '<g transform="translate(' + ox.toFixed(1) + " " + oy.toFixed(1) + ") scale(" + esc0.toFixed(5) + ')">' + paths + "</g>";
+    var xs = v ? 35 : 800, ys = v ? 700 : 110, ws = v ? 470 : 407, k = v ? 0.85 : 1;
+    o += painelAn(xs, ys, ws, v ? 220 : 570);
+    var tot = cont.A + cont.B;
+    [A, B].forEach(function (c, i) {
+      var n = i ? cont.B : cont.A, yy = ys + (v ? 34 : 44) + i * (v ? 62 : 92);
+      o += r(xs + 16, yy - 22 * k, 6, 50 * k, cor(c), 2) + t(xs + 32, yy, nomeCurto(c), { s: Math.round(20 * k), b: true, max: ws - 160 }) + t(xs + ws - 16, yy, inteiro(n), { s: Math.round(30 * k), b: true, a: "end" });
+      o += t(xs + 32, yy + 22 * k, "lidera em " + (tot ? pct(100 * n / tot).replace(",00", "") : "—") + " das cidades com voto", { s: Math.round(13 * k), c: "#c9d6e6" });
+    });
+    var yv = ys + (v ? 164 : 250);
+    if (D().turno1 && (cont.virouA + cont.virouB) > 0) {
+      o += t(xs + 16, yv, "VIRARAM DESDE O 1º TURNO", { s: Math.round(13 * k), b: true, c: "#ffd8a8", ls: 1 });
+      o += t(xs + 16, yv + 24 * k, nomeCurto(A) + " tomou " + cont.virouA + " · " + nomeCurto(B) + " tomou " + cont.virouB, { s: Math.round(15 * k), b: true, max: ws - 32 });
+    }
+    var yl = ys + (v ? 206 : 340);
+    if (!v) {
+      o += t(xs + 16, yl, "COR", { s: 12, b: true, c: "#c9d6e6", ls: 2 });
+      [[1, "15 pontos ou mais"], [0.72, "5 a 15 pontos"], [0.45, "menos de 5 pontos"]].forEach(function (lg, i) {
+        o += '<rect x="' + (xs + 16) + '" y="' + (yl + 12 + i * 26) + '" width="18" height="16" rx="2" fill="' + cor(A) + '" fill-opacity="' + lg[0] + '"/>' + '<rect x="' + (xs + 38) + '" y="' + (yl + 12 + i * 26) + '" width="18" height="16" rx="2" fill="' + cor(B) + '" fill-opacity="' + lg[0] + '"/>' + t(xs + 66, yl + 25 + i * 26, lg[1], { s: 13, c: "#c9d6e6" });
+      });
+      o += r(xs + 16, yl + 92, 40, 16, C.semDado, 2) + t(xs + 66, yl + 105, "sem voto ainda / sem boletim", { s: 13, c: "#c9d6e6" });
+      o += t(xs + 16, ys + 540, "cidades lidas: " + inteiro(cont.lidos) + " · com 100% das urnas: " + inteiro(cont.fim), { s: 12, c: C.apagado, max: ws - 32 });
+    } else o += t(xs + 16, ys + 206, "lidas: " + inteiro(cont.lidos) + " · 100%: " + inteiro(cont.fim), { s: 11, c: C.apagado });
+    return svg(W, H, o + rodAn(v, "Fonte: TSE — boletim de Presidente de cada município (MUNICIPIOS.bat) · malha municipal: IBGE"));
+  }
+  G["munmapa-h"] = function () { return telaMunMapa(false); };
+  G["munmapa-v"] = function () { return telaMunMapa(true); };
+
   // ---- TELA "AGUARDANDO O TSE" (automatica) ---------------------------------
   // Tela no ar sem o dado de que ela depende (antes das 17h, boletim ainda nao
   // lido, coleta recem-aberta): em vez de numeros zerados, uma tela limpa
   // com o nome da tela. Volta sozinha quando o dado chega.
   var SEM_PRESIDENTE = /^(pres1t|presloc1t|presmapa1t|regioes1t|senado|comparativo|mulheres|perfilcamara|camara|deputados|topdep|topfem|topsenfem|perfileleitor|foiurnas|menosvot|senvotos|gov22|assembleia|assembleias|governadores|govpartido|gov2t|gov12|senadores|senadores1|senadores2)-/;
-  var DE_ESTADOS = /^(camara|deputados|topdep|topfem|topsenfem|menosvot|senvotos|gov22|assembleia|assembleias|governadores|govpartido|gov2t|gov12|senadores|senadores1|senadores2|govpres)-/;
+  var DE_ESTADOS = /^(camara|deputados|topdep|topfem|topsenfem|menosvot|senvotos|gov22|assembleia|assembleias|governadores|govpartido|gov2t|gov12|senadores|senadores1|senadores2|govpres|governab|cruzado|pendulo)-/;
   // Presidente "tem dado" com o boletim do TSE publicado - inclusive ZERADO
   // (o 2o turno sai com 0% antes das 17h: e o dado real, como no app do TSE).
   function temPresidente() { var b = D().br; return !!(b && b.tem); }
@@ -3950,7 +4438,27 @@
       { id: "topfem-v", nome: "10 deputadas mais votadas", f: "v" },
       { id: "topsenfem-v", nome: "Senadoras eleitas", f: "v" },
       { id: "perfileleitor-v", nome: "Perfil do eleitorado", f: "v" },
-      { id: "foiurnas-v", nome: "Quem foi às urnas (perfil)", f: "v" }
+      { id: "foiurnas-v", nome: "Quem foi às urnas (perfil)", f: "v" },
+      { id: "governab-h", nome: "Governabilidade: a base de cada finalista", f: "h" },
+      { id: "capint-h", nome: "Capital × interior", f: "h" },
+      { id: "transf-h", nome: "Para onde foram os votos (estimativa)", f: "h" },
+      { id: "abstdec-h", nome: "A abstenção decidiu?", f: "h" },
+      { id: "definicao-h", nome: "A hora da definição", f: "h" },
+      { id: "semuf-h", nome: "Sem este estado, quem venceria?", f: "h" },
+      { id: "pendulo-h", nome: "Quanto cada estado se moveu (2022 → 2026)", f: "h" },
+      { id: "cruzado-h", nome: "Voto cruzado: governador × presidente", f: "h" },
+      { id: "perfilres-h", nome: "Perfil do eleitorado × resultado", f: "h" },
+      { id: "munmapa-h", nome: "Presidente em cada cidade (mapa)", f: "h" },
+      { id: "governab-v", nome: "Governabilidade: a base de cada finalista", f: "v" },
+      { id: "capint-v", nome: "Capital × interior", f: "v" },
+      { id: "transf-v", nome: "Para onde foram os votos (estimativa)", f: "v" },
+      { id: "abstdec-v", nome: "A abstenção decidiu?", f: "v" },
+      { id: "definicao-v", nome: "A hora da definição", f: "v" },
+      { id: "semuf-v", nome: "Sem este estado, quem venceria?", f: "v" },
+      { id: "pendulo-v", nome: "Quanto cada estado se moveu (2022 → 2026)", f: "v" },
+      { id: "cruzado-v", nome: "Voto cruzado: governador × presidente", f: "v" },
+      { id: "perfilres-v", nome: "Perfil do eleitorado × resultado", f: "v" },
+      { id: "munmapa-v", nome: "Presidente em cada cidade (mapa)", f: "v" }
     ],
     desenhar: function (id) { return desenharTela(id); },
     temDados: function (id) { return temDados(id); },

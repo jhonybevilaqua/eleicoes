@@ -104,7 +104,7 @@
   .sec.presidente { --tema-sec: #1f6fc0; } .sec.local { --tema-sec: #0f8f8f; } .sec.apuracao { --tema-sec: #128a12; }
   .sec.estados { --tema-sec: #8a5a12; } .sec.fav { --tema-sec: #b8860b; }
   .botoes.prontos button { font-weight: 700; }
-  .botoes.prontos button.ativo, .botoes.prontos button.ativo:hover { background: var(--verde); border-color: var(--verde-borda); color: #fff; } .sec.camara { --tema-sec: #7a3fb0; } .sec.comparativos { --tema-sec: #c62828; } .sec.jornalismo { --tema-sec: #b8860b; } .sec.auto { --tema-sec: #5a6b80; }
+  .botoes.prontos button.ativo, .botoes.prontos button.ativo:hover { background: var(--verde); border-color: var(--verde-borda); color: #fff; } .sec.camara { --tema-sec: #7a3fb0; } .sec.comparativos { --tema-sec: #c62828; } .sec.jornalismo { --tema-sec: #b8860b; } .sec.analise { --tema-sec: #0f8a8a; } .sec.auto { --tema-sec: #5a6b80; }
   :root.escuro .sec { background: #172234; }
   .sec button { background: var(--cartao); }
   .sec button:hover { background: var(--bt-hover); }
@@ -293,7 +293,7 @@
   <span class="rot rot-mostrar" style="margin-left:10px">MOSTRAR:</span>
   <button type="button" data-mostra="hv">as duas</button><button type="button" data-mostra="h">só horizontal</button><button type="button" data-mostra="v">só vertical</button>
   <a id="outraSaida" href="#" target="_blank" hidden style="font-weight:700"></a>
-  <button type="button" class="so-local" id="navColetas" style="margin-left:10px" title="abre na hora o que estiver fechado: GRAFICOS.bat (Presidente), ESTADOS.bat (governador, senado, Câmara) e os OBS das saídas">▶ ABRIR COLETAS</button>
+  <button type="button" class="so-local" id="navColetas" style="margin-left:10px" title="abre na hora o que estiver fechado: GRAFICOS.bat (Presidente), ESTADOS.bat (governador, senado, Câmara), MUNICIPIOS.bat (Presidente em cada cidade) e os OBS das saídas">▶ ABRIR COLETAS</button>
   <button type="button" id="navMon" title="abre a janela MONITOR: NO AR e PRÉVIA das duas saídas (ponha no 2º monitor)">🖥 abrir monitor ↗</button>
   <button type="button" id="navMonModo" title="onde ficam as imagens do NO AR e da PRÉVIA">monitor: …</button>
   <button type="button" class="so-local" id="navDados" style="margin-left:10px" title="baixar e importar os dados do TSE">📥 dados do TSE</button>
@@ -332,6 +332,8 @@
 <script charset="utf-8" src="estados.js"></script>
 <script charset="utf-8" src="candidatos-genero.js"></script>
 <script charset="utf-8" src="perfil-eleitor.js"></script>
+<script charset="utf-8" src="mapa-municipios.js"></script>
+<script charset="utf-8" src="municipios.js"></script>
 <script>
 (function () {
   "use strict";
@@ -587,7 +589,7 @@
     // estado tem BRASIL na primeira linha. Tela nova que nao estiver em
     // nenhuma aba cai em PRESIDENTE > "outras" (nada some do painel).
     var ABAS = [["vivo", "★ AO VIVO"], ["gov", "GOVERNADORES"], ["comp", "COMPARATIVOS 1º × 2º"], ["pres", "PRESIDENTE"],
-                ["leg", "SENADO E CÂMARA"], ["est", "ESTADOS E RESUMO"], ["jorn", "JORNALISMO"], ["auto", "AUTOMÁTICO"]];
+                ["leg", "SENADO E CÂMARA"], ["est", "ESTADOS E RESUMO"], ["jorn", "JORNALISMO"], ["anal", "ANÁLISE POLÍTICA"], ["auto", "AUTOMÁTICO"]];
     var panes = {}, abaAtual = "vivo";
     try { abaAtual = localStorage.getItem("gctse-aba-" + S.id) || "vivo"; } catch (e) { }
     if (!ABAS.some(function (x) { return x[0] === abaAtual; })) abaAtual = "vivo";
@@ -736,6 +738,29 @@
     // ---------------- JORNALISMO ----------------
     // Genero = IMPORTAR-CANDIDATOS.bat; perfil do eleitor = IMPORTAR-PERFIL-ELEITOR.bat
     botoesEm(blocoEm("jorn", "jornalismo", "JORNALISMO"), itensDe(["topfem", "topsenfem", "perfileleitor", "foiurnas"]));
+
+    // ---------------- ANALISE POLITICA (3.28) ----------------
+    // 10 telas para o debate: base no Congresso, capital x interior, para onde
+    // foram os votos, abstencao, hora da definicao, peso dos estados, 2022 x
+    // 2026, voto cruzado, perfil x resultado e o mapa por municipio.
+    var gAn = blocoEm("anal", "analise", "ANÁLISE POLÍTICA — números para o debate");
+    function subAn(tit, itens) { if (!itens.length) return; var d = document.createElement("div"); d.className = "sub2"; d.innerHTML = '<span class="rot2">' + tit + "</span>"; gAn.appendChild(d); botoesEm(d, itens); }
+    subAn("PODER", itensDe(["governab", "cruzado"]));
+    subAn("O VOTO", itensDe(["transf", "abstdec", "capint", "perfilres"]));
+    subAn("A DISPUTA", itensDe(["definicao", "semuf", "pendulo"]));
+    if (existe("munmapa-" + S.f)) {
+      usados["munmapa-" + S.f] = 1;
+      var gMun = blocoEm("anal", "local", "PRESIDENTE EM CADA CIDADE — mapa por município (MUNICIPIOS.bat)");
+      linhaBrasil(gMun, "munmapa-" + S.f, "", "todas as cidades do país", "munmapa-" + S.f);
+      var mregs = document.createElement("div"); mregs.className = "regs";
+      REGIOES_MENU.forEach(function (rg) {
+        var lb = document.createElement("span"); lb.className = "reg"; lb.textContent = rg[0]; lb.style.cssText = "font-weight:800;letter-spacing:1px;padding:6px 4px"; mregs.appendChild(lb);
+        var bx = document.createElement("div"); bx.className = "ufs";
+        rg[2].forEach(function (u) { bx.appendChild(botao(u.toUpperCase(), function () { definir(S.id, "munmapa-" + S.f, "alvo:" + u); }, "munmapa-" + S.f + "|alvo:" + u)); });
+        mregs.appendChild(bx);
+      });
+      gMun.appendChild(mregs);
+    }
 
     // ---------------- AUTOMATICO ----------------
     var gA = blocoEm("auto", "auto", "AUTOMÁTICO");
@@ -1314,8 +1339,8 @@
   function verColetas(abrir) {
     return fetch("/coletas?" + (abrir ? "abrir=1&" : "") + "t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (c) {
       var falta = [];
-      if (!c.graficos) falta.push("GRAFICOS"); if (!c.estados) falta.push("ESTADOS");
-      bCol.textContent = falta.length ? "▶ ABRIR COLETAS (fechado: " + falta.join(" e ") + ")" : "✓ coletas abertas";
+      if (!c.graficos) falta.push("GRAFICOS"); if (!c.estados) falta.push("ESTADOS"); if (c.municipios === false) falta.push("MUNICIPIOS");
+      bCol.textContent = falta.length ? "▶ ABRIR COLETAS (fechado: " + falta.join(", ") + ")" : "✓ coletas abertas";
       bCol.classList.toggle("falta", falta.length > 0);
       if (abrir && c.msg && /ENSAIO/.test(c.msg)) toast({ tipo: "info", hora: new Date().toTimeString().slice(0, 8), texto: c.msg });   // o resto vem pelas OCORRENCIAS
     }).catch(function () { });
@@ -1325,6 +1350,7 @@
   setInterval(filtrarVazias, 10000);
   // genero dos candidatos e perfil do eleitor: arquivos dos importadores
   setInterval(function () { recarregar("candidatos-genero.js"); recarregar("perfil-eleitor.js"); }, 60000);
+  setInterval(function () { recarregar("municipios.js"); }, 30000);
   setInterval(function () { recarregar("dados.js"); recarregar("estados.js"); }, 3000);
 })();
 </script>
