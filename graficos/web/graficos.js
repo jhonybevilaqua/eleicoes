@@ -1200,7 +1200,7 @@
     for (var ip = 0; ip < bruta.length;) {
       var jp = ip;
       while (jp + 1 < bruta.length && Math.abs(bruta[jp + 1].u - bruta[ip].u) < 0.15) jp++;
-      if (bruta[jp].ms - bruta[ip].ms >= 20 * 60000) pausas.push({ a: bruta[ip].ms, b: bruta[jp].ms });
+      if (bruta[jp].ms - bruta[ip].ms >= 20 * 60000 && bruta[ip].u < 99) pausas.push({ a: bruta[ip].ms, b: bruta[jp].ms });   // com ~100% e o fim, nao pausa
       ip = jp > ip ? jp : ip + 1;
     }
     // VIRADAS entre o 1o e o 2o, pelo boletim exato (sem os 10 minutos)
@@ -1311,11 +1311,13 @@
         var vx = X(q.ms), vy = Y((q.va + q.vb) / 2), ult = iq === vs.length - 1;
         o += '<line x1="' + vx.toFixed(1) + '" x2="' + vx.toFixed(1) + '" y1="' + y0 + '" y2="' + y1 + '" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="5 6" opacity="' + (ult ? 0.5 : 0.35) + '"/>';
         o += '<circle cx="' + vx.toFixed(1) + '" cy="' + vy.toFixed(1) + '" r="' + (ult ? 6 : 4.5) * k + '" fill="none" stroke="#ffffff" stroke-width="2" opacity="0.8"/>';
-        if (!ult) o += t(vx, y0 + 16 * k, hhmm(q.ms), { s: Math.round(12 * k), b: true, c: "#a5d8ff", a: "middle", extra: HALO });
+        // horario das viradas anteriores (longe do rotulo da 1a divulgacao)
+        if (!ult && vx - x0 > 150 * k) o += t(vx, y0 + 16 * k, hhmm(q.ms), { s: Math.round(12 * k), b: true, c: "#a5d8ff", a: "middle", extra: HALO });
       });
       var qv = vs[vs.length - 1], bx = X(qv.ms), txt1 = "VIRADA ÀS " + hhmm(qv.ms), txt2 = qv.lider + " assume a liderança" + (vs.length > 1 ? " · " + vs.length + " viradas na noite" : "");
       // discreto: caixa azul-clara, letras escuras e pequenas
       var bw = Math.max(txt1.length * 8.6, txt2.length * 6.2) * k + 26 * k, bh = 40 * k, bxx = Math.min(Math.max(bx + 10 * k, x0), x1 - bw), byy = y0 + 8 * k;
+      if (bxx < x0 + 150 * k) byy = y1 - bh - 10 * k;      // perto do inicio: embaixo, longe da 1a divulgacao
       o += r(bxx, byy, bw, bh, "#a5d8ff", 5) +
         t(bxx + 10 * k, byy + 17 * k, txt1, { s: Math.round(13 * k), b: true, c: "#0b1220", ls: 1 }) +
         t(bxx + 10 * k, byy + 32 * k, txt2, { s: Math.round(10 * k), b: true, c: "#1b2a44", max: bw - 18 * k });
@@ -1363,7 +1365,7 @@
   function rodapeEvolucao(ev) {
     var b = br(), n = ev.pontos.length, exib = ev.origem === "log do exibidor", log = !!ev.origem;
     return "Fonte: TSE · % dos votos válidos de 10 em 10 minutos (" + n + (n === 1 ? " ponto" : " pontos") +
-      (ev.origem === "log do exibidor 2t" ? ", refeitos do log do exibidor" : exib ? ", gravados pelo exibidor: só o 1º colocado a cada ciclo" : (log ? ", gravados pelo sistema de tarjas no ar" : ", horário do TSE")) + ")" +
+      (ev.origem === "historico do TSE" ? ", histórico de totalização do TSE" : ev.origem === "log do exibidor 2t" ? ", refeitos do log do exibidor" : exib ? ", gravados pelo exibidor: só o 1º colocado a cada ciclo" : (log ? ", gravados pelo sistema de tarjas no ar" : ", horário do TSE")) + ")" +
       (b && b.secoes && b.secoes.pct != null ? " · urnas apuradas " + pct(b.secoes.pct) : "");
   }
   G["evolucao-h"] = function () {

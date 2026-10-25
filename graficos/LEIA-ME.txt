@@ -189,7 +189,13 @@
    CODIGOS-2-TURNO.bat ....... grava os codigos do 2o turno do TSE (pede S)
    COPIA-DE-SEGURANCA.bat .... .zip da pasta inteira (= botao "copia")
    IMPORTAR-EVOLUCAO.bat ..... refaz o "minuto a minuto" se o historico
-                               (evolucao-*.json) se perdeu: le o log das
+                               (evolucao-*.json) se perdeu. MELHOR: o
+                               "BR - Historico totalizacao Presidente 2o
+                               Turno" do Portal de Dados Abertos do TSE
+                               (Historico_Totalizacao_Presidente_BR_2T_
+                               2026.zip, publicado depois da eleicao) na
+                               pasta importar - a noite inteira, oficial.
+                               Sem ele: le o log das
                                TARJAS (gctse-AAAA-MM-DD.log, os dois
                                candidatos) ou o logs\graficos-*.log deste
                                computador. Arraste o log sobre o .bat ou

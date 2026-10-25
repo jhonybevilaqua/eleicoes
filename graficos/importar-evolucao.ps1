@@ -15,6 +15,12 @@
     arquivos (ou a pasta logs inteira) sobre IMPORTAR-EVOLUCAO.bat. Sem
     arrastar nada, procura na pasta "importar" ao lado deste arquivo.
     Pode rodar com o GRAFICOS.bat aberto: ele recarrega sozinho.
+
+    MELHOR FONTE (3.28.4): o "BR - Historico totalizacao Presidente 2o Turno"
+    que o TSE publica no Portal de Dados Abertos depois da eleicao
+    (Historico_Totalizacao_Presidente_BR_2T_AAAA.zip ou .csv) - cada
+    totalizacao da noite, com a hora do TSE. Se estiver na pasta importar
+    (ou arrastado, ou em Downloads/Area de Trabalho), e usado no lugar dos logs.
 #>
 [CmdletBinding(PositionalBinding = $false)]
 param(
@@ -88,6 +94,108 @@ if ($null -eq $diaEleicao) { Sair "nao sei o dia da eleicao: rode com -Dia AAAA-
 # Apuracao comeca as 17h (Brasilia); vai ate a manha seguinte.
 $janelaIni = $diaEleicao.Date.AddHours(16).AddMinutes(30); $janelaFim = $diaEleicao.Date.AddDays(1).AddHours(8)
 
+# Nome do log -> candidato do boletim do TSE (sem acento; cortado; abreviado).
+function Achar-Candidato([string] $NomeBruto) {
+    $nome = Normalizar $NomeBruto
+    if ($porNome.ContainsKey($nome)) { return $porNome[$nome] }
+    $parecidos = @($porNome.Keys | Where-Object { $_.StartsWith($nome) -or $nome.StartsWith($_) })
+    if ($parecidos.Count -eq 1) { return $porNome[$parecidos[0]] }
+    # abreviado ("F. BOLSONARO"): o unico com uma palavra de 4+ letras igual
+    $palavras = @($nome.Split(' ') | Where-Object { $_.Length -ge 4 })
+    $porPalavra = @($porNome.Keys | Where-Object { $ks = @($_.Split(' ')); @($palavras | Where-Object { $ks -contains $_ }).Count -gt 0 })
+    if ($porPalavra.Count -eq 1) { return $porNome[$porPalavra[0]] }
+    return $null
+}
+# Ordem do tempo; urnas nunca voltam (copia velha); repeticao seguida sai.
+function Limpar($Lista) {
+    $res = New-Object System.Collections.ArrayList
+    foreach ($p in @($Lista | Sort-Object t)) {
+        if ($res.Count -gt 0) {
+            $ant = $res[$res.Count - 1]
+            if ($p.t -eq $ant.t) { $res[$res.Count - 1] = $p; continue }
+            if ($p.u -lt $ant.u) { continue }
+            if ($p.u -eq $ant.u -and (($p.c | ConvertTo-Json -Compress) -eq ($ant.c | ConvertTo-Json -Compress))) { continue }
+        }
+        [void] $res.Add($p)
+    }
+    return ,$res
+}
+
+# ----------------------- HISTORICO DE TOTALIZACAO DO TSE (o melhor, oficial)
+# O TSE publica no Portal de Dados Abertos, depois da eleicao, o "BR -
+# Historico totalizacao Presidente 2o Turno" (Historico_Totalizacao_
+# Presidente_BR_2T_AAAA.zip/.csv): cada totalizacao da noite com a hora do
+# TSE, % de secoes e votos acumulados de cada candidato. Com ele a linha
+# inteira vem do proprio TSE (um ponto a cada 30 s, o ultimo de cada faixa).
+try { Add-Type -AssemblyName System.IO.Compression.FileSystem } catch { }
+try { Add-Type -AssemblyName System.IO.Compression } catch { }
+$Latin1 = [Text.Encoding]::GetEncoding(28591)
+$turnoArq = $(if ($cfg.tse.eleicao_presidente_1turno -and "$($cfg.tse.eleicao_presidente_1turno)" -ne $Eleicao) { "2T" } else { "1T" })
+$padraoHist = '(?i)^Historico_Totalizacao_Presidente_BR_' + $turnoArq + '_\d{4}.*\.(zip|csv|txt)$'
+function Achar-Historico {
+    $lugares = @()
+    if ($null -ne $Caminhos) { $lugares += @($Caminhos | Where-Object { $_ } | ForEach-Object { "$_".Trim('"') }) }
+    $lugares += @((Join-Path $Raiz "importar"), $Raiz)
+    if ($env:USERPROFILE) { $lugares += @((Join-Path $env:USERPROFILE "Downloads"), (Join-Path $env:USERPROFILE "Desktop")) }
+    $ach = @()
+    foreach ($l in $lugares) {
+        if (Test-Path -LiteralPath $l -PathType Leaf) { $it = Get-Item -LiteralPath $l; if ($it.Name -match $padraoHist) { $ach += @($it) }; continue }
+        if (Test-Path -LiteralPath $l -PathType Container) { $ach += @(Get-ChildItem -LiteralPath $l -File -Recurse -Depth 1 -ErrorAction SilentlyContinue | Where-Object { $_.Name -match $padraoHist }) }
+    }
+    return @($ach | Sort-Object LastWriteTime -Descending | Select-Object -First 1)
+}
+function Ler-Historico-Tse($Arq) {
+    $zip = $null; $rd = $null
+    if ($Arq.Extension -match '(?i)\.zip$') {
+        $zip = [IO.Compression.ZipFile]::OpenRead($Arq.FullName)
+        $ent = @($zip.Entries | Where-Object { $_.Name -match '(?i)\.(csv|txt)$' }) | Select-Object -First 1
+        if (-not $ent) { $zip.Dispose(); return @() }
+        $rd = New-Object IO.StreamReader($ent.Open(), $Latin1)
+    } else { $rd = New-Object IO.StreamReader($Arq.FullName, $Latin1) }
+    $faixas = [ordered]@{}
+    try {
+        $cab = @($rd.ReadLine().Split(';') | ForEach-Object { $_.Trim() })
+        $ixH = @{}; for ($i = 0; $i -lt $cab.Count; $i++) { $ixH[$cab[$i].ToUpper()] = $i }
+        $iT = $(if ($ixH.ContainsKey("DT_TOTALIZACAO")) { $ixH["DT_TOTALIZACAO"] } else { -1 })
+        $iS = $(if ($ixH.ContainsKey("PE_SECOES_TOT_ACUMULADO")) { $ixH["PE_SECOES_TOT_ACUMULADO"] } else { -1 })
+        $iUe = $(if ($ixH.ContainsKey("SG_UE_UF")) { $ixH["SG_UE_UF"] } else { -1 })
+        if ($iT -lt 0 -or $iS -lt 0) { Anotar "   $($Arq.Name): sem DT_TOTALIZACAO / PE_SECOES_TOT_ACUMULADO - nao e o historico de totalizacao" "Yellow"; return @() }
+        $colC = @()
+        foreach ($nm in $cab) {
+            if ($nm -notmatch '(?i)_PE_VOTOS_TOT_ACUMULADO$' -or $nm -match '(?i)^(BRANCO|NULO)_') { continue }
+            $nomeC = ($nm -replace '(?i)_PE_VOTOS_TOT_ACUMULADO$', '') -replace '_', ' '
+            $alvo = Achar-Candidato $nomeC
+            if ($null -eq $alvo) { Anotar "   candidato do historico que nao achei no boletim: $nomeC" "Yellow"; continue }
+            $colC += @(@{ i = $ixH[$nm.ToUpper()]; n = "$($alvo.numero)"; nome = $nomeC })
+        }
+        Anotar ("   candidatos no historico: {0}" -f (($colC | ForEach-Object { $_.nome }) -join ", "))
+        if ($colC.Count -lt 2) { return @() }
+        while ($null -ne ($l = $rd.ReadLine())) {
+            $p = $l.Split(';')
+            if ($p.Count -le $iS) { continue }
+            if ($iUe -ge 0 -and $p[$iUe].Trim() -ne "BR") { continue }
+            $q = $null
+            try { $q = [datetime]::ParseExact($p[$iT].Trim(), "dd/MM/yyyy HH:mm:ss", [Globalization.CultureInfo]::InvariantCulture) } catch { continue }
+            $u = Numero-Br $p[$iS]; if ($null -eq $u) { continue }
+            $porC = [ordered]@{}
+            foreach ($cc in $colC) { $v = Numero-Br $p[$cc.i]; if ($null -ne $v) { $porC[$cc.n] = [math]::Round(100 * $v, 2) } }
+            if ($porC.Count -lt 2) { continue }
+            $chF = [math]::Floor($q.Ticks / 300000000)        # faixa de 30 s: fica a ultima
+            $faixas["$chF"] = [pscustomobject]@{ t = $q.ToString("yyyy-MM-ddTHH:mm:ss"); u = [math]::Round(100 * $u, 2); c = [pscustomobject] $porC }
+        }
+    } finally { $rd.Dispose(); if ($zip) { $zip.Dispose() } }
+    return @($faixas.Values)
+}
+$histOk = $false
+$arqHist = @(Achar-Historico)
+if ($arqHist.Count) {
+    Anotar ("historico de totalizacao do TSE: {0}" -f $arqHist[0].FullName) "Cyan"
+    $pontosH = @(Ler-Historico-Tse $arqHist[0])
+    $limpos = Limpar $pontosH
+    if ($limpos.Count -gt 0) { $histOk = $true; $origem = "historico do TSE"; Anotar ("   {0} pontos (um a cada 30 s)" -f $limpos.Count) "Green" }
+    else { Anotar "   nada lido do historico - tento os logs" "Yellow" }
+}
+if (-not $histOk) {
 # --------------------------------------------------------------- arquivos de log
 # Arrastado sobre o .bat: aceita qualquer nome (copia de WhatsApp vira
 # "gctse-2026-10-04 (1).log", o Windows esconde ".txt" etc.). Sem arrastar:
@@ -203,33 +311,6 @@ if ($usar.Count -eq 0 -and $usarExib.Count -eq 0) {
     if ($vistos.Count -gt 0) { Anotar "Logs encontrados:" "Yellow"; foreach ($v in $vistos) { Anotar $v } }
     if ($explicitos) { Anotar ("Recebi do arrastar: {0}" -f (($Caminhos | Where-Object { $_ }) -join " ; ")) "Yellow" }
     Sair ("nenhum log do dia {0} em todos os discos: nem das tarjas (gctse-{1}.log) nem deste exibidor (logs\graficos-{1}.log)." -f $diaEleicao.ToString("dd/MM/yyyy"), $diaEleicao.ToString("yyyy-MM-dd")) 1
-}
-
-# Nome do log -> candidato do boletim do TSE (sem acento; cortado; abreviado).
-function Achar-Candidato([string] $NomeBruto) {
-    $nome = Normalizar $NomeBruto
-    if ($porNome.ContainsKey($nome)) { return $porNome[$nome] }
-    $parecidos = @($porNome.Keys | Where-Object { $_.StartsWith($nome) -or $nome.StartsWith($_) })
-    if ($parecidos.Count -eq 1) { return $porNome[$parecidos[0]] }
-    # abreviado ("F. BOLSONARO"): o unico com uma palavra de 4+ letras igual
-    $palavras = @($nome.Split(' ') | Where-Object { $_.Length -ge 4 })
-    $porPalavra = @($porNome.Keys | Where-Object { $ks = @($_.Split(' ')); @($palavras | Where-Object { $ks -contains $_ }).Count -gt 0 })
-    if ($porPalavra.Count -eq 1) { return $porNome[$porPalavra[0]] }
-    return $null
-}
-# Ordem do tempo; urnas nunca voltam (copia velha); repeticao seguida sai.
-function Limpar($Lista) {
-    $res = New-Object System.Collections.ArrayList
-    foreach ($p in @($Lista | Sort-Object t)) {
-        if ($res.Count -gt 0) {
-            $ant = $res[$res.Count - 1]
-            if ($p.t -eq $ant.t) { $res[$res.Count - 1] = $p; continue }
-            if ($p.u -lt $ant.u) { continue }
-            if ($p.u -eq $ant.u -and (($p.c | ConvertTo-Json -Compress) -eq ($ant.c | ConvertTo-Json -Compress))) { continue }
-        }
-        [void] $res.Add($p)
-    }
-    return ,$res
 }
 
 $re = '^\W{0,3}(\d\d:\d\d:\d\d)\s+\S+\s+NO ARQUIVO\s+(.+?)\s+urnas\s+([\d.,]+)\s*%?\s*\|\s*(.+)$'
@@ -350,6 +431,8 @@ if ($limpos.Count -eq 0) {
     }
     Sair ("nada importado: nenhum registro de Presidente Brasil entre {0} e {1}." -f $janelaIni.ToString("dd/MM HH:mm"), $janelaFim.ToString("dd/MM HH:mm")) 1
 }
+
+}   # fim: sem o historico do TSE, os logs
 
 # ------------------------------------------- junta com o historico que ja existe
 $arqEv = Join-Path $Raiz ("evolucao-{0}-{1}-oficial.json" -f $Ciclo, $Eleicao)
