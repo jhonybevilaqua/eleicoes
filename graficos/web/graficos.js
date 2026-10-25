@@ -1296,14 +1296,16 @@
     if (ss.length === 2 && vs.length) {
       vs.forEach(function (q, iq) {
         var vx = X(q.ms), vy = Y((q.va + q.vb) / 2), ult = iq === vs.length - 1;
-        o += '<line x1="' + vx.toFixed(1) + '" x2="' + vx.toFixed(1) + '" y1="' + y0 + '" y2="' + y1 + '" stroke="#ffd43b" stroke-width="' + (ult ? 2.5 : 1.5) + '" stroke-dasharray="6 5" opacity="' + (ult ? 0.95 : 0.6) + '"/>';
-        o += '<circle cx="' + vx.toFixed(1) + '" cy="' + vy.toFixed(1) + '" r="' + (ult ? 9 : 6) * k + '" fill="none" stroke="#ffd43b" stroke-width="3"/>';
-        if (!ult) o += t(vx, y0 + 18 * k, hhmm(q.ms), { s: Math.round(13 * k), b: true, c: "#ffd43b", a: "middle", extra: HALO });
+        o += '<line x1="' + vx.toFixed(1) + '" x2="' + vx.toFixed(1) + '" y1="' + y0 + '" y2="' + y1 + '" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="5 6" opacity="' + (ult ? 0.5 : 0.35) + '"/>';
+        o += '<circle cx="' + vx.toFixed(1) + '" cy="' + vy.toFixed(1) + '" r="' + (ult ? 6 : 4.5) * k + '" fill="none" stroke="#ffffff" stroke-width="2" opacity="0.8"/>';
+        if (!ult) o += t(vx, y0 + 16 * k, hhmm(q.ms), { s: Math.round(12 * k), b: true, c: "#a5d8ff", a: "middle", extra: HALO });
       });
       var qv = vs[vs.length - 1], bx = X(qv.ms), txt1 = "VIRADA ÀS " + hhmm(qv.ms), txt2 = qv.lider + " assume a liderança" + (vs.length > 1 ? " · " + vs.length + " viradas na noite" : "");
-      var bw = Math.max(txt1.length * 13, txt2.length * 7.6) * k + 28 * k, bh = 54 * k, bxx = Math.min(Math.max(bx - bw / 2, x0), x1 - bw), byy = y0 + 24 * k;
-      o += r(bxx, byy, bw, bh, "#ffd43b", 6) + t(bxx + bw / 2, byy + 24 * k, txt1, { s: Math.round(20 * k), b: true, c: "#0b1220", a: "middle", ls: 1 }) +
-        t(bxx + bw / 2, byy + 44 * k, txt2, { s: Math.round(12 * k), b: true, c: "#0b1220", a: "middle", max: bw - 16 * k });
+      // discreto: caixa azul-clara, letras escuras e pequenas
+      var bw = Math.max(txt1.length * 8.6, txt2.length * 6.2) * k + 26 * k, bh = 40 * k, bxx = Math.min(Math.max(bx + 10 * k, x0), x1 - bw), byy = y0 + 8 * k;
+      o += r(bxx, byy, bw, bh, "#a5d8ff", 5) +
+        t(bxx + 10 * k, byy + 17 * k, txt1, { s: Math.round(13 * k), b: true, c: "#0b1220", ls: 1 }) +
+        t(bxx + 10 * k, byy + 32 * k, txt2, { s: Math.round(10 * k), b: true, c: "#1b2a44", max: bw - 18 * k });
     }
     // linhas, pontos inicial/final e rotulos
     var fins = [];
