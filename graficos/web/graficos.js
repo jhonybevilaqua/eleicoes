@@ -1192,6 +1192,28 @@
     // 3.28.3: na tela, um ponto a cada 10 minutos (o ultimo boletim de cada
     // faixa de 10 min), mais o primeiro e o mais recente. O arquivo continua
     // guardando todos os boletins.
+    var bruta = lista;
+    // 3.28.4: PAUSA = trecho de 20 min ou mais em que as urnas apuradas nao
+    // andaram (menos de 0,15 p.p.) - ex.: 17h06 as 19h03 de 25/10, o TSE
+    // parado. Na tela ele fica estreito (faixa "PAUSA") e o resto ganha espaco.
+    var pausas = [];
+    for (var ip = 0; ip < bruta.length;) {
+      var jp = ip;
+      while (jp + 1 < bruta.length && Math.abs(bruta[jp + 1].u - bruta[ip].u) < 0.15) jp++;
+      if (bruta[jp].ms - bruta[ip].ms >= 20 * 60000) pausas.push({ a: bruta[ip].ms, b: bruta[jp].ms });
+      ip = jp > ip ? jp : ip + 1;
+    }
+    // VIRADAS entre o 1o e o 2o, pelo boletim exato (sem os 10 minutos)
+    var viradas = [];
+    if (cs.length === 2) {
+      var na = String(cs[0].numero), nb = String(cs[1].numero), sAnt = 0;
+      bruta.forEach(function (p) {
+        var va = p.c[na], vb = p.c[nb]; if (va == null || vb == null) return;
+        var sn = +va > +vb ? 1 : (+va < +vb ? -1 : 0); if (!sn) return;
+        if (sAnt && sn !== sAnt) { var lid = sn > 0 ? cs[0] : cs[1]; viradas.push({ ms: p.ms, va: +va, vb: +vb, lider: lid.nome || (nomes[lid.numero] || {}).nome || lid.numero, cor: cor(lid) }); }
+        sAnt = sn;
+      });
+    }
     var DEZ = 600000, faixas = [], fxAnt = null;
     lista.forEach(function (p) { var fx = Math.floor(p.ms / DEZ); if (fx === fxAnt) faixas[faixas.length - 1] = p; else { faixas.push(p); fxAnt = fx; } });
     if (lista.length && faixas[0] !== lista[0]) faixas.unshift(lista[0]);
@@ -1203,7 +1225,7 @@
     // Serie com 1 ponto so (log do exibidor guardou so o 1o colocado): avisa na legenda.
     var maxPts = Math.max.apply(null, series.map(function (s) { return s.pts.length; }).concat([0]));
     series.forEach(function (s) { s.soFinal = maxPts >= 2 && s.pts.length === 1; });
-    return { series: series, pontos: lista, origem: ev.origem || "" };
+    return { series: series, pontos: lista, origem: ev.origem || "", pausas: pausas, viradas: viradas };
   }
   function hhmm(ms) { var x = new Date(ms); return ("0" + x.getHours()).slice(-2) + ":" + ("0" + x.getMinutes()).slice(-2); }
   function pctCurto(v, casas) { return Number(v).toFixed(casas).replace(".", ",") + "%"; }
@@ -1220,7 +1242,15 @@
     var span = Math.max(4, vB - vA + 2), passo = span <= 6 ? 1 : span <= 14 ? 2 : span <= 30 ? 5 : 10;
     var lo = Math.floor((vA - 1) / passo) * passo, hi = Math.ceil((vB + 1) / passo) * passo;
     lo = Math.max(0, lo); hi = Math.min(100, hi); if (hi - lo < passo * 2) hi = lo + passo * 2;
-    var X = function (ms) { return x0 + (x1 - x0) * (ms - tA) / (tB - tA); };
+    // pausas encolhidas: cada uma ocupa ~7% da largura (eixo do tempo
+    // continua na ordem certa; so o trecho parado fica estreito)
+    var pz = (ev.pausas || []).map(function (q) { return { a: Math.max(q.a, tA), b: Math.min(q.b, tB) }; }).filter(function (q) { return q.b - q.a > 0; });
+    var durP = pz.reduce(function (s0, q) { return s0 + (q.b - q.a); }, 0), normal = Math.max(1, (tB - tA) - durP);
+    var larP = pz.length ? Math.min(0.07 * normal / Math.max(0.3, 1 - 0.07 * pz.length), 1e15) : 0;
+    function virt(ms) { var v0 = ms - tA; pz.forEach(function (q) { if (ms > q.a) { var dent = Math.min(ms, q.b) - q.a; v0 += -dent + larP * dent / (q.b - q.a); } }); return v0; }
+    var vTot = Math.max(1, virt(tB));
+    var X = function (ms) { return x0 + (x1 - x0) * virt(ms) / vTot; };
+    var naPausa = function (ms) { return pz.some(function (q) { return ms > q.a && ms < q.b; }); };
     var Y = function (v) { return y1 - (y1 - y0) * (v - lo) / (hi - lo); };
     // grade horizontal + 50% em destaque (maioria no 2o turno)
     for (var g = lo; g <= hi + 1e-9; g += passo) {
@@ -1230,14 +1260,27 @@
       o += t(x0 - 12 * k, +gy + 6 * k, g + "%", { s: Math.round(16 * k), c: meio ? C.texto : C.apagado, a: "end", b: meio });
     }
     // eixo de horas: intervalo "redondo" que de ate maxTicks marcas
-    var min = (tB - tA) / 60000, opc = [1, 2, 5, 10, 15, 20, 30, 60, 120, 180, 240], iv = opc[opc.length - 1];
+    var min = (pz.length ? normal : (tB - tA)) / 60000, opc = [1, 2, 5, 10, 15, 20, 30, 60, 120, 180, 240], iv = opc[opc.length - 1];
     for (var i = 0; i < opc.length; i++) if (min / opc[i] <= maxTicks - 1) { iv = opc[i]; break; }
     var ivMs = iv * 60000, primeiro = Math.ceil(tA / ivMs) * ivMs, ultimoX = -1e9;
     var tz = new Date(tA).getTimezoneOffset() * 60000;   // marcas na hora cheia LOCAL
     primeiro = Math.ceil((tA - tz) / ivMs) * ivMs + tz;
     var todos = ev.pontos, marcas = [tA];
-    for (var mm = primeiro; mm <= tB; mm += ivMs) if (X(mm) - X(tA) >= 70 * k) marcas.push(mm);
+    for (var mm = primeiro; mm <= tB; mm += ivMs) if (X(mm) - X(tA) >= 70 * k && !naPausa(mm)) marcas.push(mm);
+    pz.forEach(function (q) { marcas.push(q.b); });
+    marcas.sort(function (p, q) { return p - q; });
     if (unico) { marcas = [(tA + tB) / 2]; o += t((x0 + x1) / 2, y1 - 24 * k, "1 boletim gravado: a linha começa no próximo boletim do TSE", { s: Math.round(16 * k), c: C.apagado, a: "middle" }); }
+    // faixa da pausa
+    pz.forEach(function (q) {
+      var pa = X(q.a), pb = X(q.b), pm = (pa + pb) / 2;
+      o += r(pa, y0, Math.max(2, pb - pa), y1 - y0, "rgba(255,255,255,0.06)", 0);
+      o += '<line x1="' + pa.toFixed(1) + '" x2="' + pa.toFixed(1) + '" y1="' + y0 + '" y2="' + y1 + '" stroke="rgba(255,255,255,0.22)" stroke-dasharray="3 5"/>';
+      o += '<line x1="' + pb.toFixed(1) + '" x2="' + pb.toFixed(1) + '" y1="' + y0 + '" y2="' + y1 + '" stroke="rgba(255,255,255,0.22)" stroke-dasharray="3 5"/>';
+      o += t(pm, y1 + 10 * k, "//", { s: Math.round(16 * k), b: true, c: C.apagado, a: "middle" });
+    });
+    // explicacao da faixa embaixo do eixo (em cima ficam os % da 1a divulgacao)
+    if (pz.length) o += r(x0, y1 + 58 * k, 14 * k, 12 * k, "rgba(255,255,255,0.18)", 2) +
+      t(x0 + 22 * k, y1 + 69 * k, "PAUSA " + pz.map(function (q) { return hhmm(q.a) + "–" + hhmm(q.b); }).join(", ") + ": urnas sem avanço, trecho encolhido no gráfico", { s: Math.round(13 * k), b: true, c: C.apagado, max: (x1 - x0) });
     marcas.forEach(function (m) {
       var mx = X(m); if (mx - ultimoX < 70 * k) return; ultimoX = mx;
       o += '<line x1="' + mx.toFixed(1) + '" x2="' + mx.toFixed(1) + '" y1="' + y0 + '" y2="' + y1 + '" stroke="rgba(255,255,255,0.06)"/>';
@@ -1246,21 +1289,21 @@
       if (ant && ant.u >= 0) o += t(mx, y1 + 46 * k, "urnas " + pctCurto(ant.u, ant.u < 10 ? 1 : 0), { s: Math.round(13 * k), c: C.apagado2, a: "middle" });
     });
     o += '<line x1="' + x0 + '" x2="' + x1 + '" y1="' + y1 + '" y2="' + y1 + '" stroke="rgba(255,255,255,0.25)"/>';
-    // virada: ultimo boletim em que o 1o e o 2o trocaram de posicao
-    if (ss.length === 2) {
-      var a = ss[0], b = ss[1], mapa = {}, virada = null, antes = null;
-      b.pts.forEach(function (p) { mapa[p.ms] = p.v; });
-      a.pts.forEach(function (p) {
-        if (mapa[p.ms] == null) return;
-        var sinal = p.v > mapa[p.ms] ? 1 : (p.v < mapa[p.ms] ? -1 : 0);
-        if (sinal && antes && sinal !== antes) virada = p.ms;
-        if (sinal) antes = sinal;
+    // 3.28.4: VIRADA entre o 1o e o 2o, pelo boletim exato do TSE. Cada
+    // virada: linha amarela e o horario; a ultima ganha o selo grande com
+    // quem passou a liderar.
+    var vs = (ev.viradas || []).filter(function (q) { return q.ms >= tA && q.ms <= tB; });
+    if (ss.length === 2 && vs.length) {
+      vs.forEach(function (q, iq) {
+        var vx = X(q.ms), vy = Y((q.va + q.vb) / 2), ult = iq === vs.length - 1;
+        o += '<line x1="' + vx.toFixed(1) + '" x2="' + vx.toFixed(1) + '" y1="' + y0 + '" y2="' + y1 + '" stroke="#ffd43b" stroke-width="' + (ult ? 2.5 : 1.5) + '" stroke-dasharray="6 5" opacity="' + (ult ? 0.95 : 0.6) + '"/>';
+        o += '<circle cx="' + vx.toFixed(1) + '" cy="' + vy.toFixed(1) + '" r="' + (ult ? 9 : 6) * k + '" fill="none" stroke="#ffd43b" stroke-width="3"/>';
+        if (!ult) o += t(vx, y0 + 18 * k, hhmm(q.ms), { s: Math.round(13 * k), b: true, c: "#ffd43b", a: "middle", extra: HALO });
       });
-      if (virada != null) {
-        var vx = X(virada).toFixed(1);
-        o += '<line x1="' + vx + '" x2="' + vx + '" y1="' + y0 + '" y2="' + y1 + '" stroke="rgba(255,255,255,0.55)" stroke-width="2" stroke-dasharray="4 5"/>';
-        o += t(+vx + 8 * k, y0 + 24 * k, "VIRADA · " + hhmm(virada), { s: Math.round(15 * k), b: true, ls: 1, extra: HALO });
-      }
+      var qv = vs[vs.length - 1], bx = X(qv.ms), txt1 = "VIRADA ÀS " + hhmm(qv.ms), txt2 = qv.lider + " assume a liderança" + (vs.length > 1 ? " · " + vs.length + " viradas na noite" : "");
+      var bw = Math.max(txt1.length * 13, txt2.length * 7.6) * k + 28 * k, bh = 54 * k, bxx = Math.min(Math.max(bx - bw / 2, x0), x1 - bw), byy = y0 + 24 * k;
+      o += r(bxx, byy, bw, bh, "#ffd43b", 6) + t(bxx + bw / 2, byy + 24 * k, txt1, { s: Math.round(20 * k), b: true, c: "#0b1220", a: "middle", ls: 1 }) +
+        t(bxx + bw / 2, byy + 44 * k, txt2, { s: Math.round(12 * k), b: true, c: "#0b1220", a: "middle", max: bw - 16 * k });
     }
     // linhas, pontos inicial/final e rotulos
     var fins = [];
@@ -1275,6 +1318,7 @@
     // inicio: acima de quem comeca na frente, abaixo de quem comeca atras
     if (fins.length === 2 && fins[0].p0.ms === fins[1].p0.ms && (fins[0].p0.ms !== fins[0].pf.ms)) {
       var cima = fins[0].y0 <= fins[1].y0 ? fins[0] : fins[1], baixo = cima === fins[0] ? fins[1] : fins[0];
+      o += t(x0 + 4 * k, cima.y0 - 38 * k, "1ª DIVULGAÇÃO · " + hhmm(cima.p0.ms), { s: Math.round(12 * k), b: true, c: C.apagado, ls: 1, extra: HALO });
       o += t(x0 + 4 * k, cima.y0 - 14 * k, pctCurto(cima.p0.v, 2), { s: Math.round(20 * k), b: true, c: cima.s.cor, extra: HALO });
       o += t(x0 + 4 * k, baixo.y0 + 30 * k, pctCurto(baixo.p0.v, 2), { s: Math.round(20 * k), b: true, c: baixo.s.cor, extra: HALO });
     } else {
@@ -1289,6 +1333,8 @@
     var dist = 40 * k;
     if (fins.length === 2 && fins[1].y - fins[0].y < dist) { var meioY = (fins[0].y + fins[1].y) / 2; fins[0].y = meioY - dist / 2; fins[1].y = meioY + dist / 2; }
     fins.forEach(function (f) { o += t(x1 + 16 * k, f.y + 10 * k, pctCurto(f.pf.v, 2), { s: Math.round(30 * k), b: true, c: C.texto }); });
+    // 3.28.4: a ultima divulgacao (hora do TSE) em cima dos valores finais
+    if (fins.length) o += t(x1 + 16 * k, fins[0].y - 26 * k, "ÚLTIMA · " + hhmm(fins[0].pf.ms), { s: Math.round(12 * k), b: true, c: C.apagado, ls: 1 });
     return o;
   }
   function legendaEvolucao(ev, x, y, k, maxW) {

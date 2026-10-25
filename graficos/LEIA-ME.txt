@@ -1,6 +1,11 @@
 ===========================================================================
- gctse GRAFICOS 3.28.3 - APURACAO DO 2o TURNO (25/10/2026)
+ gctse GRAFICOS 3.28.4 - APURACAO DO 2o TURNO (25/10/2026)
 
+ 3.28.4 (25/10): "Evolucao": trecho em que as urnas nao andaram por 20 min
+   ou mais fica estreito (faixa PAUSA, com o horario embaixo); cada VIRADA
+   entre o 1o e o 2o com linha amarela e o horario exato do boletim do TSE
+   (a ultima com o selo "VIRADA AS hh:mm"); % da 1a e da ultima divulgacao
+   com o horario.
  3.28.3 (25/10): "Evolucao minuto a minuto" mostra um ponto a cada 10 minutos
    (o arquivo continua guardando todos os boletins). Tela nova "Exterior:
    resultado 1o e 2o turno" (como os brasileiros no exterior votaram para
