@@ -73,8 +73,26 @@ $arqDados = Join-Path $Raiz "web\dados.js"
 if (-not (Test-Path $arqDados)) { Sair "web\dados.js nao existe: abra o GRAFICOS.bat uma vez (ele le o resultado do TSE) e rode de novo." 1 }
 $txt = [IO.File]::ReadAllText($arqDados, [Text.Encoding]::UTF8)
 $d = $txt.Substring($txt.IndexOf("{"), $txt.LastIndexOf("}") - $txt.IndexOf("{") + 1) | ConvertFrom-Json
-if (-not $d.br -or -not $d.br.tem) { Sair "web\dados.js ainda sem o boletim do Brasil: deixe o GRAFICOS.bat rodar ate aparecer 'Brasil: urnas ...' e rode de novo." 1 }
-$cands = @($d.br.candidatos); if ($cands.Count -eq 1 -and $cands[0].PSObject.Properties["value"]) { $cands = @($cands[0].value) }
+Anotar ("pasta: {0}" -f $Raiz)
+Anotar ("web\dados.js: gravado {0:dd/MM HH:mm:ss} (versao {1})" -f (Get-Item $arqDados).LastWriteTime, "$($d.versao)")
+$temBr = [bool] ($d.br -and $d.br.tem)
+$cands = @()
+if ($temBr) { $cands = @($d.br.candidatos); if ($cands.Count -eq 1 -and $cands[0].PSObject.Properties["value"]) { $cands = @($cands[0].value) } }
+else {
+    # 3.28.4: sem o boletim do Brasil nesta pasta (GRAFICOS.bat parado ou
+    # rodando de OUTRA pasta), os candidatos vem do proprio historico do
+    # minuto a minuto (numero e nome gravados pelo GRAFICOS.bat)
+    Anotar "web\dados.js desta pasta esta SEM o boletim do Brasil (o GRAFICOS.bat desta pasta nao esta coletando?). Uso os candidatos do historico do minuto a minuto." "Yellow"
+    $arqEv0 = Join-Path $Raiz ("evolucao-{0}-{1}-oficial.json" -f $Ciclo, $Eleicao)
+    if (Test-Path $arqEv0) {
+        try {
+            $ev0 = Get-Content $arqEv0 -Raw -Encoding UTF8 | ConvertFrom-Json
+            if ($ev0.PSObject.Properties["nomes"]) { foreach ($pn in $ev0.nomes.PSObject.Properties) { $cands += @([pscustomobject]@{ numero = $pn.Name; nome = "$($pn.Value.nome)"; partido = "$($pn.Value.partido)"; votos = 1; pct = $null }) } }
+        } catch { }
+    }
+    if (-not $cands.Count) { Sair ("esta pasta nao tem nem o boletim do Brasil (web\dados.js) nem o historico {0}. Rode o IMPORTAR-EVOLUCAO.bat na pasta dos GRAFICOS que esta NO AR (a do GERENCIADOR.bat aberto), ou abra o GRAFICOS.bat desta pasta, espere aparecer 'Brasil: urnas ...' e rode de novo." -f (Split-Path -Leaf $arqEv0)) 1 }
+}
+Anotar ("candidatos: {0}" -f (($cands | Where-Object { $_.votos -gt 0 } | ForEach-Object { "$($_.numero) $($_.nome)" }) -join ", "))
 $porNome = @{}
 foreach ($c in $cands) { if ($c.numero) { $porNome[(Normalizar $c.nome)] = $c } }
 
@@ -90,6 +108,7 @@ else {
         if ($m.Groups[4].Success -and [int] $m.Groups[4].Value -lt 12) { $diaEleicao = $diaEleicao.AddDays(-1) }
     }
 }
+if ($null -eq $diaEleicao -and -not $temBr) { $agora = Get-Date; $diaEleicao = $(if ($agora.Hour -lt 12) { $agora.Date.AddDays(-1) } else { $agora.Date }); Anotar ("dia da eleicao (pelo relogio): {0:dd/MM/yyyy}" -f $diaEleicao) }
 if ($null -eq $diaEleicao) { Sair "nao sei o dia da eleicao: rode com -Dia AAAA-MM-DD" 1 }
 # Apuracao comeca as 17h (Brasilia); vai ate a manha seguinte.
 $janelaIni = $diaEleicao.Date.AddHours(16).AddMinutes(30); $janelaFim = $diaEleicao.Date.AddDays(1).AddHours(8)
@@ -409,7 +428,7 @@ if ($limpos.Count -eq 0 -and $usarExib.Count -gt 0) {
     $origem = $(if ($dois.Count -eq 2) { "log do exibidor 2t" } else { "log do exibidor" })
     # Fecha com o boletim atual do TSE (dados.js), que tem os dois: e o unico
     # ponto do 2o colocado. Hora = a do TSE, ou logo depois do ultimo ciclo.
-    if ($limpos.Count -gt 0) {
+    if ($limpos.Count -gt 0 -and $temBr) {
         $fimTse = @{}
         foreach ($c in @($cands | Where-Object { $_.votos -gt 0 } | Select-Object -First 2)) { $fimTse["$($c.numero)"] = [double] $c.pct }
         $ultT = [datetime]::ParseExact($limpos[$limpos.Count - 1].t, "yyyy-MM-ddTHH:mm:ss", [Globalization.CultureInfo]::InvariantCulture)
