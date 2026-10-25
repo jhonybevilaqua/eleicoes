@@ -1363,7 +1363,7 @@
   function rodapeEvolucao(ev) {
     var b = br(), n = ev.pontos.length, exib = ev.origem === "log do exibidor", log = !!ev.origem;
     return "Fonte: TSE · % dos votos válidos de 10 em 10 minutos (" + n + (n === 1 ? " ponto" : " pontos") +
-      (exib ? ", gravados pelo exibidor: só o 1º colocado a cada ciclo" : (log ? ", gravados pelo sistema de tarjas no ar" : ", horário do TSE")) + ")" +
+      (ev.origem === "log do exibidor 2t" ? ", refeitos do log do exibidor" : exib ? ", gravados pelo exibidor: só o 1º colocado a cada ciclo" : (log ? ", gravados pelo sistema de tarjas no ar" : ", horário do TSE")) + ")" +
       (b && b.secoes && b.secoes.pct != null ? " · urnas apuradas " + pct(b.secoes.pct) : "");
   }
   G["evolucao-h"] = function () {

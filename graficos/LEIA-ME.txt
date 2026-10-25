@@ -188,6 +188,13 @@
      arrastado, se o download automatico falhar)
    CODIGOS-2-TURNO.bat ....... grava os codigos do 2o turno do TSE (pede S)
    COPIA-DE-SEGURANCA.bat .... .zip da pasta inteira (= botao "copia")
+   IMPORTAR-EVOLUCAO.bat ..... refaz o "minuto a minuto" se o historico
+                               (evolucao-*.json) se perdeu: le o log das
+                               TARJAS (gctse-AAAA-MM-DD.log, os dois
+                               candidatos) ou o logs\graficos-*.log deste
+                               computador. Arraste o log sobre o .bat ou
+                               ponha na pasta importar. Junta com o que ja
+                               existe; GRAFICOS.bat pode estar aberto.
    SALVAR-TELAS.bat .......... (3.28.2) TODAS as telas com dado em PNG Full
                                HD, COM as fotos, em TELAS-SALVAS\data_hora
                                (HORIZONTAL, VERTICAL, RESUMOS). Para o
