@@ -247,6 +247,13 @@ function Ler-Situacao-Dados {
     if ($o.arquivos.a2022) {
         try { $j = [IO.File]::ReadAllText((Join-Path $Raiz "dados-2022.json")) | ConvertFrom-Json; $o.arquivos.a2022_nominal = "$($j.ref2022_gov.fonte)" -match 'candidato'; $o.arquivos.a2022_detalhe = "$($j.ref2022.fonte)" -match 'detalhe' } catch { }
     }
+    # 3.28.4: minuto a minuto - de onde veio (historico do TSE, logs ou coleta)
+    $o.arquivos.evol = $null; $o.arquivos.evol_origem = ""
+    $arqEvG = @(Get-ChildItem -LiteralPath $Raiz -Filter "evolucao-*-oficial.json" -File -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1)
+    if ($arqEvG.Count) {
+        $o.arquivos.evol = $arqEvG[0].LastWriteTime.ToString("yyyy-MM-ddTHH:mm:ss")
+        try { $jE = [IO.File]::ReadAllText($arqEvG[0].FullName) | ConvertFrom-Json; $o.arquivos.evol_origem = "$($jE.origem)"; $o.arquivos.evol_pontos = @($jE.pontos).Count } catch { }
+    }
     $o.arquivos.comparecimento = $false
     $pf = Join-Path $Web "perfil-eleitor.js"
     if (Test-Path $pf) { try { $o.arquivos.comparecimento = ([IO.File]::ReadAllText($pf)).Contains('"comparecimento"') } catch { } }
@@ -630,7 +637,7 @@ while ($ouvinte.IsListening) {
         elseif ($caminho -eq "/dados") {
             # DADOS DO TSE: roda o atualizar-dados.ps1 (guardar copia do TSE,
             # importar candidatos e perfil do eleitor) numa janela minimizada.
-            # ?rodar=tudo|tse|candidatos|perfil|a2022  ou  ?rodar=codigos (abre a
+            # ?rodar=tudo|tse|candidatos|perfil|a2022|evol  ou  ?rodar=codigos (abre a
             # janela do CODIGOS-2-TURNO, que pede confirmacao). Sem ?rodar so
             # devolve a situacao.
             $rodar = "$($req.QueryString['rodar'])"; $msgD = ""
@@ -643,7 +650,7 @@ while ($ouvinte.IsListening) {
                     catch { $msgD = "nao abriu: $($_.Exception.Message)" }
                     Escrever-Log "dados do TSE: CODIGOS-2-TURNO aberto pelo gerenciador" "Green"
                 }
-                elseif (@("tudo", "tse", "candidatos", "perfil", "a2022") -notcontains $rodar) { $msgD = "pedido invalido" }
+                elseif (@("tudo", "tse", "candidatos", "perfil", "a2022", "evol") -notcontains $rodar) { $msgD = "pedido invalido" }
                 elseif ($stD.rodando) { $msgD = "ja esta rodando: " + $stD.etapa }
                 else {
                     $argsD = @{ FilePath = $psExe; WorkingDirectory = $Raiz; ArgumentList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ('"' + (Join-Path $Raiz "atualizar-dados.ps1") + '"'), "-SemPausa", $rodar) }

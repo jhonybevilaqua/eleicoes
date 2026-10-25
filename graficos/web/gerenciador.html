@@ -308,6 +308,7 @@
     <tr><td>Candidatos (gênero)</td><td>deputadas, senadoras e perfil da Câmara — IMPORTAR-CANDIDATOS</td><td class="q" id="dqCandidatos">…</td><td><button type="button" data-rodar="candidatos">rodar</button></td></tr>
     <tr><td>Perfil do eleitor</td><td>perfil do eleitorado; “quem foi às urnas” só depois que o TSE publicar — IMPORTAR-PERFIL-ELEITOR</td><td class="q" id="dqPerfil">…</td><td><button type="button" data-rodar="perfil">rodar</button></td></tr>
     <tr><td>Eleição de 2022</td><td>comparações com 2022 (o TSE tirou 2022 do site de resultados): lê os arquivos do Portal de Dados Abertos postos na pasta <b>importar</b> — IMPORTAR-2022</td><td class="q" id="dqA2022">…</td><td><button type="button" data-rodar="a2022">rodar</button></td></tr>
+    <tr><td>Minuto a minuto (histórico)</td><td>refaz a "Evolução" da noite inteira pelo <b>BR – Histórico totalização Presidente 2º Turno</b> do Portal de Dados Abertos do TSE (publicado depois da eleição: baixe e ponha o .zip na pasta <b>importar</b>, Downloads ou Área de Trabalho) ou, sem ele, pelos logs — IMPORTAR-EVOLUCAO</td><td class="q" id="dqEvol">…</td><td><button type="button" data-rodar="evol">rodar</button></td></tr>
     <tr><td>Códigos do 2º turno</td><td>lê do TSE os códigos do 2º turno e pede confirmação (S) antes de gravar — CODIGOS-2-TURNO</td><td class="q">—</td><td><button type="button" data-rodar="codigos">abrir janela</button></td></tr>
   </tbody></table>
   <div class="acoes"><button type="button" class="forte" data-rodar="tudo">▶ ATUALIZAR TUDO</button><span class="msg" id="dadosMsg"></span></div>
@@ -873,6 +874,8 @@
     document.getElementById("dqCandidatos").innerHTML = quandoTxt(a.candidatos);
     document.getElementById("dqPerfil").innerHTML = quandoTxt(a.perfil) + (a.perfil ? (a.comparecimento ? " · com “quem foi às urnas”" : " · sem “quem foi às urnas” (TSE publica depois)") : "");
     document.getElementById("dqA2022").innerHTML = quandoTxt(a.a2022) + (a.a2022 ? " · " + (a.a2022_nominal ? "votação nominal" : "votação em partido") + (a.a2022_detalhe ? " + detalhe por estado" : " · abstenção só do Brasil") : "");
+    var eo = a.evol_origem, eTxt = eo === "historico do TSE" ? "histórico de totalização do TSE" : eo === "log das tarjas" ? "log das tarjas" : /^log do exibidor/.test(eo || "") ? "log do exibidor" : "gravado na noite";
+    document.getElementById("dqEvol").innerHTML = a.evol ? quandoTxt(a.evol) + " · " + eTxt + (a.evol_pontos ? " · " + a.evol_pontos + " pontos" : "") : '<span style="color:var(--ruim-t);font-weight:700">sem minuto a minuto</span>';
     dadosRodando = !!d.rodando;
     var falta = !a.tse || !a.candidatos || !a.perfil;
     botaoDados.classList.toggle("rodando", dadosRodando); botaoDados.classList.toggle("falta", !dadosRodando && falta);

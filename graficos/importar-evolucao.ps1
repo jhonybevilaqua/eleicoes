@@ -178,7 +178,11 @@ function Ler-Historico-Tse($Arq) {
         $iT = $(if ($ixH.ContainsKey("DT_TOTALIZACAO")) { $ixH["DT_TOTALIZACAO"] } else { -1 })
         $iS = $(if ($ixH.ContainsKey("PE_SECOES_TOT_ACUMULADO")) { $ixH["PE_SECOES_TOT_ACUMULADO"] } else { -1 })
         $iUe = $(if ($ixH.ContainsKey("SG_UE_UF")) { $ixH["SG_UE_UF"] } else { -1 })
-        if ($iT -lt 0 -or $iS -lt 0) { Anotar "   $($Arq.Name): sem DT_TOTALIZACAO / PE_SECOES_TOT_ACUMULADO - nao e o historico de totalizacao" "Yellow"; return @() }
+        if ($iT -lt 0 -or $iS -lt 0) {
+            Anotar "   $($Arq.Name): sem DT_TOTALIZACAO / PE_SECOES_TOT_ACUMULADO - o TSE mudou o formato? Colunas do arquivo:" "Yellow"
+            Anotar ("      " + (($cab | Select-Object -First 30) -join " ; "))
+            return @()
+        }
         $colC = @()
         foreach ($nm in $cab) {
             if ($nm -notmatch '(?i)_PE_VOTOS_TOT_ACUMULADO$' -or $nm -match '(?i)^(BRANCO|NULO)_') { continue }
@@ -196,8 +200,9 @@ function Ler-Historico-Tse($Arq) {
             $q = $null
             try { $q = [datetime]::ParseExact($p[$iT].Trim(), "dd/MM/yyyy HH:mm:ss", [Globalization.CultureInfo]::InvariantCulture) } catch { continue }
             $u = Numero-Br $p[$iS]; if ($null -eq $u) { continue }
+            if ($u -gt 1.0001) { $u = $u / 100 }        # vindo ja em % (0-100) em vez de fracao (0-1)
             $porC = [ordered]@{}
-            foreach ($cc in $colC) { $v = Numero-Br $p[$cc.i]; if ($null -ne $v) { $porC[$cc.n] = [math]::Round(100 * $v, 2) } }
+            foreach ($cc in $colC) { $v = Numero-Br $p[$cc.i]; if ($null -ne $v) { if ($v -gt 1.0001) { $v = $v / 100 }; $porC[$cc.n] = [math]::Round(100 * $v, 2) } }
             if ($porC.Count -lt 2) { continue }
             $chF = [math]::Floor($q.Ticks / 300000000)        # faixa de 30 s: fica a ultima
             $faixas["$chF"] = [pscustomobject]@{ t = $q.ToString("yyyy-MM-ddTHH:mm:ss"); u = [math]::Round(100 * $u, 2); c = [pscustomobject] $porC }
