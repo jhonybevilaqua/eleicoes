@@ -1267,7 +1267,6 @@
     primeiro = Math.ceil((tA - tz) / ivMs) * ivMs + tz;
     var todos = ev.pontos, marcas = [tA];
     for (var mm = primeiro; mm <= tB; mm += ivMs) if (X(mm) - X(tA) >= 70 * k && !naPausa(mm)) marcas.push(mm);
-    pz.forEach(function (q) { marcas.push(q.b); });
     marcas.sort(function (p, q) { return p - q; });
     if (unico) { marcas = [(tA + tB) / 2]; o += t((x0 + x1) / 2, y1 - 24 * k, "1 boletim gravado: a linha começa no próximo boletim do TSE", { s: Math.round(16 * k), c: C.apagado, a: "middle" }); }
     // faixa da pausa
@@ -1280,9 +1279,23 @@
     });
     // explicacao da faixa embaixo do eixo (em cima ficam os % da 1a divulgacao)
     if (pz.length) o += r(x0, y1 + 58 * k, 14 * k, 12 * k, "rgba(255,255,255,0.18)", 2) +
-      t(x0 + 22 * k, y1 + 69 * k, "PAUSA " + pz.map(function (q) { return hhmm(q.a) + "–" + hhmm(q.b); }).join(", ") + ": urnas sem avanço, trecho encolhido no gráfico", { s: Math.round(13 * k), b: true, c: C.apagado, max: (x1 - x0) });
+      t(x0 + 22 * k, y1 + 69 * k, "PAUSA " + pz.map(function (q) { return hhmm(q.a) + " às " + hhmm(q.b) + " (" + Math.round((q.b - q.a) / 60000) + " min)"; }).join(", ") + ": urnas sem avanço, trecho encolhido no gráfico", { s: Math.round(13 * k), b: true, c: C.apagado, max: (x1 - x0) });
+    // horario em que PAROU (a esquerda da faixa) e em que VOLTOU (a direita),
+    // com as urnas de cada momento; as marcas comuns encostadas saem
+    var livres = [];
+    pz.forEach(function (q) {
+      var pa = X(q.a), pb = X(q.b), ua = null, ub = null;
+      todos.forEach(function (p) { if (p.ms <= q.a) ua = p; if (p.ms <= q.b) ub = p; });
+      o += t(pa + 4 * k, y1 + 26 * k, hhmm(q.a), { s: Math.round(16 * k), b: true, c: C.texto, a: "end" }) +
+        t(pa + 4 * k, y1 + 46 * k, "parou" + (ua ? " · " + pctCurto(ua.u, ua.u < 10 ? 1 : 0) : ""), { s: Math.round(13 * k), b: true, c: "#a5d8ff", a: "end" });
+      o += t(pb + 2 * k, y1 + 26 * k, hhmm(q.b), { s: Math.round(16 * k), b: true, c: C.texto }) +
+        t(pb + 2 * k, y1 + 46 * k, "voltou" + (ub ? " · " + pctCurto(ub.u, ub.u < 10 ? 1 : 0) : ""), { s: Math.round(13 * k), b: true, c: "#a5d8ff" });
+      livres.push([pa - 110 * k, pb + 155 * k]);
+    });
     marcas.forEach(function (m) {
-      var mx = X(m); if (mx - ultimoX < 70 * k) return; ultimoX = mx;
+      var mx = X(m); if (mx - ultimoX < 70 * k) return;
+      if (livres.some(function (L) { return mx >= L[0] && mx <= L[1]; })) return;
+      ultimoX = mx;
       o += '<line x1="' + mx.toFixed(1) + '" x2="' + mx.toFixed(1) + '" y1="' + y0 + '" y2="' + y1 + '" stroke="rgba(255,255,255,0.06)"/>';
       o += t(mx, y1 + 26 * k, hhmm(m), { s: Math.round(16 * k), b: true, c: C.apagado, a: "middle" });
       var ant = null; todos.forEach(function (p) { if (p.ms <= m) ant = p; });
