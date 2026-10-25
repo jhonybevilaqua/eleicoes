@@ -1,5 +1,5 @@
 ===========================================================================
- gctse GRAFICOS 3.28.1 - APURACAO DO 2o TURNO (25/10/2026)
+ gctse GRAFICOS 3.28.2 - APURACAO DO 2o TURNO (25/10/2026)
  Presidente e Governador ao vivo do TSE, com o 1o turno ao lado.
  Sistema SEPARADO do gctse das tarjas: outro computador, outra pasta.
 ===========================================================================
@@ -178,6 +178,14 @@
      arrastado, se o download automatico falhar)
    CODIGOS-2-TURNO.bat ....... grava os codigos do 2o turno do TSE (pede S)
    COPIA-DE-SEGURANCA.bat .... .zip da pasta inteira (= botao "copia")
+   SALVAR-TELAS.bat .......... (3.28.2) TODAS as telas com dado em PNG Full
+                               HD, COM as fotos, em TELAS-SALVAS\data_hora
+                               (HORIZONTAL, VERTICAL, RESUMOS). Para o
+                               Jornalismo na semana depois da eleicao: rode
+                               depois de 100% das urnas (= botao "salvar
+                               telas"). Usa o Chrome ou o Edge, sem janela;
+                               leva alguns minutos. Uma tela so: abra a tela
+                               e tecle P (ou "Salvar PNG") - agora com foto.
    ARQUIVO-HISTORICO-2026.bat  depois do resultado: 1o e 2o turno completos
    ABRIR-OBS.bat / ENDERECOS-OBS.bat  OBS (reabrir / montar na mao)
    PREPARAR-WINDOWS.bat ...... ajuste do Windows (1 vez)

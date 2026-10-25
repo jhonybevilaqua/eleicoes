@@ -179,6 +179,7 @@ function Ler-Arquivo {
 $script:Ensaio = $false
 $script:EleitoAuto = $true
 $script:Reabrir = $true
+$script:FotoCache = @{}   # 3.28.2: fotos do TSE pedidas pelo "Salvar PNG" (/foto)
 $script:DadosAoAbrir = $true
 $script:JanelasGer = 2   # "janelas_gerenciador": 2 = H e V lado a lado; 1 = uma janela com as duas
 $script:AbrirMonitor = $true   # "abrir_monitor": false = nao abre a janela MONITOR (NO AR + PREVIA)
@@ -675,6 +676,51 @@ while ($ouvinte.IsListening) {
             }
             $txt = $(if (Test-Path $arqCopia) { [IO.File]::ReadAllText($arqCopia) } else { '{"ok":null,"mensagem":"nenhuma copia ainda"}' })
             Responder $ctx 200 "application/json; charset=utf-8" ([Text.Encoding]::UTF8.GetBytes($txt))
+        }
+        elseif ($caminho -eq "/foto") {
+            # 3.28.2: foto de candidato para o "Salvar PNG" da tela (foto do
+            # site do TSE nao entra no PNG; daqui ela vem do mesmo endereco da
+            # pagina). Primeiro a copia guardada (web\fotos-tse), senao o TSE.
+            # So foto de candidato do site de resultados do TSE.
+            $uF = "$($req.QueryString['u'])"; $bytesF = $null
+            $mF = [regex]::Match($uF, '^https://resultados\.tse\.jus\.br/[A-Za-z0-9/_.-]+/fotos/([a-zA-Z]{2})/(\d+)\.jpe?g$')
+            if ($mF.Success) {
+                $locF = Join-Path $Web ("fotos-tse\{0}\{1}.jpeg" -f $mF.Groups[1].Value.ToLower(), $mF.Groups[2].Value)
+                if (Test-Path $locF) { $bytesF = [IO.File]::ReadAllBytes($locF) }
+                elseif ($script:FotoCache.ContainsKey($uF)) { $bytesF = $script:FotoCache[$uF] }
+                else {
+                    try {
+                        $wrF = [Net.HttpWebRequest]::Create($uF); $wrF.Timeout = 8000; $wrF.UserAgent = "gctse-graficos/1.0"
+                        $rsF = $wrF.GetResponse()
+                        try { $msF = New-Object IO.MemoryStream; $rsF.GetResponseStream().CopyTo($msF); $bytesF = $msF.ToArray() } finally { $rsF.Close() }
+                        if ($bytesF.Length -gt 0 -and $script:FotoCache.Count -lt 500) { $script:FotoCache[$uF] = $bytesF }
+                    } catch { $bytesF = $null }
+                }
+            }
+            if ($bytesF -and $bytesF.Length -gt 0) { Responder $ctx 200 "image/jpeg" $bytesF }
+            else { Responder $ctx 404 "text/plain; charset=utf-8" ([Text.Encoding]::UTF8.GetBytes("sem foto")) }
+        }
+        elseif ($caminho -eq "/salvar-telas") {
+            # 3.28.2: SALVAR-TELAS (todas as telas com dado em PNG, com foto)
+            # numa janela minimizada. ?ver=1 so devolve o andamento.
+            $arqST = Join-Path $Raiz "salvar-telas.json"
+            $stST = $null; if (Test-Path $arqST) { try { $stST = [IO.File]::ReadAllText($arqST) | ConvertFrom-Json } catch { } }
+            $vivoST = $false
+            if ($stST -and $stST.rodando) { try { $vivoST = $null -ne (Get-Process -Id ([int] $stST.pid) -ErrorAction Stop) } catch { } }
+            if ("$($req.QueryString['ver'])" -ne "1" -and -not $vivoST) {
+                $psExe = "powershell"
+                if ($env:WINDIR -and (Test-Path (Join-Path $env:WINDIR "System32\WindowsPowerShell\v1.0\powershell.exe"))) { $psExe = Join-Path $env:WINDIR "System32\WindowsPowerShell\v1.0\powershell.exe" } elseif (-not (Get-Command "powershell" -ErrorAction SilentlyContinue)) { $psExe = "pwsh" }
+                $argsST = @{ FilePath = $psExe; WorkingDirectory = $Raiz; ArgumentList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ('"' + (Join-Path $Raiz "salvar-telas.ps1") + '"'), "-SemPausa") }
+                if ($env:OS -eq "Windows_NT") { $argsST.WindowStyle = "Minimized" }
+                try {
+                    $pST = Start-Process @argsST -PassThru
+                    [IO.File]::WriteAllText($arqST, (([ordered]@{ ok = $null; rodando = $true; pid = $pST.Id; feitas = 0; total = 0; pasta = ""; mensagem = "comecando..." }) | ConvertTo-Json -Compress))
+                    Escrever-Log "salvar telas (PNG) pedido pelo gerenciador" "Green"
+                } catch { [IO.File]::WriteAllText($arqST, (([ordered]@{ ok = $false; rodando = $false; mensagem = "nao abriu: $($_.Exception.Message)" }) | ConvertTo-Json -Compress)) }
+            }
+            $txtST = $(if (Test-Path $arqST) { [IO.File]::ReadAllText($arqST) } else { '{"ok":null,"rodando":false,"mensagem":"nenhuma vez ainda"}' })
+            if ($stST -and $stST.rodando -and -not $vivoST -and "$($req.QueryString['ver'])" -eq "1") { $txtST = '{"ok":false,"rodando":false,"mensagem":"a janela do SALVAR-TELAS fechou antes de terminar"}' }
+            Responder $ctx 200 "application/json; charset=utf-8" ([Text.Encoding]::UTF8.GetBytes($txtST))
         }
         elseif ($caminho -eq "/girar") {
             # Como a tela VERTICAL vai girada na saida do OBS.

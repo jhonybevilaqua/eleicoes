@@ -268,6 +268,7 @@
   <a href="analista.html" target="_blank" title="painel só de leitura para o apresentador e os comentaristas (outro monitor)">analista ↗</a>
   <a href="caderno.html" target="_blank" title="caderno de dados para imprimir (1º turno 2026 e 2º turno 2022, estado por estado)">caderno ↗</a>
   <span class="copia so-local"><button id="copia" type="button" title="Guarda a pasta inteira (config, dados, evolução, logs) num .zip em copias-de-seguranca">💾 cópia</button> <span id="copiaMsg"></span></span>
+  <span class="copia so-local"><button id="salvarTelas" type="button" title="Grava TODAS as telas que têm dado em PNG Full HD, com as fotos, em TELAS-SALVAS (para o Jornalismo usar depois). Rode depois de 100% das urnas; leva alguns minutos.">🖼 salvar telas</button> <span id="salvarTelasMsg"></span></span>
   <button class="tema" id="tema" type="button">tema escuro</button></header>
 <div id="status"><span class="st neutro" id="stCod" hidden style="cursor:pointer"></span><span class="st neutro" id="stP">Presidente: …</span><span class="st neutro" id="stE">Estados: …</span><span class="st neutro" id="stEv" hidden></span><span class="st aviso" id="stCL" hidden></span><span class="st neutro" id="stG">Gerenciador: …</span><span class="st neutro" id="stOh" hidden></span><span class="st neutro" id="stOv" hidden></span></div>
 <div id="vigia"><span class="rot">PRESIDENTE ELEITO:</span>
@@ -1139,6 +1140,23 @@
     bCopia.disabled = true; mCopia.className = ""; mCopia.textContent = "copiando…";
     fetch("/copia?t=" + Date.now(), { cache: "no-store" }).then(function () { setTimeout(function () { verCopia(90); }, 1500); })
       .catch(function () { bCopia.disabled = false; mCopia.className = "ruim"; mCopia.textContent = "gerenciador sem conexão — use o COPIA-DE-SEGURANCA.bat"; });
+  };
+  // 3.28.2: salvar todas as telas em PNG (gerenciador.ps1 -> salvar-telas.ps1).
+  var bST = document.getElementById("salvarTelas"), mST = document.getElementById("salvarTelasMsg");
+  function verTelas(tentativas) {
+    fetch("/salvar-telas?ver=1&t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (c) {
+      if (c.rodando && tentativas > 0) { bST.disabled = true; mST.className = ""; mST.textContent = c.mensagem || "salvando…"; setTimeout(function () { verTelas(tentativas - 1); }, 3000); return; }
+      bST.disabled = false;
+      if (c.ok === true) { mST.className = "ok"; mST.textContent = "✔ " + c.mensagem; }
+      else if (c.ok === false) { mST.className = "ruim"; mST.textContent = "FALHOU: " + c.mensagem + " — use o SALVAR-TELAS.bat"; }
+      else { mST.className = ""; mST.textContent = ""; }
+    }).catch(function () { bST.disabled = false; mST.className = "ruim"; mST.textContent = "gerenciador sem conexão — use o SALVAR-TELAS.bat"; });
+  }
+  bST.onclick = function () {
+    if (!confirm("Salvar TODAS as telas com dado em PNG (com fotos)?\n\nLeva alguns minutos e usa bastante o processador: faça depois de 100% das urnas, fora do ar.")) return;
+    bST.disabled = true; mST.className = ""; mST.textContent = "começando…";
+    fetch("/salvar-telas?t=" + Date.now(), { cache: "no-store" }).then(function () { setTimeout(function () { verTelas(600); }, 2000); })
+      .catch(function () { bST.disabled = false; mST.className = "ruim"; mST.textContent = "gerenciador sem conexão — use o SALVAR-TELAS.bat"; });
   };
   // ------------------------------------------------ vigia: eventos, eleito, som
   var ctxA = null, mudoAte = 0;

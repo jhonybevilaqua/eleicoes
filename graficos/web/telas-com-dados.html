@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>gctse telas com dados</title>
+</head>
+<body>
+<!-- SALVAR-TELAS (salvar-telas.ps1): desenha cada tela da lista uma vez e
+     diz quais tem dado (as "aguardando" ficam de fora). Mesmos arquivos do
+     grafico.html, mais o mapa por municipio. Nao e para abrir no ar. -->
+<pre id="r">[]</pre>
+<script charset="utf-8" src="mapa-brasil.js"></script>
+<script charset="utf-8" src="fotos-config.js"></script>
+<script charset="utf-8" src="fotos-tse/indice.js"></script>
+<script charset="utf-8" src="senado-config.js"></script>
+<script charset="utf-8" src="camara-config.js"></script>
+<script charset="utf-8" src="deputados-config.js"></script>
+<script charset="utf-8" src="candidatos-genero.js"></script>
+<script charset="utf-8" src="perfil-eleitor.js"></script>
+<script charset="utf-8" src="comparativo-config.js"></script>
+<script charset="utf-8" src="estados.js"></script>
+<script charset="utf-8" src="exterior-paises.js"></script>
+<script charset="utf-8" src="mapa-municipios.js"></script>
+<script charset="utf-8" src="municipios.js"></script>
+<script charset="utf-8" src="graficos.js"></script>
+<script charset="utf-8" src="dados.js"></script>
+<script>
+(function () {
+  var G = window.GCTSE_GRAFICOS, vistos = {}, out = [];
+  window.__gctseSemFotos = true;      // so para saber se ha dado: nao baixa foto aqui
+  (G && G.lista || []).forEach(function (g) {
+    if (!g || !g.id || vistos[g.id]) return;
+    vistos[g.id] = 1;
+    var s = "";
+    try { s = G.desenhar(g.id) || ""; } catch (e) { s = ""; }
+    out.push({ id: g.id, nome: g.nome || g.id, f: g.f || (/-v$/.test(g.id) ? "v" : "h"), vazia: !s || s.indexOf("data-vazia") >= 0 });
+  });
+  document.getElementById("r").textContent = JSON.stringify(out);
+})();
+</script>
+</body>
+</html>

@@ -6,7 +6,7 @@ Sistemas usados pela TV Evangelizar na apuração de 2026 (1º turno 04/10 e
 | Sistema | Versão final | Pasta no repositório | Pacote pronto |
 |---|---|---|---|
 | **TARJAS** (GC — Castalia/LiveBoard) | 7.3.1 | `entrega/` | `entregas/2026/GCTSE-TARJAS-7.3.1.zip` |
-| **GRÁFICOS** (telas 1280×720 e 540×960, OBS) | 3.28.1 | `graficos/` | `entregas/2026/GCTSE-GRAFICOS-3.28.1-COM-FOTOS.zip` e `-SEM-FOTOS.zip` |
+| **GRÁFICOS** (telas 1280×720 e 540×960, OBS) | 3.28.2 | `graficos/` | `entregas/2026/GCTSE-GRAFICOS-3.28.2-COM-FOTOS.zip` e `-SEM-FOTOS.zip` |
 
 Esta versão está no branch `claude/gc-tse-api-automation-v3nvef`, que é o
 branch principal do repositório. Para baixar tudo depois: GitHub → botão
@@ -73,7 +73,13 @@ adaptadas para prefeito/vereador. Comece com tempo (2–3 meses antes).
   Para outro ano, troque o ano nos padrões de nome de arquivo e nos códigos
   de eleição gravados no JSON (544/545/546/547 eram os de 2022).
 
-### 4. Antes do dia
+### 4. Depois da apuração (Jornalismo)
+- Com 100% das urnas: `SALVAR-TELAS.bat` (ou botão "salvar telas" no
+  gerenciador) grava todas as telas com dado em PNG Full HD, com as fotos,
+  em `graficos/TELAS-SALVAS/`.
+- `COPIA-DE-SEGURANCA.bat` e `ARQUIVO-HISTORICO-2026.bat` para guardar tudo.
+
+### 5. Antes do dia
 - Testar com o TSE real (1º turno já publicado) e com o modo ensaio.
 - Conferir os campos das tarjas na cena (`CONFERIR.bat`, `CAMPOS.txt`).
 - Máquina reserva com a mesma pasta, coletando junto.

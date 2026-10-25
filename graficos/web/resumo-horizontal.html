@@ -12,6 +12,14 @@
   #aviso { position: absolute; top: 24px; left: 50%; transform: translateX(-50%); padding: 10px 22px; border-radius: 6px;
            background: rgba(0,0,0,.75); color: #fff; font: 700 22px 'Segoe UI', Arial, sans-serif; opacity: 0; transition: opacity .3s; }
 </style>
+<script>
+  // SALVAR-TELAS (3.28.2): ?exportar=LxA fixa o tamanho da pagina em pixels
+  // (o navegador sem janela tem a area visivel menor que a imagem). No ar,
+  // sem o parametro, nada muda.
+  (function () { var m = /[?&]exportar=(\d+)x(\d+)/.exec(location.search); if (!m) return;
+    var w = m[1] + "px", h = m[2] + "px";
+    document.write("<style>html,body,#tela,#palco{width:" + w + " !important;height:" + h + " !important}#palco{position:absolute !important;left:0;top:0}</style>"); })();
+</script>
 </head>
 <body>
 <div id="palco"><div class="camada" id="c0"></div><div class="camada" id="c1"></div><div id="aviso"></div></div>
