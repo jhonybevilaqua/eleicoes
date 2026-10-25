@@ -1189,6 +1189,13 @@
       var m = /^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)/.exec(p.t || "");
       return m ? { ms: new Date(+m[1], m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime(), u: +p.u, c: p.c || {} } : null;
     }).filter(Boolean).sort(function (a, b) { return a.ms - b.ms; });
+    // 3.28.3: na tela, um ponto a cada 10 minutos (o ultimo boletim de cada
+    // faixa de 10 min), mais o primeiro e o mais recente. O arquivo continua
+    // guardando todos os boletins.
+    var DEZ = 600000, faixas = [], fxAnt = null;
+    lista.forEach(function (p) { var fx = Math.floor(p.ms / DEZ); if (fx === fxAnt) faixas[faixas.length - 1] = p; else { faixas.push(p); fxAnt = fx; } });
+    if (lista.length && faixas[0] !== lista[0]) faixas.unshift(lista[0]);
+    lista = faixas;
     var series = cs.map(function (c) {
       return { c: c, cor: cor(c), nome: c.nome || (nomes[c.numero] || {}).nome || c.numero,
         pts: lista.filter(function (p) { return p.c[c.numero] != null; }).map(function (p) { return { ms: p.ms, v: +p.c[c.numero], u: p.u }; }) };
@@ -1294,7 +1301,7 @@
   }
   function rodapeEvolucao(ev) {
     var b = br(), n = ev.pontos.length, exib = ev.origem === "log do exibidor", log = !!ev.origem;
-    return "Fonte: TSE · % dos votos válidos a cada atualização (" + n + (n === 1 ? " registro" : " registros") +
+    return "Fonte: TSE · % dos votos válidos de 10 em 10 minutos (" + n + (n === 1 ? " ponto" : " pontos") +
       (exib ? ", gravados pelo exibidor: só o 1º colocado a cada ciclo" : (log ? ", gravados pelo sistema de tarjas no ar" : ", horário do TSE")) + ")" +
       (b && b.secoes && b.secoes.pct != null ? " · urnas apuradas " + pct(b.secoes.pct) : "");
   }
@@ -3306,6 +3313,55 @@
   G["excomp-h"] = function () { return telaExComp(false); };
   G["excomp-v"] = function () { return telaExComp(true); };
 
+  // ---- EXTERIOR: RESULTADO FINAL DO 1o E DO 2o TURNO (3.28.3) ------------------
+  // Como os brasileiros no exterior votaram para Presidente: todos os
+  // candidatos do 1o turno (boletim ZZ guardado, turno1.ufs.zz) e os dois do
+  // 2o turno (exterior_total ao vivo), lado a lado. So numero do TSE.
+  function telaExFinal(v) {
+    var W = v ? 540 : 1280, H = v ? 960 : 720, z2 = D().exterior_total, z1 = ((D().turno1 || {}).ufs || {}).zz;
+    var tem1 = !!(z1 && z1.tem && candidatos(z1).length), tem2 = !!(z2 && z2.tem && candidatos(z2).length);
+    var tit = v ? "EXTERIOR: PRESIDENTE" : "EXTERIOR: COMO VOTOU PARA PRESIDENTE", sub = "brasileiros no exterior · 1º turno (04/10) e 2º turno (25/10)";
+    var cab = v ? r(35, 48, 6, 38, C.destaque) + t(53, 80, tit, { s: 26, b: true, ls: 1, max: 450 }) + t(53, 106, sub, { s: 13, c: C.apagado, max: 470 })
+                : t(73, 57, tit, { s: 34, b: true, ls: 1, max: 700 }) + t(73, 85, sub, { s: 16, c: C.apagado, max: 700 });
+    if (!tem1 && !tem2) return svg(W, H, marcaVazio() + cab + t(W / 2, H / 2, "aguardando o boletim do exterior", { s: v ? 16 : 22, c: C.apagado, a: "middle" }));
+    if (tem2) cab += v ? seloV(W, seloDe({ br: z2 })) : seloH(W, seloDe({ br: z2 }));
+    function rodapeT(z) {
+      var e = z.eleitorado || {}, vt = z.votos || {};
+      return "comparecimento " + pct(e.pct_comparec) + " · brancos " + pct(vt.pct_brancos) + " · nulos " + pct(vt.pct_nulos);
+    }
+    function painel(x, y, w, h, rot, z, tem, max, grande) {
+      var o = r(x, y, w, h, "rgba(8,14,32,0.84)", 10) + t(x + 20, y + 34, rot, { s: 15, b: true, c: "#c9d6e6", ls: 2 });
+      if (!tem) return o + t(x + w / 2, y + h / 2, z === z1 ? "1º turno do exterior não guardado" : "aguardando o boletim do exterior", { s: 16, c: C.apagado, a: "middle", max: w - 40 });
+      var cs = candidatos(z).filter(function (c) { return (+c.votos || 0) > 0; }).slice(0, max), topo = Math.max.apply(null, cs.map(function (c) { return +c.pct || 0; }).concat([1]));
+      var pu = (z.secoes || {}).pct, wb = w - 40;
+      var passo = grande ? (v ? 100 : 150) : Math.min(v ? 44 : 62, Math.floor((h - 130) / Math.max(1, cs.length))), y0 = y + (grande ? (v ? 100 : 130) : 80);
+      cs.forEach(function (c, i) {
+        var yy = y0 + i * passo, cc = cor(c), lado = grande ? 28 : (v ? 15 : 18), wv = Math.max(4, wb * (+c.pct || 0) / topo * 0.62);
+        if (grande) {
+          o += r(x + 20, yy - 24, 6, 56, cc, 2) + t(x + 36, yy, c.nome + (c.partido ? " (" + c.partido + ")" : ""), { s: v ? 18 : 22, b: true, max: w - 210 }) +
+            t(x + w - 20, yy + 4, pct(c.pct), { s: v ? 30 : 38, b: true, a: "end" }) +
+            r(x + 36, yy + 14, wv, 14, cc, 3) + t(x + 36, yy + 48, inteiro(c.votos) + " votos", { s: v ? 12 : 14, c: C.apagado });
+          if (i === 0 && pu >= 100) o += t(x + w - 20, yy + 48, "VENCEU NO EXTERIOR", { s: v ? 11 : 13, b: true, c: "#69db7c", a: "end" });
+        } else {
+          o += r(x + 20, yy - lado + 3, 5, lado + 18, cc, 2) + t(x + 32, yy, c.nome, { s: lado, b: true, max: w * 0.48 - 40 }) +
+            t(x + 32, yy + 17, inteiro(c.votos) + " votos", { s: v ? 11 : 12, c: C.apagado }) +
+            r(x + w * 0.52, yy - lado + 5, Math.max(4, (w * 0.28) * (+c.pct || 0) / topo), lado - 4, cc, 2) +
+            t(x + w - 20, yy, pct(c.pct), { s: lado, b: true, a: "end" });
+        }
+      });
+      return o + t(x + 20, y + h - 18, rodapeT(z) + (pu != null && pu < 100 ? " · urnas " + pct(pu) : ""), { s: v ? 11 : 13, c: C.apagado, max: w - 40 });
+    }
+    var o = cab;
+    if (!v) {
+      o += painel(73, 110, 560, 570, "1º TURNO · 04/10", z1, tem1, 8, false) + painel(653, 110, 554, 570, "2º TURNO · 25/10", z2, tem2, 2, true);
+      return svg(W, H, o + t(73, 706, "Fonte: TSE — boletim do exterior (ZZ) de Presidente: 1º turno final e 2º turno" + (tem2 && z2.eleitorado ? " · eleitores aptos no exterior: " + inteiro(z2.eleitorado.aptos) : ""), { s: 11, c: C.apagado2, max: 1134 }));
+    }
+    o += painel(35, 160, 470, 420, "1º TURNO · 04/10", z1, tem1, 8, false) + painel(35, 596, 470, 330, "2º TURNO · 25/10", z2, tem2, 2, true);
+    return svg(W, H, o + t(35, 950, "Fonte: TSE — boletim do exterior (ZZ), Presidente", { s: 10, c: C.apagado2, max: 470 }));
+  }
+  G["exfinal-h"] = function () { return telaExFinal(false); };
+  G["exfinal-v"] = function () { return telaExFinal(true); };
+
   // =====================================================================
   // MAIS COMPARATIVOS (3.13): saldo por estado, mudou de lado desde 2022,
   // intensidade da vitoria, abstencao 2022 x 2026, brancos e nulos 1o x 2o,
@@ -4357,6 +4413,7 @@
       { id: "exterior-h", nome: "Brasileiros no exterior (por país)", f: "h" },
       { id: "excidades-h", nome: "Exterior: por cidade", f: "h" },
       { id: "excomp-h", nome: "Exterior: 1º × 2º turno", f: "h" },
+      { id: "exfinal-h", nome: "Exterior: resultado 1º e 2º turno", f: "h" },
       { id: "saldo-h", nome: "De onde veio a vantagem (saldo por estado)", f: "h" },
       { id: "mudou22-h", nome: "Mudou de lado desde 2022", f: "h" },
       { id: "intensidade-h", nome: "Intensidade da vitória (mapa)", f: "h" },
@@ -4420,6 +4477,7 @@
       { id: "exterior-v", nome: "Brasileiros no exterior (por país)", f: "v" },
       { id: "excidades-v", nome: "Exterior: por cidade", f: "v" },
       { id: "excomp-v", nome: "Exterior: 1º × 2º turno", f: "v" },
+      { id: "exfinal-v", nome: "Exterior: resultado 1º e 2º turno", f: "v" },
       { id: "saldo-v", nome: "De onde veio a vantagem (saldo por estado)", f: "v" },
       { id: "mudou22-v", nome: "Mudou de lado desde 2022", f: "v" },
       { id: "intensidade-v", nome: "Intensidade da vitória (mapa)", f: "v" },
