@@ -4011,44 +4011,52 @@
     }).filter(Boolean);
     return { f: f, A: A, B: B, ls: ls, bc: sa.ac + sa.bc > 0 ? sa.ac / (sa.ac + sa.bc) : null, bi: sa.ai + sa.bi > 0 ? sa.ai / (sa.ai + sa.bi) : null };
   }
-  function telaCapInt(v) {
-    var ci = capInt(), f = fontePres(false), W = v ? 540 : 1280, H = v ? 960 : 720, tit = "CAPITAL × INTERIOR";
-    var sub = "Presidente · em cada estado, a capital comparada com o resto do estado (interior = estado − capital)";
+  // 3.28.5: em DUAS telas (parte 1 e 2), letras maiores - metade dos
+  // estados em cada, na mesma ordem (divididos primeiro).
+  function telaCapInt(v, parte) {
+    parte = parte || 1;
+    var ci = capInt(), f = fontePres(false), W = v ? 540 : 1280, H = v ? 960 : 720, tit = "CAPITAL × INTERIOR" + (parte === 2 ? " (2/2)" : " (1/2)");
+    var sub = "Presidente · em cada estado, a capital × o resto do estado (interior = estado − capital)";
     if (!ci) return vazioAn(v, tit, sub, f, "disponível no 2º turno");
     if (!ci.ls.length) return vazioAn(v, tit, sub, f, "aguardando os boletins das capitais (GRAFICOS.bat)");
     var A = ci.A, B = ci.B, o = cabAn(v, W, tit, sub, f), divs = ci.ls.filter(function (l) { return l.div; });
     function resumo(x, y, w, rot, fa, k) {
-      return t(x, y, rot, { s: Math.round(13 * k), b: true, c: "#c9d6e6", ls: 2 }) + barraAB(x, y + 10 * k, w, 18 * k, fa, A, B) +
-        t(x, y + 46 * k, nomeCurto(A) + " " + pct(100 * fa), { s: Math.round(15 * k), b: true }) + t(x + w, y + 46 * k, pct(100 - 100 * fa) + " " + nomeCurto(B), { s: Math.round(15 * k), b: true, a: "end" });
+      return t(x, y, rot, { s: Math.round(14 * k), b: true, c: "#c9d6e6", ls: 2 }) + barraAB(x, y + 10 * k, w, 20 * k, fa, A, B) +
+        t(x, y + 52 * k, nomeCurto(A) + " " + pct(100 * fa), { s: Math.round(18 * k), b: true }) + t(x + w, y + 52 * k, pct(100 - 100 * fa) + " " + nomeCurto(B), { s: Math.round(18 * k), b: true, a: "end" });
     }
+    var ls = ci.ls.slice().sort(function (p, q) { return (q.div - p.div) || (q.gap - p.gap); });
+    var meio = Math.ceil(ls.length / 2), parteLs = parte === 2 ? ls.slice(meio) : ls.slice(0, meio);
+    var rotDiv = divs.length ? divs.length + (divs.length === 1 ? " ESTADO" : " ESTADOS") + " ONDE A CAPITAL E O INTERIOR ESCOLHERAM LADOS DIFERENTES" : "EM TODOS OS ESTADOS LIDOS, CAPITAL E INTERIOR TÊM O MESMO LÍDER";
+    if (parte === 2) rotDiv += " · continuação";
     if (!v) {
-      o += painelAn(73, 100, 1134, 78) + resumo(93, 124, 520, "TODAS AS CAPITAIS", ci.bc || 0, 1) + resumo(667, 124, 520, "TODO O INTERIOR", ci.bi || 0, 1);
-      o += t(73, 204, divs.length ? divs.length + " estado(s) onde a capital e o interior escolheram lados diferentes:" : "em todos os estados lidos, capital e interior têm o mesmo líder", { s: 16, b: true, c: divs.length ? "#ffd8a8" : C.apagado });
-      var ls = ci.ls.slice().sort(function (p, q) { return (q.div - p.div) || (q.gap - p.gap); });
-      ls.slice(0, 26).forEach(function (l, i) {
-        var col = i < 13 ? 0 : 1, li = col ? i - 13 : i, x = 73 + col * 575, y = 220 + li * 36;
-        o += r(x, y, 559, 32, l.div ? "rgba(255,216,168,0.10)" : (li % 2 ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.06)"), 4);
-        o += t(x + 10, y + 22, l.k.toUpperCase(), { s: 15, b: true });
-        o += t(x + 50, y + 14, "capital", { s: 10, c: C.apagado }) + barraAB(x + 50, y + 18, 150, 9, l.pc, A, B) + t(x + 210, y + 26, pct(100 * l.pc), { s: 12, b: true });
-        o += t(x + 280, y + 14, "interior", { s: 10, c: C.apagado }) + barraAB(x + 280, y + 18, 150, 9, l.pi, A, B) + t(x + 440, y + 26, pct(100 * l.pi), { s: 12, b: true });
-        if (l.div) o += chip(x + 495, y + 21, "DIVIDIDO", "#ffd8a8", "#0b1220", 10);
+      o += painelAn(73, 100, 1134, 88) + resumo(93, 126, 520, "TODAS AS CAPITAIS", ci.bc || 0, 1) + resumo(667, 126, 520, "TODO O INTERIOR", ci.bi || 0, 1);
+      o += t(73, 222, rotDiv, { s: 16, b: true, c: divs.length ? "#ffd8a8" : C.apagado, ls: 1, max: 1134 });
+      parteLs.slice(0, 14).forEach(function (l, i) {
+        var col = i < 7 ? 0 : 1, li = col ? i - 7 : i, x = 73 + col * 575, y = 236 + li * 64, hL = 58;
+        o += r(x, y, 559, hL, l.div ? "rgba(255,216,168,0.14)" : (li % 2 ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.08)"), 5);
+        if (l.div) o += r(x, y, 5, hL, "#ffd8a8", 2);
+        o += t(x + 18, y + 38, l.k.toUpperCase(), { s: 28, b: true });
+        o += t(x + 80, y + 24, "CAPITAL", { s: 12, b: true, c: C.apagado, ls: 1 }) + barraAB(x + 156, y + 13, 190, 13, l.pc, A, B) + t(x + 440, y + 26, pct(100 * l.pc), { s: 18, b: true, a: "end" });
+        o += t(x + 80, y + 48, "INTERIOR", { s: 12, b: true, c: C.apagado, ls: 1 }) + barraAB(x + 156, y + 37, 190, 13, l.pi, A, B) + t(x + 440, y + 50, pct(100 * l.pi), { s: 18, b: true, a: "end" });
+        if (l.div) o += pilula(x + 547, y + 36, "DIVIDIDO", "#ffd8a8", 11, true);
       });
       return svg(W, H, o + rodAn(false, "Fonte: TSE — boletim de Presidente do estado e da capital · % = " + nomeCurto(A) + " entre os dois finalistas · interior = estado menos a capital"));
     }
-    o += painelAn(35, 165, 470, 150) + resumo(53, 190, 434, "TODAS AS CAPITAIS", ci.bc || 0, 0.9) + resumo(53, 258, 434, "TODO O INTERIOR", ci.bi || 0, 0.9);
-    o += t(35, 345, divs.length ? "CAPITAL ≠ INTERIOR: " + divs.length + " estado(s)" : "capital e interior com o mesmo líder em todos", { s: 15, b: true, c: divs.length ? "#ffd8a8" : C.apagado, max: 470 });
-    var lv = ci.ls.slice().sort(function (p, q) { return (q.div - p.div) || (q.gap - p.gap); }).slice(0, 14);
-    lv.forEach(function (l, i) {
-      var y = 362 + i * 40;
-      o += r(35, y, 470, 36, l.div ? "rgba(255,216,168,0.10)" : "rgba(255,255,255,0.05)", 4) + t(45, y + 24, l.k.toUpperCase(), { s: 15, b: true });
-      o += barraAB(85, y + 8, 150, 8, l.pc, A, B) + t(245, y + 16, "cap " + pct(100 * l.pc), { s: 11, b: true });
-      o += barraAB(85, y + 22, 150, 8, l.pi, A, B) + t(245, y + 30, "int " + pct(100 * l.pi), { s: 11, b: true });
-      if (l.div) o += chip(410, y + 23, "DIVIDIDO", "#ffd8a8", "#0b1220", 10);
+    o += painelAn(35, 150, 470, 160) + resumo(53, 178, 434, "TODAS AS CAPITAIS", ci.bc || 0, 0.9) + resumo(53, 252, 434, "TODO O INTERIOR", ci.bi || 0, 0.9);
+    o += t(35, 342, divs.length ? "CAPITAL ≠ INTERIOR: " + divs.length + (divs.length === 1 ? " estado" : " estados") + (parte === 2 ? " · continuação" : "") : "mesmo líder na capital e no interior" + (parte === 2 ? " · continuação" : ""), { s: 15, b: true, c: divs.length ? "#ffd8a8" : C.apagado, max: 470 });
+    parteLs.slice(0, 14).forEach(function (l, i) {
+      var y = 356 + i * 41;
+      o += r(35, y, 470, 37, l.div ? "rgba(255,216,168,0.14)" : (i % 2 ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.08)"), 4) + t(47, y + 26, l.k.toUpperCase(), { s: 19, b: true });
+      o += t(92, y + 15, "cap", { s: 11, c: C.apagado }) + barraAB(122, y + 7, 160, 9, l.pc, A, B) + t(355, y + 16, pct(100 * l.pc), { s: 14, b: true, a: "end" });
+      o += t(92, y + 31, "int", { s: 11, c: C.apagado }) + barraAB(122, y + 23, 160, 9, l.pi, A, B) + t(355, y + 32, pct(100 * l.pi), { s: 14, b: true, a: "end" });
+      if (l.div) o += pilula(497, y + 24, "DIVIDIDO", "#ffd8a8", 10, true);
     });
     return svg(W, H, o + rodAn(true, "Fonte: TSE · % de " + nomeCurto(A) + " entre os dois · interior = estado − capital"));
   }
-  G["capint-h"] = function () { return telaCapInt(false); };
-  G["capint-v"] = function () { return telaCapInt(true); };
+  G["capint-h"] = function () { return telaCapInt(false, 1); };
+  G["capint-v"] = function () { return telaCapInt(true, 1); };
+  G["capint2-h"] = function () { return telaCapInt(false, 2); };
+  G["capint2-v"] = function () { return telaCapInt(true, 2); };
 
   // ---- A3. PARA ONDE FORAM OS VOTOS (estimativa) ----------------------------
   function transfDe(x1, x2, A, B) {
@@ -4104,9 +4112,17 @@
     var extra = (a2 - a1) / 100 * base, marg = Math.abs(votosDe(x2, A) - votosDe(x2, B));
     return { a1: a1, a2: a2, d: a2 - a1, extra: extra, marg: marg, supera: extra > 0 && extra > marg };
   }
-  function telaAbstDec(v) {
-    var f1 = fontePres(true), f2 = fontePres(false), cs = fin2(f2), W = v ? 540 : 1280, H = v ? 960 : 720, tit = "A ABSTENÇÃO DECIDIU?";
-    var sub = "eleitores que ficaram em casa a mais no 2º turno × a diferença entre os dois finalistas (nas urnas já apuradas)";
+  // selo com largura folgada (letra maiuscula em negrito e mais larga)
+  function pilula(x, y, txt, fundo, s, alinhaFim) {
+    var w = Math.round(txt.length * s * 0.74 + 18), x0 = alinhaFim ? x - w : x;
+    return r(x0, y - s - 5, w, s + 11, fundo, 4) + t(x0 + w / 2, y + 1, txt, { s: s, b: true, c: "#0b1220", a: "middle" });
+  }
+  // 3.28.5: em DUAS telas (parte 1 e 2), letras maiores - metade dos
+  // estados em cada, na mesma ordem (os que superam a diferença primeiro).
+  function telaAbstDec(v, parte) {
+    parte = parte || 1;
+    var f1 = fontePres(true), f2 = fontePres(false), cs = fin2(f2), W = v ? 540 : 1280, H = v ? 960 : 720, tit = "A ABSTENÇÃO DECIDIU?" + (parte === 2 ? " (2/2)" : " (1/2)");
+    var sub = "eleitores em casa a mais no 2º turno × diferença entre os finalistas · urnas já apuradas";
     if (!cs) return vazioAn(v, tit, sub, f2, "disponível no 2º turno");
     if (!f1.guardado) return vazioAn(v, tit, sub, f2, "1º turno ainda não guardado");
     if (!(f2.br.secoes && f2.br.secoes.pct > 0)) return vazioAn(v, tit, sub, f2, "aguardando as primeiras urnas do 2º turno");
@@ -4114,29 +4130,45 @@
     var ls = Object.keys(DEP_UF).map(function (kk) { var x = abstDec(f1, f2, A, B, f1.uf(kk), f2.uf(kk)); return x && f2.uf(kk).secoes && f2.uf(kk).secoes.pct > 0 ? { k: kk, x: x } : null; }).filter(Boolean);
     ls.sort(function (p, q) { return (q.x.supera - p.x.supera) || (q.x.extra - p.x.extra); });
     var nSup = ls.filter(function (l) { return l.x.supera; }).length, xP = v ? 35 : 73, wP = v ? 470 : 1134;
-    o += painelAn(xP, v ? 165 : 100, wP, v ? 150 : 96);
+    var yB = v ? 150 : 100, hB = v ? 118 : 100;
+    o += painelAn(xP, yB, wP, hB);
     if (nb) {
-      o += t(xP + 20, (v ? 195 : 132), "BRASIL: abstenção " + pct(nb.a1) + " no 1º turno → " + pct(nb.a2) + " no 2º (" + ppTxt(nb.d) + ")", { s: Math.round(19 * k), b: true, max: wP - 40 });
-      o += t(xP + 20, (v ? 225 : 162), (nb.extra > 0 ? milTxt(nb.extra) + " eleitores a mais em casa" : milTxt(-nb.extra) + " eleitores a mais foram votar") + "  ·  diferença entre os dois: " + milTxt(nb.marg) + " votos",
-        { s: Math.round(16 * k), c: nb.supera ? "#ffd8a8" : "#c9d6e6", max: wP - 40 });
-      if (v) o += t(xP + 20, 255, nb.supera ? "a abstenção a mais é MAIOR que a diferença" : "a diferença é maior que a abstenção a mais", { s: 14, b: true, c: nb.supera ? "#ffd8a8" : "#8ce99a" });
-      if (!v) o += t(xP + wP - 20, 132, nb.supera ? "SUPERA A DIFERENÇA" : "NÃO SUPERA", { s: 15, b: true, a: "end", c: nb.supera ? "#ffd8a8" : "#8ce99a" });
+      o += t(xP + 20, yB + (v ? 32 : 36), "BRASIL: abstenção " + pct1v(nb.a1) + " → " + pct1v(nb.a2) + " (" + ppTxt(nb.d) + ")", { s: v ? 19 : 24, b: true, max: wP - (v ? 40 : 220) });
+      o += t(xP + 20, yB + (v ? 62 : 72), (nb.extra > 0 ? milTxt(nb.extra) + " eleitores a mais em casa" : milTxt(-nb.extra) + " eleitores a mais foram votar") + "  ·  diferença entre os dois: " + milTxt(nb.marg) + " votos",
+        { s: v ? 15 : 19, c: "#e7eef7", max: wP - 40 });
+      var selB = nb.supera ? "SUPERA A DIFERENÇA" : "NÃO SUPERA";
+      if (v) o += pilula(xP + wP - 20, yB + 96, selB, nb.supera ? "#ffd8a8" : "#8ce99a", 13, true);
+      else o += pilula(xP + wP - 20, yB + 40, selB, nb.supera ? "#ffd8a8" : "#8ce99a", 16, true);
     }
-    var y0 = v ? 345 : 222;
-    o += t(xP, y0 - 10, nSup ? "EM " + nSup + " ESTADO(S) A ABSTENÇÃO A MAIS SUPERA A DIFERENÇA ENTRE OS DOIS" : "EM NENHUM ESTADO A ABSTENÇÃO A MAIS SUPERA A DIFERENÇA", { s: Math.round(13 * k), b: true, c: nSup ? "#ffd8a8" : "#c9d6e6", ls: 1, max: wP });
-    var nCol = v ? 1 : 2, porCol = v ? 14 : 12, wCol = v ? 470 : 559, passo = v ? 40 : 38;
-    ls.slice(0, nCol * porCol).forEach(function (l, i) {
+    var y0 = yB + hB + (v ? 36 : 40);
+    o += t(xP, y0 - 12, (nSup ? "EM " + nSup + (nSup === 1 ? " ESTADO" : " ESTADOS") + " A ABSTENÇÃO A MAIS SUPERA A DIFERENÇA" : "EM NENHUM ESTADO A ABSTENÇÃO A MAIS SUPERA A DIFERENÇA") + (parte === 2 ? " · continuação" : ""),
+      { s: v ? 13 : 16, b: true, c: nSup ? "#ffd8a8" : "#c9d6e6", ls: 1, max: wP });
+    var meio = Math.ceil(ls.length / 2), parteLs = parte === 2 ? ls.slice(meio) : ls.slice(0, meio);
+    var nCol = v ? 1 : 2, porCol = v ? 14 : 7, wCol = v ? 470 : 559, passo = v ? 43 : 64, hL = passo - 6;
+    if (!parteLs.length) o += t(W / 2, y0 + 80, "todos os estados apurados estão na parte 1", { s: v ? 16 : 20, c: C.apagado, a: "middle" });
+    parteLs.slice(0, nCol * porCol).forEach(function (l, i) {
       var col = Math.floor(i / porCol), li = i % porCol, x = xP + col * (wCol + 16), y = y0 + li * passo, x2 = l.x;
-      o += r(x, y, wCol, passo - 4, x2.supera ? "rgba(255,216,168,0.10)" : (li % 2 ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.06)"), 4);
-      o += t(x + 10, y + 23, l.k.toUpperCase(), { s: 15, b: true });
-      o += t(x + 50, y + 15, "abstenção " + pct1v(x2.a1) + " → " + pct1v(x2.a2) + " (" + ppTxt(x2.d) + ")", { s: Math.round(12 * k), c: "#c9d6e6", max: wCol - 60 });
-      o += t(x + 50, y + 30, (x2.extra >= 0 ? "+" + milTxt(x2.extra) + " em casa" : milTxt(-x2.extra) + " a mais votaram") + " · diferença " + milTxt(x2.marg), { s: Math.round(12 * k), b: true, max: wCol - 170 });
-      if (x2.supera) o += chip(x + wCol - (v ? 120 : 140), y + 24, "SUPERA A DIFERENÇA", "#ffd8a8", "#0b1220", v ? 9 : 10);
+      o += r(x, y, wCol, hL, x2.supera ? "rgba(255,216,168,0.14)" : (li % 2 ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.08)"), 5);
+      if (x2.supera) o += r(x, y, 5, hL, "#ffd8a8", 2);
+      var txtCasa = (x2.extra >= 0 ? "+" + milTxt(x2.extra) + " em casa" : milTxt(-x2.extra) + " a mais votaram") + "  ·  diferença " + milTxt(x2.marg);
+      if (!v) {
+        o += t(x + 18, y + 38, l.k.toUpperCase(), { s: 28, b: true });
+        o += t(x + 84, y + 24, "abstenção " + pct1v(x2.a1) + " → " + pct1v(x2.a2) + "  (" + ppTxt(x2.d) + ")", { s: 16, c: "#c9d6e6", max: wCol - (x2.supera ? 260 : 100) });
+        o += t(x + 84, y + 48, txtCasa, { s: 18, b: true, max: wCol - 100 });
+        if (x2.supera) o += pilula(x + wCol - 12, y + 22, "SUPERA A DIFERENÇA", "#ffd8a8", 11, true);
+      } else {
+        o += t(x + 12, y + 26, l.k.toUpperCase(), { s: 20, b: true });
+        o += t(x + 58, y + 16, "abstenção " + pct1v(x2.a1) + " → " + pct1v(x2.a2) + " (" + ppTxt(x2.d) + ")", { s: 13, c: "#c9d6e6", max: wCol - (x2.supera ? 140 : 70) });
+        o += t(x + 58, y + 33, txtCasa, { s: 14, b: true, max: wCol - 70 });
+        if (x2.supera) o += pilula(x + wCol - 10, y + 17, "SUPERA", "#ffd8a8", 10, true);
+      }
     });
     return svg(W, H, o + rodAn(v, "Fonte: TSE — abstenção do 1º turno (final) × 2º turno, sobre o eleitorado das seções já apuradas · não diz em quem o ausente votaria"));
   }
-  G["abstdec-h"] = function () { return telaAbstDec(false); };
-  G["abstdec-v"] = function () { return telaAbstDec(true); };
+  G["abstdec-h"] = function () { return telaAbstDec(false, 1); };
+  G["abstdec-v"] = function () { return telaAbstDec(true, 1); };
+  G["abstdec2-h"] = function () { return telaAbstDec(false, 2); };
+  G["abstdec2-v"] = function () { return telaAbstDec(true, 2); };
 
   // ---- A5. A HORA DA DEFINICAO ----------------------------------------------
   function trocasLideranca() {
@@ -4561,9 +4593,11 @@
       { id: "perfileleitor-v", nome: "Perfil do eleitorado", f: "v" },
       { id: "foiurnas-v", nome: "Quem foi às urnas (perfil)", f: "v" },
       { id: "governab-h", nome: "Governabilidade: a base de cada finalista", f: "h" },
-      { id: "capint-h", nome: "Capital × interior", f: "h" },
+      { id: "capint-h", nome: "Capital × interior (1/2)", f: "h" },
+      { id: "capint2-h", nome: "Capital × interior (2/2)", f: "h" },
       { id: "transf-h", nome: "Para onde foram os votos (estimativa)", f: "h" },
-      { id: "abstdec-h", nome: "A abstenção decidiu?", f: "h" },
+      { id: "abstdec-h", nome: "A abstenção decidiu? (1/2)", f: "h" },
+      { id: "abstdec2-h", nome: "A abstenção decidiu? (2/2)", f: "h" },
       { id: "definicao-h", nome: "A hora da definição", f: "h" },
       { id: "semuf-h", nome: "Sem este estado, quem venceria?", f: "h" },
       { id: "pendulo-h", nome: "Quanto cada estado se moveu (2022 → 2026)", f: "h" },
@@ -4571,9 +4605,11 @@
       { id: "perfilres-h", nome: "Perfil do eleitorado × resultado", f: "h" },
       { id: "munmapa-h", nome: "Presidente em cada cidade (mapa)", f: "h" },
       { id: "governab-v", nome: "Governabilidade: a base de cada finalista", f: "v" },
-      { id: "capint-v", nome: "Capital × interior", f: "v" },
+      { id: "capint-v", nome: "Capital × interior (1/2)", f: "v" },
+      { id: "capint2-v", nome: "Capital × interior (2/2)", f: "v" },
       { id: "transf-v", nome: "Para onde foram os votos (estimativa)", f: "v" },
-      { id: "abstdec-v", nome: "A abstenção decidiu?", f: "v" },
+      { id: "abstdec-v", nome: "A abstenção decidiu? (1/2)", f: "v" },
+      { id: "abstdec2-v", nome: "A abstenção decidiu? (2/2)", f: "v" },
       { id: "definicao-v", nome: "A hora da definição", f: "v" },
       { id: "semuf-v", nome: "Sem este estado, quem venceria?", f: "v" },
       { id: "pendulo-v", nome: "Quanto cada estado se moveu (2022 → 2026)", f: "v" },

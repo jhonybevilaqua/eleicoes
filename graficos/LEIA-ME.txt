@@ -1,6 +1,8 @@
 ===========================================================================
- gctse GRAFICOS 3.28.4 - APURACAO DO 2o TURNO (25/10/2026)
+ gctse GRAFICOS 3.28.5 - APURACAO DO 2o TURNO (25/10/2026)
 
+ 3.28.5 (25/10): "A abstencao decidiu?" e "Capital x interior" em DUAS telas
+   cada (1/2 e 2/2, metade dos estados em cada), com letras maiores.
  3.28.4 (25/10): "Evolucao": trecho em que as urnas nao andaram por 20 min
    ou mais fica estreito (faixa PAUSA, com o horario embaixo); cada VIRADA
    entre o 1o e o 2o com linha amarela e o horario exato do boletim do TSE

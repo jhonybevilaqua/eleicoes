@@ -749,7 +749,7 @@
     var gAn = blocoEm("anal", "analise", "ANÁLISE POLÍTICA — números para o debate");
     function subAn(tit, itens) { if (!itens.length) return; var d = document.createElement("div"); d.className = "sub2"; d.innerHTML = '<span class="rot2">' + tit + "</span>"; gAn.appendChild(d); botoesEm(d, itens); }
     subAn("PODER", itensDe(["governab", "cruzado"]));
-    subAn("O VOTO", itensDe(["transf", "abstdec", "capint", "perfilres"]));
+    subAn("O VOTO", itensDe(["transf", "abstdec", "abstdec2", "capint", "capint2", "perfilres"]));
     subAn("A DISPUTA", itensDe(["definicao", "semuf", "pendulo"]));
     if (existe("munmapa-" + S.f)) {
       usados["munmapa-" + S.f] = 1;
