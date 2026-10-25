@@ -32,6 +32,29 @@ eleições. Feitos e usados no ar nas eleições gerais de 2026 (1º turno
 5. Commits terminam com as linhas de coautoria pedidas na sessão; não
    colocar nome de modelo em arquivo do repositório. Não usar o e-mail do
    usuário em serviço nenhum.
+6. **Nunca perder dado da noite.** O TSE só publica o boletim do momento,
+   não o histórico: o que a coleta não guardou, só volta dias depois
+   (Histórico de totalização, Dados Abertos). Em 25/10/2026 o começo do
+   "minuto a minuto" se perdeu porque a pasta instalada foi trocada
+   durante a apuração. Por isso:
+   - **Durante a apuração, nunca instalar pacote novo por cima nem em outra
+     pasta.** Atualização no meio da noite = copiar só os arquivos que
+     mudaram (`web\graficos.js` etc.) para a pasta que está no ar. Sempre
+     dizer isso ao usuário junto com qualquer zip entregue no dia.
+   - Os dados ficam SÓ na pasta instalada (nunca no zip):
+     `evolucao-*.json`, `definicao-*.json`, `cores-atribuidas-*.json`,
+     `web\dados.js`, `web\estados.js`, `web\municipios.js`, `logs\`,
+     `dados-2022.json`, `web\fotos-tse\`, `copias-de-seguranca\`.
+   - Cópia de segurança (botão "cópia") antes de qualquer troca e no fim
+     da noite; levar o .zip para fora da máquina.
+   - Logs são a rede de segurança: `logs\graficos-AAAA-MM-DD.log` (1º
+     colocado a cada 20 s) e o log das TARJAS `gctse-AAAA-MM-DD.log` (os
+     dois candidatos a cada mudança). `IMPORTAR-EVOLUCAO.bat` refaz o
+     minuto a minuto por eles, ou pelo Histórico de totalização do TSE
+     (`Historico_Totalizacao_Presidente_BR_2T_AAAA`, a melhor fonte).
+   - Ideia para a próxima: a coleta gravar também uma cópia do
+     `evolucao-*.json` fora da pasta do programa (ex.: Documentos ou outro
+     disco) a cada ponto novo.
 
 ## Os dois sistemas
 
