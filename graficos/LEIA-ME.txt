@@ -1,6 +1,11 @@
 ===========================================================================
- gctse GRAFICOS 3.28.7 - APURACAO DO 2o TURNO (25/10/2026)
+ gctse GRAFICOS 3.28.8 - APURACAO DO 2o TURNO (25/10/2026)
 
+ 3.28.8 (26/10): VERSAO FINAL. Tela nova "A noite da apuracao (marcos)":
+   1a divulgacao, pausa, viradas, eleito e 100% das urnas, com o horario.
+   IMPORTAR-EVOLUCAO reconhece o historico do TSE pelo conteudo (qualquer
+   nome de arquivo) e o GRAFICOS.bat aberto pega a hora do eleito sozinho.
+   Passo a passo: COMO-IMPORTAR-MINUTO-A-MINUTO.txt
  3.28.7 (26/10): "Evolucao": selo verde ELEITO em cima da linha do vencedor,
    no ponto da hora; horas no formato da TV (20h54).
  3.28.6 (26/10): "Evolucao": linha verde com o horario em que o presidente

@@ -151,6 +151,16 @@ try { Add-Type -AssemblyName System.IO.Compression } catch { }
 $Latin1 = [Text.Encoding]::GetEncoding(28591)
 $turnoArq = $(if ($cfg.tse.eleicao_presidente_1turno -and "$($cfg.tse.eleicao_presidente_1turno)" -ne $Eleicao) { "2T" } else { "1T" })
 $padraoHist = '(?i)^Historico_Totalizacao_Presidente_BR_' + $turnoArq + '_\d{4}.*\.(zip|csv|txt)$'
+function Parece-Historico($Arq) {
+    try {
+        if ($Arq.Extension -match '(?i)\.zip$') {
+            $z = [IO.Compression.ZipFile]::OpenRead($Arq.FullName)
+            try { $e = @($z.Entries | Where-Object { $_.Name -match '(?i)\.(csv|txt)$' }) | Select-Object -First 1; if (-not $e) { return $false }
+                  $r0 = New-Object IO.StreamReader($e.Open(), $Latin1); try { $c0 = $r0.ReadLine() } finally { $r0.Dispose() } } finally { $z.Dispose() }
+        } else { $r0 = New-Object IO.StreamReader($Arq.FullName, $Latin1); try { $c0 = $r0.ReadLine() } finally { $r0.Dispose() } }
+        return ("$c0" -match '(?i)DT_TOTALIZACAO' -and "$c0" -match '(?i)_PE_VOTOS_TOT_ACUMULADO')
+    } catch { return $false }
+}
 function Achar-Historico {
     $lugares = @()
     if ($null -ne $Caminhos) { $lugares += @($Caminhos | Where-Object { $_ } | ForEach-Object { "$_".Trim('"') }) }
@@ -158,7 +168,12 @@ function Achar-Historico {
     if ($env:USERPROFILE) { $lugares += @((Join-Path $env:USERPROFILE "Downloads"), (Join-Path $env:USERPROFILE "Desktop")) }
     $ach = @()
     foreach ($l in $lugares) {
-        if (Test-Path -LiteralPath $l -PathType Leaf) { $it = Get-Item -LiteralPath $l; if ($it.Name -match $padraoHist) { $ach += @($it) }; continue }
+        if (Test-Path -LiteralPath $l -PathType Leaf) {
+            $it = Get-Item -LiteralPath $l
+            # arrastado com outro nome: vale se o cabecalho e o do historico
+            if ($it.Name -match $padraoHist -or ($it.Extension -match '(?i)\.(zip|csv|txt)$' -and (Parece-Historico $it))) { $ach += @($it) }
+            continue
+        }
         if (Test-Path -LiteralPath $l -PathType Container) { $ach += @(Get-ChildItem -LiteralPath $l -File -Recurse -Depth 1 -ErrorAction SilentlyContinue | Where-Object { $_.Name -match $padraoHist }) }
     }
     return @($ach | Sort-Object LastWriteTime -Descending | Select-Object -First 1)
@@ -514,7 +529,7 @@ if ($histOk -and $script:DefHist) {
     $arqDef = Join-Path $Raiz ("definicao-{0}-{1}-oficial.json" -f $Ciclo, $Eleicao)
     if (Test-Path $arqDef) { Copy-Item $arqDef "$arqDef.antes-da-importacao" -Force }
     [IO.File]::WriteAllText($arqDef, ([pscustomobject] $script:DefHist | ConvertTo-Json -Compress), (New-Object System.Text.UTF8Encoding($false)))
-    Anotar ("ELEITO (pela conta com o historico do TSE): {0} as {1}, com {2}% das urnas - gravado em {3}. Para a tela mostrar: feche e abra o GRAFICOS.bat." -f $script:DefHist.nome, $script:DefHist.hora, $script:DefHist.urnas, (Split-Path -Leaf $arqDef)) "Green"
+    Anotar ("ELEITO (pela conta com o historico do TSE): {0} as {1}, com {2}% das urnas - gravado em {3}. O GRAFICOS.bat aberto pega sozinho em ~20 s (versao 3.28.8 ou mais nova; se for mais velha, feche e abra)." -f $script:DefHist.nome, $script:DefHist.hora, $script:DefHist.urnas, (Split-Path -Leaf $arqDef)) "Green"
 }
 # A tela recebeu? Quem poe a linha na tela e o GRAFICOS.bat (dados.js). Um
 # GRAFICOS.bat aberto ANTES de atualizar para a 3.0 continua na versao velha,

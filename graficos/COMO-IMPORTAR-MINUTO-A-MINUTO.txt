@@ -1,0 +1,49 @@
+===========================================================================
+ COMO IMPORTAR O "MINUTO A MINUTO" DO TSE (grafico Evolucao da apuracao)
+===========================================================================
+
+ O TSE publica, depois da eleicao, o historico oficial de cada atualizacao
+ da noite. Com ele a linha do minuto a minuto fica completa e oficial, e o
+ sistema calcula a hora exata em que o presidente ficou ELEITO.
+
+ 1. BAIXAR O ARQUIVO DO TSE
+    - Site: dadosabertos.tse.jus.br
+    - Procure o conjunto de RESULTADOS de 2026 e, dentro dele:
+         "BR - Historico totalizacao Presidente 2o Turno - 2026"
+    - Clique em Explorar > Baixar. Vem um .zip parecido com
+         Historico_Totalizacao_Presidente_BR_2T_2026.zip
+    - NAO descompacte.
+
+ 2. COLOCAR O ZIP NA PASTA "importar"
+    - Copie o .zip para a pasta  importar  (dentro desta pasta GRAFICOS).
+      (Tambem serve deixar em Downloads ou na Area de Trabalho, ou arrastar
+      o .zip em cima do IMPORTAR-EVOLUCAO.bat - o nome do arquivo nao
+      importa, ele reconhece pelo conteudo.)
+
+ 3. IMPORTAR
+    - No gerenciador: botao "dados do TSE" > linha "Minuto a minuto
+      (historico)" > rodar.
+      OU: dois cliques em IMPORTAR-EVOLUCAO.bat (nesta pasta GRAFICOS).
+    - A janela mostra, no fim:
+         historico de totalizacao do TSE: ...
+         importados NNN pontos de 17h.. a ..
+         ELEITO (pela conta com o historico do TSE): NOME as HH:MM:SS
+    - O GRAFICOS.bat aberto pega tudo sozinho em ~20 segundos.
+      Depois aperte F5 na tela (no OBS: "Atualizar a pagina", fora do ar).
+
+ 4. CONFERIR
+    - Tela "Evolucao minuto a minuto": rodape diz "historico de totalizacao
+      do TSE"; linha verde ELEITO no horario certo.
+    - Tela "A noite da apuracao (marcos)": 1a divulgacao, pausa, viradas,
+      eleito e 100% das urnas, com o horario de cada um.
+
+ ENQUANTO O TSE NAO PUBLICA: o IMPORTAR-EVOLUCAO usa os logs.
+    - Log das TARJAS (computador das tarjas, pasta do GCTSE > logs):
+         gctse-2026-10-25.log  (e gctse-2026-10-26.log se passou da 0h)
+      Copie para a pasta importar e rode o IMPORTAR-EVOLUCAO.bat.
+    - Ou o logs\graficos-2026-10-25.log da pasta antiga dos GRAFICOS.
+    Quando o historico do TSE sair, rode de novo: ele substitui pelos
+    numeros oficiais.
+
+ Deu erro? Mande o arquivo IMPORTAR-EVOLUCAO.txt (fica nesta pasta).
+===========================================================================

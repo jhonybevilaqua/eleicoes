@@ -19,7 +19,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "3.28.7 - 26/10/2026"
+$Versao = "3.28.8 - 26/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -846,8 +846,22 @@ function Registrar-Evolucao {
 # mudar se o coletor reiniciar.
 $ArquivoDefinicao = Join-Path $Raiz ("definicao-{0}-{1}-{2}.json" -f $Ciclo, $Eleicao, $Modo.ToLower())
 $script:Definicao = $null
-if (Test-Path $ArquivoDefinicao) { try { $script:Definicao = Get-Content $ArquivoDefinicao -Raw -Encoding UTF8 | ConvertFrom-Json } catch { } }
+$script:DefinicaoLidaEm = [datetime]::MinValue
+# 3.28.8: relido quando o arquivo muda (o IMPORTAR-EVOLUCAO grava a hora
+# exata pelo historico do TSE) - nao precisa fechar e abrir o GRAFICOS.bat
+function Carregar-Definicao {
+    if (-not (Test-Path $ArquivoDefinicao)) { return }
+    try {
+        $q = (Get-Item $ArquivoDefinicao).LastWriteTimeUtc
+        if ($q -eq $script:DefinicaoLidaEm) { return }
+        $script:Definicao = Get-Content $ArquivoDefinicao -Raw -Encoding UTF8 | ConvertFrom-Json
+        $script:DefinicaoLidaEm = $q
+        Escrever-Log ("hora do eleito lida de {0}: {1} as {2}" -f (Split-Path -Leaf $ArquivoDefinicao), $script:Definicao.nome, $script:Definicao.hora)
+    } catch { }
+}
+Carregar-Definicao
 function Registrar-Definicao {
+    Carregar-Definicao
     if ($null -ne $script:Definicao -or -not $Eleicao1T) { return }
     if (-not $script:Cache.ContainsKey("br")) { return }
     $b = $script:Cache["br"]; $cs = @($b.candidatos)

@@ -1210,7 +1210,7 @@
       bruta.forEach(function (p) {
         var va = p.c[na], vb = p.c[nb]; if (va == null || vb == null) return;
         var sn = +va > +vb ? 1 : (+va < +vb ? -1 : 0); if (!sn) return;
-        if (sAnt && sn !== sAnt) { var lid = sn > 0 ? cs[0] : cs[1]; viradas.push({ ms: p.ms, va: +va, vb: +vb, lider: lid.nome || (nomes[lid.numero] || {}).nome || lid.numero, cor: cor(lid) }); }
+        if (sAnt && sn !== sAnt) { var lid = sn > 0 ? cs[0] : cs[1]; viradas.push({ ms: p.ms, u: p.u, va: +va, vb: +vb, lider: lid.nome || (nomes[lid.numero] || {}).nome || lid.numero, cor: cor(lid) }); }
         sAnt = sn;
       });
     }
@@ -1225,7 +1225,8 @@
     // Serie com 1 ponto so (log do exibidor guardou so o 1o colocado): avisa na legenda.
     var maxPts = Math.max.apply(null, series.map(function (s) { return s.pts.length; }).concat([0]));
     series.forEach(function (s) { s.soFinal = maxPts >= 2 && s.pts.length === 1; });
-    return { series: series, pontos: lista, origem: ev.origem || "", pausas: pausas, viradas: viradas };
+    var cem = bruta.filter(function (p) { return p.u >= 99.995; })[0] || null;
+    return { series: series, pontos: lista, origem: ev.origem || "", pausas: pausas, viradas: viradas, primeiro: bruta[0] || null, cem: cem, ultimo: bruta[bruta.length - 1] || null, cs: cs };
   }
   function hhmm(ms) { var x = new Date(ms); return ("0" + x.getHours()).slice(-2) + ":" + ("0" + x.getMinutes()).slice(-2); }
   function pctCurto(v, casas) { return Number(v).toFixed(casas).replace(".", ",") + "%"; }
@@ -1421,6 +1422,45 @@
     o += plotEvolucao(ev, 85, 410, 290, 820, 0.85, 5);
     return svg(W, H, o + t(35, 945, rodapeEvolucao(ev), { s: 11, c: C.apagado2, max: 470 }));
   };
+
+  // ---- 3.28.8: A NOITE DA APURACAO - os marcos, em ordem, com a hora ------
+  // Tudo do historico do minuto a minuto (boletins do TSE) e da hora do
+  // eleito (definicao-*.json). Bom para o jornal do dia seguinte.
+  function marcosNoite() {
+    var ev = evolucao(), cs = ev.cs || [], df = D().definicao, L = [];
+    if (cs.length < 2 || !ev.primeiro) return null;
+    var A = cs[0], B = cs[1];
+    function hm(ms) { var x = new Date(ms); return x.getHours() + "h" + ("0" + x.getMinutes()).slice(-2); }
+    function par(p) { var a = p.c[String(A.numero)], b = p.c[String(B.numero)]; return (a != null ? nomeCurto(A) + " " + pctCurto(+a, 2) : "") + (b != null ? "  ×  " + nomeCurto(B) + " " + pctCurto(+b, 2) : ""); }
+    function urn(u) { return "urnas " + pctCurto(+u, +u < 10 ? 2 : 1); }
+    L.push({ ms: ev.primeiro.ms, tit: "1ª DIVULGAÇÃO", txt: par(ev.primeiro), u: urn(ev.primeiro.u), cor: "#c9d6e6" });
+    (ev.pausas || []).forEach(function (q) { L.push({ ms: q.a, tit: "PAUSA DE " + Math.round((q.b - q.a) / 60000) + " MIN", txt: "urnas sem avanço até as " + hm(q.b), u: "", cor: "#8b9bb4" }); });
+    (ev.viradas || []).forEach(function (q) { L.push({ ms: q.ms, tit: "VIRADA", txt: q.lider + " assume a liderança", u: q.u != null ? urn(q.u) : "", cor: "#a5d8ff" }); });
+    var mD = df && /^(\d\d)\/(\d\d)\/(\d{4})\s+(\d\d):(\d\d):?(\d\d)?/.exec(String(df.geracao || ""));
+    if (mD) L.push({ ms: new Date(+mD[3], mD[2] - 1, +mD[1], +mD[4], +mD[5], +(mD[6] || 0)).getTime(), tit: "ELEITO", txt: (df.nome || "") + (df.tipo === "matematica" ? " · matematicamente eleito" : " · declarado pelo TSE"), u: df.urnas != null ? urn(df.urnas) : "", cor: "#8ce99a" });
+    if (ev.cem) L.push({ ms: ev.cem.ms, tit: "100% DAS URNAS", txt: par(ev.cem), u: "", cor: "#ffffff" });
+    L.sort(function (p, q) { return p.ms - q.ms; });
+    L.forEach(function (x) { x.h = hm(x.ms); });
+    return { L: L, A: A, B: B };
+  }
+  function telaMarcos(v) {
+    var W = v ? 540 : 1280, H = v ? 960 : 720, mk = marcosNoite(), tit = "A NOITE DA APURAÇÃO", sub = "Presidente · 2º turno · os momentos da apuração, no horário do TSE";
+    var o = v ? cabecalhoV(W, tit, "Presidente · os momentos da noite") : cabecalhoH(W, tit, sub);
+    if (!mk || !mk.L.length) return svg(W, H, marcaVazio() + o + t(W / 2, H / 2, "aguardando o minuto a minuto (GRAFICOS.bat ou IMPORTAR-EVOLUCAO)", { s: v ? 16 : 22, c: C.apagado, a: "middle", max: W - 60 }));
+    var L = mk.L.slice(0, v ? 9 : 8), x0 = v ? 35 : 73, y0 = v ? 200 : 130, yF = v ? 900 : 670, passo = Math.min(v ? 140 : 112, (yF - y0 - 30) / Math.max(1, L.length - 1)), xl = x0 + (v ? 92 : 130);
+    o += r(xl - 2, y0 + 10, 4, passo * (L.length - 1), "rgba(255,255,255,0.18)", 2);
+    L.forEach(function (x, i) {
+      var y = y0 + 10 + i * passo;
+      o += t(xl - 22, y + 9, x.h, { s: v ? 22 : 28, b: true, a: "end" });
+      o += '<circle cx="' + xl + '" cy="' + y + '" r="' + (v ? 9 : 11) + '" fill="' + x.cor + '" stroke="#0b1220" stroke-width="3"/>';
+      o += t(xl + 26, y - 6, x.tit, { s: v ? 17 : 19, b: true, c: x.cor, ls: 1 });
+      if (v) o += t(xl + 26, y + 18, x.txt, { s: 15, b: true, max: W - xl - 26 - 20 }) + (x.u ? t(xl + 26, y + 38, x.u, { s: 13, c: "#c9d6e6" }) : "");
+      else o += t(xl + 26, y + 24, x.txt + (x.u ? "  ·  " + x.u : ""), { s: 23, b: true, max: W - xl - 26 - x0 });
+    });
+    return svg(W, H, o + (v ? t(35, 945, "Fonte: TSE — boletins da noite (minuto a minuto) e hora do eleito", { s: 10, c: C.apagado2, max: 470 }) : t(73, 708, "Fonte: TSE — boletins da noite gravados pelo sistema (ou histórico de totalização do TSE) · hora do eleito: marca do TSE ou conta com os eleitores que faltavam", { s: 12, c: C.apagado2, max: 1134 })));
+  }
+  G["marcos-h"] = function () { return telaMarcos(false); };
+  G["marcos-v"] = function () { return telaMarcos(true); };
 
   // ---- Deputados federais eleitos: N por tela, trocando sozinha -------------
   // Lista do TSE (cargo 6, so quem o TSE marcou eleito), lida pelo
@@ -4517,6 +4557,7 @@
       { id: "comparativo-h", nome: "2018 × 2022 × 2026", f: "h" },
       { id: "camara-h", nome: "Câmara: bancadas 2027", f: "h" },
       { id: "evolucao-h", nome: "Evolução minuto a minuto (1º × 2º)", f: "h" },
+      { id: "marcos-h", nome: "A noite da apuração (marcos)", f: "h" },
       { id: "deputados-h", nome: "Deputados federais eleitos", f: "h" },
       { id: "mulheres-h", nome: "Câmara: bancada feminina", f: "h" },
       { id: "apuracao-h", nome: "Apuração: regiões e estados", f: "h" },
@@ -4581,6 +4622,7 @@
       { id: "comparativo-v", nome: "2018 × 2022 × 2026", f: "v" },
       { id: "camara-v", nome: "Câmara: bancadas 2027", f: "v" },
       { id: "evolucao-v", nome: "Evolução minuto a minuto (1º × 2º)", f: "v" },
+      { id: "marcos-v", nome: "A noite da apuração (marcos)", f: "v" },
       { id: "deputados-v", nome: "Deputados federais eleitos", f: "v" },
       { id: "mulheres-v", nome: "Câmara: bancada feminina", f: "v" },
       { id: "apuracao-v", nome: "Apuração: regiões", f: "v" },
