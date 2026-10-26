@@ -1,6 +1,10 @@
 ===========================================================================
- gctse GRAFICOS 3.28.8 - APURACAO DO 2o TURNO (25/10/2026)
+ gctse GRAFICOS 3.28.9 - APURACAO DO 2o TURNO (25/10/2026)
 
+ 3.28.9 (26/10): hora do MATEMATICAMENTE ELEITO (o 1o com mais votos que o 2o
+   + todos os eleitores que faltavam) em destaque na "Evolucao" e na "A noite
+   da apuracao" (com os segundos). A coleta registra a conta mesmo quando
+   o TSE marca "Eleito" no mesmo boletim.
  3.28.8 (26/10): VERSAO FINAL. Tela nova "A noite da apuracao (marcos)":
    1a divulgacao, pausa, viradas, eleito e 100% das urnas, com o horario.
    IMPORTAR-EVOLUCAO reconhece o historico do TSE pelo conteudo (qualquer

@@ -1333,7 +1333,7 @@
     if (mD) {
       var msD = new Date(+mD[3], mD[2] - 1, +mD[1], +mD[4], +mD[5], +(mD[6] || 0)).getTime();
       if (msD >= tA - 60000 && msD <= tB + 60000) {
-        var ex = X(Math.min(Math.max(msD, tA), tB)), l1 = "ELEITO ÀS " + String(df.hora || "").slice(0, 5).replace(":", "h"), l2 = (df.nome || "") + (df.urnas != null ? " · urnas " + pctCurto(+df.urnas, 2) : "") + (df.tipo === "matematica" ? " · matematicamente" : " · pelo TSE");
+        var ex = X(Math.min(Math.max(msD, tA), tB)), l1 = (df.tipo === "matematica" ? "MATEMATICAMENTE ELEITO ÀS " : "ELEITO (TSE) ÀS ") + String(df.hora || "").slice(0, 5).replace(":", "h"), l2 = (df.nome || "") + (df.urnas != null ? " · urnas " + pctCurto(+df.urnas, 2) : "") + (df.tipo === "matematica" ? " · não podia mais ser alcançado" : " · declarado pelo TSE");
         o += '<line x1="' + ex.toFixed(1) + '" x2="' + ex.toFixed(1) + '" y1="' + y0 + '" y2="' + y1 + '" stroke="#8ce99a" stroke-width="2" opacity="0.8"/>';
         var ew = Math.max(l1.length * 8.6, l2.length * 6.2) * k + 22 * k, eh = 40 * k, exx = ex + 10 * k + ew > x1 ? ex - 10 * k - ew : ex + 10 * k, ey = y1 - eh - 12 * k;
         // nao em cima do selo da virada: tenta embaixo, em cima, e logo abaixo dele
@@ -1437,7 +1437,8 @@
     (ev.pausas || []).forEach(function (q) { L.push({ ms: q.a, tit: "PAUSA DE " + Math.round((q.b - q.a) / 60000) + " MIN", txt: "urnas sem avanço até as " + hm(q.b), u: "", cor: "#8b9bb4" }); });
     (ev.viradas || []).forEach(function (q) { L.push({ ms: q.ms, tit: "VIRADA", txt: q.lider + " assume a liderança", u: q.u != null ? urn(q.u) : "", cor: "#a5d8ff" }); });
     var mD = df && /^(\d\d)\/(\d\d)\/(\d{4})\s+(\d\d):(\d\d):?(\d\d)?/.exec(String(df.geracao || ""));
-    if (mD) L.push({ ms: new Date(+mD[3], mD[2] - 1, +mD[1], +mD[4], +mD[5], +(mD[6] || 0)).getTime(), tit: "ELEITO", txt: (df.nome || "") + (df.tipo === "matematica" ? " · matematicamente eleito" : " · declarado pelo TSE"), u: df.urnas != null ? urn(df.urnas) : "", cor: "#8ce99a" });
+    if (mD) L.push({ ms: new Date(+mD[3], mD[2] - 1, +mD[1], +mD[4], +mD[5], +(mD[6] || 0)).getTime(), tit: df.tipo === "matematica" ? "MATEMATICAMENTE ELEITO" : "ELEITO (DECLARADO PELO TSE)",
+      txt: (df.nome || "") + " · às " + (+mD[4]) + "h" + mD[5] + (mD[6] ? "min" + mD[6] + "s" : ""), u: df.urnas != null ? urn(df.urnas) : "", cor: "#8ce99a" });
     if (ev.cem) L.push({ ms: ev.cem.ms, tit: "100% DAS URNAS", txt: par(ev.cem), u: "", cor: "#ffffff" });
     L.sort(function (p, q) { return p.ms - q.ms; });
     L.forEach(function (x) { x.h = hm(x.ms); });

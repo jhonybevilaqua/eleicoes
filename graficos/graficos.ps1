@@ -19,7 +19,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "3.28.8 - 26/10/2026"
+$Versao = "3.28.9 - 26/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -868,8 +868,11 @@ function Registrar-Definicao {
     if ($cs.Count -lt 2) { return }
     $l = $cs[0]; $s2 = $cs[1]; $tipo = ""
     $falt = $null; if ($b.eleitorado) { $falt = $b.eleitorado.faltam }
-    if ($l.eleito) { $tipo = "tse" }
-    elseif ($null -ne $falt -and [int64] $l.votos -gt 0 -and ([int64] $l.votos - [int64] $s2.votos) -gt [int64] $falt) { $tipo = "matematica" }
+    # 3.28.9: a conta vem primeiro - no boletim em que o 1o ja nao pode mais
+    # ser alcancado, a hora e a do MATEMATICAMENTE ELEITO (mesmo que o TSE
+    # marque "Eleito" no mesmo boletim)
+    if ($null -ne $falt -and [int64] $l.votos -gt 0 -and ([int64] $l.votos - [int64] $s2.votos) -gt [int64] $falt) { $tipo = "matematica" }
+    elseif ($l.eleito) { $tipo = "tse" }
     if (-not $tipo) { return }
     $script:Definicao = [pscustomobject]@{
         numero = $l.numero; nome = $l.nome; partido = $l.partido; tipo = $tipo
