@@ -114,7 +114,7 @@ eleições. Feitos e usados no ar nas eleições gerais de 2026 (1º turno
 - `copia-seguranca.ps1` (botão "cópia") e ARQUIVO-HISTORICO-2026.bat
   (`guardar-tse.ps1 -Historico`: guarda a eleição inteira num .zip antes
   de o TSE tirar do ar).
-- Versão final 2026: **3.29.5** (`$Versao` em graficos.ps1 e estados.ps1,
+- Versão final 2026: **3.29.6** (`$Versao` em graficos.ps1 e estados.ps1,
   topo do `LEIA-ME.txt`).
 
 ### Outros

@@ -1,6 +1,10 @@
 ===========================================================================
- gctse GRAFICOS 3.29.5 - APURACAO DO 2o TURNO (25/10/2026)
+ gctse GRAFICOS 3.29.6 - APURACAO DO 2o TURNO (25/10/2026)
 
+ 3.29.6 (26/10): SALVAR-TELAS: se o navegador nao devolve a lista de telas,
+   tenta sozinho outros jeitos (pelo gerenciador em localhost, o outro
+   navegador - Chrome/Edge -, sem a "caixa de areia"), com perfil novo a
+   cada vez; a janela e o SALVAR-TELAS.txt dizem o motivo de cada falha.
  3.29.5 (26/10): MUNICIPIOS (mapa por cidade): le o 2o TURNO PRIMEIRO (o
    mapa comeca a colorir em 1 minuto) e so depois o 1o turno. O gerenciador
    mostra "Municipios: ..." na barra de situacao (andamento, cidades no mapa

@@ -38,51 +38,107 @@ function Sair([bool] $Ok, [string] $Msg) {
 Gravar-Status
 
 # ------------------------------------------------------------- navegador
-$nav = $null
+$nav = $null; $navs = @()
 foreach ($c in @("$env:ProgramFiles\Google\Chrome\Application\chrome.exe", "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe",
                  "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe",
                  "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe", "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe")) {
-    if ($c -and (Test-Path $c)) { $nav = $c; break }
+    if ($c -and (Test-Path $c) -and $navs -notcontains $c) { $navs += $c }
 }
-if (-not $nav -and $env:GCTSE_NAVEGADOR -and (Test-Path $env:GCTSE_NAVEGADOR)) { $nav = $env:GCTSE_NAVEGADOR }
+if ($navs.Count) { $nav = $navs[0] }
+if ($env:GCTSE_NAVEGADOR -and (Test-Path $env:GCTSE_NAVEGADOR)) { $nav = $env:GCTSE_NAVEGADOR; $navs = @($nav) + @($navs | Where-Object { $_ -ne $nav }) }
 if (-not $nav) { Sair $false "nao achei o Chrome nem o Edge nesta maquina" }
 if (-not (Test-Path (Join-Path $Web "dados.js"))) { Sair $false "falta web\dados.js: abra o GERENCIADOR.bat (ou GRAFICOS.bat) e espere o primeiro boletim" }
 Anotar "navegador: $nav" "Cyan"
 
 $tmpBase = $(if ($env:TEMP) { $env:TEMP } else { [IO.Path]::GetTempPath() })
-$Perfil = Join-Path $tmpBase "gctse-salvar-telas"
+# 3.29.6: perfil novo a cada vez (um navegador escondido de uma vez anterior
+# que travou prende o perfil e o novo sai sem fazer nada)
+$Perfil = Join-Path $tmpBase ("gctse-salvar-telas-{0}" -f $PID)
+foreach ($velho in @(Get-ChildItem -LiteralPath $tmpBase -Directory -Filter "gctse-salvar-telas*" -ErrorAction SilentlyContinue)) { try { Remove-Item -LiteralPath $velho.FullName -Recurse -Force -ErrorAction Stop } catch { } }
 # Start-Process junta os argumentos com espaco: so o que tem espaco vai
 # entre aspas (o Windows tira as aspas; o endereco file:/// ja vem sem espaco).
 function Q([string] $Arg) { if ($Arg -match '\s') { return '"' + $Arg + '"' }; return $Arg }
 $BaseArgs = @("--headless=new", "--disable-gpu", "--hide-scrollbars", "--mute-audio", "--no-first-run", "--no-default-browser-check",
               "--disable-extensions", "--allow-file-access-from-files", (Q ("--user-data-dir=" + $Perfil)))
 if ($env:GCTSE_NAVEGADOR_EXTRA) { $BaseArgs += @($env:GCTSE_NAVEGADOR_EXTRA.Split(' ') | Where-Object { $_ }) }
+# 3.29.6: endereco das paginas - arquivo (file:///) ou o servidor do
+# gerenciador (http://localhost:8098/), o que funcionar neste computador
+$script:BaseHttp = ""
 function Url-De([string] $Pagina) {
+    if ($script:BaseHttp) { return $script:BaseHttp + $Pagina }
     $p = $Pagina.Split('?')[0]; $q = $(if ($Pagina.Contains('?')) { "?" + $Pagina.Split('?', 2)[1] } else { "" })
     return (New-Object System.Uri -ArgumentList (Join-Path $Web $p)).AbsoluteUri + $q
 }
+$script:UltimoErroNav = ""
 function Rodar-Nav([string[]] $Extra, [int] $Segundos, [string] $Saida = "") {
     $a = @{ FilePath = $nav; ArgumentList = @($BaseArgs + $Extra); PassThru = $true; NoNewWindow = $true }
     $errTmp = Join-Path $tmpBase ("gctse-salvar-err-{0}.txt" -f $PID); $a.RedirectStandardError = $errTmp
     if ($Saida) { $a.RedirectStandardOutput = $Saida }
-    $p = Start-Process @a
-    if (-not $p.WaitForExit($Segundos * 1000)) { try { $p.Kill() } catch { }; return $false }
+    $script:UltimoErroNav = ""
+    try { $p = Start-Process @a } catch { $script:UltimoErroNav = "nao abriu: $($_.Exception.Message)"; return $false }
+    if (-not $p.WaitForExit($Segundos * 1000)) {
+        # fecha o navegador e os processos filhos dele (pelo PID), senao ficam escondidos
+        if ($env:OS -eq "Windows_NT") { try { & taskkill.exe /PID $p.Id /T /F 2>&1 | Out-Null } catch { } }
+        try { $p.Kill() } catch { }; $script:UltimoErroNav = "tempo esgotado ($Segundos s)"; return $false }
+    try {
+        if (Test-Path $errTmp) {
+            $err = @(Get-Content -LiteralPath $errTmp -ErrorAction SilentlyContinue | Where-Object { $_ -match '\S' } | Select-Object -Last 3)
+            if ($err.Count) { $script:UltimoErroNav = ($err -join " | ") }
+            Remove-Item -LiteralPath $errTmp -Force -ErrorAction SilentlyContinue
+        }
+    } catch { }
     return $true
+}
+function Ler-Lista {
+    $tmpLista = Join-Path $tmpBase ("gctse-telas-{0}.html" -f $PID)
+    Remove-Item -LiteralPath $tmpLista -Force -ErrorAction SilentlyContinue
+    $okN = Rodar-Nav @("--virtual-time-budget=15000", "--dump-dom", (Q (Url-De "telas-com-dados.html"))) 180 $tmpLista
+    $ls = @(); $tam = 0
+    try {
+        if (Test-Path $tmpLista) { $tam = (Get-Item $tmpLista).Length }
+        $html = [IO.File]::ReadAllText($tmpLista, [Text.Encoding]::UTF8)
+        $m = [regex]::Match($html, '<pre id="r">(.*?)</pre>', 'Singleline')
+        # (PowerShell 5.1 devolve a lista JSON inteira como um objeto so: desmonta)
+        if ($m.Success) { $lj = [Net.WebUtility]::HtmlDecode($m.Groups[1].Value) | ConvertFrom-Json; $ls = @($lj | ForEach-Object { $_ }) }
+    } catch { }
+    Remove-Item -LiteralPath $tmpLista -Force -ErrorAction SilentlyContinue
+    if (-not $ls.Count) {
+        Anotar ("   nao deu: {0} | pagina devolvida: {1} bytes{2}" -f $(if ($okN) { "navegador terminou" } else { "navegador falhou" }), $tam, $(if ($script:UltimoErroNav) { " | " + $script:UltimoErroNav } else { "" })) "Yellow"
+    }
+    return ,$ls
+}
+function Gerenciador-No-Ar {
+    $porta = 8098
+    try { $c0 = Get-Content (Join-Path $Raiz "config-graficos.json") -Raw -Encoding UTF8 | ConvertFrom-Json; if ($c0.PSObject.Properties["porta_gerenciador"] -and [int] $c0.porta_gerenciador -gt 0) { $porta = [int] $c0.porta_gerenciador } } catch { }
+    try { $r = Invoke-WebRequest -Uri ("http://localhost:{0}/telas-com-dados.html" -f $porta) -UseBasicParsing -TimeoutSec 5; if ($r.StatusCode -eq 200) { return "http://localhost:$porta/" } } catch { }
+    return ""
 }
 
 # ------------------------------------------------- quais telas tem dado
 Anotar "conferindo quais telas tem dado..." "Cyan"
-$tmpLista = Join-Path $tmpBase ("gctse-telas-{0}.html" -f $PID)
-[void] (Rodar-Nav @("--virtual-time-budget=15000", "--dump-dom", (Q (Url-De "telas-com-dados.html"))) 120 $tmpLista)
+# 3.29.6: tenta varios jeitos ate um funcionar (navegador aberto pelo
+# usuario, Windows como Administrador, bloqueio de arquivo local...):
+#   1) arquivo local  2) pelo gerenciador (localhost)  3) o outro navegador
+#   4) sem a "caixa de areia" do navegador (--no-sandbox)
 $lista = @()
-try {
-    $html = [IO.File]::ReadAllText($tmpLista, [Text.Encoding]::UTF8)
-    $m = [regex]::Match($html, '<pre id="r">(.*?)</pre>', 'Singleline')
-    # (PowerShell 5.1 devolve a lista JSON inteira como um objeto so: desmonta)
-    if ($m.Success) { $lj = [Net.WebUtility]::HtmlDecode($m.Groups[1].Value) | ConvertFrom-Json; $lista = @($lj | ForEach-Object { $_ }) }
-} catch { }
-Remove-Item -LiteralPath $tmpLista -Force -ErrorAction SilentlyContinue
-if (-not $lista.Count) { Sair $false "nao consegui ler a lista de telas (telas-com-dados.html) - o navegador abriu?" }
+$httpG = Gerenciador-No-Ar
+$tentativas = @()
+foreach ($nv in $navs) {
+    $tentativas += @{ nav = $nv; http = ""; extra = @() }
+    if ($httpG) { $tentativas += @{ nav = $nv; http = $httpG; extra = @() } }
+}
+foreach ($nv in $navs) { $tentativas += @{ nav = $nv; http = $httpG; extra = @("--no-sandbox") } }
+$baseOrig = $BaseArgs
+foreach ($tt in $tentativas) {
+    $nav = $tt.nav; $script:BaseHttp = $tt.http; $BaseArgs = @($baseOrig + $tt.extra)
+    Anotar ("   tentando: {0} | {1}{2}" -f (Split-Path -Leaf $nav), $(if ($tt.http) { $tt.http } else { "arquivo local" }), $(if ($tt.extra.Count) { " | " + ($tt.extra -join " ") } else { "" }))
+    $lista = Ler-Lista
+    if ($lista.Count) { Anotar ("   OK: {0}" -f (Split-Path -Leaf $nav)) "Green"; break }
+}
+if (-not $lista.Count) {
+    if (-not $httpG) { Anotar "   dica: com o GERENCIADOR.bat aberto ha mais um jeito de tentar (pelo localhost)" "Yellow" }
+    Sair $false "nao consegui ler a lista de telas (telas-com-dados.html) com nenhum navegador - mande o SALVAR-TELAS.txt (fica na pasta GRAFICOS)"
+}
 $comDado = @($lista | Where-Object { -not $_.vazia })
 Anotar ("{0} telas na lista, {1} com dado ({2} aguardando, ficam de fora)" -f $lista.Count, $comDado.Count, ($lista.Count - $comDado.Count))
 
