@@ -1,6 +1,12 @@
 ===========================================================================
- gctse GRAFICOS 3.29.2 - APURACAO DO 2o TURNO (25/10/2026)
+ gctse GRAFICOS 3.29.3 - APURACAO DO 2o TURNO (25/10/2026)
 
+ 3.29.3 (26/10): tela nova "Comparecimento 1o x 2o desde 2002" (aba
+   PRESIDENTE: 1o x 2o TURNO): quantos votaram no 1o e no 2o turno em cada
+   eleicao desde 2002, diferenca e variacao. Anos anteriores na tabela
+   web\comparativo-config.js (TSE); 2026 do boletim do TSE ao vivo.
+   Mapa por municipio: sem voto do 2o turno no arquivo das cidades, a tela
+   diz o motivo (MUNICIPIOS.bat fechado) em vez de mostrar o mapa cinza.
  3.29.2 (26/10): tela nova "Abstencao 1o x 2o: regioes e estados" (aba
    PRESIDENTE: 1o x 2o TURNO): Brasil, as 5 regioes e os 27 estados, com a
    abstencao do 1o e do 2o turno e a diferenca em pontos percentuais

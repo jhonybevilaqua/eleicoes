@@ -3220,6 +3220,66 @@
   G["abstreg-h"] = function () { return telaAbstReg(false); };
   G["abstreg-v"] = function () { return telaAbstReg(true); };
 
+  // ---- COMPARECIMENTO 1o x 2o TURNO DESDE 2002 --------------------------------
+  // Anos anteriores: comparativo-config.js (TSE). 2026: ao vivo do TSE quando
+  // ha o 1o turno guardado e o 2o turno com 100% das urnas.
+  function comparecAnos() {
+    var cfg = ((window.GCTSE_COMPARATIVO || {}).comparecimento || []).map(function (x) { return { ano: +x.ano, t1: +x.t1, t2: +x.t2, vivo: false }; });
+    var f1 = fontePres(true), f2 = fontePres(false), e1 = f1.guardado && f1.br ? f1.br.eleitorado : null, e2 = f2.br ? f2.br.eleitorado : null;
+    var anoAtual = +String((D().tse || {}).ciclo || "").replace(/\D/g, "") || 0;
+    if (anoAtual && e1 && e2 && +e1.comparecimento > 0 && +e2.comparecimento > 0 && f2.turno === 2 && f2.br.secoes && f2.br.secoes.pct >= 100) {
+      cfg = cfg.filter(function (x) { return x.ano !== anoAtual; });
+      cfg.push({ ano: anoAtual, t1: +e1.comparecimento, t2: +e2.comparecimento, vivo: true });
+    }
+    cfg = cfg.filter(function (x) { return x.ano > 0 && x.t1 > 0 && x.t2 > 0; }).sort(function (a, b) { return a.ano - b.ano; });
+    cfg.forEach(function (x) { x.d = x.t2 - x.t1; x.p = 100 * x.d / x.t1; });
+    return cfg;
+  }
+  function pctS(v) { return (v > 0 ? "+" : v < 0 ? "−" : "") + Number(Math.abs(v)).toFixed(2).replace(".", ",") + "%"; }
+  function telaComparec(v) {
+    var ls = comparecAnos(), W = v ? 540 : 1280, H = v ? 960 : 720, o, f = fontePres(false);
+    var tit = "COMPARECIMENTO ÀS URNAS DESDE 2002", sub = "eleitores que votaram no 1º e no 2º turno (Presidente) · diferença do 2º para o 1º";
+    if (ls.length) tit = "COMPARECIMENTO ÀS URNAS DESDE " + ls[0].ano;
+    if (!ls.length) {
+      o = v ? r(35, 48, 6, 38, C.destaque) + t(53, 80, "COMPARECIMENTO", { s: 28, b: true, ls: 1 }) : t(73, 57, tit, { s: 34, b: true, ls: 1 });
+      return svg(W, H, marcaVazio() + o + t(W / 2, H / 2, "falta a tabela em web\\comparativo-config.js", { s: v ? 15 : 22, c: C.apagado, a: "middle" }));
+    }
+    var maxP = 0.5; ls.forEach(function (x) { maxP = Math.max(maxP, Math.abs(x.p)); });
+    var ultimo = ls[ls.length - 1], vivo = ls.some(function (x) { return x.vivo; });
+    var corD = function (d) { return d > 0 ? "#69db7c" : d < 0 ? "#ff8787" : C.texto; };
+    var fonte = "Fonte: TSE — comparecimento (eleitores que votaram) no 1º e no 2º turno para Presidente" + (vivo ? " · " + ultimo.ano + ": boletim do TSE" : "");
+    if (!v) {
+      o = t(73, 57, tit, { s: 30, b: true, ls: 1, max: 690 }) + t(73, 85, sub, { s: 15, c: C.apagado, max: 700 }) + seloH(W, seloDe(f));
+      var cx = [73, 220, 450, 680, 900], top = 104, hl = Math.min(74, Math.floor(560 / ls.length));
+      o += r(73, top, 1134, 44, "rgba(8,14,32,0.92)", 6);
+      [["ANO", 92, "start"], ["VOTARAM NO 1º TURNO", 420, "end"], ["VOTARAM NO 2º TURNO", 650, "end"], ["DIFERENÇA (2º − 1º)", 875, "end"], ["VARIAÇÃO", 1188, "end"]].forEach(function (c) { o += t(c[1], top + 28, c[0], { s: 13, b: true, c: "#c9d6e6", ls: 1, a: c[2] }); });
+      var zx = 1010, bw = 100;
+      ls.forEach(function (x, i) {
+        var y = top + 52 + i * hl, eu = x === ultimo, h = hl - 6;
+        o += r(73, y, 1134, h, eu ? "rgba(43,132,255,0.22)" : i % 2 ? "rgba(8,14,32,0.70)" : "rgba(8,14,32,0.84)", 6) + (eu ? r(73, y, 7, h, C.destaque, 3) : "");
+        var ym = y + h / 2 + 9;
+        o += t(96, ym, String(x.ano), { s: 26, b: true });
+        o += t(420, ym, inteiro(x.t1), { s: 24, b: eu, c: eu ? C.texto : "#dbe4ef", a: "end" }) + t(650, ym, inteiro(x.t2), { s: 24, b: eu, c: eu ? C.texto : "#dbe4ef", a: "end" });
+        o += t(875, ym, sinalVotos(x.d), { s: 24, b: true, c: corD(x.d), a: "end" });
+        var w = bw * Math.abs(x.p) / maxP;
+        o += r(zx - 1, y + 10, 2, h - 20, "rgba(255,255,255,0.35)", 1) + (w > 0 ? r(x.p >= 0 ? zx + 1 : zx - 1 - w, y + h / 2 - 7, Math.max(3, w), 14, corD(x.d), 3) : "");
+        o += t(1188, ym, pctS(x.p), { s: 22, b: true, c: corD(x.d), a: "end" });
+      });
+      return svg(W, H, o + t(73, 708, fonte + " · verde = mais gente votou no 2º turno", { s: 11, c: C.apagado2, max: 1134 }));
+    }
+    o = r(35, 48, 6, 38, C.destaque) + t(53, 80, "COMPARECIMENTO", { s: 28, b: true, ls: 1 }) + t(53, 106, "1º × 2º turno desde " + ls[0].ano + " · Presidente", { s: 14, c: C.apagado }) + seloV(W, seloDe(f));
+    var hv = Math.min(104, Math.floor(740 / ls.length));
+    ls.forEach(function (x, i) {
+      var y = 166 + i * hv, h = hv - 8, eu = x === ultimo;
+      o += r(35, y, 470, h, eu ? "rgba(43,132,255,0.22)" : "rgba(8,14,32,0.84)", 8) + (eu ? r(35, y, 6, h, C.destaque, 3) : "");
+      o += t(52, y + 34, String(x.ano), { s: 24, b: true }) + t(493, y + 34, pctS(x.p), { s: 22, b: true, a: "end", c: corD(x.d) });
+      o += t(52, y + 62, "1º " + inteiro(x.t1) + "  →  2º " + inteiro(x.t2), { s: 14, c: "#c9d6e6", max: 300 }) + t(493, y + 62, sinalVotos(x.d), { s: 16, b: true, a: "end", c: corD(x.d) });
+    });
+    return svg(W, H, o + t(35, 950, "Fonte: TSE — comparecimento no 1º e no 2º turno", { s: 10, c: C.apagado2 }));
+  }
+  G["comparec-h"] = function () { return telaComparec(false); };
+  G["comparec-v"] = function () { return telaComparec(true); };
+
   // ---- 2o TURNO: 2022 x 2026 (Presidente, % por partido em cada estado) ------
   // 2022: boletim do 2o turno de 2022 que o TSE mantem publicado (ESTADOS.bat,
   // ref2022_2t). 2026: ao vivo. Compara o PARTIDO (os candidatos podem ser
@@ -4642,6 +4702,9 @@
         paths += '<path d="' + mun[1] + '" fill="' + fill + '"' + (op < 1 ? ' fill-opacity="' + op + '"' : "") + ' stroke="#0b1220" stroke-width="' + sw + '"/>';
       });
     });
+    // 3.29.3: arquivo das cidades sem nenhum voto do 2o turno (MUNICIPIOS.bat
+    // fechado ou ainda na 1a volta): diz o motivo em vez de um mapa cinza
+    if (!(cont.A + cont.B)) return vazioAn(v, tit, sub, f, cont.lidos ? "sem voto do 2º turno nas cidades: confira se o MUNICIPIOS.bat está aberto (" + inteiro(cont.lidos) + " cidades no arquivo)" : "aguardando a coleta dos municípios (MUNICIPIOS.bat)");
     var o = cabAn(v, W, tit, sub, f) + '<g transform="translate(' + ox.toFixed(1) + " " + oy.toFixed(1) + ") scale(" + esc0.toFixed(5) + ')">' + paths + "</g>";
     var xs = v ? 35 : 800, ys = v ? 700 : 110, ws = v ? 470 : 407, k = v ? 0.85 : 1;
     o += painelAn(xs, ys, ws, v ? 220 : 570);
@@ -4744,6 +4807,7 @@
       { id: "ganho-h", nome: "Ganho de votos 1º → 2º turno", f: "h" },
       { id: "abstuf-h", nome: "Abstenção 1º × 2º por estado", f: "h" },
       { id: "abstreg-h", nome: "Abstenção 1º × 2º: regiões e estados", f: "h" },
+      { id: "comparec-h", nome: "Comparecimento 1º × 2º desde 2002", f: "h" },
       { id: "turno22-h", nome: "2º turno: 2022 × 2026 por estado", f: "h" },
       { id: "capitais-h", nome: "Presidente nas capitais", f: "h" },
       { id: "cidades-h", nome: "Presidente nas maiores cidades", f: "h" },
@@ -4811,6 +4875,7 @@
       { id: "ganho-v", nome: "Ganho de votos 1º → 2º turno", f: "v" },
       { id: "abstuf-v", nome: "Abstenção 1º × 2º por estado", f: "v" },
       { id: "abstreg-v", nome: "Abstenção 1º × 2º: regiões e estados", f: "v" },
+      { id: "comparec-v", nome: "Comparecimento 1º × 2º desde 2002", f: "v" },
       { id: "turno22-v", nome: "2º turno: 2022 × 2026 por estado", f: "v" },
       { id: "capitais-v", nome: "Presidente nas capitais", f: "v" },
       { id: "cidades-v", nome: "Presidente nas maiores cidades", f: "v" },
