@@ -1,6 +1,10 @@
 ===========================================================================
- gctse GRAFICOS 3.29 - APURACAO DO 2o TURNO (25/10/2026)
+ gctse GRAFICOS 3.29.1 - APURACAO DO 2o TURNO (25/10/2026)
 
+ 3.29.1 (26/10): o GERENCIADOR.bat abre TODAS as coletas (GRAFICOS, ESTADOS,
+   MUNICIPIOS) e o gerenciador confere e abre a que faltar - inclusive numa
+   pasta nova; desbloqueia os arquivos vindos do .zip (o Windows nao pergunta
+   mais "Deseja executar?"). A REPRISE (treino) vem num pacote a parte.
  3.29 (26/10): VERSAO FINAL.
    - COPIA EXTRA: o minuto a minuto e a hora do eleito vao tambem para
      Documentos\GCTSE-BACKUP a cada gravacao (config "copia_extra"). Pasta
@@ -229,7 +233,7 @@
                                computador. Arraste o log sobre o .bat ou
                                ponha na pasta importar. Junta com o que ja
                                existe; GRAFICOS.bat pode estar aberto.
-   REPRISE-DA-NOITE.bat ...... (3.29) TREINO: reproduz a apuracao do
+   REPRISE-DA-NOITE.bat ...... (3.29, vem no pacote de TREINO, a parte) TREINO: reproduz a apuracao do
                                Presidente com o Historico de totalizacao do
                                TSE (pasta importar), acelerada (10x; ou
                                -Velocidade 30), numa COPIA separada (pasta

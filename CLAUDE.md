@@ -112,7 +112,7 @@ eleições. Feitos e usados no ar nas eleições gerais de 2026 (1º turno
 - `copia-seguranca.ps1` (botão "cópia") e ARQUIVO-HISTORICO-2026.bat
   (`guardar-tse.ps1 -Historico`: guarda a eleição inteira num .zip antes
   de o TSE tirar do ar).
-- Versão final 2026: **3.29** (`$Versao` em graficos.ps1 e estados.ps1,
+- Versão final 2026: **3.29.1** (`$Versao` em graficos.ps1 e estados.ps1,
   topo do `LEIA-ME.txt`).
 
 ### Outros
@@ -172,8 +172,10 @@ eleições. Feitos e usados no ar nas eleições gerais de 2026 (1º turno
 
 ## Montar os pacotes
 
-- GRÁFICOS: `git ls-files` de `graficos/` menos `web/dados.js` e
-  `web/estados.js`, mais `importar/` vazia. Variante SEM FOTOS: em
+- GRÁFICOS: `git ls-files` de `graficos/` menos `web/dados.js`,
+  `web/estados.js`, `reprise.ps1` e `REPRISE-DA-NOITE.bat` (o treino vai num
+  zip à parte, `GCTSE-TREINO-REPRISE.zip`), mais `importar/` vazia. O
+  usuário quer o pacote do ar só com o que vai ao ar. Variante SEM FOTOS: em
   `web/fotos-config.js`, `window.GCTSE_FOTOS_DO_TSE = false;`.
   Nome: `GCTSE-GRAFICOS-<versão>-COM-FOTOS.zip` / `-SEM-FOTOS.zip`.
 - TARJAS: arquivos de `entrega/` com a mesma lista do pacote anterior,

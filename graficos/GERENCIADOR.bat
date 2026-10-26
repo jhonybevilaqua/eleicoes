@@ -1,12 +1,16 @@
 @echo off
 title gctse GERENCIADOR - deixe esta janela aberta
 rem Tela de gerenciamento das saidas (DeckLink via OBS):
-rem   - abre a coleta de Presidente (GRAFICOS.bat) e a dos estados
-rem     (ESTADOS.bat) e a dos municipios (MUNICIPIOS.bat) se nao estiverem rodando
+rem   - abre TODAS as coletas: Presidente (GRAFICOS.bat), estados (ESTADOS.bat)
+rem     e municipios (MUNICIPIOS.bat), se nao estiverem rodando - e o
+rem     gerenciador confere de novo e abre a que faltar
 rem   - abre os dois OBS (saida horizontal e vertical), sozinho
 rem   - liga o servidor do gerenciador (esta janela) e abre a pagina
 rem     http://localhost:8098/gerenciador.html
 cd /d "%~dp0"
+rem 3.29.1: arquivos vindos de um .zip baixado ficam "bloqueados" pelo Windows
+rem (pergunta "Deseja executar?" e a coleta nao abre): desbloqueia a pasta.
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-ChildItem -LiteralPath (Get-Location) -Recurse -File -ErrorAction SilentlyContinue | Unblock-File -ErrorAction SilentlyContinue" >nul 2>&1
 
 powershell -NoProfile -Command "if ((Test-Path 'web\dados.js') -and ((Get-Date)-(Get-Item 'web\dados.js').LastWriteTime).TotalSeconds -lt 90) { exit 0 } else { exit 1 }"
 if not errorlevel 1 goto estados

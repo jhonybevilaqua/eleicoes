@@ -340,9 +340,28 @@ function Vigiar-Estados {
         }
     }
 }
+# 3.29.1: municipios so com "municipios": { "ativo": true } no config
+function Municipios-Ativo {
+    try { $c0 = Get-Content (Join-Path $Raiz "config-graficos.json") -Raw -Encoding UTF8 | ConvertFrom-Json; if ($c0.PSObject.Properties["municipios"] -and $c0.municipios.PSObject.Properties["ativo"]) { return [bool] $c0.municipios.ativo } } catch { }
+    return $true
+}
+$script:InicioGer = Get-Date
 function Vigiar-Coleta([string] $Qual, [string] $Js, [string] $Ps1, [string] $Bat, [int] $Limite) {
     $arq = Join-Path $Web $Js
-    if (-not (Test-Path $arq)) { return }
+    $chaveR0 = "reabriu$Qual"
+    if (-not (Test-Path $arq)) {
+        # 3.29.1: coleta que NUNCA gravou (pasta nova, .bat bloqueado pelo
+        # Windows): passado 1 min e sem a janela aberta, abre sozinho
+        if ($Qual -eq "M" -and -not (Municipios-Ativo)) { return }
+        if ($script:Reabrir -and ((Get-Date) - $script:InicioGer).TotalSeconds -gt 60 -and ((Get-Date) - $script:Vigia[$chaveR0]).TotalSeconds -gt 120) {
+            $script:Vigia[$chaveR0] = Get-Date
+            if (-not (Coletor-Aberto $Ps1)) {
+                try { Start-Process -FilePath (Join-Path $Raiz $Bat) -WorkingDirectory $Raiz; Evento "info" ("{0} nao estava aberto: ABERTO sozinho" -f $Bat) }
+                catch { Evento "alerta" ("nao consegui abrir o {0}: {1} - abra pelo .bat na pasta" -f $Bat, $_.Exception.Message) }
+            }
+        }
+        return
+    }
     $idade = ((Get-Date) - (Get-Item $arq).LastWriteTime).TotalSeconds
     $chave = "parou$Qual"; $chaveR = "reabriu$Qual"
     if ($idade -gt $Limite -and -not $script:Vigia[$chave]) {
@@ -462,6 +481,21 @@ try { $ouvinte.Start() } catch {
 $script:Estado.rede = $false
 $script:Estado.pvw = [ordered]@{ h = $null; v = $null }; $script:Estado.pvw_ligada = [ordered]@{ h = $false; v = $false }   # janela MONITOR
 
+# 3.29.1: o GERENCIADOR garante TODAS as coletas abertas - GRAFICOS
+# (Presidente), ESTADOS (governador, senado, camara) e MUNICIPIOS (se ativo) -
+# mesmo aberto direto pelo gerenciador.ps1 ou se o .bat nao conseguiu.
+# Desligar: "reabrir_coletas": false no config.
+if ($script:Reabrir -and -not $script:Ensaio) {
+    Start-Sleep -Seconds 3        # as que o GERENCIADOR.bat acabou de abrir ja aparecem
+    foreach ($cl in @(@("P", "dados.js", "graficos.ps1", "GRAFICOS.bat", 90), @("E", "estados.js", "estados.ps1", "ESTADOS.bat", 150), @("M", "municipios.js", "municipios.ps1", "MUNICIPIOS.bat", 600))) {
+        if ($cl[0] -eq "M" -and -not (Municipios-Ativo)) { continue }
+        $jsC = Join-Path $Web $cl[1]
+        if ((Test-Path $jsC) -and ((Get-Date) - (Get-Item $jsC).LastWriteTime).TotalSeconds -lt $cl[4]) { continue }
+        if (Coletor-Aberto $cl[2]) { continue }
+        try { Start-Process -FilePath (Join-Path $Raiz $cl[3]) -WorkingDirectory $Raiz; Escrever-Log ("abri o {0}" -f $cl[3]) "Green"; $script:Vigia["reabriu$($cl[0])"] = Get-Date }
+        catch { Escrever-Log ("NAO consegui abrir o {0}: {1} - abra pelo .bat na pasta" -f $cl[3], $_.Exception.Message) "Red" }
+    }
+}
 Escrever-Log "gctse GERENCIADOR no ar - HORIZONTAL: http://localhost:$Porta/gerenciador.html?saida=h  |  VERTICAL: http://localhost:$Porta/gerenciador.html?saida=v" "Green"
 Escrever-Log "OBS da saida HORIZONTAL: http://localhost:$Porta/saida.html?saida=h  (fonte Navegador 1920x1080)" "Cyan"
 Escrever-Log "OBS da saida VERTICAL:   http://localhost:$Porta/saida.html?saida=v&obs=1  (fonte Navegador 1920x1080, ja girada)" "Cyan"

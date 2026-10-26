@@ -41,8 +41,9 @@
     1o Turno - 2026" e ponha na mesma pasta importar. O IMPORTAR-EVOLUCAO
     reconhece qual e qual e grava os dois. Tela: "As duas noites".
 
- TREINO: com o historico na pasta importar, o REPRISE-DA-NOITE.bat
-    reproduz a noite acelerada numa copia separada (NAO VAI AO AR).
+ TREINO (pacote a parte, GCTSE-TREINO-REPRISE): com o historico na pasta
+    importar, o REPRISE-DA-NOITE.bat reproduz a noite acelerada numa copia
+    separada (NAO VAI AO AR).
 
  ENQUANTO O TSE NAO PUBLICA: o IMPORTAR-EVOLUCAO usa os logs.
     - Log das TARJAS (computador das tarjas, pasta do GCTSE > logs):
