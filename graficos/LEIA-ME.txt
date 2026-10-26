@@ -1,6 +1,10 @@
 ===========================================================================
- gctse GRAFICOS 3.29.1 - APURACAO DO 2o TURNO (25/10/2026)
+ gctse GRAFICOS 3.29.2 - APURACAO DO 2o TURNO (25/10/2026)
 
+ 3.29.2 (26/10): tela nova "Abstencao 1o x 2o: regioes e estados" (aba
+   PRESIDENTE: 1o x 2o TURNO): Brasil, as 5 regioes e os 27 estados, com a
+   abstencao do 1o e do 2o turno e a diferenca em pontos percentuais
+   (laranja = subiu, verde = caiu). Regiao = soma dos estados, conta do TSE.
  3.29.1 (26/10): o GERENCIADOR.bat abre TODAS as coletas (GRAFICOS, ESTADOS,
    MUNICIPIOS) e o gerenciador confere e abre a que faltar - inclusive numa
    pasta nova; desbloqueia os arquivos vindos do .zip (o Windows nao pergunta

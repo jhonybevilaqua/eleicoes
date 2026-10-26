@@ -3144,6 +3144,82 @@
   G["abstuf-h"] = function () { return telaAbstUf(false); };
   G["abstuf-v"] = function () { return telaAbstUf(true); };
 
+  // ---- ABSTENCAO 1o x 2o: BRASIL, REGIOES E OS 27 ESTADOS (tabela) -----------
+  // Regiao = soma da abstencao / soma (comparecimento + abstencao) dos estados
+  // (mesma conta do TSE, so secoes totalizadas). Regiao incompleta fica "—".
+  function abstConta(x) {
+    var e = x && x.eleitorado; if (!e) return null;
+    var a = +e.abstencao, c = +e.comparecimento;
+    return isFinite(a) && isFinite(c) && a + c > 0 ? { a: a, c: c } : null;
+  }
+  function abstRegioes() {
+    var f1 = fontePres(true), f2 = fontePres(false);
+    if (!f1.guardado || !f2.br) return null;
+    function uf1(k) { var x = f1.uf(k), y = f2.uf(k), p1 = x && x.eleitorado ? x.eleitorado.pct_abstencao : null, p2 = y && y.eleitorado ? y.eleitorado.pct_abstencao : null;
+      if (p1 == null || p2 == null || !(y.secoes && y.secoes.pct > 0)) return { k: k, d: null, fim: false };
+      return { k: k, p1: +p1, p2: +p2, d: p2 - p1, fim: y.andamento === "f" || y.secoes.pct >= 100 }; }
+    function soma(f, ks) { var a = 0, c = 0; for (var i = 0; i < ks.length; i++) { var z = abstConta(f.uf(ks[i])); if (!z) return null; a += z.a; c += z.c; } return 100 * a / (a + c); }
+    var regs = DEP_REGIOES.map(function (rg) {
+      var p1 = soma(f1, rg[1]), p2 = soma(f2, rg[1]), ufs = rg[1].map(uf1);
+      ufs.sort(function (a, b) { return (b.d == null ? -99 : b.d) - (a.d == null ? -99 : a.d); });
+      return { nome: rg[0], p1: p1, p2: p2, d: p1 != null && p2 != null ? p2 - p1 : null, ufs: ufs };
+    });
+    var b1 = f1.br.eleitorado ? f1.br.eleitorado.pct_abstencao : null, b2 = f2.br.eleitorado ? f2.br.eleitorado.pct_abstencao : null;
+    if (b1 == null || b2 == null) return null;
+    return { regs: regs, b1: +b1, b2: +b2, d: b2 - b1, f2: f2, parcial: f2.br.andamento !== "f" };
+  }
+  function corPP(d) { return d == null ? C.apagado : Math.abs(d) < 0.005 ? C.texto : d > 0 ? "#ffa94d" : "#69db7c"; }
+  function ppC(d) { return d == null ? "—" : (d > 0 ? "+" : d < 0 ? "−" : "") + Number(Math.abs(d)).toFixed(2).replace(".", ","); }
+  function pctOu(v) { return v == null ? "—" : pct(v); }
+  function telaAbstReg(v) {
+    var da = abstRegioes(), W = v ? 540 : 1280, H = v ? 960 : 720, o, tit = "ABSTENÇÃO 1º × 2º TURNO";
+    if (!da) {
+      o = v ? r(35, 48, 6, 38, C.destaque) + t(53, 80, "ABSTENÇÃO 1º × 2º", { s: 28, b: true, ls: 1 }) : t(73, 57, tit, { s: 36, b: true, ls: 1 });
+      return svg(W, H, marcaVazio() + o + t(W / 2, H / 2, "disponível no 2º turno (compara com o 1º turno guardado)", { s: v ? 15 : 22, c: C.apagado, a: "middle", max: W - 60 }));
+    }
+    var nota = da.parcial ? "2º turno PARCIAL (urnas " + pct(da.f2.br.secoes ? da.f2.br.secoes.pct : 0) + "): só seções já totalizadas" : "";
+    if (!v) {
+      o = t(73, 57, tit, { s: 36, b: true, ls: 1, max: 667 }) + t(73, 85, "% do eleitorado que não votou · 1º turno → 2º turno · diferença em pontos percentuais (p.p.)", { s: 15, c: C.apagado, max: 660 }) + seloH(W, seloDe(da.f2));
+      o += r(73, 100, 1134, 52, "rgba(8,14,32,0.84)", 8) + r(73, 100, 7, 52, corPP(da.d), 3) + t(96, 134, "BRASIL", { s: 20, b: true, ls: 2 });
+      o += t(330, 134, "1º turno " + pct(da.b1) + "   →   2º turno " + pct(da.b2), { s: 19, b: true, c: "#c9d6e6" });
+      o += t(1190, 136, ppC(da.d) + " p.p.", { s: 26, b: true, a: "end", c: corPP(da.d) });
+      da.regs.forEach(function (rg, i) {
+        var x = 73 + i * 228, w = 222;
+        o += r(x, 162, w, 84, "rgba(8,14,32,0.84)", 8) + r(x, 162, w, 6, corPP(rg.d), 3);
+        o += t(x + 12, 190, REG_NOME[rg.nome], { s: 16, b: true, ls: 1, max: w - 24 });
+        o += t(x + 12, 214, pctOu(rg.p1) + " → " + pctOu(rg.p2), { s: 14, c: "#c9d6e6", max: w - 24 });
+        o += t(x + w - 12, 238, ppC(rg.d) + " p.p.", { s: 20, b: true, a: "end", c: corPP(rg.d) });
+        rg.ufs.forEach(function (u, j) {
+          var y = 254 + j * 48;
+          o += r(x, y, w, 44, j % 2 ? "rgba(8,14,32,0.70)" : "rgba(8,14,32,0.84)", 5) + r(x, y, 5, 44, corPP(u.d), 2);
+          o += t(x + 14, y + 20, u.k.toUpperCase(), { s: 16, b: true }) + t(x + 14, y + 37, u.d == null ? "sem dado" : pct(u.p1) + " → " + pct(u.p2), { s: 11, c: C.apagado, max: 140 });
+          o += t(x + w - 10, y + 29, ppC(u.d), { s: 18, b: true, a: "end", c: corPP(u.d) });
+        });
+      });
+      return svg(W, H, o + t(73, 708, "Fonte: TSE — Presidente, abstenção sobre o eleitorado; 1º turno final × 2º turno" + (nota ? " · " + nota : "") + " · laranja = abstenção subiu, verde = caiu", { s: 11, c: C.apagado2, max: 1134 }));
+    }
+    o = r(35, 48, 6, 38, C.destaque) + t(53, 80, "ABSTENÇÃO 1º × 2º", { s: 28, b: true, ls: 1 }) + t(53, 106, "% do eleitorado que não votou · p.p." + (da.parcial ? " · parcial" : ""), { s: 14, c: C.apagado, max: 330 }) + seloV(W, seloDe(da.f2));
+    o += r(35, 166, 470, 58, "rgba(8,14,32,0.84)", 8) + r(35, 166, 6, 58, corPP(da.d), 3) + t(52, 192, "BRASIL", { s: 17, b: true, ls: 2 }) + t(52, 214, pct(da.b1) + " → " + pct(da.b2), { s: 13, c: "#c9d6e6" });
+    o += t(493, 204, ppC(da.d) + " p.p.", { s: 24, b: true, a: "end", c: corPP(da.d) });
+    da.regs.forEach(function (rg, i) {
+      var y = 232 + i * 46;
+      o += r(35, y, 470, 40, "rgba(8,14,32,0.84)", 6) + r(35, y, 6, 40, corPP(rg.d), 2) + t(52, y + 26, REG_NOME[rg.nome], { s: 15, b: true, ls: 1 });
+      o += t(330, y + 26, pctOu(rg.p1) + " → " + pctOu(rg.p2), { s: 12, c: C.apagado, a: "end" }) + t(493, y + 27, ppC(rg.d), { s: 18, b: true, a: "end", c: corPP(rg.d) });
+    });
+    var todos = []; da.regs.forEach(function (rg) { todos = todos.concat(rg.ufs); });
+    todos.sort(function (a, b) { return (b.d == null ? -99 : b.d) - (a.d == null ? -99 : a.d); });
+    o += t(35, 488, "ESTADOS (do que mais subiu ao que mais caiu)", { s: 12, b: true, c: "#c9d6e6", ls: 1 });
+    todos.forEach(function (u, i) {
+      var col = Math.floor(i / 9), li = i % 9, x = 35 + col * 159, y = 498 + li * 48, w = 153;
+      o += r(x, y, w, 42, "rgba(8,14,32,0.84)", 5) + r(x, y, 5, 42, corPP(u.d), 2);
+      o += t(x + 12, y + 20, u.k.toUpperCase(), { s: 15, b: true }) + t(x + 12, y + 37, u.d == null ? "sem dado" : Number(u.p1).toFixed(1).replace(".", ",") + "→" + Number(u.p2).toFixed(1).replace(".", ","), { s: 10, c: C.apagado, max: 80 });
+      o += t(x + w - 8, y + 29, ppC(u.d), { s: 15, b: true, a: "end", c: corPP(u.d) });
+    });
+    return svg(W, H, o + t(35, 950, "Fonte: TSE — abstenção 1º × 2º turno · laranja subiu, verde caiu", { s: 10, c: C.apagado2 }));
+  }
+  G["abstreg-h"] = function () { return telaAbstReg(false); };
+  G["abstreg-v"] = function () { return telaAbstReg(true); };
+
   // ---- 2o TURNO: 2022 x 2026 (Presidente, % por partido em cada estado) ------
   // 2022: boletim do 2o turno de 2022 que o TSE mantem publicado (ESTADOS.bat,
   // ref2022_2t). 2026: ao vivo. Compara o PARTIDO (os candidatos podem ser
@@ -4667,6 +4743,7 @@
       { id: "margem-h", nome: "Disputa mais apertada", f: "h" },
       { id: "ganho-h", nome: "Ganho de votos 1º → 2º turno", f: "h" },
       { id: "abstuf-h", nome: "Abstenção 1º × 2º por estado", f: "h" },
+      { id: "abstreg-h", nome: "Abstenção 1º × 2º: regiões e estados", f: "h" },
       { id: "turno22-h", nome: "2º turno: 2022 × 2026 por estado", f: "h" },
       { id: "capitais-h", nome: "Presidente nas capitais", f: "h" },
       { id: "cidades-h", nome: "Presidente nas maiores cidades", f: "h" },
@@ -4733,6 +4810,7 @@
       { id: "margem-v", nome: "Disputa mais apertada", f: "v" },
       { id: "ganho-v", nome: "Ganho de votos 1º → 2º turno", f: "v" },
       { id: "abstuf-v", nome: "Abstenção 1º × 2º por estado", f: "v" },
+      { id: "abstreg-v", nome: "Abstenção 1º × 2º: regiões e estados", f: "v" },
       { id: "turno22-v", nome: "2º turno: 2022 × 2026 por estado", f: "v" },
       { id: "capitais-v", nome: "Presidente nas capitais", f: "v" },
       { id: "cidades-v", nome: "Presidente nas maiores cidades", f: "v" },

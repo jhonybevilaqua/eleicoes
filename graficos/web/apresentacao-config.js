@@ -51,8 +51,8 @@ window.GCTSE_APRESENTACAO = {
       h: ["presmapa-h", "virar-h", "faltam-h", "evolucao-h", "decisivos-h", "regioes-h", "gov2t-h", "gov12-h", "margem-h", "viradas-h", "apuracao-h"],
       v: ["presmapa-v", "virar-v", "faltam-v", "evolucao-v", "decisivos-v", "regioes-v", "gov2t-v", "gov12-v", "margem-v", "viradas-v", "apuracao-v"] },
     { nome: "Fechamento", tempo: 15,
-      h: ["eleito-h", "pres2t-h", "presmapa-h", "pres1t-h", "viradas-h", "ganho-h", "ganhouf-h", "abstuf-h", "turnos-h", "governadores-h", "gov2t-h", "gov12-h", "govpres-h"],
-      v: ["eleito-v", "pres2t-v", "presmapa-v", "pres1t-v", "viradas-v", "ganho-v", "ganhouf-v", "abstuf-v", "turnos-v", "governadores-v", "gov2t-v", "gov12-v", "govpres-v"] }
+      h: ["eleito-h", "pres2t-h", "presmapa-h", "pres1t-h", "viradas-h", "ganho-h", "ganhouf-h", "abstuf-h", "abstreg-h", "turnos-h", "governadores-h", "gov2t-h", "gov12-h", "govpres-h"],
+      v: ["eleito-v", "pres2t-v", "presmapa-v", "pres1t-v", "viradas-v", "ganho-v", "ganhouf-v", "abstuf-v", "abstreg-v", "turnos-v", "governadores-v", "gov2t-v", "gov12-v", "govpres-v"] }
   ],
 
   // FAVORITOS: atalhos no topo do GERENCIADOR (fica fixo no ar ao clicar).
