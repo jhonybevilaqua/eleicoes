@@ -1,6 +1,10 @@
 ===========================================================================
- gctse GRAFICOS 3.29.3 - APURACAO DO 2o TURNO (25/10/2026)
+ gctse GRAFICOS 3.29.4 - APURACAO DO 2o TURNO (25/10/2026)
 
+ 3.29.4 (26/10): IMPORTAR-EVOLUCAO aceita o arquivo de totalizacao do TSE
+   com QUALQUER nome na pasta importar (ex.: "BR - Relatorio de Totalizacao")
+   e acha o 1o e o 2o turno dentro do mesmo .zip. Arquivo nao reconhecido:
+   o IMPORTAR-EVOLUCAO.txt mostra o que ha dentro para conferirmos.
  3.29.3 (26/10): tela nova "Comparecimento 1o x 2o desde 2002" (aba
    PRESIDENTE: 1o x 2o TURNO): quantos votaram no 1o e no 2o turno em cada
    eleicao desde 2002, diferenca e variacao. Anos anteriores na tabela

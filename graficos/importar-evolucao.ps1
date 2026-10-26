@@ -162,44 +162,63 @@ $modo2T = [bool] ($cfg.tse.eleicao_presidente_1turno -and "$($cfg.tse.eleicao_pr
 $padraoHist = '(?i)^Historico_Totalizacao_Presidente_BR_[12]T_\d{4}.*\.(zip|csv|txt)$'
 # 3.29: de que turno e o historico - pelo CONTEUDO: 2 candidatos = 2o turno,
 # mais de 2 = 1o turno (0 = nao e o historico de totalizacao)
-function Turno-Historico($Arq) {
+function Turno-Cabecalho([string] $c0) {
+    if ("$c0" -notmatch '(?i)DT_TOTALIZACAO') { return 0 }
+    $nC = @([regex]::Matches("$c0", '(?i)([A-Z0-9_]+)_PE_VOTOS_TOT_ACUMULADO') | Where-Object { $_.Groups[1].Value.Trim() -notmatch '(?i)^(BRANCO|NULO)$' }).Count
+    if ($nC -lt 2) { return 0 }
+    return $(if ($nC -eq 2) { 2 } else { 1 })
+}
+# 3.29.3: o .zip pode trazer varias planilhas (ex.: "Relatorio de Totalizacao"
+# com 1o e 2o turno juntos): a de cada turno e achada pelo conteudo.
+function Turnos-Do-Arquivo($Arq) {
+    $ts = @()
     try {
-        $c0 = ""
         if ($Arq.Extension -match '(?i)\.zip$') {
             $z = [IO.Compression.ZipFile]::OpenRead($Arq.FullName)
-            try { $e = @($z.Entries | Where-Object { $_.Name -match '(?i)\.(csv|txt)$' }) | Select-Object -First 1; if (-not $e) { return 0 }
-                  $r0 = New-Object IO.StreamReader($e.Open(), $Latin1); try { $c0 = $r0.ReadLine() } finally { $r0.Dispose() } } finally { $z.Dispose() }
-        } else { $r0 = New-Object IO.StreamReader($Arq.FullName, $Latin1); try { $c0 = $r0.ReadLine() } finally { $r0.Dispose() } }
-        if ("$c0" -notmatch '(?i)DT_TOTALIZACAO') { return 0 }
-        $nC = @([regex]::Matches("$c0", '(?i)([A-Z0-9_]+)_PE_VOTOS_TOT_ACUMULADO') | Where-Object { $_.Groups[1].Value.Trim() -notmatch '(?i)^(BRANCO|NULO)$' }).Count
-        if ($nC -lt 2) { return 0 }
-        return $(if ($nC -eq 2) { 2 } else { 1 })
-    } catch { return 0 }
+            try {
+                foreach ($e in @($z.Entries | Where-Object { $_.Name -match '(?i)\.(csv|txt)$' })) {
+                    $r0 = New-Object IO.StreamReader($e.Open(), $Latin1); try { $c0 = $r0.ReadLine() } finally { $r0.Dispose() }
+                    $t = Turno-Cabecalho $c0; if ($t -gt 0 -and $ts -notcontains $t) { $ts += $t }
+                }
+            } finally { $z.Dispose() }
+        } else { $r0 = New-Object IO.StreamReader($Arq.FullName, $Latin1); try { $c0 = $r0.ReadLine() } finally { $r0.Dispose() }; $t = Turno-Cabecalho $c0; if ($t -gt 0) { $ts += $t } }
+    } catch { }
+    return ,$ts
 }
+function Turno-Historico($Arq) { $ts = Turnos-Do-Arquivo $Arq; if ($ts.Count) { return $ts[0] }; return 0 }
 function Achar-Historico([int] $Turno) {
     $lugares = @()
     if ($null -ne $Caminhos) { $lugares += @($Caminhos | Where-Object { $_ } | ForEach-Object { "$_".Trim('"') }) }
-    $lugares += @((Join-Path $Raiz "importar"), $Raiz)
+    $pastaImp = Join-Path $Raiz "importar"
+    $lugares += @($pastaImp, $Raiz)
     if ($env:USERPROFILE) { $lugares += @((Join-Path $env:USERPROFILE "Downloads"), (Join-Path $env:USERPROFILE "Desktop")) }
     $ach = @()
     foreach ($l in $lugares) {
         if (Test-Path -LiteralPath $l -PathType Leaf) {
             # arrastado com qualquer nome: vale pelo conteudo
             $it = Get-Item -LiteralPath $l
-            if ($it.Extension -match '(?i)\.(zip|csv|txt)$' -and (Turno-Historico $it) -eq $Turno) { $ach += @($it) }
+            if ($it.Extension -match '(?i)\.(zip|csv|txt)$' -and (Turnos-Do-Arquivo $it) -contains $Turno) { $ach += @($it) }
             continue
         }
         if (Test-Path -LiteralPath $l -PathType Container) {
-            $ach += @(Get-ChildItem -LiteralPath $l -File -Recurse -Depth 1 -ErrorAction SilentlyContinue | Where-Object { $_.Name -match $padraoHist -and (Turno-Historico $_) -eq $Turno })
+            # pasta importar: qualquer nome; nas outras, so nome com "totaliza"
+            $qualquer = ($l -eq $pastaImp)
+            $ach += @(Get-ChildItem -LiteralPath $l -File -Recurse -Depth 1 -ErrorAction SilentlyContinue | Where-Object { $_.Extension -match '(?i)^\.(zip|csv|txt)$' -and ($qualquer -or $_.Name -match $padraoHist -or $_.Name -match '(?i)totaliza') -and (Turnos-Do-Arquivo $_) -contains $Turno })
         }
     }
     return @($ach | Sort-Object LastWriteTime -Descending | Select-Object -First 1)
 }
-function Ler-Historico-Tse($Arq) {
+function Ler-Historico-Tse($Arq, [int] $Turno = 0) {
     $zip = $null; $rd = $null
     if ($Arq.Extension -match '(?i)\.zip$') {
         $zip = [IO.Compression.ZipFile]::OpenRead($Arq.FullName)
-        $ent = @($zip.Entries | Where-Object { $_.Name -match '(?i)\.(csv|txt)$' }) | Select-Object -First 1
+        $ent = $null
+        foreach ($e in @($zip.Entries | Where-Object { $_.Name -match '(?i)\.(csv|txt)$' })) {
+            $r0 = New-Object IO.StreamReader($e.Open(), $Latin1); try { $c0 = $r0.ReadLine() } finally { $r0.Dispose() }
+            $t = Turno-Cabecalho $c0
+            if ($t -gt 0 -and ($Turno -eq 0 -or $t -eq $Turno)) { $ent = $e; break }
+        }
+        if (-not $ent) { $ent = @($zip.Entries | Where-Object { $_.Name -match '(?i)\.(csv|txt)$' }) | Select-Object -First 1 }
         if (-not $ent) { $zip.Dispose(); return @() }
         $rd = New-Object IO.StreamReader($ent.Open(), $Latin1)
     } else { $rd = New-Object IO.StreamReader($Arq.FullName, $Latin1) }
@@ -266,7 +285,7 @@ if ($modo2T) {
     if ($arqH1.Count) {
         Anotar ("historico do 1o TURNO: {0}" -f $arqH1[0].FullName) "Cyan"
         $script:SemDef = $true
-        $p1 = Limpar @(Ler-Historico-Tse $arqH1[0])
+        $p1 = Limpar @(Ler-Historico-Tse $arqH1[0] 1)
         $script:SemDef = $false
         if ($p1.Count -gt 0) {
             $ele1 = "$($cfg.tse.eleicao_presidente_1turno)"
@@ -284,10 +303,31 @@ $histOk = $false
 $arqHist = @(Achar-Historico $(if ($modo2T) { 2 } else { 1 }))
 if ($arqHist.Count) {
     Anotar ("historico de totalizacao do TSE: {0}" -f $arqHist[0].FullName) "Cyan"
-    $pontosH = @(Ler-Historico-Tse $arqHist[0])
+    $pontosH = @(Ler-Historico-Tse $arqHist[0] $(if ($modo2T) { 2 } else { 1 }))
     $limpos = Limpar $pontosH
     if ($limpos.Count -gt 0) { $histOk = $true; $origem = "historico do TSE"; Anotar ("   {0} pontos (um a cada 30 s)" -f $limpos.Count) "Green" }
     else { Anotar "   nada lido do historico - tento os logs" "Yellow" }
+}
+if (-not $arqHist.Count) {
+    # 3.29.3: nenhum historico reconhecido - mostra o que ha na pasta importar
+    # (nome e 1a linha de cada planilha) para saber se o TSE mudou o formato
+    $pi = Join-Path $Raiz "importar"
+    $outros = @(Get-ChildItem -LiteralPath $pi -File -ErrorAction SilentlyContinue | Where-Object { $_.Extension -match '(?i)^\.(zip|csv|txt)$' -and $_.Name -notmatch '(?i)\.log' })
+    if ($outros.Count) {
+        Anotar "nenhum historico de totalizacao reconhecido. Arquivos na pasta importar:" "Yellow"
+        foreach ($o in $outros) {
+            Anotar ("   {0}" -f $o.Name)
+            try {
+                if ($o.Extension -match '(?i)\.zip$') {
+                    $z = [IO.Compression.ZipFile]::OpenRead($o.FullName)
+                    try { foreach ($e in @($z.Entries | Select-Object -First 8)) {
+                        $l1 = ""; if ($e.Name -match '(?i)\.(csv|txt)$') { $r0 = New-Object IO.StreamReader($e.Open(), $Latin1); try { $l1 = $r0.ReadLine() } finally { $r0.Dispose() } }
+                        Anotar ("      {0}  {1}" -f $e.FullName, $(if ($l1) { "| " + $l1.Substring(0, [math]::Min(220, $l1.Length)) } else { "" })) } } finally { $z.Dispose() }
+                }
+            } catch { }
+        }
+        Anotar "   mande este IMPORTAR-EVOLUCAO.txt para conferirmos o formato" "Yellow"
+    }
 }
 if (-not $histOk) {
 # --------------------------------------------------------------- arquivos de log

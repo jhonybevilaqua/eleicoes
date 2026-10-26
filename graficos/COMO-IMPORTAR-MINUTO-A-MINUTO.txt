@@ -8,10 +8,14 @@
 
  1. BAIXAR O ARQUIVO DO TSE
     - Site: dadosabertos.tse.jus.br
-    - Procure o conjunto de RESULTADOS de 2026 e, dentro dele:
+    - Procure o conjunto de RESULTADOS de 2026 e, dentro dele, o item do
+      BRASIL (BR) com a palavra TOTALIZACAO no nome, por exemplo:
          "BR - Historico totalizacao Presidente 2o Turno - 2026"
-    - Clique em Explorar > Baixar. Vem um .zip parecido com
-         Historico_Totalizacao_Presidente_BR_2T_2026.zip
+         "BR - Relatorio de Totalizacao - 2026"
+      (os itens "Votacao por secao", "por municipio e zona" e "Detalhe da
+      apuracao" NAO servem: so tem o resultado final, sem a hora.)
+    - Clique em Explorar > Baixar. Vem um .zip (o nome nao importa: o
+      IMPORTAR-EVOLUCAO acha o 1o e o 2o turno dentro dele pelo conteudo).
     - NAO descompacte.
 
  2. COLOCAR O ZIP NA PASTA "importar"
