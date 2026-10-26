@@ -85,7 +85,7 @@
 
   function selo() {
     var d = D(), b = br();
-    if (ensaioAtivo()) return { texto: "ENSAIO — NÃO VAI AO AR", cor: C.vermelho };
+    if (ensaioAtivo()) return { texto: (window.GCTSE_DADOS || {}).reprise ? "REPRISE — NÃO VAI AO AR" : "ENSAIO — NÃO VAI AO AR", cor: C.vermelho };
     if (d.modo === "SIMULADO") return { texto: "SIMULADO — NÃO OFICIAL", cor: C.vermelho };
     if (b && b.andamento === "f") return { texto: "TOTALIZAÇÃO FINAL", cor: C.verde };
     // Antes da 1a urna (arquivo do TSE ja publicado com tudo zerado, ou
@@ -125,6 +125,7 @@
   }
   // O selo tem a largura medida DEPOIS de desenhado (ver ajustarSelos).
   var SELO_ENSAIO = { texto: "ENSAIO — NÃO VAI AO AR", cor: "#d03b3b" };
+  Object.defineProperty(SELO_ENSAIO, "texto", { get: function () { return (window.GCTSE_DADOS || {}).reprise ? "REPRISE — NÃO VAI AO AR" : "ENSAIO — NÃO VAI AO AR"; } });
   function seloH(W, sl) {
     var s = ensaioAtivo() ? SELO_ENSAIO : sl || selo();
     // a esquerda da logo (canto superior direito)
@@ -146,11 +147,11 @@
   function ensaioAtivo() { return !!((window.GCTSE_DADOS || {}).ensaio || (window.GCTSE_ESTADOS || {}).ensaio); }
   function marcaEnsaio(W, H) {
     if (!ensaioAtivo()) return "";
-    var cx = W / 2, cy = H / 2, s = Math.round(Math.min(W, H) / 7.5);
+    var cx = W / 2, cy = H / 2, s = Math.round(Math.min(W, H) / 7.5), rp = !!(window.GCTSE_DADOS || {}).reprise;
     return '<g pointer-events="none"><text x="' + cx + '" y="' + cy + '" text-anchor="middle" dominant-baseline="middle" font-size="' + s +
-      '" font-weight="800" fill="#ff2a2a" fill-opacity="0.22" transform="rotate(' + (W > H ? -18 : -55) + " " + cx + " " + cy + ')">ENSAIO</text>' +
+      '" font-weight="800" fill="#ff2a2a" fill-opacity="0.22" transform="rotate(' + (W > H ? -18 : -55) + " " + cx + " " + cy + ')">' + (rp ? "REPRISE" : "ENSAIO") + '</text>' +
       '<rect x="0" y="' + (H - 30) + '" width="' + W + '" height="30" fill="#c00000"/>' +
-      '<text x="' + cx + '" y="' + (H - 9) + '" text-anchor="middle" font-size="17" font-weight="800" fill="#ffffff">ENSAIO — DADOS FICTÍCIOS — NÃO VAI AO AR</text></g>';
+      '<text x="' + cx + '" y="' + (H - 9) + '" text-anchor="middle" font-size="17" font-weight="800" fill="#ffffff">' + (rp ? "REPRISE (TREINO) — DADOS DE OUTRA NOITE — NÃO VAI AO AR" : "ENSAIO — DADOS FICTÍCIOS — NÃO VAI AO AR") + '</text></g>';
   }
   function svg(W, H, corpo) {
     return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + " " + H + '" width="' + W + '" height="' + H +
@@ -1463,6 +1464,89 @@
   G["marcos-h"] = function () { return telaMarcos(false); };
   G["marcos-v"] = function () { return telaMarcos(true); };
 
+  // ---- 3.29: AS DUAS NOITES - 1o x 2o turno pelo % de urnas apuradas -------
+  // % de cada finalista na SOMA dos votos dos dois (assim o 1o e o 2o turno
+  // ficam na mesma base), em cada boletim, conforme as urnas eram apuradas.
+  // 2o turno: evolucao; 1o turno: evolucao_1t (historico do 1o turno do TSE
+  // ou o arquivo gravado na noite do 1o turno).
+  function duasNoites() {
+    var d = D(), cs = candidatos(br()).filter(function (c) { return c.votos > 0; }).slice(0, 2);
+    if (cs.length < 2) return null;
+    var A = String(cs[0].numero), B = String(cs[1].numero);
+    function serie(ev) {
+      var out = []; comoLista(ev && ev.pontos).forEach(function (p) {
+        var c = p.c || {}, a = c[A], b = c[B]; if (a == null || b == null || !(+a + +b > 0)) return;
+        out.push({ u: +p.u, a: 100 * a / (+a + +b), ra: +a, rb: +b, t: p.t });
+      });
+      out.sort(function (x, y) { return x.u - y.u || String(x.t).localeCompare(String(y.t)); });
+      // um ponto por 0,5% de urnas (o ultimo de cada faixa) - linha limpa
+      var f = [], fx = null; out.forEach(function (p) { var k = Math.floor(p.u * 2); if (k === fx) f[f.length - 1] = p; else { f.push(p); fx = k; } });
+      return f;
+    }
+    var s2 = serie(d.evolucao), s1 = serie(d.evolucao_1t);
+    if (s2.length < 2 && s1.length < 2) return null;
+    return { A: cs[0], B: cs[1], s1: s1, s2: s2 };
+  }
+  function telaDuasNoites(v) {
+    var W = v ? 540 : 1280, H = v ? 960 : 720, dn = duasNoites(), tit = "AS DUAS NOITES";
+    var o = v ? cabecalhoV(W, tit, "Presidente · 1º × 2º turno") : cabecalhoH(W, tit, "Presidente · 1º × 2º turno · a disputa entre os dois finalistas conforme as urnas eram apuradas");
+    if (!dn) return svg(W, H, marcaVazio() + o + t(W / 2, H / 2, "aguardando o minuto a minuto (2º turno e/ou 1º turno: IMPORTAR-EVOLUCAO)", { s: v ? 15 : 22, c: C.apagado, a: "middle", max: W - 60 }));
+    var k = v ? 0.85 : 1, x0 = v ? 85 : 125, x1 = v ? 400 : 1015, y0 = v ? 300 : 190, y1 = v ? 760 : 590;
+    var cA = cor(dn.A), cB = cor(dn.B), vals = [];
+    [dn.s1, dn.s2].forEach(function (s0) { s0.forEach(function (p) { vals.push(p.a, 100 - p.a); }); });
+    var lo = Math.max(0, Math.floor((Math.min.apply(null, vals) - 2) / 5) * 5), hi = Math.min(100, Math.ceil((Math.max.apply(null, vals) + 2) / 5) * 5);
+    if (hi - lo < 10) { lo = Math.max(0, lo - 5); hi = Math.min(100, hi + 5); }
+    var X = function (u) { return x0 + (x1 - x0) * Math.max(0, Math.min(100, u)) / 100; }, Y = function (v0) { return y1 - (y1 - y0) * (v0 - lo) / (hi - lo); };
+    var passoY = hi - lo > 30 ? 10 : 5;
+    for (var g = lo; g <= hi + 1e-9; g += passoY) {
+      var gy = Y(g).toFixed(1), meio = Math.abs(g - 50) < 1e-9;
+      o += '<line x1="' + x0 + '" x2="' + x1 + '" y1="' + gy + '" y2="' + gy + '" stroke="' + (meio ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.10)") + '" stroke-width="' + (meio ? 2 : 1) + '"' + (meio ? ' stroke-dasharray="8 6"' : "") + "/>";
+      o += t(x0 - 12 * k, +gy + 6 * k, g + "%", { s: Math.round(16 * k), c: meio ? C.texto : C.apagado, a: "end", b: meio });
+    }
+    [0, 20, 40, 60, 80, 100].forEach(function (u) { o += t(X(u), y1 + 26 * k, u + "%", { s: Math.round(16 * k), b: true, c: C.apagado, a: "middle" }); });
+    o += t((x0 + x1) / 2, y1 + 50 * k, "urnas apuradas", { s: Math.round(13 * k), c: C.apagado2, a: "middle" });
+    function linha(s0, fA, corL, larg, tracejado, opac) {
+      if (s0.length < 2) return "";
+      var dd = s0.map(function (p, j) { return (j ? "L" : "M") + X(p.u).toFixed(1) + " " + Y(fA(p)).toFixed(1); }).join(" ");
+      return '<path d="' + dd + '" fill="none" stroke="' + corL + '" stroke-width="' + (larg * k).toFixed(1) + '" stroke-linejoin="round" stroke-linecap="round"' + (tracejado ? ' stroke-dasharray="' + (7 * k) + ' ' + (6 * k) + '"' : "") + ' opacity="' + opac + '"/>';
+    }
+    var fa = function (p) { return p.a; }, fb = function (p) { return 100 - p.a; };
+    o += linha(dn.s1, fa, cA, 3, true, 0.75) + linha(dn.s1, fb, cB, 3, true, 0.75) + linha(dn.s2, fa, cA, 4.5, false, 1) + linha(dn.s2, fb, cB, 4.5, false, 1);
+    // finais: 2o turno grande a direita; 1o turno pequeno
+    var f2 = dn.s2[dn.s2.length - 1], f1 = dn.s1[dn.s1.length - 1];
+    function fim(p, fn, c0, big) { var y = Y(fn(p)); return '<circle cx="' + X(p.u).toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + ((big ? 7 : 5) * k).toFixed(1) + '" fill="' + c0 + '" stroke="#fff" stroke-width="2"/>'; }
+    if (f1) o += fim(f1, fa, cA, false) + fim(f1, fb, cB, false);
+    if (f2) {
+      o += fim(f2, fa, cA, true) + fim(f2, fb, cB, true);
+      var ya = Y(fa(f2)), yb = Y(fb(f2)); if (Math.abs(ya - yb) < 34 * k) { var mm = (ya + yb) / 2; ya = mm - (ya < yb ? 17 : -17) * k; yb = mm + (ya < mm ? 17 : -17) * k; }
+      o += t(x1 + 14 * k, ya + 9 * k, pctCurto(fa(f2), 1), { s: Math.round(26 * k), b: true }) + t(x1 + 14 * k, yb + 9 * k, pctCurto(fb(f2), 1), { s: Math.round(26 * k), b: true });
+    }
+    // final do 1o turno (pequeno), se nao encostar nos do 2o
+    if (f1) [[fa, cA], [fb, cB]].forEach(function (z) {
+      var y = Y(z[0](f1)); if (f2 && (Math.abs(y - Y(fa(f2))) < 26 * k || Math.abs(y - Y(fb(f2))) < 26 * k)) return;
+      o += t(x1 + 14 * k, y + 5 * k, "1º t. " + pctCurto(z[0](f1), 1), { s: Math.round(14 * k), b: true, c: "#c9d6e6" });
+    });
+    // legenda e resumo
+    var ly = v ? 196 : 136;
+    function leg(x, y, c0, nome, tr) { return '<line x1="' + x + '" x2="' + (x + 34 * k) + '" y1="' + (y - 6 * k) + '" y2="' + (y - 6 * k) + '" stroke="' + c0 + '" stroke-width="' + (tr ? 3 : 5) * k + '"' + (tr ? ' stroke-dasharray="' + 6 * k + ' ' + 4 * k + '" opacity="0.8"' : "") + '/>' + t(x + 44 * k, y, nome, { s: Math.round((v ? 15 : 17) * k / (v ? 0.85 : 1)), b: true, max: v ? 200 : 260 }); }
+    if (!v) {
+      o += leg(73, ly, cA, nomeCurto(dn.A) + " · 2º turno", false) + leg(380, ly, cA, "1º turno", true) + leg(600, ly, cB, nomeCurto(dn.B) + " · 2º turno", false) + leg(907, ly, cB, "1º turno", true);
+      var res = [];
+      if (f1) res.push("1º turno (final): " + nomeCurto(dn.A) + " " + pctCurto(f1.ra, 2) + " × " + nomeCurto(dn.B) + " " + pctCurto(f1.rb, 2) + " dos válidos");
+      if (f2) res.push("2º turno" + (f2.u >= 99.995 ? " (final)" : " (urnas " + pctCurto(f2.u, 1) + ")") + ": " + pctCurto(f2.ra, 2) + " × " + pctCurto(f2.rb, 2));
+      o += t(73, 680, res.join("   ·   "), { s: 15, b: true, c: "#c9d6e6", max: 1134 });
+      if (!dn.s1.length) o += t(73, 166, "1º turno: importe o histórico do 1º turno do TSE (IMPORTAR-EVOLUCAO) para a linha tracejada", { s: 13, c: "#ffd8a8" });
+      return svg(W, H, o + t(73, 708, "Fonte: TSE — % de cada finalista na soma dos votos dos dois, a cada boletim · linha cheia = 2º turno, tracejada = 1º turno", { s: 11, c: C.apagado2, max: 1134 }));
+    }
+    o += leg(35, ly, cA, nomeCurto(dn.A) + " 2º t.", false) + leg(280, ly, cA, "1º t.", true) + leg(35, ly + 30, cB, nomeCurto(dn.B) + " 2º t.", false) + leg(280, ly + 30, cB, "1º t.", true);
+    if (f1) o += t(35, 860, "1º turno: " + pctCurto(f1.ra, 2) + " × " + pctCurto(f1.rb, 2) + " dos válidos", { s: 14, b: true, c: "#c9d6e6", max: 470 });
+    if (f2) o += t(35, 884, "2º turno: " + pctCurto(f2.ra, 2) + " × " + pctCurto(f2.rb, 2), { s: 14, b: true, c: "#c9d6e6", max: 470 });
+    if (!dn.s1.length) o += t(35, 908, "1º turno: importe o histórico do 1º turno (IMPORTAR-EVOLUCAO)", { s: 12, c: "#ffd8a8", max: 470 });
+    return svg(W, H, o + t(35, 945, "Fonte: TSE · % na soma dos dois · cheia = 2º turno, tracejada = 1º", { s: 10, c: C.apagado2, max: 470 }));
+  }
+  G["duasnoites-h"] = function () { return telaDuasNoites(false); };
+  G["duasnoites-v"] = function () { return telaDuasNoites(true); };
+
   // ---- Deputados federais eleitos: N por tela, trocando sozinha -------------
   // Lista do TSE (cargo 6, so quem o TSE marcou eleito), lida pelo
   // ESTADOS.bat. Estados e tempo em web\deputados-config.js. Ordem: regiao
@@ -1738,7 +1822,7 @@
   }
   function seloDe(f) {
     var b = f.br;
-    if (ensaioAtivo()) return { texto: "ENSAIO — NÃO VAI AO AR", cor: C.vermelho };
+    if (ensaioAtivo()) return { texto: (window.GCTSE_DADOS || {}).reprise ? "REPRISE — NÃO VAI AO AR" : "ENSAIO — NÃO VAI AO AR", cor: C.vermelho };
     if (D().modo === "SIMULADO") return { texto: "SIMULADO — NÃO OFICIAL", cor: C.vermelho };
     if (b && b.andamento === "f") return { texto: "TOTALIZAÇÃO FINAL", cor: C.verde };
     var p = b && b.secoes ? b.secoes.pct : null;
@@ -4559,6 +4643,7 @@
       { id: "camara-h", nome: "Câmara: bancadas 2027", f: "h" },
       { id: "evolucao-h", nome: "Evolução minuto a minuto (1º × 2º)", f: "h" },
       { id: "marcos-h", nome: "A noite da apuração (marcos)", f: "h" },
+      { id: "duasnoites-h", nome: "As duas noites: 1º × 2º turno", f: "h" },
       { id: "deputados-h", nome: "Deputados federais eleitos", f: "h" },
       { id: "mulheres-h", nome: "Câmara: bancada feminina", f: "h" },
       { id: "apuracao-h", nome: "Apuração: regiões e estados", f: "h" },
@@ -4624,6 +4709,7 @@
       { id: "camara-v", nome: "Câmara: bancadas 2027", f: "v" },
       { id: "evolucao-v", nome: "Evolução minuto a minuto (1º × 2º)", f: "v" },
       { id: "marcos-v", nome: "A noite da apuração (marcos)", f: "v" },
+      { id: "duasnoites-v", nome: "As duas noites: 1º × 2º turno", f: "v" },
       { id: "deputados-v", nome: "Deputados federais eleitos", f: "v" },
       { id: "mulheres-v", nome: "Câmara: bancada feminina", f: "v" },
       { id: "apuracao-v", nome: "Apuração: regiões", f: "v" },

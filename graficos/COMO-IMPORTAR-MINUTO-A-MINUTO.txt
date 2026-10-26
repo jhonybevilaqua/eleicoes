@@ -37,6 +37,13 @@
     - Tela "A noite da apuracao (marcos)": 1a divulgacao, pausa, viradas,
       eleito e 100% das urnas, com o horario de cada um.
 
+ 1o TURNO TAMBEM: baixe tambem o "BR - Historico totalizacao Presidente
+    1o Turno - 2026" e ponha na mesma pasta importar. O IMPORTAR-EVOLUCAO
+    reconhece qual e qual e grava os dois. Tela: "As duas noites".
+
+ TREINO: com o historico na pasta importar, o REPRISE-DA-NOITE.bat
+    reproduz a noite acelerada numa copia separada (NAO VAI AO AR).
+
  ENQUANTO O TSE NAO PUBLICA: o IMPORTAR-EVOLUCAO usa os logs.
     - Log das TARJAS (computador das tarjas, pasta do GCTSE > logs):
          gctse-2026-10-25.log  (e gctse-2026-10-26.log se passou da 0h)

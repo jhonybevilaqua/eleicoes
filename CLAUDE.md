@@ -52,9 +52,10 @@ eleições. Feitos e usados no ar nas eleições gerais de 2026 (1º turno
      dois candidatos a cada mudança). `IMPORTAR-EVOLUCAO.bat` refaz o
      minuto a minuto por eles, ou pelo Histórico de totalização do TSE
      (`Historico_Totalizacao_Presidente_BR_2T_AAAA`, a melhor fonte).
-   - Ideia para a próxima: a coleta gravar também uma cópia do
-     `evolucao-*.json` fora da pasta do programa (ex.: Documentos ou outro
-     disco) a cada ponto novo.
+   - Desde a 3.29 a coleta grava cópia extra de `evolucao-*.json` e
+     `definicao-*.json` em `Documentos\GCTSE-BACKUP` (config `copia_extra`)
+     e, ao abrir, restaura/JUNTA os pontos de lá (nunca mistura com um
+     arquivo de origem "historico do TSE").
 
 ## Os dois sistemas
 
@@ -98,10 +99,20 @@ eleições. Feitos e usados no ar nas eleições gerais de 2026 (1º turno
   telas com dado em PNG Full HD **com as fotos**, em `TELAS-SALVAS/`,
   usando o Chrome/Edge em modo headless. Botão "Salvar PNG" (tecla P) de
   cada tela também leva as fotos (via `/foto` do gerenciador).
+- `importar-evolucao.ps1` (IMPORTAR-EVOLUCAO.bat / botão "Minuto a minuto
+  (histórico)"): refaz o minuto a minuto pelo Histórico de totalização do
+  TSE (reconhece 1º/2º turno pelo conteúdo; calcula a hora do
+  MATEMATICAMENTE ELEITO e grava `definicao-*.json`) ou pelos logs.
+  Passo a passo: `COMO-IMPORTAR-MINUTO-A-MINUTO.txt`.
+- `reprise.ps1` (REPRISE-DA-NOITE.bat): treino. Servidor local no formato
+  do TSE (127.0.0.1:8790) montado do Histórico de totalização, acelerado,
+  e uma CÓPIA separada do GRAFICOS em `reprise/` (config com base_url
+  local, porta 8097, `reprise: true` → marca "REPRISE — NÃO VAI AO AR",
+  `copia_extra: "nao"`). Só Presidente/Brasil (o histórico é só do Brasil).
 - `copia-seguranca.ps1` (botão "cópia") e ARQUIVO-HISTORICO-2026.bat
   (`guardar-tse.ps1 -Historico`: guarda a eleição inteira num .zip antes
   de o TSE tirar do ar).
-- Versão final 2026: **3.28.x** (`$Versao` em graficos.ps1 e estados.ps1,
+- Versão final 2026: **3.29** (`$Versao` em graficos.ps1 e estados.ps1,
   topo do `LEIA-ME.txt`).
 
 ### Outros

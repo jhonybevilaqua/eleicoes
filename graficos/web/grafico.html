@@ -57,7 +57,7 @@
     var d = window.GCTSE_GRAFICOS.dados();
     var e = window.GCTSE_ESTADOS || {};
     var pg = paginada ? window.GCTSE_GRAFICOS.pagina(id) : "";
-    var chave = JSON.stringify([d.modo, d.br, d.ufs, d.capitais, d.exterior, d.exterior_total, d.cor_slot, d.cores, usaEstados ? [e.camara, e.ref2022, e.ref2022_2t, e.ref2022_gov, e.assembleia, e.ufs, e.definicoes_gov] : 0, d.turno1, pg, d.definicao, usaMun ? [(window.GCTSE_MUN || {}).gravado_em, !!window.MAPA_MUN] : 0]);
+    var chave = JSON.stringify([d.modo, d.br, d.ufs, d.capitais, d.exterior, d.exterior_total, d.cor_slot, d.cores, usaEstados ? [e.camara, e.ref2022, e.ref2022_2t, e.ref2022_gov, e.assembleia, e.ufs, e.definicoes_gov] : 0, d.turno1, pg, d.definicao, [((d.evolucao || {}).pontos || []).length, (d.evolucao || {}).origem, ((d.evolucao_1t || {}).pontos || []).length], usaMun ? [(window.GCTSE_MUN || {}).gravado_em, !!window.MAPA_MUN] : 0]);
     if (chave === ultimo) return;       // so redesenha quando o dado mudou
     var trocouPagina = paginada && ultimo && JSON.parse(ultimo)[7] !== pg;
     ultimo = chave;

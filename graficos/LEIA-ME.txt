@@ -1,6 +1,16 @@
 ===========================================================================
- gctse GRAFICOS 3.28.9 - APURACAO DO 2o TURNO (25/10/2026)
+ gctse GRAFICOS 3.29 - APURACAO DO 2o TURNO (25/10/2026)
 
+ 3.29 (26/10): VERSAO FINAL.
+   - COPIA EXTRA: o minuto a minuto e a hora do eleito vao tambem para
+     Documentos\GCTSE-BACKUP a cada gravacao (config "copia_extra"). Pasta
+     nova/trocada: ao abrir, o GRAFICOS.bat restaura e JUNTA o que estava la.
+   - 1o TURNO: o IMPORTAR-EVOLUCAO tambem le o "Historico totalizacao
+     Presidente 1o Turno" (reconhece 1o ou 2o turno pelo conteudo).
+     Tela nova "As duas noites: 1o x 2o turno".
+   - REPRISE-DA-NOITE.bat: treino com a noite de verdade (historico do TSE),
+     acelerada, numa copia separada (pasta reprise) - telas com a marca
+     REPRISE / NAO VAI AO AR; gerenciador da reprise na porta 8097.
  3.28.9 (26/10): hora do MATEMATICAMENTE ELEITO (o 1o com mais votos que o 2o
    + todos os eleitores que faltavam) em destaque na "Evolucao" e na "A noite
    da apuracao" (com os segundos). A coleta registra a conta mesmo quando
@@ -219,6 +229,13 @@
                                computador. Arraste o log sobre o .bat ou
                                ponha na pasta importar. Junta com o que ja
                                existe; GRAFICOS.bat pode estar aberto.
+   REPRISE-DA-NOITE.bat ...... (3.29) TREINO: reproduz a apuracao do
+                               Presidente com o Historico de totalizacao do
+                               TSE (pasta importar), acelerada (10x; ou
+                               -Velocidade 30), numa COPIA separada (pasta
+                               reprise). Nao mexe nos dados de verdade.
+                               Abrir: http://localhost:8097/gerenciador.html
+                               Telas com a marca REPRISE - NAO VAI AO AR.
    SALVAR-TELAS.bat .......... (3.28.2) TODAS as telas com dado em PNG Full
                                HD, COM as fotos, em TELAS-SALVAS\data_hora
                                (HORIZONTAL, VERTICAL, RESUMOS). Para o

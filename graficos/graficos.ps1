@@ -19,7 +19,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
-$Versao = "3.28.9 - 26/10/2026"
+$Versao = "3.29 - 26/10/2026"
 
 # TLS 1.2: o Windows PowerShell 5.1 ainda oferece TLS 1.0 por padrao.
 try {
@@ -253,6 +253,10 @@ $Eleicao = "$($cfg.tse.eleicao_presidente)"
 $Modo    = "OFICIAL"
 # Versao final: so o ambiente OFICIAL do TSE (ensaio e modo teste retirados).
 $Ensaio = $false
+# 3.29: REPRISE DA NOITE (REPRISE-DA-NOITE.bat, numa copia separada): telas
+# com a marca REPRISE / NAO VAI AO AR
+$Reprise = [bool] ((Tem-Propriedade $cfg "reprise") -and $cfg.reprise -eq $true)
+if ($Reprise) { $Ensaio = $true }
 # 2o TURNO: com "eleicao_presidente_1turno" diferente de "eleicao_presidente",
 # o resultado FINAL do 1o turno (Brasil e 27 estados) continua sendo lido
 # (a cada 3 ciclos) para o mapa do 1o turno e as comparacoes.
@@ -776,6 +780,51 @@ function Atribuir-Cores {
 # (sobrevive a fechar o programa; o 2o turno, outra eleicao, comeca um
 # arquivo novo) e vai para a tela dentro do dados.js.
 
+# 3.29: COPIA EXTRA do minuto a minuto e da hora do eleito FORA da pasta do
+# programa (em 25/10/2026 a pasta foi trocada no meio da noite e o comeco da
+# linha se perdeu). A cada gravacao vai uma copia para Documentos\GCTSE-BACKUP
+# (ou a pasta de "copia_extra" no config; "nao" desliga). Ao abrir, se o
+# arquivo nao existir aqui mas existir la, e restaurado.
+$PastaExtra = ""
+if (Tem-Propriedade $cfg "copia_extra") { $PastaExtra = "$($cfg.copia_extra)" }
+if (-not $PastaExtra) { try { $docX = [Environment]::GetFolderPath("MyDocuments"); if ($docX) { $PastaExtra = Join-Path $docX "GCTSE-BACKUP" } } catch { } }
+if ($PastaExtra -eq "nao") { $PastaExtra = "" }
+if ($PastaExtra) { Escrever-Log "copia extra do minuto a minuto e da hora do eleito em: $PastaExtra" }
+function Copia-Extra([string] $Arq) {
+    if (-not $PastaExtra -or -not (Test-Path -LiteralPath $Arq)) { return }
+    try {
+        if (-not (Test-Path -LiteralPath $PastaExtra)) { New-Item -ItemType Directory -Path $PastaExtra -Force | Out-Null }
+        Copy-Item -LiteralPath $Arq -Destination (Join-Path $PastaExtra (Split-Path -Leaf $Arq)) -Force
+    } catch { }
+}
+function Restaurar-Extra([string] $Arq) {
+    if (-not $PastaExtra) { return }
+    $bk = Join-Path $PastaExtra (Split-Path -Leaf $Arq)
+    if (-not (Test-Path -LiteralPath $bk)) { return }
+    if (-not (Test-Path -LiteralPath $Arq)) {
+        try { Copy-Item -LiteralPath $bk -Destination $Arq -Force; Escrever-Log ("{0} RESTAURADO da copia extra ({1})" -f (Split-Path -Leaf $Arq), $PastaExtra) "OK" } catch { }
+        return
+    }
+    # os dois existem (pasta trocada no meio da noite): o minuto a minuto
+    # JUNTA os pontos dos dois (nada se perde); a hora do eleito fica a daqui
+    if ((Split-Path -Leaf $Arq) -notmatch '^evolucao-') { return }
+    try {
+        $aqui = Get-Content -LiteralPath $Arq -Raw -Encoding UTF8 | ConvertFrom-Json
+        if ("$($aqui.origem)" -eq "historico do TSE") { return }      # o oficial nao se mistura
+        $la = Get-Content -LiteralPath $bk -Raw -Encoding UTF8 | ConvertFrom-Json
+        $porT = [ordered]@{}
+        foreach ($pt in @(@($la.pontos) + @($aqui.pontos))) { if ($null -eq $pt) { continue }; $tt = $(if ($pt.t -is [datetime]) { $pt.t.ToString("yyyy-MM-ddTHH:mm:ss") } else { "$($pt.t)" }); $pt.t = $tt; $porT[$tt] = $pt }
+        $nAqui = @($aqui.pontos).Count
+        if ($porT.Count -le $nAqui) { return }
+        $nomesJ = [ordered]@{}
+        foreach ($o0 in @($la, $aqui)) { if ($o0.PSObject.Properties["nomes"]) { foreach ($pn in $o0.nomes.PSObject.Properties) { $nomesJ[$pn.Name] = $pn.Value } } }
+        $todos = @($porT.Keys | Sort-Object | ForEach-Object { $porT[$_] })
+        $obj = [ordered]@{ ciclo = $aqui.ciclo; eleicao = $aqui.eleicao; modo = $aqui.modo; origem = "$($aqui.origem)"; nomes = [pscustomobject] $nomesJ; pontos = $todos }
+        Copy-Item -LiteralPath $Arq -Destination "$Arq.antes-de-juntar" -Force
+        [IO.File]::WriteAllText($Arq, ($obj | ConvertTo-Json -Depth 6 -Compress), (New-Object System.Text.UTF8Encoding($false)))
+        Escrever-Log ("{0}: juntei a copia extra - {1} pontos (aqui havia {2})" -f (Split-Path -Leaf $Arq), $todos.Count, $nAqui) "OK"
+    } catch { Escrever-Log "copia extra: nao consegui juntar ($($_.Exception.Message))" "AVISO" }
+}
 $ArquivoEvolucao = Join-Path $Raiz ("evolucao-{0}-{1}-{2}.json" -f $Ciclo, $Eleicao, $Modo.ToLower())
 $script:Evolucao = New-Object System.Collections.ArrayList
 $script:EvolucaoNomes = [ordered]@{}
@@ -804,7 +853,28 @@ function Carregar-Evolucao {
         if ($script:Evolucao.Count -gt 0) { Escrever-Log ("evolucao: {0} pontos no historico ({1})" -f $script:Evolucao.Count, (Split-Path -Leaf $ArquivoEvolucao)) }
     } catch { Escrever-Log "evolucao: nao li $ArquivoEvolucao ($($_.Exception.Message))" "AVISO" }
 }
+Restaurar-Extra $ArquivoEvolucao
 Carregar-Evolucao
+
+# 3.29: minuto a minuto do 1o TURNO (no modo 2o turno), so leitura - vem do
+# IMPORTAR-EVOLUCAO (historico do 1o turno) ou do arquivo gravado na noite
+# do 1o turno. Vai para a tela "As duas noites".
+$script:Evolucao1T = $null; $script:Evol1TLidaEm = [datetime]::MinValue
+function Carregar-Evolucao-1T {
+    if (-not $Eleicao1T) { return }
+    $a1 = Join-Path $Raiz ("evolucao-{0}-{1}-{2}.json" -f $Ciclo, $Eleicao1T, $Modo.ToLower())
+    Restaurar-Extra $a1
+    if (-not (Test-Path $a1)) { return }
+    try {
+        $q1 = (Get-Item $a1).LastWriteTimeUtc
+        if ($q1 -eq $script:Evol1TLidaEm) { return }
+        $j1 = Get-Content $a1 -Raw -Encoding UTF8 | ConvertFrom-Json
+        $pts1 = @($j1.pontos | Where-Object { $null -ne $_ } | ForEach-Object { if ($_.t -is [datetime]) { $_.t = $_.t.ToString("yyyy-MM-ddTHH:mm:ss") }; $_ })
+        $script:Evolucao1T = [pscustomobject]@{ origem = "$($j1.origem)"; nomes = $j1.nomes; pontos = $pts1 }
+        $script:Evol1TLidaEm = $q1
+        Escrever-Log ("minuto a minuto do 1o turno: {0} pontos ({1})" -f $pts1.Count, (Split-Path -Leaf $a1))
+    } catch { }
+}
 
 function Registrar-Evolucao {
     Carregar-Evolucao
@@ -834,6 +904,7 @@ function Registrar-Evolucao {
         $tmpEv = "$ArquivoEvolucao.tmp"
         [IO.File]::WriteAllText($tmpEv, ($objEv | ConvertTo-Json -Depth 6 -Compress), (New-Object System.Text.UTF8Encoding($false)))
         [void] (Promover-Temporario $tmpEv $ArquivoEvolucao)
+        Copia-Extra $ArquivoEvolucao
         $script:EvolucaoLidaEm = (Get-Item $ArquivoEvolucao).LastWriteTimeUtc
     } catch { Escrever-Log "evolucao: nao gravei o historico ($($_.Exception.Message))" "AVISO" }
 }
@@ -859,6 +930,7 @@ function Carregar-Definicao {
         Escrever-Log ("hora do eleito lida de {0}: {1} as {2}" -f (Split-Path -Leaf $ArquivoDefinicao), $script:Definicao.nome, $script:Definicao.hora)
     } catch { }
 }
+Restaurar-Extra $ArquivoDefinicao
 Carregar-Definicao
 function Registrar-Definicao {
     Carregar-Definicao
@@ -879,13 +951,14 @@ function Registrar-Definicao {
         hora = $b.hora; geracao = $b.geracao; urnas = $b.secoes.pct
         votos = $l.votos; votos_2 = $s2.votos; faltam = $falt; registrado_em = (Get-Date).ToString("yyyy-MM-ddTHH:mm:ss")
     }
-    try { [IO.File]::WriteAllText($ArquivoDefinicao, ($script:Definicao | ConvertTo-Json -Compress), (New-Object System.Text.UTF8Encoding($false))) } catch { }
+    try { [IO.File]::WriteAllText($ArquivoDefinicao, ($script:Definicao | ConvertTo-Json -Compress), (New-Object System.Text.UTF8Encoding($false))); Copia-Extra $ArquivoDefinicao } catch { }
     Escrever-Log ("DEFINIDO: {0} ({1}) - {2}, com {3}% das urnas, boletim das {4}" -f $l.nome, $l.partido, $(if ($tipo -eq "tse") { "eleito pelo TSE" } else { "matematicamente eleito" }), $b.secoes.pct, $b.hora) "OK"
 }
 
 # ------------------------------------------------------------- gravar dados
 
 function Gravar-Dados {
+    try { Carregar-Evolucao-1T } catch { }
     Atribuir-Cores
     $porEstado = [ordered]@{}
     foreach ($u in $UFs) {
@@ -900,6 +973,7 @@ function Gravar-Dados {
         versao        = $Versao
         modo          = $Modo
         ensaio        = $Ensaio
+        reprise       = $Reprise
         pid           = $PID
         gravado_em    = (Get-Date).ToString("yyyy-MM-ddTHH:mm:ss")
         copia_local   = $script:UsandoLocal.Count
@@ -923,6 +997,7 @@ function Gravar-Dados {
         exterior_cidades = $(if ($script:Mun) { $script:Mun.exterior.Count } else { 0 })
         turno1        = $(if ($Eleicao1T) { [pscustomobject]@{ eleicao = $Eleicao1T; br = $(if ($script:Turno1.Contains("br")) { $script:Turno1["br"] } else { [pscustomobject]@{ tem = $false } }); ufs = [pscustomobject] $script:Turno1 } } else { $null })
         evolucao      = [pscustomobject]@{ origem = $script:EvolucaoOrigem; nomes = [pscustomobject] $script:EvolucaoNomes; pontos = @($script:Evolucao) }
+        evolucao_1t   = $script:Evolucao1T
         definicao     = $script:Definicao
     }
     $json = $dados | ConvertTo-Json -Depth 8 -Compress

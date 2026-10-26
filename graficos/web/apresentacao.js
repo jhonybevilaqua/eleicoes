@@ -52,7 +52,7 @@
 
   function chave() {
     var d = window.GCTSE_GRAFICOS.dados(), e = window.GCTSE_ESTADOS || {};
-    return JSON.stringify([d.modo, d.br, d.ufs, d.capitais, d.exterior, d.exterior_total, d.cor_slot, d.cores, d.turno1, e.ufs, e.ref2022, e.ref2022_2t, e.ref2022_gov, e.camara, e.assembleia]);
+    return JSON.stringify([d.modo, d.br, d.ufs, d.capitais, d.exterior, d.exterior_total, d.cor_slot, d.cores, d.turno1, e.ufs, e.ref2022, e.ref2022_2t, e.ref2022_gov, e.camara, e.assembleia, d.definicao, ((d.evolucao || {}).pontos || []).length, (d.evolucao || {}).origem, ((d.evolucao_1t || {}).pontos || []).length]);
   }
   function desenharEm(camada, id) {
     if (id.indexOf("resumo:") === 0) {

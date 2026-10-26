@@ -69,6 +69,15 @@ function Numero-Ponto([string] $Texto) {
 if (-not (Test-Path "config-graficos.json")) { Sair "config-graficos.json nao encontrado nesta pasta." 1 }
 $cfg = Get-Content "config-graficos.json" -Raw -Encoding UTF8 | ConvertFrom-Json
 $Ciclo = "$($cfg.tse.ciclo)"; $Eleicao = "$($cfg.tse.eleicao_presidente)"
+# 3.29: copia extra fora da pasta do programa (a mesma do GRAFICOS.bat)
+$PastaExtra = ""
+if ($cfg.PSObject.Properties["copia_extra"]) { $PastaExtra = "$($cfg.copia_extra)" }
+if (-not $PastaExtra) { try { $docX = [Environment]::GetFolderPath("MyDocuments"); if ($docX) { $PastaExtra = Join-Path $docX "GCTSE-BACKUP" } } catch { } }
+if ($PastaExtra -eq "nao") { $PastaExtra = "" }
+function Copia-Extra([string] $Arq) {
+    if (-not $PastaExtra -or -not (Test-Path -LiteralPath $Arq)) { return }
+    try { if (-not (Test-Path -LiteralPath $PastaExtra)) { New-Item -ItemType Directory -Path $PastaExtra -Force | Out-Null }; Copy-Item -LiteralPath $Arq -Destination (Join-Path $PastaExtra (Split-Path -Leaf $Arq)) -Force } catch { }
+}
 $arqDados = Join-Path $Raiz "web\dados.js"
 if (-not (Test-Path $arqDados)) { Sair "web\dados.js nao existe: abra o GRAFICOS.bat uma vez (ele le o resultado do TSE) e rode de novo." 1 }
 $txt = [IO.File]::ReadAllText($arqDados, [Text.Encoding]::UTF8)
@@ -149,19 +158,25 @@ function Limpar($Lista) {
 try { Add-Type -AssemblyName System.IO.Compression.FileSystem } catch { }
 try { Add-Type -AssemblyName System.IO.Compression } catch { }
 $Latin1 = [Text.Encoding]::GetEncoding(28591)
-$turnoArq = $(if ($cfg.tse.eleicao_presidente_1turno -and "$($cfg.tse.eleicao_presidente_1turno)" -ne $Eleicao) { "2T" } else { "1T" })
-$padraoHist = '(?i)^Historico_Totalizacao_Presidente_BR_' + $turnoArq + '_\d{4}.*\.(zip|csv|txt)$'
-function Parece-Historico($Arq) {
+$modo2T = [bool] ($cfg.tse.eleicao_presidente_1turno -and "$($cfg.tse.eleicao_presidente_1turno)" -ne $Eleicao)
+$padraoHist = '(?i)^Historico_Totalizacao_Presidente_BR_[12]T_\d{4}.*\.(zip|csv|txt)$'
+# 3.29: de que turno e o historico - pelo CONTEUDO: 2 candidatos = 2o turno,
+# mais de 2 = 1o turno (0 = nao e o historico de totalizacao)
+function Turno-Historico($Arq) {
     try {
+        $c0 = ""
         if ($Arq.Extension -match '(?i)\.zip$') {
             $z = [IO.Compression.ZipFile]::OpenRead($Arq.FullName)
-            try { $e = @($z.Entries | Where-Object { $_.Name -match '(?i)\.(csv|txt)$' }) | Select-Object -First 1; if (-not $e) { return $false }
+            try { $e = @($z.Entries | Where-Object { $_.Name -match '(?i)\.(csv|txt)$' }) | Select-Object -First 1; if (-not $e) { return 0 }
                   $r0 = New-Object IO.StreamReader($e.Open(), $Latin1); try { $c0 = $r0.ReadLine() } finally { $r0.Dispose() } } finally { $z.Dispose() }
         } else { $r0 = New-Object IO.StreamReader($Arq.FullName, $Latin1); try { $c0 = $r0.ReadLine() } finally { $r0.Dispose() } }
-        return ("$c0" -match '(?i)DT_TOTALIZACAO' -and "$c0" -match '(?i)_PE_VOTOS_TOT_ACUMULADO')
-    } catch { return $false }
+        if ("$c0" -notmatch '(?i)DT_TOTALIZACAO') { return 0 }
+        $nC = @([regex]::Matches("$c0", '(?i)([A-Z0-9_]+)_PE_VOTOS_TOT_ACUMULADO') | Where-Object { $_.Groups[1].Value.Trim() -notmatch '(?i)^(BRANCO|NULO)$' }).Count
+        if ($nC -lt 2) { return 0 }
+        return $(if ($nC -eq 2) { 2 } else { 1 })
+    } catch { return 0 }
 }
-function Achar-Historico {
+function Achar-Historico([int] $Turno) {
     $lugares = @()
     if ($null -ne $Caminhos) { $lugares += @($Caminhos | Where-Object { $_ } | ForEach-Object { "$_".Trim('"') }) }
     $lugares += @((Join-Path $Raiz "importar"), $Raiz)
@@ -169,12 +184,14 @@ function Achar-Historico {
     $ach = @()
     foreach ($l in $lugares) {
         if (Test-Path -LiteralPath $l -PathType Leaf) {
+            # arrastado com qualquer nome: vale pelo conteudo
             $it = Get-Item -LiteralPath $l
-            # arrastado com outro nome: vale se o cabecalho e o do historico
-            if ($it.Name -match $padraoHist -or ($it.Extension -match '(?i)\.(zip|csv|txt)$' -and (Parece-Historico $it))) { $ach += @($it) }
+            if ($it.Extension -match '(?i)\.(zip|csv|txt)$' -and (Turno-Historico $it) -eq $Turno) { $ach += @($it) }
             continue
         }
-        if (Test-Path -LiteralPath $l -PathType Container) { $ach += @(Get-ChildItem -LiteralPath $l -File -Recurse -Depth 1 -ErrorAction SilentlyContinue | Where-Object { $_.Name -match $padraoHist }) }
+        if (Test-Path -LiteralPath $l -PathType Container) {
+            $ach += @(Get-ChildItem -LiteralPath $l -File -Recurse -Depth 1 -ErrorAction SilentlyContinue | Where-Object { $_.Name -match $padraoHist -and (Turno-Historico $_) -eq $Turno })
+        }
     }
     return @($ach | Sort-Object LastWriteTime -Descending | Select-Object -First 1)
 }
@@ -225,7 +242,7 @@ function Ler-Historico-Tse($Arq) {
             $porC = [ordered]@{}
             foreach ($cc in $colC) { $v = Numero-Br $p[$cc.i]; if ($null -ne $v) { if ($v -gt 1.0001) { $v = $v / 100 }; $porC[$cc.n] = [math]::Round(100 * $v, 2) } }
             if ($porC.Count -lt 2) { continue }
-            if ($null -eq $script:DefHist -and $iAt -ge 0 -and $iAa -ge 0 -and @($colC | Where-Object { $_.iq -lt 0 }).Count -eq 0) {
+            if (-not $script:SemDef -and $null -eq $script:DefHist -and $iAt -ge 0 -and $iAa -ge 0 -and @($colC | Where-Object { $_.iq -lt 0 }).Count -eq 0) {
                 $vs = @($colC | ForEach-Object { [pscustomobject]@{ cc = $_; v = [int64] (Numero-Br $p[$_.iq]) } } | Sort-Object v -Descending)
                 $falt = [int64] (Numero-Br $p[$iAt]) - [int64] (Numero-Br $p[$iAa])
                 if ($vs.Count -ge 2 -and $vs[0].v -gt 0 -and $falt -ge 0 -and ($vs[0].v - $vs[1].v) -gt $falt) {
@@ -240,9 +257,31 @@ function Ler-Historico-Tse($Arq) {
     } finally { $rd.Dispose(); if ($zip) { $zip.Dispose() } }
     return @($faixas.Values)
 }
-$script:DefHist = $null
+$script:DefHist = $null; $script:SemDef = $false; $script:Imp1T = $false
+# 3.29: com o 2o turno no config, o historico do 1o TURNO (se estiver la)
+# vira o minuto a minuto do 1o turno (evolucao-...-<eleicao do 1o turno>),
+# para a tela "As duas noites". So os dois finalistas.
+if ($modo2T) {
+    $arqH1 = @(Achar-Historico 1)
+    if ($arqH1.Count) {
+        Anotar ("historico do 1o TURNO: {0}" -f $arqH1[0].FullName) "Cyan"
+        $script:SemDef = $true
+        $p1 = Limpar @(Ler-Historico-Tse $arqH1[0])
+        $script:SemDef = $false
+        if ($p1.Count -gt 0) {
+            $ele1 = "$($cfg.tse.eleicao_presidente_1turno)"
+            $arq1 = Join-Path $Raiz ("evolucao-{0}-{1}-oficial.json" -f $Ciclo, $ele1)
+            $nomes1 = [ordered]@{}; foreach ($c in $cands) { if ($c.numero) { $nomes1["$($c.numero)"] = [pscustomobject]@{ nome = $c.nome; partido = $c.partido } } }
+            if (Test-Path $arq1) { Copy-Item $arq1 "$arq1.antes-da-importacao" -Force }
+            [IO.File]::WriteAllText($arq1, (([ordered]@{ ciclo = $Ciclo; eleicao = $ele1; modo = "OFICIAL"; origem = "historico do TSE"; nomes = [pscustomobject] $nomes1; pontos = @($p1) }) | ConvertTo-Json -Depth 6 -Compress), (New-Object System.Text.UTF8Encoding($false)))
+            Copia-Extra $arq1
+            $script:Imp1T = $true
+            Anotar ("   1o turno: {0} pontos de {1} a {2} - gravado em {3}" -f $p1.Count, $p1[0].t.Substring(11, 5), $p1[$p1.Count - 1].t.Substring(11, 5), (Split-Path -Leaf $arq1)) "Green"
+        } else { Anotar "   1o turno: nada lido (os finalistas nao estao no arquivo?)" "Yellow" }
+    }
+}
 $histOk = $false
-$arqHist = @(Achar-Historico)
+$arqHist = @(Achar-Historico $(if ($modo2T) { 2 } else { 1 }))
 if ($arqHist.Count) {
     Anotar ("historico de totalizacao do TSE: {0}" -f $arqHist[0].FullName) "Cyan"
     $pontosH = @(Ler-Historico-Tse $arqHist[0])
@@ -482,8 +521,10 @@ if ($limpos.Count -eq 0 -and $usarExib.Count -gt 0) {
 }
 if ($limpos.Count -eq 0) {
     if (-not (Tem-DoDia $usar) -and -not (Tem-DoDia $usarExib)) {
+        if ($script:Imp1T) { Sair "1o turno importado. Do 2o turno nada novo (sem o historico do 2o turno e sem logs da noite)." 0 }
         Sair ("nada importado: NAO existe neste computador log da noite de {0} (graficos-{1}.log nem gctse-{1}.log) - procurei em todos os discos. Se a pasta do GRAFICOS usada na eleicao foi apagada, restaure-a da LIXEIRA e rode de novo; se a noite rodou em OUTRO computador, copie de la a pasta logs para a pasta importar." -f $diaEleicao.ToString("dd/MM/yyyy"), $diaEleicao.ToString("yyyy-MM-dd")) 1
     }
+    if ($script:Imp1T) { Sair "1o turno importado. Do 2o turno nada novo." 0 }
     Sair ("nada importado: nenhum registro de Presidente Brasil entre {0} e {1}." -f $janelaIni.ToString("dd/MM HH:mm"), $janelaFim.ToString("dd/MM HH:mm")) 1
 }
 
@@ -517,6 +558,7 @@ $obj = [ordered]@{
 $tmp = "$arqEv.tmp"
 [IO.File]::WriteAllText($tmp, ($obj | ConvertTo-Json -Depth 6 -Compress), (New-Object System.Text.UTF8Encoding($false)))
 Move-Item -LiteralPath $tmp -Destination $arqEv -Force
+Copia-Extra $arqEv
 
 $p0 = $limpos[0]; $pf = $limpos[$limpos.Count - 1]
 Write-Host ""
@@ -529,6 +571,7 @@ if ($histOk -and $script:DefHist) {
     $arqDef = Join-Path $Raiz ("definicao-{0}-{1}-oficial.json" -f $Ciclo, $Eleicao)
     if (Test-Path $arqDef) { Copy-Item $arqDef "$arqDef.antes-da-importacao" -Force }
     [IO.File]::WriteAllText($arqDef, ([pscustomobject] $script:DefHist | ConvertTo-Json -Compress), (New-Object System.Text.UTF8Encoding($false)))
+    Copia-Extra $arqDef
     Anotar ("ELEITO (pela conta com o historico do TSE): {0} as {1}, com {2}% das urnas - gravado em {3}. O GRAFICOS.bat aberto pega sozinho em ~20 s (versao 3.28.8 ou mais nova; se for mais velha, feche e abra)." -f $script:DefHist.nome, $script:DefHist.hora, $script:DefHist.urnas, (Split-Path -Leaf $arqDef)) "Green"
 }
 # A tela recebeu? Quem poe a linha na tela e o GRAFICOS.bat (dados.js). Um

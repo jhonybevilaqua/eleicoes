@@ -312,7 +312,7 @@
     return '<g pointer-events="none"><text x="' + cx + '" y="' + cy + '" text-anchor="middle" dominant-baseline="middle" font-size="' + s +
       '" font-weight="800" fill="#ff2a2a" fill-opacity="0.22" transform="rotate(' + (W > H ? -18 : -55) + " " + cx + " " + cy + ')">ENSAIO</text>' +
       '<rect x="0" y="' + (H - 30) + '" width="' + W + '" height="30" fill="#c00000"/>' +
-      '<text x="' + cx + '" y="' + (H - 9) + '" text-anchor="middle" font-size="17" font-weight="800" fill="#ffffff">ENSAIO — DADOS FICTÍCIOS — NÃO VAI AO AR</text></g>';
+      '<text x="' + cx + '" y="' + (H - 9) + '" text-anchor="middle" font-size="17" font-weight="800" fill="#ffffff">' + ((window.GCTSE_DADOS || {}).reprise ? "REPRISE (TREINO) — DADOS DE OUTRA NOITE — NÃO VAI AO AR" : "ENSAIO — DADOS FICTÍCIOS — NÃO VAI AO AR") + '</text></g>';
   }
   function svg(W, H, corpo) {
     return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + " " + H + '" width="' + W + '" height="' + H +
