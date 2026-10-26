@@ -1305,7 +1305,7 @@
     // 3.28.4: VIRADA entre o 1o e o 2o, pelo boletim exato do TSE. Cada
     // virada: linha amarela e o horario; a ultima ganha o selo grande com
     // quem passou a liderar.
-    var vs = (ev.viradas || []).filter(function (q) { return q.ms >= tA && q.ms <= tB; });
+    var vs = (ev.viradas || []).filter(function (q) { return q.ms >= tA && q.ms <= tB; }), caixaV = null;
     if (ss.length === 2 && vs.length) {
       vs.forEach(function (q, iq) {
         var vx = X(q.ms), vy = Y((q.va + q.vb) / 2), ult = iq === vs.length - 1;
@@ -1318,9 +1318,31 @@
       // discreto: caixa azul-clara, letras escuras e pequenas
       var bw = Math.max(txt1.length * 8.6, txt2.length * 6.2) * k + 26 * k, bh = 40 * k, bxx = Math.min(Math.max(bx + 10 * k, x0), x1 - bw), byy = y0 + 8 * k;
       if (bxx < x0 + 150 * k) byy = y1 - bh - 10 * k;      // perto do inicio: embaixo, longe da 1a divulgacao
+      caixaV = { x: bxx, y: byy, w: bw, h: bh };
       o += r(bxx, byy, bw, bh, "#a5d8ff", 5) +
         t(bxx + 10 * k, byy + 17 * k, txt1, { s: Math.round(13 * k), b: true, c: "#0b1220", ls: 1 }) +
         t(bxx + 10 * k, byy + 32 * k, txt2, { s: Math.round(10 * k), b: true, c: "#1b2a44", max: bw - 18 * k });
+    }
+    // 3.28.6: hora em que o presidente ficou ELEITO (TSE ou conta: o 1o com
+    // mais votos que o 2o + todos os eleitores que faltam) - definicao-*.json,
+    // da coleta ou do historico de totalizacao do TSE (IMPORTAR-EVOLUCAO)
+    var df = D().definicao, mD = df && /^(\d\d)\/(\d\d)\/(\d{4})\s+(\d\d):(\d\d):?(\d\d)?/.exec(String(df.geracao || ""));
+    if (mD) {
+      var msD = new Date(+mD[3], mD[2] - 1, +mD[1], +mD[4], +mD[5], +(mD[6] || 0)).getTime();
+      if (msD >= tA - 60000 && msD <= tB + 60000) {
+        var ex = X(Math.min(Math.max(msD, tA), tB)), l1 = "ELEITO ÀS " + String(df.hora || "").slice(0, 5), l2 = (df.nome || "") + (df.urnas != null ? " · urnas " + pctCurto(+df.urnas, 2) : "") + (df.tipo === "matematica" ? " · matematicamente" : " · pelo TSE");
+        o += '<line x1="' + ex.toFixed(1) + '" x2="' + ex.toFixed(1) + '" y1="' + y0 + '" y2="' + y1 + '" stroke="#8ce99a" stroke-width="2" opacity="0.8"/>';
+        var ew = Math.max(l1.length * 8.6, l2.length * 6.2) * k + 22 * k, eh = 40 * k, exx = ex + 10 * k + ew > x1 ? ex - 10 * k - ew : ex + 10 * k, ey = y1 - eh - 12 * k;
+        // nao em cima do selo da virada: tenta embaixo, em cima, e logo abaixo dele
+        // obstaculos: o selo da virada e o rotulo da 1a divulgacao (canto de cima, a esquerda)
+        var obst = [{ x: x0, y: y0 - 30 * k, w: 170 * k, h: 80 * k }]; if (caixaV) obst.push(caixaV);
+        var bate = function (yy) { return obst.some(function (b0) { return exx < b0.x + b0.w && exx + ew > b0.x && yy < b0.y + b0.h && yy + eh > b0.y; }); };
+        var achou = [y1 - eh - 12 * k, y0 + 8 * k, caixaV ? caixaV.y - eh - 8 * k : 0, caixaV ? caixaV.y + caixaV.h + 8 * k : 0].some(function (yy) { if (yy >= y0 && yy + eh <= y1 && !bate(yy)) { ey = yy; return true; } return false; });
+        // tela estreita (vertical) ou sem lugar livre: embaixo do eixo das horas
+        if (!achou || k < 1) { exx = x0; ey = y1 + (pz.length ? 84 : 58) * k; }
+        o += r(exx, ey, ew, eh, "#b2f2bb", 5) + t(exx + 10 * k, ey + 17 * k, l1, { s: Math.round(13 * k), b: true, c: "#0b1220", ls: 1 }) +
+          t(exx + 10 * k, ey + 32 * k, l2, { s: Math.round(10 * k), b: true, c: "#1b2a44", max: ew - 16 * k });
+      }
     }
     // linhas, pontos inicial/final e rotulos
     var fins = [];
@@ -2642,16 +2664,21 @@
     if (dois.length < 2) dois = cs.slice(0, 2);
     var o = r(x, y, w, h, "rgba(8,14,32,0.84)", 8);
     o += t(x + 14, y + 22 * k2, DEP_UF[k], { s: Math.round(16 * k2), b: true, ls: 1 });
-    o += t(x + w - 12, y + 22 * k2, do2 ? "urnas " + pct(g.urnas_pct) : "1º turno · vão ao 2º turno", { s: Math.round(12 * k2), c: C.apagado, a: "end" });
-    var lh = (h - 30 * k2) / 2;
+    var lh = (h - 30 * k2) / 2, compacto = lh < 60, temEl = dois.some(function (c) { return c.eleito; });
+    // cartao baixo (vertical com muitos estados): ELEITO vai na linha do estado
+    if (compacto && temEl) o += r(x + w - 74, y + 8 * k2, 62, 16, C.verde, 3) + t(x + w - 43, y + 20 * k2, "ELEITO", { s: 11, b: true, a: "middle", ls: 1 });
+    o += t(x + w - (compacto && temEl ? 84 : 12), y + 22 * k2, do2 ? "urnas " + pct(g.urnas_pct) : "1º turno · vão ao 2º turno", { s: Math.round(12 * k2), c: C.apagado, a: "end" });
     dois.forEach(function (c, i) {
       var yy = y + 30 * k2 + i * lh, cc = corPartidoCamara(c.partido, i), fh = lh - 6, fw = fh * 0.78;
       o += fotoOuSilhueta(urlFotoGov(k, { c: c, g: g }), x + 12, yy + 2, fw, fh);
       var tx = x + 20 + fw;
-      o += t(tx, yy + lh * 0.55, c.nome + "  ·  " + c.partido, { s: Math.round(15 * k2), b: true, max: w - (tx - x) - 120 });
-      o += barraFina(tx, yy + lh - 10, w - (tx - x) - 110, (c.pct || 0) / 100, cc);
-      o += t(x + w - 12, yy + lh * 0.62, pct(c.pct), { s: Math.round(22 * k2), b: true, a: "end" });
-      if (c.eleito) o += r(x + w - 92, yy + 2, 80, 16, C.verde, 2) + t(x + w - 52, yy + 14, "ELEITO", { s: 11, b: true, a: "middle" });
+      var resPct = Math.round(110 * Math.max(1, k2));
+      o += t(tx, yy + lh * 0.55, c.nome + "  ·  " + c.partido, { s: Math.round(15 * k2), b: true, max: w - (tx - x) - resPct - 10 });
+      o += barraFina(tx, yy + lh - 10, w - (tx - x) - resPct, (c.pct || 0) / 100, cc);
+      o += t(x + w - 12, yy + lh * 0.55, pct(c.pct), { s: Math.round(22 * k2), b: true, a: "end" });
+      // 3.28.6: ELEITO embaixo do %, na linha da barra (nao cobre o numero)
+      if (c.eleito && compacto) o += r(x + 4, yy + 4, 4, lh - 8, C.verde, 2);
+      if (c.eleito && !compacto) { var we = Math.round(84 * Math.max(1, k2 * 0.9)), he = Math.round(18 * Math.max(1, k2 * 0.9)); o += r(x + w - 12 - we, yy + lh - 8 - he / 2 - 2, we, he, C.verde, 3) + t(x + w - 12 - we / 2, yy + lh - 8 + he / 2 - 6, "ELEITO", { s: Math.round(12 * Math.max(1, k2 * 0.9)), b: true, a: "middle", ls: 1 }); }
     });
     return o;
   }
@@ -2664,15 +2691,16 @@
       var W = 1280, H = 720;
       o = t(73, 57, "GOVERNADORES — 2º TURNO", { s: 36, b: true, ls: 1, max: 667 }) + t(73, 85, sub, { s: 18, c: C.apagado }) + seloH(W, sl);
       if (!n) return svg(W, H, marcaVazio() + o + t(640, 380, "nenhum estado com 2º turno de governador", { s: 22, c: C.apagado, a: "middle" }));
-      var rows = Math.ceil(n / 2), ch = Math.min(116, (590 - (rows - 1) * 8) / rows);
-      ls.forEach(function (k, i) { o += cartaoGov2t(k, 73 + (i % 2) * 575, 106 + Math.floor(i / 2) * (ch + 8), 559, ch, Math.min(1, ch / 108)); });
+      // 3.28.6: com poucos estados os cartoes crescem e ocupam a tela
+      var rows = Math.ceil(n / 2), ch = Math.min(200, (582 - (rows - 1) * 10) / rows);
+      ls.forEach(function (k, i) { o += cartaoGov2t(k, 73 + (i % 2) * 575, 106 + Math.floor(i / 2) * (ch + 10), 559, ch, Math.min(1.4, ch / 108)); });
       return svg(W, H, o + t(73, 708, "Fonte: TSE — Governador, 2º turno" + (E().turno === 2 ? "" : " (hoje: os dois que vão ao 2º turno, % do 1º turno)"), { s: 11, c: C.apagado2 }));
     }
     var W2 = 540, H2 = 960;
     o = r(35, 48, 6, 38, C.destaque) + t(53, 80, "GOVERNADORES", { s: 30, b: true, ls: 1 }) + t(53, 106, "2º turno · " + sub, { s: 13, c: C.apagado, max: 450 }) + seloV(W2, sl);
     if (!n) return svg(W2, H2, marcaVazio() + o + t(270, 480, "nenhum estado com 2º turno", { s: 18, c: C.apagado, a: "middle" }));
-    var ch2 = Math.min(118, (770 - (n - 1) * 6) / n);
-    ls.forEach(function (k, i) { o += cartaoGov2t(k, 35, 164 + i * (ch2 + 6), 470, ch2, Math.min(0.95, ch2 / 112)); });
+    var ch2 = Math.min(170, (770 - (n - 1) * 8) / n);
+    ls.forEach(function (k, i) { o += cartaoGov2t(k, 35, 164 + i * (ch2 + 8), 470, ch2, Math.min(1.2, ch2 / 112)); });
     return svg(W2, H2, o + t(35, 950, "Fonte: TSE — Governador, 2º turno", { s: 10, c: C.apagado2 }));
   }
   G["gov2t-h"] = function () { return telaGov2t(false); };

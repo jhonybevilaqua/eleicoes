@@ -1,6 +1,11 @@
 ===========================================================================
- gctse GRAFICOS 3.28.5 - APURACAO DO 2o TURNO (25/10/2026)
+ gctse GRAFICOS 3.28.6 - APURACAO DO 2o TURNO (25/10/2026)
 
+ 3.28.6 (26/10): "Evolucao": linha verde com o horario em que o presidente
+   ficou ELEITO (do TSE ou pela conta). O IMPORTAR-EVOLUCAO, com o
+   Historico de totalizacao do TSE, calcula esse horario exato e grava em
+   definicao-*.json (feche e abra o GRAFICOS.bat para a tela pegar).
+   "Governadores - 2o turno": cartoes ocupam a tela; ELEITO nao cobre o %.
  3.28.5 (25/10): "A abstencao decidiu?" e "Capital x interior" em DUAS telas
    cada (1/2 e 2/2, metade dos estados em cada), com letras maiores.
  3.28.4 (25/10): "Evolucao": trecho em que as urnas nao andaram por 20 min

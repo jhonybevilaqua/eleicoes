@@ -189,10 +189,16 @@ function Ler-Historico-Tse($Arq) {
             $nomeC = ($nm -replace '(?i)_PE_VOTOS_TOT_ACUMULADO$', '') -replace '_', ' '
             $alvo = Achar-Candidato $nomeC
             if ($null -eq $alvo) { Anotar "   candidato do historico que nao achei no boletim: $nomeC" "Yellow"; continue }
-            $colC += @(@{ i = $ixH[$nm.ToUpper()]; n = "$($alvo.numero)"; nome = $nomeC })
+            $nmQ = ($nm -replace '(?i)_PE_VOTOS_TOT_ACUMULADO$', '_QT_VOTOS_TOT_ACUMULADO').ToUpper()
+            $colC += @(@{ i = $ixH[$nm.ToUpper()]; iq = $(if ($ixH.ContainsKey($nmQ)) { $ixH[$nmQ] } else { -1 }); n = "$($alvo.numero)"; nome = $nomeC; c = $alvo })
         }
         Anotar ("   candidatos no historico: {0}" -f (($colC | ForEach-Object { $_.nome }) -join ", "))
         if ($colC.Count -lt 2) { return @() }
+        # hora em que ficou MATEMATICAMENTE ELEITO: 1o colocado com mais votos
+        # que o 2o + todos os eleitores das secoes ainda nao totalizadas
+        # (aptos total - aptos ja totalizados) - a mesma conta da coleta
+        $iAt = $(if ($ixH.ContainsKey("QT_APTOS_TOTAL")) { $ixH["QT_APTOS_TOTAL"] } else { -1 })
+        $iAa = $(if ($ixH.ContainsKey("QT_APTOS_TOT_ACUMULADO")) { $ixH["QT_APTOS_TOT_ACUMULADO"] } else { -1 })
         while ($null -ne ($l = $rd.ReadLine())) {
             $p = $l.Split(';')
             if ($p.Count -le $iS) { continue }
@@ -204,12 +210,22 @@ function Ler-Historico-Tse($Arq) {
             $porC = [ordered]@{}
             foreach ($cc in $colC) { $v = Numero-Br $p[$cc.i]; if ($null -ne $v) { if ($v -gt 1.0001) { $v = $v / 100 }; $porC[$cc.n] = [math]::Round(100 * $v, 2) } }
             if ($porC.Count -lt 2) { continue }
+            if ($null -eq $script:DefHist -and $iAt -ge 0 -and $iAa -ge 0 -and @($colC | Where-Object { $_.iq -lt 0 }).Count -eq 0) {
+                $vs = @($colC | ForEach-Object { [pscustomobject]@{ cc = $_; v = [int64] (Numero-Br $p[$_.iq]) } } | Sort-Object v -Descending)
+                $falt = [int64] (Numero-Br $p[$iAt]) - [int64] (Numero-Br $p[$iAa])
+                if ($vs.Count -ge 2 -and $vs[0].v -gt 0 -and $falt -ge 0 -and ($vs[0].v - $vs[1].v) -gt $falt) {
+                    $script:DefHist = [ordered]@{ numero = $vs[0].cc.n; nome = "$($vs[0].cc.c.nome)"; partido = "$($vs[0].cc.c.partido)"; tipo = "matematica"
+                        hora = $q.ToString("HH:mm:ss"); geracao = $q.ToString("dd/MM/yyyy HH:mm:ss"); urnas = [math]::Round(100 * $u, 2)
+                        votos = $vs[0].v; votos_2 = $vs[1].v; faltam = $falt; registrado_em = (Get-Date).ToString("yyyy-MM-ddTHH:mm:ss"); origem = "historico do TSE" }
+                }
+            }
             $chF = [math]::Floor($q.Ticks / 300000000)        # faixa de 30 s: fica a ultima
             $faixas["$chF"] = [pscustomobject]@{ t = $q.ToString("yyyy-MM-ddTHH:mm:ss"); u = [math]::Round(100 * $u, 2); c = [pscustomobject] $porC }
         }
     } finally { $rd.Dispose(); if ($zip) { $zip.Dispose() } }
     return @($faixas.Values)
 }
+$script:DefHist = $null
 $histOk = $false
 $arqHist = @(Achar-Historico)
 if ($arqHist.Count) {
@@ -492,6 +508,14 @@ Write-Host ""
 Anotar ("importados {0} pontos de {1} a {2} (urnas {3}% a {4}%)" -f $limpos.Count, $p0.t.Substring(11, 5), $pf.t.Substring(11, 5), $p0.u, $pf.u)
 foreach ($k in $pf.c.PSObject.Properties) { Anotar ("   ultimo ponto: {0,-28} {1}%" -f $nomes[$k.Name].nome, $k.Value) }
 Anotar ("gravado em {0}." -f (Split-Path -Leaf $arqEv))
+# hora do ELEITO pelo historico do TSE: vai para definicao-*.json (o
+# GRAFICOS.bat le ao abrir; com ele aberto, feche e abra para a tela pegar)
+if ($histOk -and $script:DefHist) {
+    $arqDef = Join-Path $Raiz ("definicao-{0}-{1}-oficial.json" -f $Ciclo, $Eleicao)
+    if (Test-Path $arqDef) { Copy-Item $arqDef "$arqDef.antes-da-importacao" -Force }
+    [IO.File]::WriteAllText($arqDef, ([pscustomobject] $script:DefHist | ConvertTo-Json -Compress), (New-Object System.Text.UTF8Encoding($false)))
+    Anotar ("ELEITO (pela conta com o historico do TSE): {0} as {1}, com {2}% das urnas - gravado em {3}. Para a tela mostrar: feche e abra o GRAFICOS.bat." -f $script:DefHist.nome, $script:DefHist.hora, $script:DefHist.urnas, (Split-Path -Leaf $arqDef)) "Green"
+}
 # A tela recebeu? Quem poe a linha na tela e o GRAFICOS.bat (dados.js). Um
 # GRAFICOS.bat aberto ANTES de atualizar para a 3.0 continua na versao velha,
 # que nao rele o historico: a tela fica com 1 ponto.
