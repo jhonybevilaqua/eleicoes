@@ -1,6 +1,8 @@
 ===========================================================================
- gctse GRAFICOS 3.28.6 - APURACAO DO 2o TURNO (25/10/2026)
+ gctse GRAFICOS 3.28.7 - APURACAO DO 2o TURNO (25/10/2026)
 
+ 3.28.7 (26/10): "Evolucao": selo verde ELEITO em cima da linha do vencedor,
+   no ponto da hora; horas no formato da TV (20h54).
  3.28.6 (26/10): "Evolucao": linha verde com o horario em que o presidente
    ficou ELEITO (do TSE ou pela conta). O IMPORTAR-EVOLUCAO, com o
    Historico de totalizacao do TSE, calcula esse horario exato e grava em

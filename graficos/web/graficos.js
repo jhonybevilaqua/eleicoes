@@ -1232,6 +1232,8 @@
   var HALO = ' stroke="#0b1220" stroke-width="6" stroke-linejoin="round" paint-order="stroke"';
   // Area do grafico: x0..x1, y0..y1. k = escala das letras.
   function plotEvolucao(ev, x0, x1, y0, y1, k, maxTicks) {
+    // 3.28.7: horas como na TV ("20h54")
+    var hhmm = function (ms) { var x = new Date(ms); return x.getHours() + "h" + ("0" + x.getMinutes()).slice(-2); };
     var ss = ev.series.filter(function (s) { return s.pts.length; }), o = "";
     if (!ss.length) return marcaVazio() + t((x0 + x1) / 2, (y0 + y1) / 2, br() ? "nenhum boletim gravado ainda" : "aguardando o primeiro boletim do TSE", { s: Math.round(22 * k), c: C.apagado, a: "middle" }) +
       t((x0 + x1) / 2, (y0 + y1) / 2 + 30 * k, "o GRAFICOS.bat grava cada boletim novo do TSE", { s: Math.round(16 * k), c: C.apagado2, a: "middle" });
@@ -1330,7 +1332,7 @@
     if (mD) {
       var msD = new Date(+mD[3], mD[2] - 1, +mD[1], +mD[4], +mD[5], +(mD[6] || 0)).getTime();
       if (msD >= tA - 60000 && msD <= tB + 60000) {
-        var ex = X(Math.min(Math.max(msD, tA), tB)), l1 = "ELEITO ÀS " + String(df.hora || "").slice(0, 5), l2 = (df.nome || "") + (df.urnas != null ? " · urnas " + pctCurto(+df.urnas, 2) : "") + (df.tipo === "matematica" ? " · matematicamente" : " · pelo TSE");
+        var ex = X(Math.min(Math.max(msD, tA), tB)), l1 = "ELEITO ÀS " + String(df.hora || "").slice(0, 5).replace(":", "h"), l2 = (df.nome || "") + (df.urnas != null ? " · urnas " + pctCurto(+df.urnas, 2) : "") + (df.tipo === "matematica" ? " · matematicamente" : " · pelo TSE");
         o += '<line x1="' + ex.toFixed(1) + '" x2="' + ex.toFixed(1) + '" y1="' + y0 + '" y2="' + y1 + '" stroke="#8ce99a" stroke-width="2" opacity="0.8"/>';
         var ew = Math.max(l1.length * 8.6, l2.length * 6.2) * k + 22 * k, eh = 40 * k, exx = ex + 10 * k + ew > x1 ? ex - 10 * k - ew : ex + 10 * k, ey = y1 - eh - 12 * k;
         // nao em cima do selo da virada: tenta embaixo, em cima, e logo abaixo dele
@@ -1340,6 +1342,16 @@
         var achou = [y1 - eh - 12 * k, y0 + 8 * k, caixaV ? caixaV.y - eh - 8 * k : 0, caixaV ? caixaV.y + caixaV.h + 8 * k : 0].some(function (yy) { if (yy >= y0 && yy + eh <= y1 && !bate(yy)) { ey = yy; return true; } return false; });
         // tela estreita (vertical) ou sem lugar livre: embaixo do eixo das horas
         if (!achou || k < 1) { exx = x0; ey = y1 + (pz.length ? 84 : 58) * k; }
+        // selo "ELEITO" em cima da linha do vencedor, no ponto da hora
+        var sV = ss.filter(function (s0) { return String(s0.c.numero) === String(df.numero); })[0];
+        if (sV) {
+          var pv = null; sV.pts.forEach(function (p0) { if (p0.ms <= msD || !pv) pv = p0; });
+          var nxt = sV.pts.filter(function (p0) { return p0.ms > msD; })[0], vV = pv.v;
+          if (nxt && nxt.ms > pv.ms && msD > pv.ms) vV = pv.v + (nxt.v - pv.v) * (msD - pv.ms) / (nxt.ms - pv.ms);   // so para posicionar o selo na linha
+          var py = Y(vV), pw = 66 * k, ph = 22 * k;
+          o += '<circle cx="' + ex.toFixed(1) + '" cy="' + py.toFixed(1) + '" r="' + (6 * k).toFixed(1) + '" fill="#2fb344" stroke="#ffffff" stroke-width="2"/>';
+          o += r(ex - pw / 2, py - ph - 12 * k, pw, ph, "#2fb344", 11 * k) + t(ex, py - 12 * k - 6 * k, "ELEITO", { s: Math.round(12 * k), b: true, c: "#ffffff", a: "middle", ls: 1 });
+        }
         o += r(exx, ey, ew, eh, "#b2f2bb", 5) + t(exx + 10 * k, ey + 17 * k, l1, { s: Math.round(13 * k), b: true, c: "#0b1220", ls: 1 }) +
           t(exx + 10 * k, ey + 32 * k, l2, { s: Math.round(10 * k), b: true, c: "#1b2a44", max: ew - 16 * k });
       }
