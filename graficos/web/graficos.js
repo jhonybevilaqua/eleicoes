@@ -4677,12 +4677,21 @@
     if (!a) { try { a = (new URLSearchParams(location.search).get("a") || "").toLowerCase(); } catch (e) { a = ""; } }
     return DEP_UF[a] ? a : "br";
   }
+  // 3.29.5: o que a coleta MUNICIPIOS esta fazendo (gravado no municipios.js)
+  function situacaoMun(R, lidos) {
+    if (!R) return "aguardando a coleta dos municípios: abra o MUNICIPIOS.bat";
+    var tot = +R.total || 0, pos = +R.pos || 0, err = String(R.ultimo_erro || "");
+    if (err && !(+R.lidos_2t > 0)) return "o TSE não respondeu à coleta dos municípios: " + err.replace(/https?:\/\/[^ ]*\/dados\//, ".../") + " (veja logs\\municipios-*.log)";
+    if (R.fase === "lista" || !tot) return "aguardando a lista de municípios do TSE (MUNICIPIOS.bat)";
+    if (R.fase === "2t") return "lendo o 2º turno das cidades: " + inteiro(pos) + " de " + inteiro(tot) + " (o mapa aparece aos poucos)";
+    return "sem voto do 2º turno nas cidades: confira se o MUNICIPIOS.bat está aberto (" + inteiro(lidos || 0) + " cidades no arquivo)";
+  }
   function telaMunMapa(v) {
     var f = fontePres(false), cs = fin2(f), M = window.MAPA_MUN, R = window.GCTSE_MUN, a = alvoMun(), W = v ? 540 : 1280, H = v ? 960 : 720;
     var tit = a === "br" ? "PRESIDENTE EM CADA CIDADE" : "CIDADES — " + DEP_UF[a], sub = "quem lidera em cada município · cor forte = vantagem de 15 pontos ou mais";
     if (!cs) return vazioAn(v, tit, sub, f, "disponível no 2º turno");
     if (!M || !M.ufs) return vazioAn(v, tit, sub, f, "falta o arquivo do mapa (web\\mapa-municipios.js)");
-    var ix = indiceMun(); if (!ix) return vazioAn(v, tit, sub, f, "aguardando a coleta dos municípios (MUNICIPIOS.bat)");
+    var ix = indiceMun(); if (!ix) return vazioAn(v, tit, sub, f, situacaoMun(R, 0));
     var A = cs[0], B = cs[1], ufsV = a === "br" ? Object.keys(M.ufs) : [a], bb = null;
     ufsV.forEach(function (u) { var b = M.ufs[u] && M.ufs[u].bbox; if (!b) return; bb = bb ? [Math.min(bb[0], b[0]), Math.min(bb[1], b[1]), Math.max(bb[2], b[2]), Math.max(bb[3], b[3])] : b.slice(); });
     if (!bb) return vazioAn(v, tit, sub, f, "estado sem mapa");
@@ -4704,7 +4713,7 @@
     });
     // 3.29.3: arquivo das cidades sem nenhum voto do 2o turno (MUNICIPIOS.bat
     // fechado ou ainda na 1a volta): diz o motivo em vez de um mapa cinza
-    if (!(cont.A + cont.B)) return vazioAn(v, tit, sub, f, cont.lidos ? "sem voto do 2º turno nas cidades: confira se o MUNICIPIOS.bat está aberto (" + inteiro(cont.lidos) + " cidades no arquivo)" : "aguardando a coleta dos municípios (MUNICIPIOS.bat)");
+    if (!(cont.A + cont.B)) return vazioAn(v, tit, sub, f, situacaoMun(R, cont.lidos));
     var o = cabAn(v, W, tit, sub, f) + '<g transform="translate(' + ox.toFixed(1) + " " + oy.toFixed(1) + ") scale(" + esc0.toFixed(5) + ')">' + paths + "</g>";
     var xs = v ? 35 : 800, ys = v ? 700 : 110, ws = v ? 470 : 407, k = v ? 0.85 : 1;
     o += painelAn(xs, ys, ws, v ? 220 : 570);

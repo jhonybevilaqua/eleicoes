@@ -1,6 +1,11 @@
 ===========================================================================
- gctse GRAFICOS 3.29.4 - APURACAO DO 2o TURNO (25/10/2026)
+ gctse GRAFICOS 3.29.5 - APURACAO DO 2o TURNO (25/10/2026)
 
+ 3.29.5 (26/10): MUNICIPIOS (mapa por cidade): le o 2o TURNO PRIMEIRO (o
+   mapa comeca a colorir em 1 minuto) e so depois o 1o turno. O gerenciador
+   mostra "Municipios: ..." na barra de situacao (andamento, cidades no mapa
+   ou o ERRO do TSE) e a tela do mapa diz o motivo quando esta vazia.
+   Erros do TSE ficam em logs\municipios-AAAA-MM-DD.log.
  3.29.4 (26/10): IMPORTAR-EVOLUCAO aceita o arquivo de totalizacao do TSE
    com QUALQUER nome na pasta importar (ex.: "BR - Relatorio de Totalizacao")
    e acha o 1o e o 2o turno dentro do mesmo .zip. Arquivo nao reconhecido:

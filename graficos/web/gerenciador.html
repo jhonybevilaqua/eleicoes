@@ -270,7 +270,7 @@
   <span class="copia so-local"><button id="copia" type="button" title="Guarda a pasta inteira (config, dados, evolução, logs) num .zip em copias-de-seguranca">💾 cópia</button> <span id="copiaMsg"></span></span>
   <span class="copia so-local"><button id="salvarTelas" type="button" title="Grava TODAS as telas que têm dado em PNG Full HD, com as fotos, em TELAS-SALVAS (para o Jornalismo usar depois). Rode depois de 100% das urnas; leva alguns minutos.">🖼 salvar telas</button> <span id="salvarTelasMsg"></span></span>
   <button class="tema" id="tema" type="button">tema escuro</button></header>
-<div id="status"><span class="st neutro" id="stCod" hidden style="cursor:pointer"></span><span class="st neutro" id="stP">Presidente: …</span><span class="st neutro" id="stE">Estados: …</span><span class="st neutro" id="stEv" hidden></span><span class="st aviso" id="stCL" hidden></span><span class="st neutro" id="stG">Gerenciador: …</span><span class="st neutro" id="stOh" hidden></span><span class="st neutro" id="stOv" hidden></span></div>
+<div id="status"><span class="st neutro" id="stCod" hidden style="cursor:pointer"></span><span class="st neutro" id="stP">Presidente: …</span><span class="st neutro" id="stE">Estados: …</span><span class="st neutro" id="stM">Municípios: …</span><span class="st neutro" id="stEv" hidden></span><span class="st aviso" id="stCL" hidden></span><span class="st neutro" id="stG">Gerenciador: …</span><span class="st neutro" id="stOh" hidden></span><span class="st neutro" id="stOv" hidden></span></div>
 <div id="vigia"><span class="rot">PRESIDENTE ELEITO:</span>
   <button type="button" class="so-local" id="elAuto" title="Quando o TSE declarar o eleito, a tela 'Presidente eleito' vai ao ar sozinha nas duas saídas">no ar automático: …</button>
   <button type="button" id="elAgora">colocar no ar agora (H e V)</button>
@@ -1081,6 +1081,15 @@
     else if (ie > 120) { s.className = "st ruim"; s.textContent = "Estados: COLETA PAROU há " + ie + " s"; }
     else if (e.recebendo_tse === false) { s.className = "st ruim"; s.textContent = "Estados: SEM RESPOSTA DO TSE"; }
     else { s.className = "st ok"; s.textContent = "Estados: OK"; }
+    // 3.29.5: coleta dos municipios (mapa por cidade) - andamento e erro do TSE
+    var m = window.GCTSE_MUN, sm = document.getElementById("stM"), im = m ? idade(m.gravado_em) : null;
+    if (!m) { sm.className = "st neutro"; sm.textContent = "Municípios: coleta não rodou (abra o MUNICIPIOS.bat)"; }
+    else if (m.ultimo_erro && !(+m.lidos_2t > 0)) { sm.className = "st ruim"; sm.textContent = "Municípios: ERRO DO TSE — " + m.ultimo_erro; sm.title = m.ultimo_erro; }
+    else if (im != null && im > 900) { sm.className = "st ruim"; sm.textContent = "Municípios: COLETA PAROU há " + Math.round(im / 60) + " min"; }
+    else if (m.fase === "lista") { sm.className = "st aviso"; sm.textContent = "Municípios: aguardando a lista do TSE"; }
+    else if (m.fase === "2t") { sm.className = "st aviso"; sm.textContent = "Municípios: lendo 2º turno " + (+m.pos || 0) + "/" + (+m.total || 0) + " cidades"; }
+    else if (m.fase === "1t") { sm.className = "st ok"; sm.textContent = "Municípios: " + (+m.lidos_2t || 0) + " cidades no mapa · lendo 1º turno " + (+m.pos || 0) + "/" + (+m.total || 0); }
+    else { sm.className = (+m.lidos_2t > 0) ? "st ok" : "st ruim"; sm.textContent = "Municípios: " + (+m.lidos_2t || 0) + " de " + (+m.total || 0) + " cidades no mapa"; }
     // Grafico minuto a minuto (evolucao): o GRAFICOS.bat grava um ponto a
     // cada boletim novo do TSE. Vermelho = apuracao andando e nada gravado
     // ha 5 min.

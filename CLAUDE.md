@@ -79,7 +79,9 @@ eleições. Feitos e usados no ar nas eleições gerais de 2026 (1º turno
   - `estados.ps1` (ESTADOS.bat) → `web/estados.js`: governador, senado,
     câmara, assembleias, comparações com 2022 (`dados-2022.json`).
   - `municipios.ps1` (MUNICIPIOS.bat) → `web/municipios.js`: Presidente
-    em cada cidade (lento de propósito, `req_por_segundo`).
+    em cada cidade (lento de propósito, `req_por_segundo`). Lê o 2º turno
+    primeiro (é o que pinta o mapa) e depois o 1º; grava `fase`, `pos`,
+    `ultimo_erro` no arquivo, mostrados no gerenciador ("Municípios: …").
 - `gerenciador.ps1` (GERENCIADOR.bat, o único .bat do dia a dia): servidor
   em `http://localhost:8098`, abre as coletas e os dois OBS, reabre coleta
   que parar, painel `web/gerenciador.html` (abas de telas, no ar H/V,
@@ -112,7 +114,7 @@ eleições. Feitos e usados no ar nas eleições gerais de 2026 (1º turno
 - `copia-seguranca.ps1` (botão "cópia") e ARQUIVO-HISTORICO-2026.bat
   (`guardar-tse.ps1 -Historico`: guarda a eleição inteira num .zip antes
   de o TSE tirar do ar).
-- Versão final 2026: **3.29.4** (`$Versao` em graficos.ps1 e estados.ps1,
+- Versão final 2026: **3.29.5** (`$Versao` em graficos.ps1 e estados.ps1,
   topo do `LEIA-ME.txt`).
 
 ### Outros

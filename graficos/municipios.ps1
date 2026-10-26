@@ -18,7 +18,7 @@ param([switch] $UmaVolta)
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
-$Versao = "3.28 - 19/10/2026"
+$Versao = "3.29.5 - 26/10/2026"
 
 try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 } catch { }
 try { [Net.ServicePointManager]::DefaultConnectionLimit = 64 } catch { }
@@ -99,6 +99,8 @@ $script:Etag = @{}       # url -> ETag
 $script:Ausente = @{}    # url -> @{ vezes; ate }  (recuo depois de 404)
 $script:UltimoOk = $null
 $script:Pedidos = 0
+# 3.29.5: o que esta acontecendo, gravado no municipios.js (a tela mostra)
+$script:Fase = "lista"; $script:Pos = 0; $script:UltimoErro = ""; $script:Erros = 0
 
 function Pedir([string] $Url) {
     # -> objeto do JSON, "SEM-MUDANCA" (304) ou $null (falha/404)
@@ -118,17 +120,20 @@ function Pedir([string] $Url) {
         $txt = $rd.ReadToEnd(); $rd.Dispose()
         if ($script:Ausente.ContainsKey($Url)) { $script:Ausente.Remove($Url) }
         $script:UltimoOk = Get-Date
-        try { return ($txt | ConvertFrom-Json) } catch { if ($script:Etag.ContainsKey($Url)) { $script:Etag.Remove($Url) }; return $null }
+        try { return ($txt | ConvertFrom-Json) } catch { if ($script:Etag.ContainsKey($Url)) { $script:Etag.Remove($Url) }; $script:Erros++; $script:UltimoErro = "nao consegui ler o JSON de $Url ($($txt.Length) caracteres): $($_.Exception.Message)"; Escrever-Log $script:UltimoErro "AVISO"; return $null }
     } catch [Net.WebException] {
         $r = $_.Exception.Response
         $cod = 0; if ($r) { try { $cod = [int] $r.StatusCode } catch { } ; try { $r.Close() } catch { } }
         if ($cod -eq 304) { $script:UltimoOk = Get-Date; return "SEM-MUDANCA" }
+        $script:Erros++
+        $script:UltimoErro = $(if ($cod) { "TSE respondeu HTTP $cod em $Url" } else { "sem resposta do TSE ($($_.Exception.Message)) em $Url" })
+        if ($script:Erros -le 3 -or $script:Erros % 200 -eq 0) { Escrever-Log ("{0} (erros ate agora: {1})" -f $script:UltimoErro, $script:Erros) "AVISO" }
         if ($cod -eq 404) {
             $v = 1; if ($script:Ausente.ContainsKey($Url)) { $v = $script:Ausente[$Url].vezes + 1 }
             $script:Ausente[$Url] = @{ vezes = $v; ate = (Get-Date).AddMinutes([math]::Min(30, [math]::Pow(2, $v))) }
         }
         return $null
-    } catch { return $null }
+    } catch { $script:Erros++; $script:UltimoErro = "falha lendo $Url : $($_.Exception.Message)"; return $null }
     finally { if ($resp) { try { $resp.Close() } catch { } } }
 }
 
@@ -185,7 +190,7 @@ $Arq1T = Join-Path $Raiz ("municipios-1t-{0}-{1}.json" -f $Ciclo, $Eleicao1T)
 function Gravar {
     $ufs = [ordered]@{}
     $numeros = @{}
-    foreach ($m in $script:Lista) {
+    foreach ($m in @(if ($script:Lista) { $script:Lista } else { @() })) {
         $k = "$($m.uf)-$($m.cd)"
         $r2 = $null; if ($script:R2.ContainsKey($k)) { $r2 = $script:R2[$k] }
         $r1 = $null; if ($script:R1.ContainsKey($k)) { $r1 = $script:R1[$k] }
@@ -205,7 +210,8 @@ function Gravar {
         versao = $Versao; gravado_em = (Get-Date).ToString("yyyy-MM-ddTHH:mm:ss")
         eleicao = $Eleicao; eleicao_1t = $Eleicao1T
         total = $(if ($script:Lista) { $script:Lista.Count } else { 0 }); lidos_2t = $script:R2.Count; lidos_1t = $script:R1.Count
-        volta = $script:Volta; ultimo_tse = $(if ($script:UltimoOk) { $script:UltimoOk.ToString("HH:mm:ss") } else { "" })
+        volta = $script:Volta; fase = $script:Fase; pos = $script:Pos; erros = $script:Erros; ultimo_erro = $script:UltimoErro
+        ultimo_tse = $(if ($script:UltimoOk) { $script:UltimoOk.ToString("HH:mm:ss") } else { "" })
         campos = "cdi (IBGE), nome, % urnas 2o turno, votos por numero no 2o turno, lider no 1o turno, % do lider no 1o turno"
         ufs = $ufs
     }
@@ -223,13 +229,18 @@ while ($null -eq $script:Lista) {
         $l = Ler-Lista $ele
         if ($null -ne $l -and $l.Count -gt 1000) { $script:Lista = $l; Escrever-Log ("lista de municipios do TSE (eleicao {0}): {1} cidades" -f $ele, $l.Count) "OK"; break }
     }
-    if ($null -eq $script:Lista) { Escrever-Log "lista de municipios do TSE ainda nao disponivel - tento de novo em 2 min" "AVISO"; Start-Sleep -Seconds 120 }
+    if ($null -eq $script:Lista) {
+        Escrever-Log ("lista de municipios do TSE ainda nao disponivel ({0}) - tento de novo em 2 min" -f $(if ($script:UltimoErro) { $script:UltimoErro } else { "$Base/$Ciclo/$Eleicao/config/..." })) "AVISO"
+        Gravar; Start-Sleep -Seconds 120
+    }
 }
 $semIbge = @($script:Lista | Where-Object { -not $_.cdi }).Count
 if ($semIbge -gt 0) { Escrever-Log ("{0} cidades sem codigo IBGE (cdi) na lista do TSE: o mapa liga essas pelo NOME" -f $semIbge) "AVISO" }
 
-# 1o turno: do arquivo guardado, ou do TSE (uma vez so)
-if ($Eleicao1T) {
+# 1o turno: do arquivo guardado, ou do TSE (uma vez so). 3.29.5: depois da
+# 1a volta do 2o turno - o mapa (2o turno) aparece primeiro.
+function Ler-1T {
+    if (-not $Eleicao1T) { return }
     if (Test-Path $Arq1T) {
         try {
             $g = Get-Content $Arq1T -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -241,7 +252,7 @@ if ($Eleicao1T) {
         Escrever-Log "lendo o 1o turno de cada cidade (uma vez so, alguns minutos)..."
         $i = 0
         foreach ($m in $script:Lista) {
-            $i++; $k = "$($m.uf)-$($m.cd)"
+            $i++; $k = "$($m.uf)-$($m.cd)"; $script:Fase = "1t"; $script:Pos = $i
             if ($script:R1.ContainsKey($k)) { continue }
             $o = Pedir (Url-Mun $m $Eleicao1T)
             if ($null -ne $o -and "$o" -ne "SEM-MUDANCA") { $r = Resumir $o; if ($r) { $script:R1[$k] = $r } }
@@ -261,12 +272,15 @@ do {
     $script:Volta++
     $ini = Get-Date; $novos = 0; $i = 0
     foreach ($m in $script:Lista) {
-        $i++
+        $i++; $script:Fase = "2t"; $script:Pos = $i
         $o = Pedir (Url-Mun $m $Eleicao)
         if ($null -ne $o -and "$o" -ne "SEM-MUDANCA") { $r = Resumir $o; if ($r) { $script:R2["$($m.uf)-$($m.cd)"] = $r; $novos++ } }
         if ($i % 400 -eq 0) { Gravar }
     }
+    $script:Fase = "pronto"; $script:Pos = $script:Lista.Count
     Gravar
+    if ($script:Volta -eq 1 -and $Eleicao1T) { Ler-1T; $script:Fase = "pronto"; Gravar }
+    if ($novos -eq 0 -and $script:R2.Count -eq 0) { Escrever-Log ("volta {0}: NENHUMA cidade lida do 2o turno. Ultimo erro: {1}" -f $script:Volta, $script:UltimoErro) "ERRO" }
     $fim = 0; foreach ($k in $script:R2.Keys) { if ($script:R2[$k].urnas -ge 100) { $fim++ } }
     Escrever-Log ("volta {0}: {1} cidades lidas ({2} com numero novo) | {3} com 100% das urnas | {4:N0} s | TSE: {5}" -f $script:Volta, $script:R2.Count, $novos, $fim, ((Get-Date) - $ini).TotalSeconds, $(if ($script:UltimoOk) { "ultima resposta " + $script:UltimoOk.ToString("HH:mm:ss") } else { "SEM RESPOSTA" })) $(if ($script:UltimoOk) { "INFO" } else { "AVISO" })
     if ($UmaVolta) { break }
